@@ -1,0 +1,32 @@
+.error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.error-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-text {
+  color: #991b1b;
+  font-weight: 500;
+  margin: 0;
+}
+
+.error-details {
+  color: #7f1d1d;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+}

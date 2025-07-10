@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Capacinator Frontend Test</title>
+</head>
+<body>
+    <h1>Testing Capacinator Frontend Data Loading</h1>
+    <div id="results"></div>
+    
+    <script>
+        const BASE_URL = 'http://dev.capacinator.com';
+        const results = document.getElementById('results');
+        
+        async function testEndpoint(name, url) {
+            try {
+                const response = await fetch(BASE_URL + url);
+                const data = await response.json();
+                
+                results.innerHTML += `
+                    <div style="margin: 10px 0; padding: 10px; background: #f0f0f0;">
+                        <strong>${name}:</strong> ✅ Success<br>
+                        <small>Response: ${JSON.stringify(data).substring(0, 100)}...</small>
+                    </div>
+                `;
+            } catch (error) {
+                results.innerHTML += `
+                    <div style="margin: 10px 0; padding: 10px; background: #ffe0e0;">
+                        <strong>${name}:</strong> ❌ Error<br>
+                        <small>Error: ${error.message}</small>
+                    </div>
+                `;
+            }
+        }
+        
+        // Test various endpoints
+        (async () => {
+            await testEndpoint('API Health', '/api/health');
+            await testEndpoint('Projects', '/api/projects');
+            await testEndpoint('People', '/api/people');
+            await testEndpoint('Dashboard', '/api/reporting/dashboard');
+            await testEndpoint('Locations', '/api/locations');
+            await testEndpoint('Roles', '/api/roles');
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<testsuites id="" name="" tests="4" failures="0" skipped="0" errors="0" time="15.042164000000001">
+<testsuite name="reports-validation.spec.ts" timestamp="2025-07-09T18:35:32.284Z" hostname="chromium" tests="4" failures="0" skipped="0" time="13.374" errors="0">
+<testcase name="Reports Validation - Data Accuracy › should show accurate capacity gaps and not claim sufficient capacity when there are major gaps" classname="reports-validation.spec.ts" time="3.403">
+<system-out>
+<![CDATA[✅ Project Manager row found
+Project Manager status:  Gap (1093 hrs short) View People Add Person
+✅ Project Manager correctly showing as having a gap
+✅ Developer row found
+Developer status:  Gap (468 hrs short) View People Add Person
+✅ QA Engineer row found
+QA Engineer status:  Gap (733 hrs short) View People Add Person
+Total Gap shown: 2393 hours
+]]>
+</system-out>
+</testcase>
+<testcase name="Reports Validation - Data Accuracy › should show accurate utilization data" classname="reports-validation.spec.ts" time="3.292">
+<system-out>
+<![CDATA[Over-allocated count: 3 people
+✅ Over-allocated count is correct (3 people)
+Alice Johnson utilization: 165%
+✅ Alice Johnson utilization is correct (165%)
+]]>
+</system-out>
+</testcase>
+<testcase name="Reports Validation - Data Accuracy › should show meaningful chart data" classname="reports-validation.spec.ts" time="3.161">
+<system-out>
+<![CDATA[✅ Capacity by Role chart found
+Chart bars found: 2
+✅ Capacity by Location chart found
+Pie chart slices found: 5
+Total Capacity: 714 hours
+]]>
+</system-out>
+</testcase>
+<testcase name="Reports Validation - Data Accuracy › should show demand forecast with actual data" classname="reports-validation.spec.ts" time="3.518">
+<system-out>
+<![CDATA[Total Demand: 720 hours
+❌ CRITICAL ERROR: Total Demand showing as 0 hours when there is significant project demand!
+✅ Demand Forecast chart found
+Demand forecast data points: 10
+Projects count: 3
+✅ Projects count is showing correctly: 3
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

@@ -1,0 +1,313 @@
+{
+  "config": {
+    "configFile": "/home/tony/GitHub/Capacinator/playwright.config.ts",
+    "rootDir": "/home/tony/GitHub/Capacinator/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "test-results/html",
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/junit.xml"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/tony/GitHub/Capacinator/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.53.2",
+    "workers": 4,
+    "webServer": {
+      "command": "npm run dev:web",
+      "url": "http://localhost:5174",
+      "reuseExistingServer": true,
+      "timeout": 120000,
+      "env": {
+        "NODE_ENV": "test"
+      }
+    }
+  },
+  "suites": [
+    {
+      "title": "reports-validation.spec.ts",
+      "file": "reports-validation.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Reports Validation - Data Accuracy",
+          "file": "reports-validation.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should show accurate capacity gaps and not claim sufficient capacity when there are major gaps",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3403,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Project Manager row found\n"
+                        },
+                        {
+                          "text": "Project Manager status:  Gap (1093 hrs short) View People Add Person\n"
+                        },
+                        {
+                          "text": "✅ Project Manager correctly showing as having a gap\n"
+                        },
+                        {
+                          "text": "✅ Developer row found\n"
+                        },
+                        {
+                          "text": "Developer status:  Gap (468 hrs short) View People Add Person\n"
+                        },
+                        {
+                          "text": "✅ QA Engineer row found\n"
+                        },
+                        {
+                          "text": "QA Engineer status:  Gap (733 hrs short) View People Add Person\n"
+                        },
+                        {
+                          "text": "Total Gap shown: 2393 hours\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-07-09T18:35:33.114Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "577ba0c7550b9f7644ad-594b06922ef256de9d3e",
+              "file": "reports-validation.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "should show accurate utilization data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3292,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Over-allocated count: 3 people\n"
+                        },
+                        {
+                          "text": "✅ Over-allocated count is correct (3 people)\n"
+                        },
+                        {
+                          "text": "Alice Johnson utilization: 165%\n"
+                        },
+                        {
+                          "text": "✅ Alice Johnson utilization is correct (165%)\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-07-09T18:35:36.848Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "577ba0c7550b9f7644ad-903e1e49892a967841f6",
+              "file": "reports-validation.spec.ts",
+              "line": 84,
+              "column": 3
+            },
+            {
+              "title": "should show meaningful chart data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3161,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✅ Capacity by Role chart found\n"
+                        },
+                        {
+                          "text": "Chart bars found: 2\n"
+                        },
+                        {
+                          "text": "✅ Capacity by Location chart found\n"
+                        },
+                        {
+                          "text": "Pie chart slices found: 5\n"
+                        },
+                        {
+                          "text": "Total Capacity: 714 hours\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-07-09T18:35:40.146Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "577ba0c7550b9f7644ad-e6d45c7152e50b087f84",
+              "file": "reports-validation.spec.ts",
+              "line": 127,
+              "column": 3
+            },
+            {
+              "title": "should show demand forecast with actual data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3518,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Total Demand: 720 hours\n"
+                        },
+                        {
+                          "text": "❌ CRITICAL ERROR: Total Demand showing as 0 hours when there is significant project demand!\n"
+                        },
+                        {
+                          "text": "✅ Demand Forecast chart found\n"
+                        },
+                        {
+                          "text": "Demand forecast data points: 10\n"
+                        },
+                        {
+                          "text": "Projects count: 3\n"
+                        },
+                        {
+                          "text": "✅ Projects count is showing correctly: 3\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-07-09T18:35:43.314Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "577ba0c7550b9f7644ad-6a6a55467aaff1926932",
+              "file": "reports-validation.spec.ts",
+              "line": 177,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-07-09T18:35:31.919Z",
+    "duration": 15042.164,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

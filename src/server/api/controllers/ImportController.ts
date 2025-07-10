@@ -1,0 +1,194 @@
+import { Request, Response } from 'express';
+import { BaseController } from './BaseController.js';
+import { ExcelImporter } from '../../services/import/ExcelImporter.js';
+import { ExcelImporterV2 } from '../../services/import/ExcelImporterV2.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises';
+
+export class ImportController extends BaseController {
+  private upload = multer({
+    dest: 'uploads/',
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ];
+      
+      if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.xlsx') || file.originalname.endsWith('.xls')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only Excel files (.xlsx, .xls) are allowed'));
+      }
+    },
+    limits: {
+      fileSize: parseInt(process.env.MAX_FILE_SIZE || '52428800') // 50MB default
+    }
+  });
+
+  getUploadMiddleware() {
+    return this.upload.single('excelFile');
+  }
+
+  async uploadExcel(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          error: 'No file uploaded',
+          message: 'Please select an Excel file to upload'
+        });
+      }
+
+      const clearExisting = req.body.clearExisting === 'true' || req.body.clearExisting === true;
+      const useV2 = req.body.useV2 === 'true' || req.body.useV2 === true;
+      
+      console.log(`Starting Excel import from: ${req.file.path}`);
+      console.log(`Clear existing data: ${clearExisting}`);
+      console.log(`Use V2 importer: ${useV2}`);
+      
+      const result = useV2 
+        ? await new ExcelImporterV2().importFromFile(req.file.path, clearExisting)
+        : await new ExcelImporter().importFromFile(req.file.path, clearExisting);
+
+      // Clean up uploaded file
+      try {
+        await fs.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.warn('Failed to clean up uploaded file:', cleanupError);
+      }
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: 'Excel import completed successfully',
+          imported: result.imported,
+          warnings: result.warnings
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Excel import completed with errors',
+          imported: result.imported,
+          errors: result.errors,
+          warnings: result.warnings
+        });
+      }
+
+    } catch (error) {
+      // Clean up uploaded file on error
+      if (req.file) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.warn('Failed to clean up uploaded file:', cleanupError);
+        }
+      }
+
+      this.handleError(error, res, 'Excel import failed');
+    }
+  }
+
+  async downloadTemplate(req: Request, res: Response) {
+    try {
+      // TODO: Generate and return an Excel template file
+      // For now, return a 501 with instructions
+      res.status(501).json({
+        error: 'Template download not yet implemented',
+        message: 'Please create an Excel file with the following worksheets and columns:',
+        expectedFormat: {
+          'Projects': [
+            'Project Name',
+            'Project Type', 
+            'Location',
+            'Priority',
+            'Description',
+            'Start Date',
+            'End Date',
+            'Owner'
+          ],
+          'Rosters': [
+            'Name',
+            'Email', 
+            'Primary Role',
+            'Worker Type',
+            'Supervisor',
+            'Availability %',
+            'Hours Per Day'
+          ],
+          'Standard Allocations': [
+            'Project Type',
+            'Phase',
+            'Role',
+            'Allocation %'
+          ]
+        }
+      });
+
+    } catch (error) {
+      this.handleError(error, res, 'Failed to generate template');
+    }
+  }
+
+  async getImportHistory(req: Request, res: Response) {
+    try {
+      // TODO: Implement import history tracking
+      // For now, return empty array
+      res.json({
+        imports: [],
+        message: 'Import history tracking not yet implemented'
+      });
+
+    } catch (error) {
+      this.handleError(error, res, 'Failed to fetch import history');
+    }
+  }
+
+  async validateFile(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          error: 'No file uploaded',
+          message: 'Please select an Excel file to validate'
+        });
+      }
+
+      // TODO: Implement file validation without importing
+      // For now, just check the file format
+      const allowedExtensions = ['.xlsx', '.xls'];
+      const fileExtension = path.extname(req.file.originalname).toLowerCase();
+      
+      if (!allowedExtensions.includes(fileExtension)) {
+        return res.status(400).json({
+          valid: false,
+          errors: ['File must be an Excel file (.xlsx or .xls)']
+        });
+      }
+
+      // Clean up uploaded file
+      try {
+        await fs.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.warn('Failed to clean up uploaded file:', cleanupError);
+      }
+
+      res.json({
+        valid: true,
+        message: 'File format is valid',
+        filename: req.file.originalname,
+        size: req.file.size
+      });
+
+    } catch (error) {
+      // Clean up uploaded file on error
+      if (req.file) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.warn('Failed to clean up uploaded file:', cleanupError);
+        }
+      }
+
+      this.handleError(error, res, 'File validation failed');
+    }
+  }
+}

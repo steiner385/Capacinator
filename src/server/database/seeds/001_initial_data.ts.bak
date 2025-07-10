@@ -1,0 +1,439 @@
+import { Knex } from 'knex';
+
+export async function seed(knex: Knex): Promise<void> {
+  console.log('🌱 Seeding initial data...');
+  
+  // Clear existing data (in reverse dependency order)
+  await knex('project_assignments').del();
+  await knex('demand_overrides').del();
+  await knex('project_phases_timeline').del();
+  await knex('standard_allocations').del();
+  await knex('projects').del();
+  await knex('person_roles').del();
+  await knex('people').del();
+  await knex('roles').del();
+  await knex('project_phases').del();
+  await knex('project_types').del();
+  await knex('locations').del();
+
+  // Seed locations
+  const locationIds = {
+    nyc: '550e8400-e29b-41d4-a716-446655440001',
+    sf: '550e8400-e29b-41d4-a716-446655440002',
+    london: '550e8400-e29b-41d4-a716-446655440003',
+    remote: '550e8400-e29b-41d4-a716-446655440004'
+  };
+
+  await knex('locations').insert([
+    {
+      id: locationIds.nyc,
+      name: 'New York City',
+      description: 'NYC headquarters and main development center'
+    },
+    {
+      id: locationIds.sf,
+      name: 'San Francisco',
+      description: 'West coast engineering hub'
+    },
+    {
+      id: locationIds.london,
+      name: 'London',
+      description: 'European operations center'
+    },
+    {
+      id: locationIds.remote,
+      name: 'Remote',
+      description: 'Distributed team members'
+    }
+  ]);
+
+  // Seed project types
+  const projectTypeIds = {
+    webApp: '550e8400-e29b-41d4-a716-446655440011',
+    mobileApp: '550e8400-e29b-41d4-a716-446655440012',
+    infrastructure: '550e8400-e29b-41d4-a716-446655440013',
+    maintenance: '550e8400-e29b-41d4-a716-446655440014'
+  };
+
+  await knex('project_types').insert([
+    {
+      id: projectTypeIds.webApp,
+      name: 'Web Application',
+      description: 'Frontend and backend web development projects',
+      color_code: '#3B82F6'
+    },
+    {
+      id: projectTypeIds.mobileApp,
+      name: 'Mobile Application',
+      description: 'iOS and Android mobile app development',
+      color_code: '#10B981'
+    },
+    {
+      id: projectTypeIds.infrastructure,
+      name: 'Infrastructure',
+      description: 'DevOps, cloud, and infrastructure projects',
+      color_code: '#F59E0B'
+    },
+    {
+      id: projectTypeIds.maintenance,
+      name: 'Maintenance',
+      description: 'Bug fixes, updates, and technical debt',
+      color_code: '#EF4444'
+    }
+  ]);
+
+  // Seed project phases
+  const phaseIds = {
+    planning: '550e8400-e29b-41d4-a716-446655440021',
+    design: '550e8400-e29b-41d4-a716-446655440022',
+    development: '550e8400-e29b-41d4-a716-446655440023',
+    testing: '550e8400-e29b-41d4-a716-446655440024',
+    deployment: '550e8400-e29b-41d4-a716-446655440025',
+    maintenance: '550e8400-e29b-41d4-a716-446655440026'
+  };
+
+  await knex('project_phases').insert([
+    {
+      id: phaseIds.planning,
+      name: 'Planning',
+      description: 'Requirements gathering and project planning',
+      order_index: 1
+    },
+    {
+      id: phaseIds.design,
+      name: 'Design',
+      description: 'UI/UX design and technical architecture',
+      order_index: 2
+    },
+    {
+      id: phaseIds.development,
+      name: 'Development',
+      description: 'Implementation and coding',
+      order_index: 3
+    },
+    {
+      id: phaseIds.testing,
+      name: 'Testing',
+      description: 'QA testing and bug fixes',
+      order_index: 4
+    },
+    {
+      id: phaseIds.deployment,
+      name: 'Deployment',
+      description: 'Production deployment and launch',
+      order_index: 5
+    },
+    {
+      id: phaseIds.maintenance,
+      name: 'Maintenance',
+      description: 'Post-launch support and updates',
+      order_index: 6
+    }
+  ]);
+
+  // Seed roles
+  const roleIds = {
+    projectManager: '550e8400-e29b-41d4-a716-446655440031',
+    techLead: '550e8400-e29b-41d4-a716-446655440032',
+    seniorDev: '550e8400-e29b-41d4-a716-446655440033',
+    juniorDev: '550e8400-e29b-41d4-a716-446655440034',
+    uxDesigner: '550e8400-e29b-41d4-a716-446655440035',
+    qaEngineer: '550e8400-e29b-41d4-a716-446655440036',
+    devOps: '550e8400-e29b-41d4-a716-446655440037',
+    productOwner: '550e8400-e29b-41d4-a716-446655440038'
+  };
+
+  await knex('roles').insert([
+    {
+      id: roleIds.projectManager,
+      name: 'Project Manager',
+      external_id: 'PM',
+      description: 'Manages project timeline, resources, and stakeholder communication'
+    },
+    {
+      id: roleIds.techLead,
+      name: 'Technical Lead',
+      external_id: 'TL',
+      description: 'Technical leadership and architecture decisions'
+    },
+    {
+      id: roleIds.seniorDev,
+      name: 'Senior Developer',
+      external_id: 'SR_DEV',
+      description: 'Experienced developer with mentoring responsibilities'
+    },
+    {
+      id: roleIds.juniorDev,
+      name: 'Junior Developer',
+      external_id: 'JR_DEV',
+      description: 'Entry-level developer focused on learning and growth'
+    },
+    {
+      id: roleIds.uxDesigner,
+      name: 'UX Designer',
+      external_id: 'UX',
+      description: 'User experience and interface design'
+    },
+    {
+      id: roleIds.qaEngineer,
+      name: 'QA Engineer',
+      external_id: 'QA',
+      description: 'Quality assurance testing and automation'
+    },
+    {
+      id: roleIds.devOps,
+      name: 'DevOps Engineer',
+      external_id: 'DEVOPS',
+      description: 'Infrastructure, deployment, and operations'
+    },
+    {
+      id: roleIds.productOwner,
+      name: 'Product Owner',
+      external_id: 'PO',
+      description: 'Product strategy and requirements definition'
+    }
+  ]);
+
+  // Seed people
+  const peopleIds = {
+    alice: '550e8400-e29b-41d4-a716-446655440041',
+    bob: '550e8400-e29b-41d4-a716-446655440042',
+    carol: '550e8400-e29b-41d4-a716-446655440043',
+    david: '550e8400-e29b-41d4-a716-446655440044',
+    eve: '550e8400-e29b-41d4-a716-446655440045',
+    frank: '550e8400-e29b-41d4-a716-446655440046',
+    grace: '550e8400-e29b-41d4-a716-446655440047',
+    henry: '550e8400-e29b-41d4-a716-446655440048'
+  };
+
+  await knex('people').insert([
+    {
+      id: peopleIds.alice,
+      name: 'Alice Johnson',
+      email: 'alice.johnson@company.com',
+      primary_role_id: roleIds.techLead,
+      worker_type: 'FTE',
+      supervisor_id: null, // Team lead, no supervisor in this dataset
+      default_availability_percentage: 80.0, // 80% - some management duties
+      default_hours_per_day: 6.4
+    },
+    {
+      id: peopleIds.bob,
+      name: 'Bob Smith',
+      email: 'bob.smith@company.com',
+      primary_role_id: roleIds.seniorDev,
+      worker_type: 'FTE',
+      supervisor_id: peopleIds.alice,
+      default_availability_percentage: 100.0,
+      default_hours_per_day: 8.0
+    },
+    {
+      id: peopleIds.carol,
+      name: 'Carol Williams',
+      email: 'carol.williams@company.com',
+      primary_role_id: roleIds.seniorDev,
+      worker_type: 'FTE',
+      supervisor_id: peopleIds.alice,
+      default_availability_percentage: 100.0,
+      default_hours_per_day: 8.0
+    },
+    {
+      id: peopleIds.david,
+      name: 'David Brown',
+      email: 'david.brown@company.com',
+      primary_role_id: roleIds.juniorDev,
+      worker_type: 'FTE',
+      supervisor_id: peopleIds.alice,
+      default_availability_percentage: 100.0,
+      default_hours_per_day: 8.0
+    },
+    {
+      id: peopleIds.eve,
+      name: 'Eve Davis',
+      email: 'eve.davis@company.com',
+      primary_role_id: roleIds.uxDesigner,
+      worker_type: 'FTE',
+      supervisor_id: null, // Design lead
+      default_availability_percentage: 100.0,
+      default_hours_per_day: 8.0
+    },
+    {
+      id: peopleIds.frank,
+      name: 'Frank Miller',
+      email: 'frank.miller@company.com',
+      primary_role_id: roleIds.qaEngineer,
+      worker_type: 'FTE',
+      supervisor_id: peopleIds.alice,
+      default_availability_percentage: 100.0,
+      default_hours_per_day: 8.0
+    },
+    {
+      id: peopleIds.grace,
+      name: 'Grace Wilson',
+      email: 'grace.wilson@company.com',
+      primary_role_id: roleIds.projectManager,
+      worker_type: 'FTE',
+      supervisor_id: null, // PM lead
+      default_availability_percentage: 75.0, // 75% - meetings and admin
+      default_hours_per_day: 6.0
+    },
+    {
+      id: peopleIds.henry,
+      name: 'Henry Taylor',
+      email: 'henry.taylor@company.com',
+      primary_role_id: roleIds.devOps,
+      worker_type: 'Contractor',
+      supervisor_id: peopleIds.alice,
+      default_availability_percentage: 100.0,
+      default_hours_per_day: 8.0
+    }
+  ]);
+
+  // Add role planners (who can manage capacity for each role)
+  await knex('role_planners').insert([
+    // Alice manages technical roles
+    {
+      role_id: roleIds.techLead,
+      person_id: peopleIds.alice,
+      is_primary: true,
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: true
+    },
+    {
+      role_id: roleIds.seniorDev,
+      person_id: peopleIds.alice,
+      is_primary: true,
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: true
+    },
+    {
+      role_id: roleIds.juniorDev,
+      person_id: peopleIds.alice,
+      is_primary: true,
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: true
+    },
+    {
+      role_id: roleIds.devOps,
+      person_id: peopleIds.alice,
+      is_primary: false, // Secondary planner
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: false
+    },
+    // Eve manages design roles
+    {
+      role_id: roleIds.uxDesigner,
+      person_id: peopleIds.eve,
+      is_primary: true,
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: true
+    },
+    // Grace manages PM and QA roles
+    {
+      role_id: roleIds.projectManager,
+      person_id: peopleIds.grace,
+      is_primary: true,
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: true
+    },
+    {
+      role_id: roleIds.qaEngineer,
+      person_id: peopleIds.grace,
+      is_primary: true,
+      can_allocate_resources: true,
+      can_approve_assignments: true,
+      can_modify_standard_allocations: true
+    }
+  ]);
+
+  // Seed standard allocations for Web Application projects
+  await knex('standard_allocations').insert([
+    // Planning phase
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.planning, role_id: roleIds.projectManager, allocation_percentage: 50.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.planning, role_id: roleIds.productOwner, allocation_percentage: 75.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.planning, role_id: roleIds.techLead, allocation_percentage: 25.0 },
+    
+    // Design phase
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.design, role_id: roleIds.uxDesigner, allocation_percentage: 100.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.design, role_id: roleIds.techLead, allocation_percentage: 50.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.design, role_id: roleIds.projectManager, allocation_percentage: 25.0 },
+    
+    // Development phase
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.development, role_id: roleIds.seniorDev, allocation_percentage: 100.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.development, role_id: roleIds.juniorDev, allocation_percentage: 100.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.development, role_id: roleIds.techLead, allocation_percentage: 30.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.development, role_id: roleIds.projectManager, allocation_percentage: 20.0 },
+    
+    // Testing phase
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.testing, role_id: roleIds.qaEngineer, allocation_percentage: 100.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.testing, role_id: roleIds.seniorDev, allocation_percentage: 25.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.testing, role_id: roleIds.projectManager, allocation_percentage: 20.0 },
+    
+    // Deployment phase
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.deployment, role_id: roleIds.devOps, allocation_percentage: 100.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.deployment, role_id: roleIds.techLead, allocation_percentage: 50.0 },
+    { project_type_id: projectTypeIds.webApp, phase_id: phaseIds.deployment, role_id: roleIds.projectManager, allocation_percentage: 30.0 }
+  ]);
+
+  // Create a sample project
+  const sampleProjectId = '550e8400-e29b-41d4-a716-446655440051';
+  await knex('projects').insert([
+    {
+      id: sampleProjectId,
+      name: 'Customer Portal Redesign',
+      project_type_id: projectTypeIds.webApp,
+      location_id: locationIds.nyc,
+      priority: 1,
+      description: 'Complete redesign of the customer-facing portal with modern UI and improved performance',
+      data_restrictions: 'PII data must be handled according to GDPR requirements',
+      include_in_demand: true,
+      aspiration_start: '2024-02-01',
+      aspiration_finish: '2024-05-31',
+      owner_id: peopleIds.grace
+    }
+  ]);
+
+  // Add project planners
+  await knex('project_planners').insert([
+    {
+      project_id: sampleProjectId,
+      person_id: peopleIds.grace,
+      permission_level: 'OWNER',
+      can_modify_type: true,
+      can_modify_roadmap: true,
+      can_add_overrides: true,
+      can_assign_resources: true,
+      is_primary_planner: true
+    },
+    {
+      project_id: sampleProjectId,
+      person_id: peopleIds.alice,
+      permission_level: 'PLANNER',
+      can_modify_type: false,
+      can_modify_roadmap: true,
+      can_add_overrides: true,
+      can_assign_resources: true,
+      is_primary_planner: false
+    }
+  ]);
+
+  // Add project phase timeline
+  await knex('project_phases_timeline').insert([
+    { project_id: sampleProjectId, phase_id: phaseIds.planning, start_date: '2024-02-01', end_date: '2024-02-14' },
+    { project_id: sampleProjectId, phase_id: phaseIds.design, start_date: '2024-02-15', end_date: '2024-03-15' },
+    { project_id: sampleProjectId, phase_id: phaseIds.development, start_date: '2024-03-16', end_date: '2024-04-30' },
+    { project_id: sampleProjectId, phase_id: phaseIds.testing, start_date: '2024-05-01', end_date: '2024-05-15' },
+    { project_id: sampleProjectId, phase_id: phaseIds.deployment, start_date: '2024-05-16', end_date: '2024-05-31' }
+  ]);
+
+  console.log('✅ Initial data seeded successfully!');
+  console.log(`   Created sample project: "${sampleProjectId}" (Customer Portal Redesign)`);
+  console.log('   Added 8 team members with different roles and availability');
+  console.log('   Configured standard allocations for Web Application projects');
+}

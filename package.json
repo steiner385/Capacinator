@@ -1,0 +1,132 @@
+{
+  "name": "capacinator",
+  "version": "1.0.0",
+  "description": "Web-based project capacity planning system",
+  "main": "src/electron/main.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:electron\"",
+    "dev:web": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:web:bg": "concurrently --raw \"npm run dev:server\" \"npm run dev:client\" > /tmp/capacinator-dev.log 2>&1 &",
+    "dev:server": "tsx watch --clear-screen=false src/server/index.ts",
+    "dev:client": "cd client && npm run dev",
+    "dev:electron": "wait-on http://localhost:3456 && electron .",
+    "build": "npm run build:server && npm run build:client && npm run build:electron",
+    "build:server": "tsc",
+    "build:client": "cd client && npm run build",
+    "build:electron": "electron-builder",
+    "start": "electron .",
+    "start:server": "node dist/server/index.js",
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:comprehensive": "tsx tests/e2e/run-all-scenarios.ts",
+    "test:e2e:enterprise": "playwright test tests/e2e/enterprise-expansion.spec.ts",
+    "test:e2e:agile": "playwright test tests/e2e/agile-product-development.spec.ts",
+    "test:e2e:consulting": "playwright test tests/e2e/consulting-services.spec.ts",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "db:init": "tsx src/server/database/init.ts",
+    "db:migrate": "tsx src/server/database/migrate.ts",
+    "db:seed": "tsx src/server/database/seed.ts",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@types/multer": "^2.0.0",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.2.0",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.1.0",
+    "electron-store": "^10.1.0",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "node-cron": "^4.2.0",
+    "puppeteer-core": "^24.12.1",
+    "socket.io": "^4.8.1",
+    "zod": "^3.25.76"
+  },
+  "build": {
+    "appId": "com.capacinator.app",
+    "productName": "Capacinator",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "src/electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
+    "@playwright/test": "^1.53.2",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/form-data": "^2.5.2",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.0.11",
+    "@types/node-cron": "^3.0.11",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.30.1",
+    "form-data": "^4.0.3",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.4.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "wait-on": "^8.0.3"
+  }
+}
