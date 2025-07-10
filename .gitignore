@@ -16,7 +16,10 @@ client/build/
 # Database
 *.db
 *.sqlite
+*.db-shm
+*.db-wal
 prisma/migrations/
+data/
 
 # Logs
 logs/
@@ -39,6 +42,12 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Test reports
+test-results/
+playwright-report/
+client/test-results/
+client/playwright-report/
+
 # Temporary files
 tmp/
 temp/
@@ -54,3 +63,6 @@ uploads/
 
 # Production builds
 build/
+
+# Server logs
+server.log
