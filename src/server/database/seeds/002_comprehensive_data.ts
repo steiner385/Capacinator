@@ -147,6 +147,7 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('people').del();
   await knex('roles').del();
   await knex('project_phases').del();
+  await knex('project_sub_types').del(); // Delete sub-types first due to foreign key
   await knex('project_types').del();
   await knex('locations').del();
 
@@ -181,8 +182,9 @@ export async function seed(knex: Knex): Promise<void> {
     }
   ]);
 
-  // Seed project types
+  // Seed project types (parent types)
   const projectTypeIds = {
+    // Parent project types
     aiml: '0fa42dcf-6408-48a4-ba86-733a1c48729a',
     cloudMigration: '1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e',
     dataAnalytics: '2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f',
@@ -192,9 +194,60 @@ export async function seed(knex: Knex): Promise<void> {
     webApp: '3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8a',
     security: '4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b',
     productDev: '5f6a7b8c-9d0e-1f2a-3b4c-5d6e7f8a9b0c',
-    rnd: '45c0bb7f-a140-4317-b390-d824038f8861'
+    rnd: '45c0bb7f-a140-4317-b390-d824038f8861',
+    
+    // Child project types - AI/ML Platform
+    computerVision: 'cv101010-2020-3030-4040-506070809010',
+    nlpPlatform: 'nlp20202-3030-4040-5050-607080901020',
+    mlOps: 'mlops303-4040-5050-6060-708090102030',
+    
+    // Child project types - Cloud Migration
+    awsMigration: 'aws40404-5050-6060-7070-809010203040',
+    azureMigration: 'azure505-6060-7070-8080-901020304050',
+    gcpMigration: 'gcp60606-7070-8080-9090-102030405060',
+    
+    // Child project types - Mobile Application
+    iosApp: 'ios70707-8080-9090-1010-203040506070',
+    androidApp: 'andr8080-9090-1010-2020-304050607080',
+    reactNative: 'rn909090-1010-2020-3030-405060708090',
+    
+    // Child project types - Web Application
+    reactApp: 'react101-2020-3030-4040-506070809101',
+    vueApp: 'vue11111-2020-3030-4040-506070809111',
+    angularApp: 'ang12121-3030-4040-5050-607080910121',
+    
+    // Child project types - Security
+    penTesting: 'pen13131-4040-5050-6060-708091013131',
+    compliance: 'comp1414-5050-6060-7070-809101314141',
+    encryption: 'enc15151-6060-7070-8080-910131415151',
+    
+    // Child project types - Data Analytics
+    dataWarehouse: 'dw161616-7070-8080-9090-101316161616',
+    businessIntel: 'bi171717-8080-9090-1010-201417171717',
+    realtimeAnalytics: 'rt181818-9090-1010-2020-301518181818',
+    
+    // Child project types - Infrastructure
+    cloudInfra: 'ci191919-1010-2020-3030-401619191919',
+    onPremInfra: 'op202020-2020-3030-4040-502020202020',
+    hybridInfra: 'hi212121-3030-4040-5050-602121212121',
+    
+    // Child project types - Integration
+    apiIntegration: 'api22222-4040-5050-6060-702222222222',
+    dataIntegration: 'di232323-5050-6060-7070-802323232323',
+    systemIntegration: 'si242424-6060-7070-8080-902424242424',
+    
+    // Child project types - Product Development
+    mvpDevelopment: 'mvp25252-7070-8080-9090-102525252525',
+    featureRollout: 'fr262626-8080-9090-1010-202626262626',
+    productLaunch: 'pl272727-9090-1010-2020-302727272727',
+    
+    // Child project types - Research & Development
+    prototypeRnD: 'pr282828-1010-2020-3030-402828282828',
+    techResearch: 'tr292929-2020-3030-4040-502929292929',
+    experimentalRnD: 'ex303030-3030-4040-5050-603030303030'
   };
 
+  // Insert project types (parent level)
   await knex('project_types').insert([
     { id: projectTypeIds.aiml, name: 'AI/ML Platform', description: 'AI and machine learning platform projects', color_code: '#8B5CF6' },
     { id: projectTypeIds.cloudMigration, name: 'Cloud Migration', description: 'Cloud infrastructure migration projects', color_code: '#06B6D4' },
@@ -206,6 +259,59 @@ export async function seed(knex: Knex): Promise<void> {
     { id: projectTypeIds.security, name: 'Security', description: 'Security and compliance projects', color_code: '#DC2626' },
     { id: projectTypeIds.productDev, name: 'Product Development', description: 'New product development projects', color_code: '#7C3AED' },
     { id: projectTypeIds.rnd, name: 'Research & Development', description: 'Research and experimental projects', color_code: '#059669' }
+  ]);
+
+  // Insert project sub-types (child level)
+  await knex('project_sub_types').insert([
+    // AI/ML Platform sub-types
+    { id: projectTypeIds.computerVision, project_type_id: projectTypeIds.aiml, name: 'Computer Vision Platform', description: 'Computer vision and image recognition systems', color_code: '#9333EA' },
+    { id: projectTypeIds.nlpPlatform, project_type_id: projectTypeIds.aiml, name: 'NLP Platform', description: 'Natural language processing and text analysis', color_code: '#7C3AED' },
+    { id: projectTypeIds.mlOps, project_type_id: projectTypeIds.aiml, name: 'MLOps Platform', description: 'Machine learning operations and deployment', color_code: '#6D28D9' },
+    
+    // Cloud Migration sub-types
+    { id: projectTypeIds.awsMigration, project_type_id: projectTypeIds.cloudMigration, name: 'AWS Migration', description: 'Migration to Amazon Web Services', color_code: '#0891B2' },
+    { id: projectTypeIds.azureMigration, project_type_id: projectTypeIds.cloudMigration, name: 'Azure Migration', description: 'Migration to Microsoft Azure', color_code: '#0E7490' },
+    { id: projectTypeIds.gcpMigration, project_type_id: projectTypeIds.cloudMigration, name: 'GCP Migration', description: 'Migration to Google Cloud Platform', color_code: '#155E75' },
+    
+    // Mobile Application sub-types
+    { id: projectTypeIds.iosApp, project_type_id: projectTypeIds.mobileApp, name: 'iOS Application', description: 'Native iOS mobile applications', color_code: '#2563EB' },
+    { id: projectTypeIds.androidApp, project_type_id: projectTypeIds.mobileApp, name: 'Android Application', description: 'Native Android mobile applications', color_code: '#1D4ED8' },
+    { id: projectTypeIds.reactNative, project_type_id: projectTypeIds.mobileApp, name: 'React Native App', description: 'Cross-platform React Native applications', color_code: '#1E40AF' },
+    
+    // Web Application sub-types
+    { id: projectTypeIds.reactApp, project_type_id: projectTypeIds.webApp, name: 'React Application', description: 'React-based web applications', color_code: '#4F46E5' },
+    { id: projectTypeIds.vueApp, project_type_id: projectTypeIds.webApp, name: 'Vue Application', description: 'Vue.js-based web applications', color_code: '#4338CA' },
+    { id: projectTypeIds.angularApp, project_type_id: projectTypeIds.webApp, name: 'Angular Application', description: 'Angular-based web applications', color_code: '#3730A3' },
+    
+    // Security sub-types
+    { id: projectTypeIds.penTesting, project_type_id: projectTypeIds.security, name: 'Penetration Testing', description: 'Security penetration testing and vulnerability assessment', color_code: '#B91C1C' },
+    { id: projectTypeIds.compliance, project_type_id: projectTypeIds.security, name: 'Compliance & Audit', description: 'Security compliance and audit projects', color_code: '#991B1B' },
+    { id: projectTypeIds.encryption, project_type_id: projectTypeIds.security, name: 'Encryption & PKI', description: 'Encryption and public key infrastructure projects', color_code: '#7F1D1D' },
+    
+    // Data Analytics sub-types
+    { id: projectTypeIds.dataWarehouse, project_type_id: projectTypeIds.dataAnalytics, name: 'Data Warehouse', description: 'Enterprise data warehouse and ETL systems', color_code: '#059669', is_default: true },
+    { id: projectTypeIds.businessIntel, project_type_id: projectTypeIds.dataAnalytics, name: 'Business Intelligence', description: 'BI dashboards and reporting solutions', color_code: '#047857' },
+    { id: projectTypeIds.realtimeAnalytics, project_type_id: projectTypeIds.dataAnalytics, name: 'Real-time Analytics', description: 'Streaming analytics and real-time data processing', color_code: '#065F46' },
+    
+    // Infrastructure sub-types
+    { id: projectTypeIds.cloudInfra, project_type_id: projectTypeIds.infrastructure, name: 'Cloud Infrastructure', description: 'Cloud-based infrastructure and platform services', color_code: '#D97706', is_default: true },
+    { id: projectTypeIds.onPremInfra, project_type_id: projectTypeIds.infrastructure, name: 'On-Premise Infrastructure', description: 'On-premise hardware and network infrastructure', color_code: '#B45309' },
+    { id: projectTypeIds.hybridInfra, project_type_id: projectTypeIds.infrastructure, name: 'Hybrid Infrastructure', description: 'Hybrid cloud and on-premise infrastructure', color_code: '#92400E' },
+    
+    // Integration sub-types
+    { id: projectTypeIds.apiIntegration, project_type_id: projectTypeIds.integration, name: 'API Integration', description: 'REST and GraphQL API integration projects', color_code: '#DC2626', is_default: true },
+    { id: projectTypeIds.dataIntegration, project_type_id: projectTypeIds.integration, name: 'Data Integration', description: 'ETL and data pipeline integration', color_code: '#B91C1C' },
+    { id: projectTypeIds.systemIntegration, project_type_id: projectTypeIds.integration, name: 'System Integration', description: 'Enterprise system and service integration', color_code: '#991B1B' },
+    
+    // Product Development sub-types
+    { id: projectTypeIds.mvpDevelopment, project_type_id: projectTypeIds.productDev, name: 'MVP Development', description: 'Minimum viable product development', color_code: '#7C3AED', is_default: true },
+    { id: projectTypeIds.featureRollout, project_type_id: projectTypeIds.productDev, name: 'Feature Rollout', description: 'New feature development and rollout', color_code: '#6D28D9' },
+    { id: projectTypeIds.productLaunch, project_type_id: projectTypeIds.productDev, name: 'Product Launch', description: 'Full product launch and go-to-market', color_code: '#5B21B6' },
+    
+    // Research & Development sub-types
+    { id: projectTypeIds.prototypeRnD, project_type_id: projectTypeIds.rnd, name: 'Prototype R&D', description: 'Prototype development and proof-of-concept', color_code: '#059669', is_default: true },
+    { id: projectTypeIds.techResearch, project_type_id: projectTypeIds.rnd, name: 'Technology Research', description: 'Technology evaluation and research', color_code: '#047857' },
+    { id: projectTypeIds.experimentalRnD, project_type_id: projectTypeIds.rnd, name: 'Experimental R&D', description: 'Experimental research and innovation projects', color_code: '#065F46' }
   ]);
 
   // Seed project phases
@@ -365,55 +471,291 @@ export async function seed(knex: Knex): Promise<void> {
     { person_id: peopleIds.henry, role_id: roleIds.dataAnalyst }
   ]);
 
-  // Create a sample project
-  const sampleProjectId = '987fcdeb-51a2-4b3c-d4e5-f6a7b8c9d0e1';
+  // Create multiple sample projects
+  const projectIds = {
+    customerPortal: '987fcdeb-51a2-4b3c-d4e5-f6a7b8c9d0e1',
+    aiChatbot: 'proj2222-51a2-4b3c-d4e5-f6a7b8c9d0e2',
+    mobileApp: 'proj3333-51a2-4b3c-d4e5-f6a7b8c9d0e3',
+    cloudMigration: 'proj4444-51a2-4b3c-d4e5-f6a7b8c9d0e4',
+    securityAudit: 'proj5555-51a2-4b3c-d4e5-f6a7b8c9d0e5',
+    dataWarehouse: 'proj6666-51a2-4b3c-d4e5-f6a7b8c9d0e6',
+    iosApp: 'proj7777-51a2-4b3c-d4e5-f6a7b8c9d0e7',
+    mlPlatform: 'proj8888-51a2-4b3c-d4e5-f6a7b8c9d0e8',
+    complianceProject: 'proj9999-51a2-4b3c-d4e5-f6a7b8c9d0e9',
+    ecommerce: 'proj1010-51a2-4b3c-d4e5-f6a7b8c9d010'
+  };
+
   await knex('projects').insert([
     {
-      id: sampleProjectId,
+      id: projectIds.customerPortal,
       name: 'Customer Portal Redesign',
       description: 'Modernize the customer portal with new UI/UX and improved functionality',
       project_type_id: projectTypeIds.webApp,
+      project_sub_type_id: projectTypeIds.reactApp,
       location_id: locationIds.nyc,
       priority: 2,
       owner_id: peopleIds.grace,
       data_restrictions: 'Customer data must be handled according to GDPR requirements',
       include_in_demand: true,
-      external_id: 'CUST-2024-001'
-    }
-  ]);
-
-  // Add project planners
-  await knex('project_planners').insert([
-    {
-      project_id: sampleProjectId,
-      person_id: peopleIds.grace,
-      permission_level: 'OWNER',
-      can_modify_type: true,
-      can_modify_roadmap: true,
-      can_add_overrides: true,
-      can_assign_resources: true,
-      is_primary_planner: true
+      external_id: 'CUST-2023-001',
+      aspiration_start: '2023-10-01',
+      aspiration_finish: '2023-12-31'
     },
     {
-      project_id: sampleProjectId,
-      person_id: peopleIds.alice,
-      permission_level: 'PLANNER',
-      can_modify_type: false,
-      can_modify_roadmap: true,
-      can_add_overrides: true,
-      can_assign_resources: true,
-      is_primary_planner: false
+      id: projectIds.aiChatbot,
+      name: 'AI Customer Support Chatbot',
+      description: 'Implement an AI-powered chatbot for customer support using NLP',
+      project_type_id: projectTypeIds.aiml,
+      project_sub_type_id: projectTypeIds.nlpPlatform,
+      location_id: locationIds.sf,
+      priority: 1,
+      owner_id: peopleIds.henry,
+      data_restrictions: 'Customer conversation data privacy requirements',
+      include_in_demand: true,
+      external_id: 'AI-2023-002',
+      aspiration_start: '2023-08-01',
+      aspiration_finish: '2023-11-30'
+    },
+    {
+      id: projectIds.mobileApp,
+      name: 'Mobile Banking App',
+      description: 'Native iOS mobile application for banking services',
+      project_type_id: projectTypeIds.mobileApp,
+      project_sub_type_id: projectTypeIds.iosApp,
+      location_id: locationIds.nyc,
+      priority: 1,
+      owner_id: peopleIds.frank,
+      data_restrictions: 'Financial data security requirements, PCI DSS compliance',
+      include_in_demand: true,
+      external_id: 'MOB-2023-003',
+      aspiration_start: '2023-05-01',
+      aspiration_finish: '2023-09-15'
+    },
+    {
+      id: projectIds.cloudMigration,
+      name: 'Legacy System AWS Migration',
+      description: 'Migrate legacy monolithic application to AWS microservices',
+      project_type_id: projectTypeIds.cloudMigration,
+      project_sub_type_id: projectTypeIds.awsMigration,
+      location_id: locationIds.remote,
+      priority: 2,
+      owner_id: peopleIds.eve,
+      data_restrictions: 'Enterprise data migration security protocols',
+      include_in_demand: true,
+      external_id: 'AWS-2024-004',
+      aspiration_start: '2024-03-01',
+      aspiration_finish: '2024-10-31'
+    },
+    {
+      id: projectIds.securityAudit,
+      name: 'Security Penetration Testing',
+      description: 'Comprehensive security audit and penetration testing of all systems',
+      project_type_id: projectTypeIds.security,
+      project_sub_type_id: projectTypeIds.penTesting,
+      location_id: locationIds.london,
+      priority: 1,
+      owner_id: peopleIds.alice,
+      data_restrictions: 'Confidential security findings, limited access',
+      include_in_demand: true,
+      external_id: 'SEC-2024-005',
+      aspiration_start: '2024-06-01',
+      aspiration_finish: '2024-12-15'
+    },
+    {
+      id: projectIds.dataWarehouse,
+      name: 'Enterprise Data Analytics Platform',
+      description: 'Build comprehensive data warehouse and analytics platform',
+      project_type_id: projectTypeIds.dataAnalytics,
+      project_sub_type_id: projectTypeIds.dataWarehouse,
+      location_id: locationIds.sf,
+      priority: 2,
+      owner_id: peopleIds.henry,
+      data_restrictions: 'Sensitive business intelligence data',
+      include_in_demand: true,
+      external_id: 'DATA-2024-006',
+      aspiration_start: '2024-09-01',
+      aspiration_finish: '2025-03-31'
+    },
+    {
+      id: projectIds.iosApp,
+      name: 'Fitness Tracking iOS App',
+      description: 'Native iOS fitness and health tracking application',
+      project_type_id: projectTypeIds.mobileApp,
+      project_sub_type_id: projectTypeIds.iosApp,
+      location_id: locationIds.sf,
+      priority: 3,
+      owner_id: peopleIds.frank,
+      data_restrictions: 'Health data privacy (HIPAA considerations)',
+      include_in_demand: true,
+      external_id: 'FIT-2025-007',
+      aspiration_start: '2025-02-01',
+      aspiration_finish: '2025-07-31'
+    },
+    {
+      id: projectIds.mlPlatform,
+      name: 'Computer Vision Platform',
+      description: 'Machine learning platform for image recognition and analysis',
+      project_type_id: projectTypeIds.aiml,
+      project_sub_type_id: projectTypeIds.computerVision,
+      location_id: locationIds.sf,
+      priority: 1,
+      owner_id: peopleIds.henry,
+      data_restrictions: 'Proprietary ML models and training data',
+      include_in_demand: true,
+      external_id: 'CV-2025-008',
+      aspiration_start: '2025-04-01',
+      aspiration_finish: '2025-10-30'
+    },
+    {
+      id: projectIds.complianceProject,
+      name: 'SOX Compliance Automation',
+      description: 'Automate Sarbanes-Oxley compliance reporting and controls',
+      project_type_id: projectTypeIds.security,
+      project_sub_type_id: projectTypeIds.compliance,
+      location_id: locationIds.nyc,
+      priority: 1,
+      owner_id: peopleIds.alice,
+      data_restrictions: 'Financial audit data, SOX compliance requirements',
+      include_in_demand: true,
+      external_id: 'SOX-2025-009',
+      aspiration_start: '2025-06-01',
+      aspiration_finish: '2025-11-15'
+    },
+    {
+      id: projectIds.ecommerce,
+      name: 'E-commerce Platform Modernization',
+      description: 'Modernize e-commerce platform with Vue.js and microservices',
+      project_type_id: projectTypeIds.webApp,
+      project_sub_type_id: projectTypeIds.vueApp,
+      location_id: locationIds.london,
+      priority: 2,
+      owner_id: peopleIds.grace,
+      data_restrictions: 'Customer payment data, PCI DSS compliance',
+      include_in_demand: true,
+      external_id: 'ECOM-2025-010',
+      aspiration_start: '2025-08-01',
+      aspiration_finish: '2026-01-30'
     }
   ]);
 
-  // Add project phase timeline
-  await knex('project_phases_timeline').insert([
-    { project_id: sampleProjectId, phase_id: phaseIds.planning, start_date: '2024-02-01', end_date: '2024-02-14' },
-    { project_id: sampleProjectId, phase_id: phaseIds.development, start_date: '2024-02-15', end_date: '2024-04-30' },
-    { project_id: sampleProjectId, phase_id: phaseIds.testing, start_date: '2024-05-01', end_date: '2024-05-15' },
-    { project_id: sampleProjectId, phase_id: phaseIds.uat, start_date: '2024-05-16', end_date: '2024-05-31' },
-    { project_id: sampleProjectId, phase_id: phaseIds.cutover, start_date: '2024-06-01', end_date: '2024-06-07' }
-  ]);
+  // Add project planners for all projects
+  const projectPlanners = [];
+  Object.values(projectIds).forEach(projectId => {
+    // Add owner as primary planner based on the project's owner_id
+    const project = [
+      { id: projectIds.customerPortal, owner: peopleIds.grace },
+      { id: projectIds.aiChatbot, owner: peopleIds.henry },
+      { id: projectIds.mobileApp, owner: peopleIds.frank },
+      { id: projectIds.cloudMigration, owner: peopleIds.eve },
+      { id: projectIds.securityAudit, owner: peopleIds.alice },
+      { id: projectIds.dataWarehouse, owner: peopleIds.henry },
+      { id: projectIds.iosApp, owner: peopleIds.frank },
+      { id: projectIds.mlPlatform, owner: peopleIds.henry },
+      { id: projectIds.complianceProject, owner: peopleIds.alice },
+      { id: projectIds.ecommerce, owner: peopleIds.grace }
+    ].find(p => p.id === projectId);
+
+    if (project) {
+      projectPlanners.push({
+        project_id: projectId,
+        person_id: project.owner,
+        permission_level: 'OWNER',
+        can_modify_type: true,
+        can_modify_roadmap: true,
+        can_add_overrides: true,
+        can_assign_resources: true,
+        is_primary_planner: true
+      });
+
+      // Add Alice as a secondary planner for most projects
+      if (project.owner !== peopleIds.alice) {
+        projectPlanners.push({
+          project_id: projectId,
+          person_id: peopleIds.alice,
+          permission_level: 'PLANNER',
+          can_modify_type: false,
+          can_modify_roadmap: true,
+          can_add_overrides: true,
+          can_assign_resources: true,
+          is_primary_planner: false
+        });
+      }
+    }
+  });
+
+  await knex('project_planners').insert(projectPlanners);
+
+  // Add project phase timelines for all projects
+  const projectPhaseTimelines = [
+    // Customer Portal Redesign (2023-10-01 to 2023-12-31)
+    { project_id: projectIds.customerPortal, phase_id: phaseIds.planning, start_date: '2023-10-01', end_date: '2023-10-15' },
+    { project_id: projectIds.customerPortal, phase_id: phaseIds.development, start_date: '2023-10-16', end_date: '2023-11-30' },
+    { project_id: projectIds.customerPortal, phase_id: phaseIds.testing, start_date: '2023-12-01', end_date: '2023-12-15' },
+    { project_id: projectIds.customerPortal, phase_id: phaseIds.uat, start_date: '2023-12-16', end_date: '2023-12-25' },
+    { project_id: projectIds.customerPortal, phase_id: phaseIds.cutover, start_date: '2023-12-26', end_date: '2023-12-31' },
+
+    // AI Customer Support Chatbot (2023-08-01 to 2023-11-30)
+    { project_id: projectIds.aiChatbot, phase_id: phaseIds.planning, start_date: '2023-08-01', end_date: '2023-08-15' },
+    { project_id: projectIds.aiChatbot, phase_id: phaseIds.development, start_date: '2023-08-16', end_date: '2023-10-15' },
+    { project_id: projectIds.aiChatbot, phase_id: phaseIds.testing, start_date: '2023-10-16', end_date: '2023-11-01' },
+    { project_id: projectIds.aiChatbot, phase_id: phaseIds.uat, start_date: '2023-11-02', end_date: '2023-11-15' },
+    { project_id: projectIds.aiChatbot, phase_id: phaseIds.cutover, start_date: '2023-11-16', end_date: '2023-11-30' },
+
+    // Mobile Banking App (2023-05-01 to 2023-09-15)
+    { project_id: projectIds.mobileApp, phase_id: phaseIds.planning, start_date: '2023-05-01', end_date: '2023-05-15' },
+    { project_id: projectIds.mobileApp, phase_id: phaseIds.development, start_date: '2023-05-16', end_date: '2023-07-31' },
+    { project_id: projectIds.mobileApp, phase_id: phaseIds.testing, start_date: '2023-08-01', end_date: '2023-08-15' },
+    { project_id: projectIds.mobileApp, phase_id: phaseIds.uat, start_date: '2023-08-16', end_date: '2023-09-01' },
+    { project_id: projectIds.mobileApp, phase_id: phaseIds.cutover, start_date: '2023-09-02', end_date: '2023-09-15' },
+
+    // Legacy System AWS Migration (2024-03-01 to 2024-10-31)
+    { project_id: projectIds.cloudMigration, phase_id: phaseIds.planning, start_date: '2024-03-01', end_date: '2024-03-31' },
+    { project_id: projectIds.cloudMigration, phase_id: phaseIds.development, start_date: '2024-04-01', end_date: '2024-07-31' },
+    { project_id: projectIds.cloudMigration, phase_id: phaseIds.testing, start_date: '2024-08-01', end_date: '2024-09-15' },
+    { project_id: projectIds.cloudMigration, phase_id: phaseIds.uat, start_date: '2024-09-16', end_date: '2024-10-15' },
+    { project_id: projectIds.cloudMigration, phase_id: phaseIds.cutover, start_date: '2024-10-16', end_date: '2024-10-31' },
+
+    // Security Penetration Testing (2024-06-01 to 2024-12-15)
+    { project_id: projectIds.securityAudit, phase_id: phaseIds.planning, start_date: '2024-06-01', end_date: '2024-06-30' },
+    { project_id: projectIds.securityAudit, phase_id: phaseIds.development, start_date: '2024-07-01', end_date: '2024-10-31' },
+    { project_id: projectIds.securityAudit, phase_id: phaseIds.testing, start_date: '2024-11-01', end_date: '2024-11-30' },
+    { project_id: projectIds.securityAudit, phase_id: phaseIds.uat, start_date: '2024-12-01', end_date: '2024-12-15' },
+
+    // Enterprise Data Analytics Platform (2024-09-01 to 2025-03-31)
+    { project_id: projectIds.dataWarehouse, phase_id: phaseIds.planning, start_date: '2024-09-01', end_date: '2024-09-30' },
+    { project_id: projectIds.dataWarehouse, phase_id: phaseIds.development, start_date: '2024-10-01', end_date: '2025-01-31' },
+    { project_id: projectIds.dataWarehouse, phase_id: phaseIds.testing, start_date: '2025-02-01', end_date: '2025-02-28' },
+    { project_id: projectIds.dataWarehouse, phase_id: phaseIds.uat, start_date: '2025-03-01', end_date: '2025-03-15' },
+    { project_id: projectIds.dataWarehouse, phase_id: phaseIds.cutover, start_date: '2025-03-16', end_date: '2025-03-31' },
+
+    // Fitness Tracking iOS App (2025-02-01 to 2025-07-31)
+    { project_id: projectIds.iosApp, phase_id: phaseIds.planning, start_date: '2025-02-01', end_date: '2025-02-28' },
+    { project_id: projectIds.iosApp, phase_id: phaseIds.development, start_date: '2025-03-01', end_date: '2025-05-31' },
+    { project_id: projectIds.iosApp, phase_id: phaseIds.testing, start_date: '2025-06-01', end_date: '2025-06-30' },
+    { project_id: projectIds.iosApp, phase_id: phaseIds.uat, start_date: '2025-07-01', end_date: '2025-07-15' },
+    { project_id: projectIds.iosApp, phase_id: phaseIds.cutover, start_date: '2025-07-16', end_date: '2025-07-31' },
+
+    // Computer Vision Platform (2025-04-01 to 2025-10-30)
+    { project_id: projectIds.mlPlatform, phase_id: phaseIds.planning, start_date: '2025-04-01', end_date: '2025-04-30' },
+    { project_id: projectIds.mlPlatform, phase_id: phaseIds.development, start_date: '2025-05-01', end_date: '2025-08-31' },
+    { project_id: projectIds.mlPlatform, phase_id: phaseIds.testing, start_date: '2025-09-01', end_date: '2025-09-30' },
+    { project_id: projectIds.mlPlatform, phase_id: phaseIds.uat, start_date: '2025-10-01', end_date: '2025-10-15' },
+    { project_id: projectIds.mlPlatform, phase_id: phaseIds.cutover, start_date: '2025-10-16', end_date: '2025-10-30' },
+
+    // SOX Compliance Automation (2025-06-01 to 2025-11-15)
+    { project_id: projectIds.complianceProject, phase_id: phaseIds.planning, start_date: '2025-06-01', end_date: '2025-06-30' },
+    { project_id: projectIds.complianceProject, phase_id: phaseIds.development, start_date: '2025-07-01', end_date: '2025-09-30' },
+    { project_id: projectIds.complianceProject, phase_id: phaseIds.testing, start_date: '2025-10-01', end_date: '2025-10-31' },
+    { project_id: projectIds.complianceProject, phase_id: phaseIds.uat, start_date: '2025-11-01', end_date: '2025-11-15' },
+
+    // E-commerce Platform Modernization (2025-08-01 to 2026-01-30)
+    { project_id: projectIds.ecommerce, phase_id: phaseIds.planning, start_date: '2025-08-01', end_date: '2025-08-31' },
+    { project_id: projectIds.ecommerce, phase_id: phaseIds.development, start_date: '2025-09-01', end_date: '2025-12-15' },
+    { project_id: projectIds.ecommerce, phase_id: phaseIds.testing, start_date: '2025-12-16', end_date: '2026-01-15' },
+    { project_id: projectIds.ecommerce, phase_id: phaseIds.uat, start_date: '2026-01-16', end_date: '2026-01-30' }
+  ];
+
+  await knex('project_phases_timeline').insert(projectPhaseTimelines);
 
   // Now seed resource templates
   console.log('🌱 Seeding resource templates...');
@@ -426,9 +768,14 @@ export async function seed(knex: Knex): Promise<void> {
   const resourceTemplates = [];
   let templateCount = 0;
   
-  // Generate resource templates for each combination
-  for (const projectType of projectTypes) {
-    const projectTypeAllocations = allocationMatrix[projectType.name] || defaultAllocations;
+  // Get all project sub-types that we just created
+  const projectSubTypes = await knex('project_sub_types').select('*');
+  
+  // Generate resource templates for each project sub-type combination
+  for (const projectSubType of projectSubTypes) {
+    // Get the parent project type to determine allocations
+    const parentProjectType = projectTypes.find(pt => pt.id === projectSubType.project_type_id);
+    const projectTypeAllocations = parentProjectType ? (allocationMatrix[parentProjectType.name] || defaultAllocations) : defaultAllocations;
     
     for (const phase of phases) {
       const phaseAllocations = projectTypeAllocations[phase.name] || {};
@@ -439,7 +786,7 @@ export async function seed(knex: Knex): Promise<void> {
         if (allocationPercentage && allocationPercentage > 0) {
           resourceTemplates.push({
             id: uuidv4(),
-            project_type_id: projectType.id,
+            project_sub_type_id: projectSubType.id,
             phase_id: phase.id,
             role_id: role.id,
             allocation_percentage: allocationPercentage,
@@ -459,13 +806,109 @@ export async function seed(knex: Knex): Promise<void> {
     await knex('resource_templates').insert(batch);
   }
 
+  // Insert meaningful project assignments
+  console.log('🔧 Creating project assignments...');
+  const projectAssignments = [];
+  let assignmentCount = 0;
+  
+  // Get created projects and people for assignments
+  const createdProjects = await knex('projects').select('*');
+  const createdPeople = await knex('people').select('*');
+  const createdRoles = await knex('roles').select('*');
+  const createdPhases = await knex('project_phases').select('*');
+  
+  // Create assignments for a few key projects to reduce gaps
+  const activeProjects = createdProjects.slice(0, 6); // Assign people to first 6 projects
+  
+  for (const project of activeProjects) {
+    // Get project phase timeline entries for this project
+    const projectPhases = await knex('project_phases_timeline')
+      .where('project_id', project.id)
+      .select('*');
+    
+    // Assign key people to key roles for each phase
+    for (const phaseEntry of projectPhases.slice(0, 3)) { // Assign to first 3 phases per project
+      // Assign Project Manager (assuming first person is PM)
+      const pmRole = createdRoles.find(r => r.name === 'Project Manager');
+      const pmPerson = createdPeople[0]; // First person as PM
+      
+      if (pmRole && pmPerson) {
+        projectAssignments.push({
+          id: uuidv4(),
+          project_id: project.id,
+          person_id: pmPerson.id,
+          role_id: pmRole.id,
+          phase_id: phaseEntry.phase_id,
+          start_date: phaseEntry.start_date,
+          end_date: phaseEntry.end_date,
+          allocation_percentage: 75, // 75% allocation
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        assignmentCount++;
+      }
+      
+      // Assign Senior Developer
+      const devRole = createdRoles.find(r => r.name === 'Senior Developer');
+      const devPerson = createdPeople[1]; // Second person as developer
+      
+      if (devRole && devPerson) {
+        projectAssignments.push({
+          id: uuidv4(),
+          project_id: project.id,
+          person_id: devPerson.id,
+          role_id: devRole.id,
+          phase_id: phaseEntry.phase_id,
+          start_date: phaseEntry.start_date,
+          end_date: phaseEntry.end_date,
+          allocation_percentage: 80, // 80% allocation
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        assignmentCount++;
+      }
+      
+      // Assign QA Engineer
+      const qaRole = createdRoles.find(r => r.name === 'QA Engineer');
+      const qaPerson = createdPeople[2]; // Third person as QA
+      
+      if (qaRole && qaPerson) {
+        projectAssignments.push({
+          id: uuidv4(),
+          project_id: project.id,
+          person_id: qaPerson.id,
+          role_id: qaRole.id,
+          phase_id: phaseEntry.phase_id,
+          start_date: phaseEntry.start_date,
+          end_date: phaseEntry.end_date,
+          allocation_percentage: 60, // 60% allocation
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        assignmentCount++;
+      }
+    }
+  }
+  
+  // Insert assignments in batches
+  if (projectAssignments.length > 0) {
+    const batchSize = 50;
+    for (let i = 0; i < projectAssignments.length; i += batchSize) {
+      const batch = projectAssignments.slice(i, i + batchSize);
+      await knex('project_assignments').insert(batch);
+    }
+  }
+
   console.log('✅ Comprehensive data seeding completed!');
   console.log(`   📍 Locations: 4`);
   console.log(`   📋 Project types: ${projectTypes.length}`);
+  console.log(`   📋 Project sub-types: ${projectSubTypes.length}`);
   console.log(`   📈 Phases: ${phases.length}`);
   console.log(`   👥 Roles: ${roles.length}`);
   console.log(`   🧑‍💼 People: 8`);
-  console.log(`   📊 Projects: 1 (Customer Portal Redesign)`);
+  console.log(`   📊 Projects: 10 (including AI/ML, cloud migration, mobile apps, etc.)`);
+  console.log(`   📅 Project phases: ${projectPhaseTimelines.length} timeline entries`);
   console.log(`   🔧 Resource templates: ${templateCount}`);
-  console.log(`\n🎉 Database is ready for use!`);
+  console.log(`   👥 Project assignments: ${assignmentCount}`);
+  console.log(`\n🎉 Database is ready for use with comprehensive project portfolio!`);
 }

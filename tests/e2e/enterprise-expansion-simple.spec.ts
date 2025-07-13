@@ -26,9 +26,9 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
     await page.goto('/reports');
     await expect(page.locator('h1')).toContainText('Reports');
     
-    // Test 7: Check allocations
+    // Test 7: Check allocations (redirects to roles)
     await page.goto('/allocations');
-    await expect(page.locator('h1')).toContainText('Allocations');
+    await expect(page.locator('h1')).toContainText('Roles');
     
     // Test 8: Check availability
     await page.goto('/availability');

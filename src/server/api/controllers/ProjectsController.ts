@@ -2,6 +2,44 @@ import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 
 export class ProjectsController extends BaseController {
+  /**
+   * Validates that a project has a mandatory project subtype.
+   * Projects must be associated with active project sub-types.
+   */
+  private async validateProjectSubType(projectTypeId: string, projectSubTypeId: string): Promise<void> {
+    // project_sub_type_id is now mandatory
+    if (!projectSubTypeId) {
+      throw new Error('Project sub-type is required for all projects');
+    }
+
+    // Check if project type exists
+    const projectType = await this.db('project_types')
+      .select('id', 'name')
+      .where('id', projectTypeId)
+      .first();
+
+    if (!projectType) {
+      throw new Error(`Project type with ID ${projectTypeId} not found`);
+    }
+
+    // Validate the project sub-type
+    const projectSubType = await this.db('project_sub_types')
+      .select('id', 'name', 'project_type_id', 'is_active')
+      .where('id', projectSubTypeId)
+      .first();
+
+    if (!projectSubType) {
+      throw new Error(`Project sub-type with ID ${projectSubTypeId} not found`);
+    }
+
+    if (projectSubType.project_type_id !== projectTypeId) {
+      throw new Error(`Project sub-type "${projectSubType.name}" does not belong to project type "${projectType.name}"`);
+    }
+
+    if (!projectSubType.is_active) {
+      throw new Error(`Project sub-type "${projectSubType.name}" is not active`);
+    }
+  }
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -16,12 +54,17 @@ export class ProjectsController extends BaseController {
       let query = this.db('projects')
         .leftJoin('locations', 'projects.location_id', 'locations.id')
         .leftJoin('project_types', 'projects.project_type_id', 'project_types.id')
+        .leftJoin('project_sub_types', 'projects.project_sub_type_id', 'project_sub_types.id')
         .leftJoin('people as owner', 'projects.owner_id', 'owner.id')
+        .leftJoin('project_phases as current_phase', 'projects.current_phase_id', 'current_phase.id')
         .select(
           'projects.*',
           'locations.name as location_name',
           'project_types.name as project_type_name',
-          'owner.name as owner_name'
+          this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
+          'project_sub_types.name as project_sub_type_name',
+          'owner.name as owner_name',
+          'current_phase.name as current_phase_name'
         );
 
       query = this.buildFilters(query, filters);
@@ -53,12 +96,17 @@ export class ProjectsController extends BaseController {
       const project = await this.db('projects')
         .leftJoin('locations', 'projects.location_id', 'locations.id')
         .leftJoin('project_types', 'projects.project_type_id', 'project_types.id')
+        .leftJoin('project_sub_types', 'projects.project_sub_type_id', 'project_sub_types.id')
         .leftJoin('people as owner', 'projects.owner_id', 'owner.id')
+        .leftJoin('project_phases as current_phase', 'projects.current_phase_id', 'current_phase.id')
         .select(
           'projects.*',
           'locations.name as location_name',
           'project_types.name as project_type_name',
-          'owner.name as owner_name'
+          this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
+          'project_sub_types.name as project_sub_type_name',
+          'owner.name as owner_name',
+          'current_phase.name as current_phase_name'
         )
         .where('projects.id', id)
         .first();
@@ -118,6 +166,9 @@ export class ProjectsController extends BaseController {
     const projectData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Validate project type and sub-type relationship
+      await this.validateProjectSubType(projectData.project_type_id, projectData.project_sub_type_id);
+
       const [project] = await this.db('projects')
         .insert({
           ...projectData,
@@ -139,6 +190,16 @@ export class ProjectsController extends BaseController {
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Validate project type and sub-type relationship
+      if (updateData.project_type_id || updateData.project_sub_type_id) {
+        // Get current project to determine current type if not being updated
+        const currentProject = await this.db('projects').where('id', id).first();
+        const typeId = updateData.project_type_id || currentProject?.project_type_id;
+        const subTypeId = updateData.project_sub_type_id || currentProject?.project_sub_type_id;
+        
+        await this.validateProjectSubType(typeId, subTypeId);
+      }
+
       const [project] = await this.db('projects')
         .where('id', id)
         .update({
@@ -207,6 +268,21 @@ export class ProjectsController extends BaseController {
 
       return demands;
     }, res, 'Failed to fetch project demands');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async deleteTestData(req: Request, res: Response) {
+    const result = await this.executeQuery(async () => {
+      // Delete test projects (ones with "Test_" in name)
+      const deleted = await this.db('projects')
+        .where('name', 'like', 'Test_%')
+        .del();
+
+      return { message: `Deleted ${deleted} test projects` };
+    }, res, 'Failed to delete test data');
 
     if (result) {
       res.json(result);

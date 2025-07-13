@@ -2,6 +2,7 @@ import knex from 'knex';
 import knexConfig from './knexfile.js';
 import path from 'path';
 import fs from 'fs';
+import { initializeAuditService } from '../services/audit/index.js';
 
 // Create and export the database connection
 export const db = knex(knexConfig);
@@ -24,6 +25,9 @@ export async function initializeDatabase(): Promise<void> {
     // Run migrations
     await db.migrate.latest();
     console.log('Database migrations completed');
+    
+    // Initialize audit service after migrations
+    initializeAuditService(db);
     
     // Seed initial data if needed
     const hasData = await db('roles').count('* as count').first();

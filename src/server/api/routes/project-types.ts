@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { SimpleController } from '../controllers/SimpleController.js';
+import { ProjectTypesController } from '../controllers/ProjectTypesController.js';
 
 const router = Router();
-const controller = new SimpleController('project_types');
+const controller = new ProjectTypesController();
 
 router.get('/', (req, res) => controller.getAll(req, res));
 router.get('/:id', (req, res) => controller.getById(req, res));

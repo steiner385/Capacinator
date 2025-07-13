@@ -8,6 +8,9 @@ import {
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
+import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
+import ProjectPhaseManager from '../components/ProjectPhaseManager';
+import type { Project } from '../types';
 import './PersonDetails.css'; // Reuse existing styles
 import '../components/Charts.css';
 
@@ -16,6 +19,11 @@ interface ProjectDetail {
   name: string;
   project_type_id?: string;
   project_type_name?: string;
+  project_type?: {
+    id: string;
+    name: string;
+    color_code?: string;
+  };
   location_id?: string;
   location_name?: string;
   priority: number;
@@ -182,7 +190,17 @@ export function ProjectDetail() {
           <button className="btn btn-icon" onClick={() => navigate('/projects')}>
             <ArrowLeft size={20} />
           </button>
-          <h1>{project.name}</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{
+              backgroundColor: project.project_type?.color_code || '#6b7280',
+              width: '16px',
+              height: '16px',
+              borderRadius: '50%',
+              marginRight: '12px',
+              flexShrink: 0
+            }} />
+            {project.name}
+          </h1>
           <span className={`badge badge-${getPriorityColor(project.priority)}`}>
             {getPriorityLabel(project.priority)}
           </span>
@@ -359,33 +377,17 @@ export function ProjectDetail() {
           <div className="section-header" onClick={() => toggleSection('phases')}>
             <h2>
               <Calendar size={20} />
-              Project Phases
+              Project Phases & Timeline
             </h2>
             {expandedSections.phases ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </div>
           
           {expandedSections.phases && (
             <div className="section-content">
-              {project.phases.length > 0 ? (
-                <div className="phases-timeline">
-                  {project.phases.map((phase) => (
-                    <div key={phase.id} className="phase-item">
-                      <div className="phase-header">
-                        <h4>{phase.phase_name}</h4>
-                        <div className="phase-dates">
-                          {formatDate(new Date(phase.start_date).toISOString())} - {formatDate(new Date(phase.end_date).toISOString())}
-                        </div>
-                      </div>
-                      <p className="phase-description">{phase.phase_description}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <Calendar size={48} />
-                  <p>No phases defined</p>
-                </div>
-              )}
+              <ProjectPhaseManager 
+                projectId={project.id} 
+                projectName={project.name}
+              />
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   FolderKanban,
@@ -28,6 +29,8 @@ const COLORS = {
 };
 
 export function Dashboard() {
+  const navigate = useNavigate();
+  
   const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
@@ -41,15 +44,20 @@ export function Dashboard() {
   if (!dashboard) return null;
 
   // Prepare data for charts
-  const projectHealthData = Object.entries(dashboard.projectHealth).map(([status, count]) => ({
-    name: status.replace('_', ' '),
-    value: count,
-  }));
+  const projectHealthData = Object.keys(dashboard.projectHealth).length > 0
+    ? Object.entries(dashboard.projectHealth).map(([status, count]) => ({
+        name: status.replace('_', ' '),
+        value: count,
+      }))
+    : [{ name: 'No Projects', value: 0 }];
 
-  const utilizationData = Object.entries(dashboard.utilization).map(([status, count]) => ({
-    name: status.replace(/_/g, ' '),
-    value: count,
-  }));
+  // Handle empty utilization data gracefully
+  const utilizationData = Object.keys(dashboard.utilization).length > 0 
+    ? Object.entries(dashboard.utilization).map(([status, count]) => ({
+        name: status === 'NO_ASSIGNMENTS' ? 'No Assignments Yet' : status.replace(/_/g, ' '),
+        value: count,
+      }))
+    : [{ name: 'No Data', value: 0 }];
 
   const capacityData = Object.entries(dashboard.capacityGaps).map(([status, count]) => ({
     name: status,
@@ -66,33 +74,40 @@ export function Dashboard() {
 
       <div className="stats-grid">
         <StatCard
-          title="Total Projects"
+          title="Current Projects"
           value={dashboard.summary.projects}
           icon={FolderKanban}
           color="primary"
+          onClick={() => navigate('/projects')}
         />
         <StatCard
           title="Total People"
           value={dashboard.summary.people}
           icon={Users}
           color="success"
+          onClick={() => navigate('/people')}
         />
         <StatCard
           title="Total Roles"
           value={dashboard.summary.roles}
           icon={Briefcase}
           color="purple"
+          onClick={() => navigate('/people')}
         />
         <StatCard
           title="Capacity Gaps"
           value={dashboard.capacityGaps.GAP || 0}
           icon={AlertTriangle}
           color="danger"
+          onClick={() => navigate('/reports')}
         />
       </div>
 
       <div className="charts-grid">
-        <Card title="Project Health Status">
+        <Card 
+          title="Current Project Health"
+          onClick={() => navigate('/projects')}
+        >
           <div className="chart-container">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -105,6 +120,8 @@ export function Dashboard() {
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
+                  onClick={() => navigate('/projects')}
+                  style={{ cursor: 'pointer' }}
                 >
                   {projectHealthData.map((entry, index) => (
                     <Cell
@@ -124,7 +141,10 @@ export function Dashboard() {
           </div>
         </Card>
 
-        <Card title="Resource Utilization">
+        <Card 
+          title="Resource Utilization"
+          onClick={() => navigate('/people')}
+        >
           <div className="chart-container">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={utilizationData}>
@@ -132,16 +152,31 @@ export function Dashboard() {
                 <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill={COLORS.primary} />
+                <Bar 
+                  dataKey="value" 
+                  fill={COLORS.primary}
+                  onClick={() => navigate('/people')}
+                  style={{ cursor: 'pointer' }}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <Card title="Capacity Status by Role">
+        <Card 
+          title="Capacity Status by Role"
+          onClick={() => navigate('/reports')}
+        >
           <div className="capacity-summary">
             {capacityData.map((item) => (
-              <div key={item.name} className="capacity-item">
+              <div 
+                key={item.name} 
+                className="capacity-item capacity-item-clickable"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/reports');
+                }}
+              >
                 <div className="capacity-label">
                   <span className="capacity-status" style={{ backgroundColor: item.color }}></span>
                   <span>{item.name}</span>
@@ -154,28 +189,40 @@ export function Dashboard() {
 
         <Card title="Quick Stats">
           <div className="quick-stats">
-            <div className="stat-item">
+            <div 
+              className="stat-item stat-item-clickable" 
+              onClick={() => navigate('/people')}
+            >
               <UserCheck className="stat-icon" color={COLORS.success} />
               <div>
                 <div className="stat-value">{dashboard.availability.AVAILABLE || 0}</div>
                 <div className="stat-label">Available</div>
               </div>
             </div>
-            <div className="stat-item">
+            <div 
+              className="stat-item stat-item-clickable" 
+              onClick={() => navigate('/people')}
+            >
               <UserX className="stat-icon" color={COLORS.danger} />
               <div>
                 <div className="stat-value">{dashboard.availability.UNAVAILABLE || 0}</div>
                 <div className="stat-label">On Leave</div>
               </div>
             </div>
-            <div className="stat-item">
+            <div 
+              className="stat-item stat-item-clickable" 
+              onClick={() => navigate('/people')}
+            >
               <Activity className="stat-icon" color={COLORS.warning} />
               <div>
                 <div className="stat-value">{dashboard.availability.LIMITED || 0}</div>
                 <div className="stat-label">Limited Capacity</div>
               </div>
             </div>
-            <div className="stat-item">
+            <div 
+              className="stat-item stat-item-clickable" 
+              onClick={() => navigate('/people')}
+            >
               <TrendingUp className="stat-icon" color={COLORS.primary} />
               <div>
                 <div className="stat-value">{dashboard.utilization.OVER_ALLOCATED || 0}</div>

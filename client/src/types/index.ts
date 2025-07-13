@@ -9,6 +9,7 @@ export interface BaseEntity {
 export interface Project extends BaseEntity {
   name: string;
   project_type_id: string;
+  project_sub_type_id: string; // Mandatory field for sub-type reference
   location_id: string;
   priority: number;
   description?: string;
@@ -18,15 +19,16 @@ export interface Project extends BaseEntity {
   aspiration_finish?: string;
   external_id?: string;
   owner_id?: string;
-  status?: 'planned' | 'active' | 'on_hold' | 'completed' | 'cancelled';
+  current_phase_id?: string; // References project_phases.id, manually set to track progress
   start_date?: string;
   end_date?: string;
-  current_phase?: string;
   // Relations
   project_type?: ProjectType;
   location?: Location;
+  current_phase?: ProjectPhase; // Populated when current_phase_id is set
   project_type_name?: string;
   location_name?: string;
+  current_phase_name?: string; // From project_health_view
   owner_name?: string;
   phases?: ProjectPhaseTimeline[];
   assignments?: ProjectAssignment[];
@@ -69,6 +71,21 @@ export interface ProjectType extends BaseEntity {
   name: string;
   description?: string;
   color_code?: string;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface ProjectSubType extends BaseEntity {
+  project_type_id: string;
+  name: string;
+  description?: string;
+  color_code?: string; // Inherits from parent if null
+  sort_order?: number;
+  is_default?: boolean;
+  is_active?: boolean;
+  
+  // Optional populated fields
+  project_type?: ProjectType;
 }
 
 export interface ProjectPhase extends BaseEntity {
@@ -85,22 +102,37 @@ export interface ProjectPhaseTimeline extends BaseEntity {
   end_date: string;
   notes?: string;
   // Relations
+  project_name?: string;
   phase_name?: string;
   phase_description?: string;
+  phase_order?: number;
 }
 
 export interface ProjectAssignment extends BaseEntity {
   project_id: string;
   person_id: string;
   role_id: string;
+  phase_id?: string;
   allocation_percentage: number;
-  start_date: string;
-  end_date: string;
+  
+  // Assignment date mode determines how dates are calculated
+  assignment_date_mode: 'fixed' | 'phase' | 'project';
+  
+  // For fixed mode: explicit dates
+  start_date?: string;
+  end_date?: string;
+  
+  // Computed dates (calculated based on mode)
+  computed_start_date?: string;
+  computed_end_date?: string;
+  
   notes?: string;
+  
   // Relations
   project_name?: string;
   person_name?: string;
   role_name?: string;
+  phase_name?: string;
 }
 
 export interface PersonRole {
@@ -116,12 +148,16 @@ export interface PersonRole {
 }
 
 export interface StandardAllocation extends BaseEntity {
-  project_type_id: string;
+  project_type_id?: string; // For parent type allocations
+  project_sub_type_id?: string; // For specific sub-type allocations
   phase_id: string;
   role_id: string;
   allocation_percentage: number;
+  is_inherited?: boolean; // Indicates if inherited from parent type
+  parent_template_id?: string; // Reference to parent template if inherited
   // Relations
   project_type_name?: string;
+  project_sub_type_name?: string;
   phase_name?: string;
   role_name?: string;
 }
@@ -297,4 +333,113 @@ export interface ImportResult {
   };
   errors?: string[];
   warnings?: string[];
+}
+
+// Scenario Planning Types
+export interface Scenario extends BaseEntity {
+  name: string;
+  description?: string;
+  parent_scenario_id?: string;
+  created_by: string;
+  status: 'active' | 'archived' | 'merged';
+  scenario_type: 'baseline' | 'branch' | 'sandbox';
+  branch_point?: string;
+  // Relations
+  created_by_name?: string;
+  parent_scenario_name?: string;
+  child_scenarios?: Scenario[];
+}
+
+export interface ScenarioProjectAssignment extends BaseEntity {
+  scenario_id: string;
+  project_id: string;
+  person_id: string;
+  role_id: string;
+  phase_id?: string;
+  allocation_percentage: number;
+  assignment_date_mode: 'fixed' | 'phase' | 'project';
+  start_date?: string;
+  end_date?: string;
+  notes?: string;
+  change_type: 'added' | 'modified' | 'removed';
+  base_assignment_id?: string;
+  // Computed fields
+  computed_start_date?: string;
+  computed_end_date?: string;
+  // Relations
+  project_name?: string;
+  person_name?: string;
+  role_name?: string;
+  phase_name?: string;
+}
+
+export interface ScenarioProjectPhase extends BaseEntity {
+  scenario_id: string;
+  project_id: string;
+  phase_id: string;
+  start_date: string;
+  end_date: string;
+  notes?: string;
+  change_type: 'added' | 'modified' | 'removed';
+  base_phase_timeline_id?: string;
+  // Relations
+  project_name?: string;
+  phase_name?: string;
+}
+
+export interface ScenarioProject extends BaseEntity {
+  scenario_id: string;
+  project_id: string;
+  name?: string;
+  priority?: number;
+  aspiration_start?: string;
+  aspiration_finish?: string;
+  change_type: 'added' | 'modified' | 'removed';
+  notes?: string;
+  // Relations
+  original_project_name?: string;
+}
+
+export interface ScenarioMergeConflict extends BaseEntity {
+  source_scenario_id: string;
+  target_scenario_id: string;
+  conflict_type: 'assignment' | 'phase_timeline' | 'project_details';
+  entity_id: string;
+  source_data: any;
+  target_data: any;
+  resolution: 'use_source' | 'use_target' | 'manual' | 'pending';
+  resolved_data?: any;
+  resolved_by?: string;
+  resolved_at?: string;
+  // Relations
+  source_scenario_name?: string;
+  target_scenario_name?: string;
+  resolved_by_name?: string;
+}
+
+export interface ScenarioComparison {
+  scenario1: Scenario;
+  scenario2: Scenario;
+  differences: {
+    assignments: {
+      added: ScenarioProjectAssignment[];
+      modified: ScenarioProjectAssignment[];
+      removed: ScenarioProjectAssignment[];
+    };
+    phases: {
+      added: ScenarioProjectPhase[];
+      modified: ScenarioProjectPhase[];
+      removed: ScenarioProjectPhase[];
+    };
+    projects: {
+      added: ScenarioProject[];
+      modified: ScenarioProject[];
+      removed: ScenarioProject[];
+    };
+  };
+  metrics: {
+    utilization_impact: Record<string, number>;
+    capacity_impact: Record<string, number>;
+    timeline_impact: Record<string, number>;
+  };
 }

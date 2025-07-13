@@ -13,6 +13,11 @@ export default defineConfig({
       }
     })
   ],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.ts',
+  },
   server: {
     port: 8090,
     hmr: {
@@ -27,7 +32,7 @@ export default defineConfig({
     allowedHosts: ['dev.capacinator.com', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8082',
+        target: 'http://localhost:3456',
         changeOrigin: true,
         secure: false,
       },

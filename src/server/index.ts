@@ -56,6 +56,10 @@ app.use(morgan(isDev ? 'dev' : 'combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Audit middleware
+import { initializeAuditService, getAuditService, createAuditMiddleware } from './services/audit/index.js';
+let auditService: any = null;
+
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
@@ -76,8 +80,16 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Mount API routes
-app.use('/api', apiRoutes);
+// Test route before API routes
+app.get('/api/debug', (req, res) => {
+  console.log('🐛 Debug endpoint hit');
+  res.json({ message: 'Debug endpoint working' });
+});
+
+// Mock dashboard endpoint removed - using real ReportingController instead
+
+
+// API routes will be mounted after services are initialized
 
 // API status endpoint
 app.get('/api/status', (req, res) => {
@@ -109,13 +121,7 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
   });
 });
 
-// 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({
-    error: 'API endpoint not found',
-    path: req.path
-  });
-});
+// 404 handler will be set up after all routes are mounted
 
 // Initialize and start server
 async function startServer() {
@@ -126,6 +132,35 @@ async function startServer() {
     console.log('📊 Initializing database...');
     await initializeDatabase();
     console.log('✅ Database ready');
+    
+    // Get audit service (initialized by database init)
+    console.log('🔍 Getting audit service...');
+    auditService = getAuditService();
+    if (auditService) {
+      app.use(createAuditMiddleware(auditService));
+      
+      // Mount audit routes now that service is available
+      const { createAuditRoutes } = await import('./api/routes/audit.js');
+      app.use('/api/audit', createAuditRoutes(auditService));
+      console.log('✅ Audit service and routes enabled');
+    } else {
+      console.log('⚠️ Audit service disabled');
+    }
+    
+    // Mount main API routes
+    console.log('🔗 Mounting API routes...');
+    app.use('/api', (req, res, next) => {
+      console.log(`🔗 API Request: ${req.method} ${req.path}`);
+      next();
+    }, apiRoutes);
+    
+    // 404 handler for API routes (must be after all routes)
+    app.use('/api/*', (req, res) => {
+      res.status(404).json({
+        error: 'API endpoint not found',
+        path: req.path
+      });
+    });
     
     // Schedule automatic backups if enabled
     if (process.env.DB_BACKUP_ENABLED === 'true') {
@@ -181,6 +216,21 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// Handle unhandled promise rejections and uncaught exceptions
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit in production to keep the server running
+  if (isDev) {
+    console.log('⚠️  Development mode: continuing despite unhandled rejection');
+  }
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Log but don't exit immediately
+  console.log('⚠️  Attempting to continue...');
+});
 
 // Start the server
 startServer();

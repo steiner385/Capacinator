@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Eye, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Calendar, Users } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import ProjectModal from '../components/modals/ProjectModal';
+import ProjectAllocations from '../components/ProjectAllocations';
 import { useModal } from '../hooks/useModal';
+import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
 import type { Project, Location, ProjectType } from '../types';
 import './Projects.css';
 
@@ -24,7 +26,9 @@ export function Projects() {
   
   const addProjectModal = useModal();
   const editProjectModal = useModal();
+  const allocationModal = useModal();
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [selectedProjectForAllocations, setSelectedProjectForAllocations] = useState<Project | null>(null);
 
   // Fetch projects
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useQuery({
@@ -34,7 +38,17 @@ export function Projects() {
         .filter(([_, value]) => value)
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       const response = await api.projects.list(params);
-      return response.data.data as Project[];
+      const rawProjects = response.data.data;
+      
+      // Transform flat response to include project_type object
+      return rawProjects.map((project: any) => ({
+        ...project,
+        project_type: project.project_type_name ? {
+          id: project.project_type_id,
+          name: project.project_type_name,
+          color_code: project.project_type_color_code
+        } : undefined
+      })) as Project[];
     }
   });
 
@@ -43,7 +57,8 @@ export function Projects() {
     queryKey: ['locations'],
     queryFn: async () => {
       const response = await api.locations.list();
-      return response.data as Location[];
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return (response.data?.data || response.data || []) as Location[];
     }
   });
 
@@ -52,7 +67,8 @@ export function Projects() {
     queryKey: ['projectTypes'],
     queryFn: async () => {
       const response = await api.projectTypes.list();
-      return response.data as ProjectType[];
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return (response.data?.data || response.data || []) as ProjectType[];
     }
   });
 
@@ -77,9 +93,19 @@ export function Projects() {
     editProjectModal.open();
   };
 
+  const handleManageAllocations = (project: Project) => {
+    setSelectedProjectForAllocations(project);
+    allocationModal.open();
+  };
+
   const handleProjectSuccess = () => {
     // Both modals will close automatically via onClose
     setEditingProject(null);
+  };
+
+  const handleCloseAllocations = () => {
+    setSelectedProjectForAllocations(null);
+    allocationModal.close();
   };
 
   const handleFilterChange = (name: string, value: string) => {
@@ -118,8 +144,21 @@ export function Projects() {
       sortable: true,
       render: (value, row) => (
         <div className="project-name">
-          <span>{value}</span>
-          <span className="text-xs text-muted">{row.project_type?.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={getProjectTypeIndicatorStyle(row)} />
+            <span>{value}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'project_type.name',
+      header: 'Project Type',
+      sortable: true,
+      render: (value, row) => (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={getProjectTypeIndicatorStyle(row)} />
+          <span>{row.project_type?.name || 'Not assigned'}</span>
         </div>
       )
     },
@@ -141,7 +180,7 @@ export function Projects() {
       render: formatDate
     },
     {
-      key: 'current_phase',
+      key: 'current_phase_name',
       header: 'Current Phase',
       render: (value) => value || '-'
     },
@@ -170,6 +209,16 @@ export function Projects() {
             title="Edit"
           >
             <Edit2 size={16} />
+          </button>
+          <button
+            className="btn btn-icon btn-sm btn-secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleManageAllocations(row);
+            }}
+            title="Manage Allocations"
+          >
+            <Users size={16} />
           </button>
           <button
             className="btn btn-icon btn-sm btn-danger"
@@ -203,7 +252,11 @@ export function Projects() {
       name: 'project_type_id',
       label: 'Project Type',
       type: 'select' as const,
-      options: projectTypes?.map(type => ({ value: type.id, label: type.name })) || []
+      options: projectTypes?.map(type => ({ 
+        value: type.id, 
+        label: type.name,
+        color: type.color_code
+      })) || []
     },
     {
       name: 'status',
@@ -283,6 +336,19 @@ export function Projects() {
         onSuccess={handleProjectSuccess}
         editingProject={editingProject}
       />
+
+      {/* Project Allocations Modal */}
+      {allocationModal.isOpen && selectedProjectForAllocations && (
+        <div className="modal-overlay">
+          <div className="modal-container large">
+            <ProjectAllocations
+              projectId={selectedProjectForAllocations.id}
+              projectName={selectedProjectForAllocations.name}
+              onClose={handleCloseAllocations}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

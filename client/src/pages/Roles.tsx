@@ -196,13 +196,6 @@ export default function Roles() {
             <Plus size={16} />
             Add Role
           </button>
-          <button
-            className="btn btn-secondary"
-            onClick={() => navigate('/allocations')}
-          >
-            <Settings size={16} />
-            Resource Templates
-          </button>
         </div>
       </div>
 

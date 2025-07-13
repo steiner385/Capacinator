@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { auditModelChanges } from '../../middleware/auditMiddleware.js';
+import { isTableAudited } from '../../config/auditConfig.js';
 
 export class PeopleController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -115,6 +117,19 @@ export class PeopleController extends BaseController {
           updated_at: new Date()
         })
         .returning('*');
+
+      // Log audit entry for creation
+      if (isTableAudited('people')) {
+        await auditModelChanges(
+          req,
+          'people',
+          person.id,
+          'CREATE',
+          undefined,
+          person,
+          `Created person: ${person.name}`
+        );
+      }
 
       return person;
     }, res, 'Failed to create person');
@@ -233,6 +248,21 @@ export class PeopleController extends BaseController {
 
       return { message: 'Role removed from person successfully' };
     }, res, 'Failed to remove role from person');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async deleteTestData(req: Request, res: Response) {
+    const result = await this.executeQuery(async () => {
+      // Delete test people (ones with "Test_" in name)
+      const deleted = await this.db('people')
+        .where('name', 'like', 'Test_%')
+        .del();
+
+      return { message: `Deleted ${deleted} test people` };
+    }, res, 'Failed to delete test data');
 
     if (result) {
       res.json(result);

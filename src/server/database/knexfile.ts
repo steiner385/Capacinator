@@ -29,20 +29,22 @@ const config: Knex.Config = {
     filename: path.join(dataPath, process.env.DB_FILENAME || 'project-capacitizer.db')
   },
   useNullAsDefault: true,
+  acquireConnectionTimeout: 10000,
+  timeout: 30000,
   migrations: {
     directory: './src/server/database/migrations'
   },
   seeds: {
     directory: './src/server/database/seeds'
   },
-  // SQLite performance optimizations
+  // SQLite configuration for stability
   pool: {
+    min: 0,
+    max: 1,
     afterCreate: (conn: any, cb: any) => {
-      conn.pragma('journal_mode = WAL');
-      conn.pragma('synchronous = NORMAL');
-      conn.pragma('cache_size = 10000');
-      conn.pragma('mmap_size = 30000000000');
-      conn.pragma('temp_store = MEMORY');
+      conn.pragma('journal_mode = DELETE');
+      conn.pragma('synchronous = FULL');
+      conn.pragma('foreign_keys = ON');
       cb();
     }
   }

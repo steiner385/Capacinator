@@ -1,0 +1,218 @@
+/* ProjectTypes hierarchy view styles */
+.view-mode-toggle {
+  display: flex;
+  gap: 4px;
+  margin-right: 12px;
+}
+
+.view-mode-toggle .btn {
+  border-radius: 6px;
+}
+
+.hierarchy-view {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.project-types-hierarchy {
+  min-height: 200px;
+}
+
+.project-type-node {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.project-type-node:last-child {
+  border-bottom: none;
+}
+
+.project-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  hover: background-color: #f8fafc;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.project-type-row:hover {
+  background-color: #f8fafc;
+}
+
+.project-type-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+}
+
+.expand-toggle {
+  padding: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #64748b;
+}
+
+.expand-toggle:hover {
+  background: #f1f5f9 !important;
+  color: #475569;
+}
+
+.expand-spacer {
+  width: 32px;
+  height: 24px;
+}
+
+.project-type-info {
+  flex: 1;
+}
+
+.project-type-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.project-type-name .name {
+  font-weight: 500;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.project-type-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.parent-badge {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.child-badge {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.project-type-row.parent-type {
+  background: #f8fafc;
+  border-left: 4px solid #3b82f6;
+}
+
+.project-type-row.child-type {
+  background: #fffbeb;
+}
+
+.project-type-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.project-type-meta .description {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.level-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.project-type-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.project-type-actions .btn {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.project-type-row:hover .project-type-actions .btn {
+  opacity: 1;
+}
+
+.project-type-children {
+  background: #fafbfc;
+  border-left: 3px solid #3b82f6;
+  margin-left: 20px;
+  position: relative;
+}
+
+.project-type-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 20px;
+  height: 24px;
+  border-left: 2px solid #cbd5e1;
+  border-bottom: 2px solid #cbd5e1;
+  border-radius: 0 0 0 8px;
+}
+
+.project-type-children .project-type-node:not(:last-child) .project-type-row::before {
+  content: '';
+  position: absolute;
+  left: -23px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #cbd5e1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #64748b;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Ensure DataTable styles don't interfere with hierarchy view */
+.hierarchy-view .project-type-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hierarchy-view .project-type-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.hierarchy-view .name {
+  font-weight: 500;
+  color: #1e293b;
+}

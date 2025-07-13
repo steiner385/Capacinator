@@ -30,3 +30,13 @@
 .card-body {
   padding: 1.5rem;
 }
+
+.card-clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}

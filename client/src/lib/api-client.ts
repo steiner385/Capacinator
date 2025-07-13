@@ -158,6 +158,13 @@ export const api = {
     create: (data: any) => apiClient.post('/project-types', data),
     update: (id: string, data: any) => apiClient.put(`/project-types/${id}`, data),
     delete: (id: string) => apiClient.delete(`/project-types/${id}`),
+    // Hierarchy methods
+    getHierarchy: () => apiClient.get('/project-type-hierarchy/hierarchy'),
+    getPhases: (id: string) => apiClient.get(`/project-type-hierarchy/${id}/phases`),
+    createChild: (parentId: string, data: any) => apiClient.post(`/project-type-hierarchy/${parentId}/children`, data),
+    addPhase: (id: string, data: any) => apiClient.post(`/project-type-hierarchy/${id}/phases`, data),
+    removePhase: (id: string, phaseId: string) => apiClient.delete(`/project-type-hierarchy/${id}/phases/${phaseId}`),
+    updateHierarchy: (id: string, data: any) => apiClient.put(`/project-type-hierarchy/${id}/hierarchy`, data),
   },
 
   phases: {
@@ -168,6 +175,38 @@ export const api = {
     delete: (id: string) => apiClient.delete(`/phases/${id}`),
   },
 
+  projectPhases: {
+    list: (params?: any) => apiClient.get('/project-phases', { params }),
+    get: (id: string) => apiClient.get(`/project-phases/${id}`),
+    create: (data: any) => apiClient.post('/project-phases', data),
+    update: (id: string, data: any) => apiClient.put(`/project-phases/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/project-phases/${id}`),
+    bulkUpdate: (data: any) => apiClient.post('/project-phases/bulk', data),
+    duplicatePhase: (data: any) => apiClient.post('/project-phases/duplicate', data),
+    createCustomPhase: (data: any) => apiClient.post('/project-phases/create-custom', data),
+  },
+
+  projectAllocations: {
+    get: (projectId: string) => apiClient.get(`/project-allocations/${projectId}`),
+    initialize: (projectId: string) => apiClient.post(`/project-allocations/${projectId}/initialize`),
+    override: (projectId: string, data: any) => apiClient.post(`/project-allocations/${projectId}/override`, data),
+    reset: (projectId: string, phaseId: string, roleId: string) => apiClient.post(`/project-allocations/${projectId}/reset/${phaseId}/${roleId}`),
+    delete: (projectId: string, phaseId: string, roleId: string) => apiClient.delete(`/project-allocations/${projectId}/${phaseId}/${roleId}`),
+  },
+
+  // Scenarios
+  scenarios: {
+    list: () => apiClient.get('/scenarios'),
+    get: (id: string) => apiClient.get(`/scenarios/${id}`),
+    create: (data: any) => apiClient.post('/scenarios', data),
+    update: (id: string, data: any) => apiClient.put(`/scenarios/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/scenarios/${id}`),
+    getAssignments: (id: string) => apiClient.get(`/scenarios/${id}/assignments`),
+    upsertAssignment: (id: string, data: any) => apiClient.post(`/scenarios/${id}/assignments`, data),
+    removeAssignment: (id: string, assignmentId: string) => apiClient.delete(`/scenarios/${id}/assignments/${assignmentId}`),
+    compare: (id: string, compareToId: string) => apiClient.get(`/scenarios/${id}/compare?compare_to=${compareToId}`),
+    merge: (id: string, data?: any) => apiClient.post(`/scenarios/${id}/merge`, data || {}),
+  },
 
   // Health check
   health: () => apiClient.get('/health'),

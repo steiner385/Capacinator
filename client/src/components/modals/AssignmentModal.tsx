@@ -9,6 +9,7 @@ interface AssignmentFormData {
   person_id: string;
   role_id: string;
   phase_id: string;
+  assignment_date_mode: 'fixed' | 'phase' | 'project';
   start_date: string;
   end_date: string;
   allocation_percentage: number;
@@ -37,6 +38,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     person_id: '',
     role_id: '',
     phase_id: '',
+    assignment_date_mode: 'fixed',
     start_date: '',
     end_date: '',
     allocation_percentage: 100,
@@ -56,6 +58,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
         person_id: editingAssignment.person_id || '',
         role_id: editingAssignment.role_id || '',
         phase_id: editingAssignment.phase_id || '',
+        assignment_date_mode: editingAssignment.assignment_date_mode || 'fixed',
         start_date: editingAssignment.start_date || '',
         end_date: editingAssignment.end_date || '',
         allocation_percentage: editingAssignment.allocation_percentage || 100,
@@ -68,6 +71,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
         person_id: '',
         role_id: '',
         phase_id: '',
+        assignment_date_mode: 'fixed',
         start_date: '',
         end_date: '',
         allocation_percentage: 100,
@@ -110,8 +114,19 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     queryKey: ['phases'],
     queryFn: async () => {
       const response = await api.phases.list();
-      return response.data.data;
+      return response.data;
     }
+  });
+
+  // Get project phase timeline for selected project
+  const { data: projectPhases } = useQuery({
+    queryKey: ['project-phases', formData.project_id],
+    queryFn: async () => {
+      if (!formData.project_id) return [];
+      const response = await api.projectPhases.list({ project_id: formData.project_id });
+      return response.data;
+    },
+    enabled: !!formData.project_id
   });
 
   // Mutations
@@ -152,8 +167,15 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     if (!formData.project_id) newErrors.project_id = 'Project is required';
     if (!formData.person_id) newErrors.person_id = 'Person is required';
     if (!formData.role_id) newErrors.role_id = 'Role is required';
-    if (!formData.start_date) newErrors.start_date = 'Start date is required';
-    if (!formData.end_date) newErrors.end_date = 'End date is required';
+    
+    // Date validation based on assignment mode
+    if (formData.assignment_date_mode === 'fixed') {
+      if (!formData.start_date) newErrors.start_date = 'Start date is required for fixed mode';
+      if (!formData.end_date) newErrors.end_date = 'End date is required for fixed mode';
+    } else if (formData.assignment_date_mode === 'phase') {
+      if (!formData.phase_id) newErrors.phase_id = 'Phase is required for phase mode';
+    }
+    
     if (formData.allocation_percentage <= 0 || formData.allocation_percentage > 100) {
       newErrors.allocation_percentage = 'Allocation must be between 1% and 100%';
     }
@@ -178,12 +200,21 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
     }
   };
 
-  // Filter phases based on selected project
-  const filteredPhases = useMemo(() => {
-    if (!phases || !formData.project_id) return [];
+  // Get phases for the selected project from project timeline
+  const availablePhases = useMemo(() => {
+    if (!projectPhases || !phases) return [];
     
-    return phases.filter((phase: any) => phase.project_id === formData.project_id);
-  }, [phases, formData.project_id]);
+    // Map project phases timeline to phase details
+    return projectPhases.map((pp: any) => {
+      const phaseDetail = phases.find((p: any) => p.id === pp.phase_id);
+      return {
+        id: pp.phase_id,
+        name: phaseDetail?.name || 'Unknown Phase',
+        start_date: pp.start_date,
+        end_date: pp.end_date
+      };
+    });
+  }, [projectPhases, phases]);
 
   // Filter roles based on selected person
   const filteredRoles = useMemo(() => {
@@ -264,45 +295,81 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
         </div>
 
         <div className="form-group">
-          <label htmlFor="phase_id">Phase</label>
+          <label htmlFor="assignment_date_mode">Date Mode *</label>
           <select
-            id="phase_id"
+            id="assignment_date_mode"
             className="form-select"
-            value={formData.phase_id}
-            onChange={(e) => handleChange('phase_id', e.target.value)}
+            value={formData.assignment_date_mode}
+            onChange={(e) => handleChange('assignment_date_mode', e.target.value as 'fixed' | 'phase' | 'project')}
           >
-            <option value="">Select phase (optional)</option>
-            {filteredPhases?.map((phase: any) => (
-              <option key={phase.id} value={phase.id}>
-                {phase.name}
-              </option>
-            ))}
+            <option value="fixed">Fixed Dates</option>
+            <option value="phase">Based on Project Phase</option>
+            <option value="project">Based on Entire Project</option>
           </select>
+          <small className="form-help">
+            Fixed: Use specific dates | Phase: Follow selected phase timeline | Project: Follow project aspiration dates
+          </small>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="start_date">Start Date *</label>
-          <input
-            type="date"
-            id="start_date"
-            className={`form-input ${errors.start_date ? 'error' : ''}`}
-            value={formData.start_date}
-            onChange={(e) => handleChange('start_date', e.target.value)}
-          />
-          {errors.start_date && <span className="error-message">{errors.start_date}</span>}
-        </div>
+        {formData.assignment_date_mode === 'phase' && (
+          <div className="form-group">
+            <label htmlFor="phase_id">Phase *</label>
+            <select
+              id="phase_id"
+              className={`form-select ${errors.phase_id ? 'error' : ''}`}
+              value={formData.phase_id}
+              onChange={(e) => handleChange('phase_id', e.target.value)}
+            >
+              <option value="">Select phase</option>
+              {availablePhases?.map((phase: any) => (
+                <option key={phase.id} value={phase.id}>
+                  {phase.name} ({phase.start_date} - {phase.end_date})
+                </option>
+              ))}
+            </select>
+            {errors.phase_id && <span className="error-message">{errors.phase_id}</span>}
+          </div>
+        )}
 
-        <div className="form-group">
-          <label htmlFor="end_date">End Date *</label>
-          <input
-            type="date"
-            id="end_date"
-            className={`form-input ${errors.end_date ? 'error' : ''}`}
-            value={formData.end_date}
-            onChange={(e) => handleChange('end_date', e.target.value)}
-          />
-          {errors.end_date && <span className="error-message">{errors.end_date}</span>}
-        </div>
+        {formData.assignment_date_mode === 'fixed' && (
+          <>
+            <div className="form-group">
+              <label htmlFor="start_date">Start Date *</label>
+              <input
+                type="date"
+                id="start_date"
+                className={`form-input ${errors.start_date ? 'error' : ''}`}
+                value={formData.start_date}
+                onChange={(e) => handleChange('start_date', e.target.value)}
+              />
+              {errors.start_date && <span className="error-message">{errors.start_date}</span>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="end_date">End Date *</label>
+              <input
+                type="date"
+                id="end_date"
+                className={`form-input ${errors.end_date ? 'error' : ''}`}
+                value={formData.end_date}
+                onChange={(e) => handleChange('end_date', e.target.value)}
+              />
+              {errors.end_date && <span className="error-message">{errors.end_date}</span>}
+            </div>
+          </>
+        )}
+
+        {formData.assignment_date_mode !== 'fixed' && (
+          <div className="form-group full-width">
+            <div className="alert alert-info">
+              <strong>Automatic Dates:</strong> 
+              {formData.assignment_date_mode === 'phase' 
+                ? ' Assignment dates will be calculated from the selected project phase timeline.'
+                : ' Assignment dates will be calculated from the project aspiration dates.'
+              }
+            </div>
+          </div>
+        )}
 
         <div className="form-group">
           <label htmlFor="allocation_percentage">Allocation Percentage *</label>

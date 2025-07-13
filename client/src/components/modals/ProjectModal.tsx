@@ -13,6 +13,7 @@ interface ProjectFormData {
   include_in_demand: boolean;
   external_id: string;
   owner_id: string;
+  current_phase_id: string;
 }
 
 interface ProjectModalProps {
@@ -40,7 +41,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     data_restrictions: '',
     include_in_demand: true,
     external_id: '',
-    owner_id: ''
+    owner_id: '',
+    current_phase_id: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,7 +59,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         data_restrictions: editingProject.data_restrictions || '',
         include_in_demand: editingProject.include_in_demand ?? true,
         external_id: editingProject.external_id || '',
-        owner_id: editingProject.owner_id || ''
+        owner_id: editingProject.owner_id || '',
+        current_phase_id: editingProject.current_phase_id || ''
       });
     } else {
       setFormData({
@@ -69,7 +72,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         data_restrictions: '',
         include_in_demand: true,
         external_id: '',
-        owner_id: ''
+        owner_id: '',
+        current_phase_id: ''
       });
     }
     // Clear errors when switching between add/edit
@@ -81,7 +85,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     queryKey: ['project-types'],
     queryFn: async () => {
       const response = await api.projectTypes.list();
-      return response.data;
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return response.data?.data || response.data || [];
     }
   });
 
@@ -89,7 +94,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     queryKey: ['locations'],
     queryFn: async () => {
       const response = await api.locations.list();
-      return response.data;
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return response.data?.data || response.data || [];
     }
   });
 
@@ -97,7 +103,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      return response.data.data;
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return response.data?.data || response.data || [];
+    }
+  });
+
+  const { data: phases } = useQuery({
+    queryKey: ['phases'],
+    queryFn: async () => {
+      const response = await api.phases.list();
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return response.data?.data || response.data || [];
     }
   });
 
@@ -161,14 +177,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     }
   };
 
-  // Filter project types based on location
+  // Filter project types to only show child project types (not parents)
   const filteredProjectTypes = useMemo(() => {
     if (!projectTypes) return [];
     
-    // If location is selected, you could filter project types by location
-    // For now, return all project types
-    return projectTypes;
-  }, [projectTypes, formData.location_id]);
+    // Only show child project types (those with parent_id)
+    // Projects should not be associated with parent project types
+    return projectTypes.filter((type: any) => type.parent_id !== null);
+  }, [projectTypes]);
 
   // Filter potential owners based on location
   const filteredOwners = useMemo(() => {
@@ -297,6 +313,23 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             onChange={(e) => handleChange('external_id', e.target.value)}
             placeholder="External system ID"
           />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="current_phase_id">Current Phase</label>
+          <select
+            id="current_phase_id"
+            className="form-select"
+            value={formData.current_phase_id}
+            onChange={(e) => handleChange('current_phase_id', e.target.value)}
+          >
+            <option value="">Select current phase</option>
+            {phases?.map((phase: any) => (
+              <option key={phase.id} value={phase.id}>
+                {phase.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="form-group full-width">

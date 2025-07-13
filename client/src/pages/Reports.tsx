@@ -203,7 +203,7 @@ export default function Reports() {
     queryKey: ['projectTypes'],
     queryFn: async () => {
       const response = await api.projectTypes.list();
-      return response.data.data;
+      return response.data?.data || [];
     }
   });
 
@@ -211,7 +211,7 @@ export default function Reports() {
     queryKey: ['locations'],
     queryFn: async () => {
       const response = await api.locations.list();
-      return response.data.data;
+      return response.data?.data || [];
     }
   });
 
@@ -219,7 +219,7 @@ export default function Reports() {
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.roles.list();
-      return response.data.data;
+      return response.data?.data || [];
     }
   });
 

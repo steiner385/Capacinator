@@ -31,19 +31,35 @@ export class AssignmentsController extends BaseController {
         .join('projects', 'project_assignments.project_id', 'projects.id')
         .join('people', 'project_assignments.person_id', 'people.id')
         .join('roles', 'project_assignments.role_id', 'roles.id')
+        .leftJoin('project_phases', 'project_assignments.phase_id', 'project_phases.id')
         .select(
           'project_assignments.*',
           'projects.name as project_name',
+          'projects.aspiration_start',
+          'projects.aspiration_finish',
           'people.name as person_name',
-          'roles.name as role_name'
+          'roles.name as role_name',
+          'project_phases.name as phase_name'
         );
 
-      // Add date range filter
+      // Add date range filter using computed dates
       if (req.query.start_date) {
-        query = query.where('project_assignments.end_date', '>=', req.query.start_date);
+        query = query.where(function() {
+          this.where('project_assignments.computed_end_date', '>=', req.query.start_date)
+            .orWhere(function() {
+              this.whereNull('project_assignments.computed_end_date')
+                .andWhere('project_assignments.end_date', '>=', req.query.start_date);
+            });
+        });
       }
       if (req.query.end_date) {
-        query = query.where('project_assignments.start_date', '<=', req.query.end_date);
+        query = query.where(function() {
+          this.where('project_assignments.computed_start_date', '<=', req.query.end_date)
+            .orWhere(function() {
+              this.whereNull('project_assignments.computed_start_date')
+                .andWhere('project_assignments.start_date', '<=', req.query.end_date);
+            });
+        });
       }
 
       query = this.buildFilters(query, filters);
@@ -53,8 +69,22 @@ export class AssignmentsController extends BaseController {
       const assignments = await query;
       const total = await this.db('project_assignments').count('* as count').first();
 
+      // Compute dates for each assignment
+      const assignmentsWithComputedDates = await Promise.all(
+        assignments.map(async (assignment) => {
+          const computedDates = await this.computeAssignmentDates(assignment);
+          return { ...assignment, ...computedDates };
+        })
+      );
+
       // Transform date fields from timestamps to date strings
-      const transformedAssignments = transformDatesInArray(assignments, COMMON_DATE_FIELDS);
+      const transformedAssignments = transformDatesInArray(assignmentsWithComputedDates, [
+        ...COMMON_DATE_FIELDS,
+        'computed_start_date',
+        'computed_end_date',
+        'aspiration_start',
+        'aspiration_finish'
+      ]);
 
       return {
         data: transformedAssignments,
@@ -76,11 +106,18 @@ export class AssignmentsController extends BaseController {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Compute dates based on assignment mode
+      const computedDates = await this.computeAssignmentDates(assignmentData);
+      
+      // Use computed dates for conflict checking
+      const effectiveStartDate = computedDates.computed_start_date || assignmentData.start_date;
+      const effectiveEndDate = computedDates.computed_end_date || assignmentData.end_date;
+
       // Check for conflicts before creating
       const conflicts = await this.checkConflicts(
         assignmentData.person_id,
-        assignmentData.start_date,
-        assignmentData.end_date,
+        effectiveStartDate,
+        effectiveEndDate,
         assignmentData.allocation_percentage
       );
 
@@ -95,12 +132,19 @@ export class AssignmentsController extends BaseController {
       const [assignment] = await this.db('project_assignments')
         .insert({
           ...assignmentData,
+          ...computedDates,
           created_at: new Date(),
           updated_at: new Date()
         })
         .returning('*');
 
-      return transformDates(assignment, COMMON_DATE_FIELDS);
+      // Return assignment with computed dates
+      const assignmentWithDates = { ...assignment, ...computedDates };
+      return transformDates(assignmentWithDates, [
+        ...COMMON_DATE_FIELDS,
+        'computed_start_date',
+        'computed_end_date'
+      ]);
     }, res, 'Failed to create assignment');
 
     if (result) {
@@ -616,11 +660,96 @@ export class AssignmentsController extends BaseController {
     return summary;
   }
 
+  async deleteTestData(req: Request, res: Response) {
+    const result = await this.executeQuery(async () => {
+      // Delete test assignments (ones with "Test_" in related entities)
+      const deleted = await this.db('project_assignments')
+        .whereIn('project_id', 
+          this.db('projects').select('id').where('name', 'like', 'Test_%')
+        )
+        .orWhereIn('person_id',
+          this.db('people').select('id').where('name', 'like', 'Test_%')  
+        )
+        .del();
+
+      return { message: `Deleted ${deleted} test assignments` };
+    }, res, 'Failed to delete test data');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
   private daysBetween(date1: string, date2: string): number {
     const d1 = new Date(date1);
     const d2 = new Date(date2);
     const diffTime = Math.abs(d2.getTime() - d1.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  }
+
+  /**
+   * Compute assignment start and end dates based on assignment_date_mode
+   */
+  private async computeAssignmentDates(assignment: any): Promise<{
+    computed_start_date?: string;
+    computed_end_date?: string;
+  }> {
+    const mode = assignment.assignment_date_mode || 'fixed';
+    
+    switch (mode) {
+      case 'fixed':
+        // Use explicit start_date and end_date
+        return {
+          computed_start_date: assignment.start_date,
+          computed_end_date: assignment.end_date
+        };
+        
+      case 'phase':
+        // Get dates from project phase timeline
+        if (!assignment.phase_id || !assignment.project_id) {
+          throw new Error('Phase mode requires both phase_id and project_id');
+        }
+        
+        const phaseTimeline = await this.db('project_phases_timeline')
+          .where('project_id', assignment.project_id)
+          .where('phase_id', assignment.phase_id)
+          .first();
+          
+        if (!phaseTimeline) {
+          throw new Error(`No timeline found for phase ${assignment.phase_id} in project ${assignment.project_id}`);
+        }
+        
+        return {
+          computed_start_date: phaseTimeline.start_date,
+          computed_end_date: phaseTimeline.end_date
+        };
+        
+      case 'project':
+        // Get dates from project aspiration dates
+        if (!assignment.project_id) {
+          throw new Error('Project mode requires project_id');
+        }
+        
+        const project = await this.db('projects')
+          .where('id', assignment.project_id)
+          .first();
+          
+        if (!project) {
+          throw new Error(`Project ${assignment.project_id} not found`);
+        }
+        
+        if (!project.aspiration_start || !project.aspiration_finish) {
+          throw new Error(`Project ${assignment.project_id} missing aspiration dates`);
+        }
+        
+        return {
+          computed_start_date: project.aspiration_start,
+          computed_end_date: project.aspiration_finish
+        };
+        
+      default:
+        throw new Error(`Unknown assignment_date_mode: ${mode}`);
+    }
   }
 }

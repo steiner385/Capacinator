@@ -126,12 +126,22 @@ export default function Assignments() {
       key: 'project_name',
       header: 'Project',
       sortable: true,
-      render: (value, row) => (
-        <div className="project-info">
-          <span className="project-name">{value}</span>
-          <span className="text-xs text-muted">{formatDate(row.start_date)} - {formatDate(row.end_date)}</span>
-        </div>
-      )
+      render: (value, row) => {
+        const startDate = row.computed_start_date || row.start_date;
+        const endDate = row.computed_end_date || row.end_date;
+        const modeLabel = row.assignment_date_mode === 'phase' ? 'Phase' : 
+                         row.assignment_date_mode === 'project' ? 'Project' : 'Fixed';
+        
+        return (
+          <div className="project-info">
+            <span className="project-name">{value}</span>
+            <span className="text-xs text-muted">
+              {formatDate(startDate)} - {formatDate(endDate)}
+              <span className="assignment-mode-badge">{modeLabel}</span>
+            </span>
+          </div>
+        );
+      }
     },
     {
       key: 'person_name',
@@ -160,20 +170,22 @@ export default function Assignments() {
       key: 'start_date',
       header: 'Start Date',
       sortable: true,
-      render: formatDate
+      render: (value, row) => formatDate(row.computed_start_date || value)
     },
     {
       key: 'end_date',
       header: 'End Date',
       sortable: true,
-      render: formatDate
+      render: (value, row) => formatDate(row.computed_end_date || value)
     },
     {
       key: 'duration',
       header: 'Duration',
       render: (_, row) => {
-        const start = new Date(row.start_date);
-        const end = new Date(row.end_date);
+        const startDate = row.computed_start_date || row.start_date;
+        const endDate = row.computed_end_date || row.end_date;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
         const weeks = Math.round(days / 7);
         return weeks > 0 ? `${weeks}w` : `${days}d`;

@@ -11,9 +11,13 @@ import {
   Settings,
   GitBranch,
   ClipboardList,
-  Activity,
   Palette,
+  History,
+  GanttChart,
+  LogOut,
+  User,
 } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 import './Layout.css';
 
 interface LayoutProps {
@@ -24,24 +28,23 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'People', href: '/people', icon: Users },
-  { name: 'Roles', href: '/roles', icon: UserCog },
-  { name: 'Project Types', href: '/project-types', icon: Palette },
   { name: 'Assignments', href: '/assignments', icon: ClipboardList },
-  { name: 'Resource Templates', href: '/allocations', icon: GitBranch },
-  { name: 'Availability', href: '/availability', icon: Calendar },
+  { name: 'Scenarios', href: '/scenarios', icon: GitBranch },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Import', href: '/import', icon: FileSpreadsheet },
+  { name: 'Audit Log', href: '/audit-log', icon: History },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { currentUser, logout } = useUser();
 
   return (
     <div className="layout">
       <nav className="sidebar">
         <div className="sidebar-header">
-          <Activity className="logo-icon" />
+          <img src="/capacinator_inator_transparent_logo.png" alt="Capacinator" className="logo-icon" />
           <div className="logo-text">Capacinator</div>
         </div>
         
@@ -67,6 +70,21 @@ export function Layout({ children }: LayoutProps) {
         </ul>
 
         <div className="sidebar-footer">
+          {currentUser && (
+            <div className="user-info">
+              <div className="user-details">
+                <User className="user-icon" size={16} />
+                <div className="user-name">{currentUser.name}</div>
+              </div>
+              <button 
+                onClick={logout} 
+                className="logout-button"
+                title="Switch User"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          )}
           <div className="version">v1.0.0</div>
         </div>
       </nav>

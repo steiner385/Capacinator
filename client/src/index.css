@@ -100,11 +100,208 @@ input:focus, select:focus, textarea:focus {
   background: var(--text-tertiary);
 }
 
-/* Allocations Page Styles */
-.allocations-grid {
+/* Resource Templates Page Styles */
+.resource-templates-grid {
   display: grid;
   gap: 2rem;
   margin-top: 2rem;
+}
+
+.allocation-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+}
+
+.allocation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  border-left: 3px solid var(--primary);
+}
+
+.project-type-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-right: 0.5rem;
+}
+
+.allocation-value {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.allocation-empty {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* Role Details Page Styles */
+.role-details-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-left h1 {
+  margin: 0;
+}
+
+.role-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  margin-top: 2rem;
+}
+
+.role-info-section,
+.resource-templates-section {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+}
+
+.section-header {
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  margin: 0 0 0.5rem 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.info-item span {
+  color: var(--text-primary);
+}
+
+.templates-grid {
+  overflow-x: auto;
+}
+
+.resource-templates-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.resource-templates-table th {
+  background: var(--table-header-bg);
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.resource-templates-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+
+.resource-templates-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.resource-templates-table tbody tr:hover {
+  background: var(--table-hover-bg);
+}
+
+.project-type-cell {
+  min-width: 200px;
+}
+
+.project-type-name {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.project-type-description {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.allocation-cell {
+  text-align: center;
+  position: relative;
+  min-width: 100px;
+}
+
+.allocation-input {
+  width: 60px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.875rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+
+.allocation-input:focus {
+  outline: none;
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.allocation-unit {
+  margin-left: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-tertiary);
+}
+
+.error-page {
+  text-align: center;
+  padding: 3rem;
+}
+
+.error-page h1 {
+  color: var(--danger);
+  margin-bottom: 1rem;
+}
+
+.span-2 {
+  grid-column: span 2;
 }
 
 .phase-section {
@@ -119,23 +316,6 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-primary);
 }
 
-.allocations-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.allocations-table th,
-.allocations-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.allocations-table .form-select,
-.allocations-table .form-input {
-  width: 100%;
-  margin: 0;
-}
 
 .add-form-section {
   background: var(--bg-secondary);

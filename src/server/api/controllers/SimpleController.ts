@@ -53,7 +53,9 @@ export class SimpleController extends BaseController {
           }
         };
       } else {
-        return items;
+        return {
+          data: items
+        };
       }
     }, res, `Failed to fetch ${this.tableName}`);
 
@@ -75,7 +77,7 @@ export class SimpleController extends BaseController {
         return null;
       }
 
-      return item;
+      return { data: item };
     }, res, `Failed to fetch ${this.tableName.slice(0, -1)}`);
 
     if (result) {
@@ -95,7 +97,7 @@ export class SimpleController extends BaseController {
         })
         .returning('*');
 
-      return item;
+      return { data: item };
     }, res, `Failed to create ${this.tableName.slice(0, -1)}`);
 
     if (result) {
@@ -121,7 +123,7 @@ export class SimpleController extends BaseController {
         return null;
       }
 
-      return item;
+      return { data: item };
     }, res, `Failed to update ${this.tableName.slice(0, -1)}`);
 
     if (result) {

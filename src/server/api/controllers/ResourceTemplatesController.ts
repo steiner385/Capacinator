@@ -131,6 +131,29 @@ export class ResourceTemplatesController extends BaseController {
     const allocationData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Check if this is a child project type (role allocations only allowed for child types)
+      const projectType = await this.db('project_types')
+        .where('id', allocationData.project_type_id)
+        .first();
+
+      if (!projectType) {
+        return res.status(404).json({
+          error: 'Project type not found'
+        });
+      }
+
+      // Prevent editing allocations for default child project types
+      if (projectType.is_default) {
+        return res.status(403).json({
+          error: 'Cannot modify allocations for default project types',
+          message: 'Default project types are read-only. Modify the parent project type instead.'
+        });
+      }
+
+      // Determine if this is an inherited template or a parent/override template
+      const isInherited = false; // Direct creation is never inherited
+      const parentTemplateId = null; // Will be set during inheritance propagation
+
       // Validate allocation doesn't already exist
       const existing = await this.db('resource_templates')
         .where({
@@ -151,10 +174,17 @@ export class ResourceTemplatesController extends BaseController {
       const [allocation] = await this.db('resource_templates')
         .insert({
           ...allocationData,
+          is_inherited: isInherited,
+          parent_template_id: parentTemplateId,
           created_at: new Date(),
           updated_at: new Date()
         })
         .returning('*');
+
+      // If this is a parent project type, propagate to children
+      if (projectType.parent_id === null) {
+        await this.propagateTemplateToChildren(allocation.project_type_id, allocation);
+      }
 
       return allocation;
     }, res, 'Failed to create allocation');
@@ -168,6 +198,29 @@ export class ResourceTemplatesController extends BaseController {
     const { project_type_id, allocations } = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Check if this is a child project type (role allocations only allowed for child types)
+      const projectType = await this.db('project_types')
+        .where('id', project_type_id)
+        .first();
+
+      if (!projectType) {
+        return res.status(404).json({
+          error: 'Project type not found'
+        });
+      }
+
+      // Prevent editing allocations for default child project types
+      if (projectType.is_default) {
+        return res.status(403).json({
+          error: 'Cannot modify allocations for default project types',
+          message: 'Default project types are read-only. Modify the parent project type instead.'
+        });
+      }
+
+      // Determine if this is an inherited template or a parent/override template
+      const isInherited = false; // Direct creation is never inherited
+      const parentTemplateId = null; // Will be set during inheritance propagation
+
       const results = {
         created: [] as any[],
         updated: [] as any[],
@@ -205,6 +258,8 @@ export class ResourceTemplatesController extends BaseController {
                   phase_id: allocation.phase_id,
                   role_id: allocation.role_id,
                   allocation_percentage: allocation.allocation_percentage,
+                  is_inherited: false,
+                  parent_template_id: null,
                   created_at: new Date(),
                   updated_at: new Date()
                 })
@@ -220,6 +275,16 @@ export class ResourceTemplatesController extends BaseController {
           }
         }
       });
+
+      // If this is a parent project type, propagate changes to children
+      if (projectType.parent_id === null) {
+        for (const createdTemplate of results.created) {
+          await this.propagateTemplateToChildren(project_type_id, createdTemplate);
+        }
+        for (const updatedTemplate of results.updated) {
+          await this.propagateTemplateToChildren(project_type_id, updatedTemplate);
+        }
+      }
 
       return {
         summary: {
@@ -424,5 +489,90 @@ export class ResourceTemplatesController extends BaseController {
     if (result) {
       res.json(result);
     }
+  }
+
+  // Helper method to propagate template to children
+  private async propagateTemplateToChildren(parentProjectTypeId: string, parentTemplate: any) {
+    // Get all child project types
+    const children = await this.db('project_types')
+      .where('parent_id', parentProjectTypeId);
+
+    for (const child of children) {
+      // Check if child already has an override for this role/phase combination
+      const existingOverride = await this.db('resource_templates')
+        .where({
+          project_type_id: child.id,
+          phase_id: parentTemplate.phase_id,
+          role_id: parentTemplate.role_id,
+          is_inherited: false
+        })
+        .first();
+
+      if (existingOverride) {
+        // Child has an override, don't propagate
+        continue;
+      }
+
+      // Check if child already has an inherited template for this role/phase
+      const existingInherited = await this.db('resource_templates')
+        .where({
+          project_type_id: child.id,
+          phase_id: parentTemplate.phase_id,
+          role_id: parentTemplate.role_id,
+          is_inherited: true
+        })
+        .first();
+
+      if (existingInherited) {
+        // Update existing inherited template
+        await this.db('resource_templates')
+          .where('id', existingInherited.id)
+          .update({
+            allocation_percentage: parentTemplate.allocation_percentage,
+            parent_template_id: parentTemplate.id,
+            updated_at: new Date()
+          });
+      } else {
+        // Create new inherited template
+        await this.db('resource_templates')
+          .insert({
+            project_type_id: child.id,
+            phase_id: parentTemplate.phase_id,
+            role_id: parentTemplate.role_id,
+            allocation_percentage: parentTemplate.allocation_percentage,
+            is_inherited: true,
+            parent_template_id: parentTemplate.id,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+      }
+
+      // Recursively propagate to grandchildren
+      await this.propagateTemplateToChildren(child.id, parentTemplate);
+    }
+  }
+
+  // Helper method to get effective allocations (inherited + overridden)
+  async getEffectiveAllocations(projectTypeId: string) {
+    const result = await this.executeQuery(async () => {
+      // Get all templates for this project type
+      const templates = await this.db('resource_templates')
+        .join('project_phases', 'resource_templates.phase_id', 'project_phases.id')
+        .join('roles', 'resource_templates.role_id', 'roles.id')
+        .leftJoin('project_types as parent_types', 'resource_templates.parent_template_id', 'parent_types.id')
+        .where('resource_templates.project_type_id', projectTypeId)
+        .select(
+          'resource_templates.*',
+          'project_phases.name as phase_name',
+          'project_phases.order_index as phase_order',
+          'roles.name as role_name',
+          'parent_types.name as parent_type_name'
+        )
+        .orderBy('project_phases.order_index', 'roles.name');
+
+      return templates;
+    });
+
+    return result;
   }
 }

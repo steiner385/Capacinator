@@ -109,7 +109,8 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     queryKey: ['locations'],
     queryFn: async () => {
       const response = await api.locations.list();
-      return response.data.data;
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return response.data?.data || response.data || [];
     }
   });
 
@@ -117,7 +118,8 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      return response.data.data;
+      // Handle both wrapped {data: [...]} and direct array [...] responses
+      return response.data?.data || response.data || [];
     }
   });
 

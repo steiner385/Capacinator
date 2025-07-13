@@ -4,6 +4,9 @@ import { PeopleController } from '../controllers/PeopleController.js';
 const router = Router();
 const controller = new PeopleController();
 
+// Test data cleanup (for e2e tests) - must come before /:id route  
+router.delete('/test-data', (req, res) => controller.deleteTestData(req, res));
+
 // People CRUD operations
 router.get('/', (req, res) => controller.getAll(req, res));
 router.get('/:id', (req, res) => controller.getById(req, res));

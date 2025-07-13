@@ -10,11 +10,15 @@ interface StatCardProps {
     value: number;
     isPositive: boolean;
   };
+  onClick?: () => void;
 }
 
-export function StatCard({ title, value, icon: Icon, color = 'primary', trend }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, color = 'primary', trend, onClick }: StatCardProps) {
   return (
-    <div className={`stat-card stat-card-${color}`}>
+    <div 
+      className={`stat-card stat-card-${color} ${onClick ? 'stat-card-clickable' : ''}`}
+      onClick={onClick}
+    >
       <div className="stat-card-content">
         <div className="stat-card-info">
           <p className="stat-card-title">{title}</p>

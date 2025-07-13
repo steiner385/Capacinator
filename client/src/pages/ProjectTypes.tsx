@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Palette } from 'lucide-react';
+import { Plus, Edit2, Trash2, Palette, ChevronRight, ChevronDown, List, GitBranch, Eye } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
@@ -9,26 +10,35 @@ import { ErrorMessage } from '../components/ui/ErrorMessage';
 import ProjectTypeModal from '../components/modals/ProjectTypeModal';
 import { useModal } from '../hooks/useModal';
 import type { ProjectType } from '../types';
+import './ProjectTypes.css';
 
 export default function ProjectTypes() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     search: ''
   });
+  const [viewMode, setViewMode] = useState<'list' | 'hierarchy'>('list');
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   
   const addProjectTypeModal = useModal();
   const editProjectTypeModal = useModal();
   const [editingProjectType, setEditingProjectType] = useState<ProjectType | null>(null);
 
-  // Fetch project types
+  // Fetch project types - list or hierarchy based on view mode
   const { data: projectTypes, isLoading: projectTypesLoading, error: projectTypesError } = useQuery({
-    queryKey: ['projectTypes', filters],
+    queryKey: ['projectTypes', filters, viewMode],
     queryFn: async () => {
-      const params = Object.entries(filters)
-        .filter(([_, value]) => value)
-        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-      const response = await api.projectTypes.list(params);
-      return response.data as ProjectType[];
+      if (viewMode === 'hierarchy') {
+        const response = await api.projectTypes.getHierarchy();
+        return response.data.data as ProjectType[];
+      } else {
+        const params = Object.entries(filters)
+          .filter(([_, value]) => value)
+          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+        const response = await api.projectTypes.list(params);
+        return response.data.data as ProjectType[];
+      }
     }
   });
 
@@ -68,6 +78,23 @@ export default function ProjectTypes() {
     });
   };
 
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleCreateChild = (parentId: string) => {
+    // TODO: Implement child creation modal
+    console.log('Create child for:', parentId);
+  };
+
   const columns: Column<ProjectType>[] = [
     {
       key: 'name',
@@ -90,19 +117,6 @@ export default function ProjectTypes() {
         <span className="text-muted">
           {value || 'No description'}
         </span>
-      )
-    },
-    {
-      key: 'color_code',
-      header: 'Color',
-      render: (value) => (
-        <div className="color-display">
-          <div 
-            className="color-box"
-            style={{ backgroundColor: value || '#6b7280' }}
-          />
-          <span className="color-code">{value || '#6b7280'}</span>
-        </div>
       )
     },
     {
@@ -149,6 +163,97 @@ export default function ProjectTypes() {
     }
   ];
 
+  const ProjectTypeNode = ({ projectType, level = 0 }: { projectType: any; level?: number }) => {
+    const hasChildren = projectType.children && projectType.children.length > 0;
+    const isExpanded = expandedNodes.has(projectType.id);
+    const indent = level * 20;
+    const isParentType = level === 0;
+    const isSubType = level > 0;
+
+    return (
+      <div className="project-type-node">
+        <div 
+          className={`project-type-row ${isParentType ? 'parent-type' : 'child-type'}`}
+          style={{ paddingLeft: `${indent}px` }}
+        >
+          <div className="project-type-content">
+            {hasChildren && (
+              <button
+                className="btn btn-icon btn-sm expand-toggle"
+                onClick={() => toggleNode(projectType.id)}
+              >
+                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </button>
+            )}
+            {!hasChildren && <div className="expand-spacer" />}
+            
+            <div className="project-type-info">
+              <div className="project-type-name">
+                <div 
+                  className="project-type-color"
+                  style={{ backgroundColor: projectType.color_code || '#6b7280' }}
+                />
+                <span className="name">{projectType.name}</span>
+                {isParentType && <span className="parent-badge">Project Type</span>}
+                {isSubType && <span className="child-badge">Sub-Type</span>}
+              </div>
+              <div className="project-type-meta">
+                <span className="description">{projectType.description || 'No description'}</span>
+                {hasChildren && <span className="level-badge">{projectType.children.length} sub-types</span>}
+              </div>
+            </div>
+          </div>
+          
+          <div className="project-type-actions">
+            {projectType.is_parent && (
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => handleCreateChild(projectType.id)}
+                title="Add Child"
+              >
+                <Plus size={14} />
+                Child
+              </button>
+            )}
+            <button
+              className="btn btn-icon btn-sm"
+              onClick={() => navigate(`/project-types/${projectType.id}`)}
+              title="View Details"
+            >
+              <Eye size={16} />
+            </button>
+            <button
+              className="btn btn-icon btn-sm"
+              onClick={() => handleEditProjectType(projectType)}
+              title="Edit"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button
+              className="btn btn-icon btn-sm btn-danger"
+              onClick={() => handleDeleteProjectType(projectType.id, projectType.name)}
+              title="Delete"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+        
+        {hasChildren && isExpanded && (
+          <div className="project-type-children">
+            {projectType.children.map((child: any) => (
+              <ProjectTypeNode
+                key={child.id}
+                projectType={child}
+                level={level + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (projectTypesLoading) {
     return <LoadingSpinner />;
   }
@@ -165,6 +270,22 @@ export default function ProjectTypes() {
           <p className="text-muted">Manage project type definitions and colors</p>
         </div>
         <div className="header-actions">
+          <div className="view-mode-toggle">
+            <button
+              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('list')}
+            >
+              <List size={16} />
+              List
+            </button>
+            <button
+              className={`btn btn-sm ${viewMode === 'hierarchy' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setViewMode('hierarchy')}
+            >
+              <GitBranch size={16} />
+              Hierarchy
+            </button>
+          </div>
           <button
             className="btn btn-primary"
             onClick={addProjectTypeModal.open}
@@ -182,11 +303,28 @@ export default function ProjectTypes() {
         onReset={handleResetFilters}
       />
 
-      <DataTable
-        data={projectTypes || []}
-        columns={columns}
-        itemsPerPage={20}
-      />
+      {viewMode === 'hierarchy' ? (
+        <div className="hierarchy-view">
+          {projectTypes && projectTypes.length > 0 ? (
+            <div className="project-types-hierarchy">
+              {projectTypes.map((projectType: any) => (
+                <ProjectTypeNode key={projectType.id} projectType={projectType} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <p>No project types found</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <DataTable
+          data={projectTypes || []}
+          columns={columns}
+          itemsPerPage={20}
+          onRowClick={(projectType) => navigate(`/project-types/${projectType.id}`)}
+        />
+      )}
 
       {/* Add Project Type Modal */}
       <ProjectTypeModal
