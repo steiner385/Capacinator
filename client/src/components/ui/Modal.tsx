@@ -20,33 +20,31 @@ export const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   className = ''
 }) => {
-  if (!isOpen) return null;
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleBackdropClick = React.useCallback((e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
-  };
+  }, [onClose]);
 
-  const handleEscapeKey = (e: KeyboardEvent) => {
+  const handleKeydown = React.useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
     }
-  };
+  }, [onClose]);
 
   React.useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return;
+    
+    document.addEventListener('keydown', handleKeydown);
+    document.body.style.overflow = 'hidden';
     
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('keydown', handleKeydown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, handleKeydown]);
 
-  const getSizeClass = () => {
+  const getSizeClass = React.useMemo(() => {
     switch (size) {
       case 'sm': return 'modal-sm';
       case 'md': return 'modal-md';
@@ -54,11 +52,13 @@ export const Modal: React.FC<ModalProps> = ({
       case 'xl': return 'modal-xl';
       default: return 'modal-md';
     }
-  };
+  }, [size]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="modal" onClick={handleBackdropClick}>
-      <div className={`modal-content ${getSizeClass()} ${className}`}>
+      <div className={`modal-content ${getSizeClass} ${className}`}>
         <div className="modal-header">
           <h2>{title}</h2>
           {showCloseButton && (

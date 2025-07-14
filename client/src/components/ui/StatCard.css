@@ -1,69 +1,69 @@
 .stat-card {
-  background-color: #fff;
+  background-color: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   border-left: 4px solid;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-card-primary {
-  border-left-color: #3b82f6;
+  border-left-color: var(--primary);
 }
 
 .stat-card-primary .stat-card-icon {
-  background-color: #eff6ff;
+  background-color: var(--badge-primary-bg);
   color: #3b82f6;
 }
 
 .stat-card-success {
-  border-left-color: #10b981;
+  border-left-color: var(--success);
 }
 
 .stat-card-success .stat-card-icon {
-  background-color: #f0fdf4;
-  color: #10b981;
+  background-color: var(--badge-success-bg);
+  color: var(--success);
 }
 
 .stat-card-warning {
-  border-left-color: #f59e0b;
+  border-left-color: var(--warning);
 }
 
 .stat-card-warning .stat-card-icon {
-  background-color: #fffbeb;
-  color: #f59e0b;
+  background-color: var(--badge-warning-bg);
+  color: var(--warning);
 }
 
 .stat-card-danger {
-  border-left-color: #ef4444;
+  border-left-color: var(--danger);
 }
 
 .stat-card-danger .stat-card-icon {
-  background-color: #fef2f2;
-  color: #ef4444;
+  background-color: var(--badge-danger-bg);
+  color: var(--danger);
 }
 
 .stat-card-purple {
-  border-left-color: #8b5cf6;
+  border-left-color: var(--color-purple);
 }
 
 .stat-card-purple .stat-card-icon {
-  background-color: #f5f3ff;
-  color: #8b5cf6;
+  background-color: var(--badge-info-bg);
+  color: var(--color-purple);
 }
 
 .stat-card-pink {
-  border-left-color: #ec4899;
+  border-left-color: var(--color-pink);
 }
 
 .stat-card-pink .stat-card-icon {
-  background-color: #fdf2f8;
-  color: #ec4899;
+  background-color: var(--badge-secondary-bg);
+  color: var(--color-pink);
 }
 
 .stat-card-content {
