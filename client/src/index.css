@@ -29,6 +29,8 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 h1 {
@@ -403,7 +405,7 @@ input:focus, select:focus, textarea:focus {
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   margin-bottom: 0.25rem;
-  color: #ffffff;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -731,8 +733,9 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.75rem;
 }
 
-/* Light Mode Theme Variables (Only Theme) */
-:root {
+/* Light Mode Theme Variables */
+:root,
+[data-theme="light"] {
   /* Primary Colors */
   --primary: #4f46e5;
   --primary-hover: #4338ca;
@@ -792,9 +795,141 @@ input:focus, select:focus, textarea:focus {
   --color-orange: #f59e0b;
   --color-purple: #8b5cf6;
   --color-gray: #6b7280;
+  --color-pink: #ec4899;
+  --color-indigo: #6366f1;
+  --color-red: #ef4444;
+  --color-yellow: #eab308;
+  --color-emerald: #10b981;
+  --color-cyan: #06b6d4;
+  --color-slate: #64748b;
+  
+  /* Chart Colors */
+  --chart-primary: #4f46e5;
+  --chart-secondary: #10b981;
+  --chart-tertiary: #f59e0b;
+  --chart-quaternary: #ef4444;
+  --chart-quinary: #8b5cf6;
+  --chart-accent: #ec4899;
+  
+  /* Specific Component Colors */
+  --modal-backdrop: rgba(0, 0, 0, 0.5);
+  --gradient-light: linear-gradient(to bottom, #ffffff, #f8fafc);
+  --today-line: #dc2626;
+  --timeline-grid: #e5e7eb;
+  --project-active: #2563eb;
+  --project-selected: #1d4ed8;
+  --project-hover: rgba(37, 99, 235, 0.1);
+  
+  /* Status Colors Extended */
+  --status-overdue: #dc2626;
+  --status-active: #16a34a;
+  --status-pending: #d97706;
+  --status-complete: #059669;
+  --status-cancelled: #6b7280;
   
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark Mode Theme Variables */
+[data-theme="dark"] {
+  color-scheme: dark;
+  
+  /* Primary Colors - Keep consistent */
+  --primary: #6366f1;
+  --primary-hover: #5b5beb;
+  --primary-dark: #4f46e5;
+  
+  /* Status Colors - Adjusted for dark theme */
+  --success: #10b981;
+  --success-hover: #059669;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --warning: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  
+  /* Background Colors - Dark theme backgrounds */
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  
+  /* Text Colors - High contrast for dark theme */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+  
+  /* Border Colors - Subtle borders for dark theme */
+  --border-color: #374151;
+  --border-color-hover: #4b5563;
+  
+  /* Component Specific - Dark theme adjustments */
+  --sidebar-bg: #0f172a;
+  --sidebar-text: rgba(255, 255, 255, 0.9);
+  --sidebar-text-hover: #ffffff;
+  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --table-header-bg: #1f2937;
+  --table-hover-bg: #374151;
+  --input-bg: #1f2937;
+  --input-border: #374151;
+  --input-focus-border: var(--primary);
+  
+  /* Badge Colors - Dark theme badges */
+  --badge-primary-bg: rgba(99, 102, 241, 0.15);
+  --badge-primary-text: #a5b4fc;
+  --badge-success-bg: rgba(16, 185, 129, 0.15);
+  --badge-success-text: #6ee7b7;
+  --badge-warning-bg: rgba(245, 158, 11, 0.15);
+  --badge-warning-text: #fbbf24;
+  --badge-danger-bg: rgba(239, 68, 68, 0.15);
+  --badge-danger-text: #fca5a5;
+  
+  /* Utility Colors - Dark theme versions */
+  --color-blue: #60a5fa;
+  --color-green: #34d399;
+  --color-orange: #fbbf24;
+  --color-purple: #a78bfa;
+  --color-gray: #9ca3af;
+  --color-pink: #f472b6;
+  --color-indigo: #818cf8;
+  --color-red: #f87171;
+  --color-yellow: #facc15;
+  --color-emerald: #34d399;
+  --color-cyan: #22d3ee;
+  --color-slate: #94a3b8;
+  
+  /* Chart Colors - Dark theme friendly */
+  --chart-primary: #6366f1;
+  --chart-secondary: #10b981;
+  --chart-tertiary: #f59e0b;
+  --chart-quaternary: #ef4444;
+  --chart-quinary: #a78bfa;
+  --chart-accent: #f472b6;
+  
+  /* Specific Component Colors - Dark theme */
+  --modal-backdrop: rgba(0, 0, 0, 0.7);
+  --gradient-light: linear-gradient(to bottom, #1f2937, #111827);
+  --today-line: #ef4444;
+  --timeline-grid: #374151;
+  --project-active: #60a5fa;
+  --project-selected: #3b82f6;
+  --project-hover: rgba(96, 165, 250, 0.15);
+  
+  /* Status Colors Extended - Dark theme */
+  --status-overdue: #ef4444;
+  --status-active: #22c55e;
+  --status-pending: #f59e0b;
+  --status-complete: #10b981;
+  --status-cancelled: #9ca3af;
+  
+  /* Shadows - Darker shadows for dark theme */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
 }
