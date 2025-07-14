@@ -146,16 +146,20 @@ export async function up(knex: Knex): Promise<void> {
   });
 
   // Create a baseline scenario automatically
-  await knex('scenarios').insert({
-    id: 'baseline-0000-0000-0000-000000000000',
-    name: 'Baseline Plan',
-    description: 'The current baseline plan that all scenarios branch from',
-    parent_scenario_id: null,
-    created_by: (await knex('people').select('id').first())?.id || '123e4567-e89b-12d3-a456-426614174000',
-    status: 'active',
-    scenario_type: 'baseline',
-    branch_point: null
-  });
+  // Only create baseline scenario if there are people in the database
+  const firstPerson = await knex('people').select('id').first();
+  if (firstPerson) {
+    await knex('scenarios').insert({
+      id: 'baseline-0000-0000-0000-000000000000',
+      name: 'Baseline Plan',
+      description: 'The current baseline plan that all scenarios branch from',
+      parent_scenario_id: null,
+      created_by: firstPerson.id,
+      status: 'active',
+      scenario_type: 'baseline',
+      branch_point: null
+    });
+  }
 
   // Create views for scenario-aware data
   await knex.raw(`
