@@ -30,7 +30,6 @@ const config: Knex.Config = {
   },
   useNullAsDefault: true,
   acquireConnectionTimeout: 10000,
-  timeout: 30000,
   migrations: {
     directory: './src/server/database/migrations'
   },

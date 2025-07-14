@@ -172,7 +172,7 @@ export class ScenariosController extends BaseController {
         .count('* as count')
         .first();
 
-      if (childCount && childCount.count > 0) {
+      if (childCount && Number(childCount.count) > 0) {
         throw new Error('Cannot delete scenario with child scenarios');
       }
 

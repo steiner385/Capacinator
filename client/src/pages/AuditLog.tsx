@@ -11,7 +11,7 @@ interface AuditEntry {
   id: string;
   table_name: string;
   record_id: string;
-  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | null | undefined;
   changed_by: string | null;
   old_values: Record<string, any> | null;
   new_values: Record<string, any> | null;
@@ -139,11 +139,14 @@ export function AuditLog() {
     {
       key: 'action',
       header: 'Action',
-      render: (entry: AuditEntry) => (
-        <span className={`audit-action audit-action--${entry.action.toLowerCase()}`}>
-          {entry.action}
-        </span>
-      )
+      render: (entry: AuditEntry) => {
+        const action = entry.action || 'UNKNOWN';
+        return (
+          <span className={`audit-action audit-action--${action.toLowerCase()}`}>
+            {action}
+          </span>
+        );
+      }
     },
     {
       key: 'changed_by',
@@ -167,7 +170,7 @@ export function AuditLog() {
           >
             {expandedEntry === entry.id ? 'Hide' : 'Details'}
           </button>
-          {entry.action !== 'DELETE' && (
+          {entry.action && entry.action !== 'DELETE' && (
             <button
               onClick={() => handleUndoChange(entry.table_name, entry.record_id)}
               disabled={undoingEntry === `${entry.table_name}:${entry.record_id}`}

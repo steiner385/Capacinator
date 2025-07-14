@@ -9,7 +9,10 @@ import {
   ArrowRightLeft,
   Users,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  LayoutGrid,
+  List,
+  Network
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { Scenario } from '../types';
@@ -245,6 +248,7 @@ const CreateScenarioModal: React.FC<CreateScenarioModalProps> = ({
 export const Scenarios: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedParentScenario, setSelectedParentScenario] = useState<Scenario | undefined>();
+  const [viewMode, setViewMode] = useState<'cards' | 'list' | 'graphical'>('cards');
 
   const { data: scenarios, isLoading, error } = useQuery({
     queryKey: ['scenarios'],
@@ -289,6 +293,381 @@ export const Scenarios: React.FC = () => {
     setSelectedParentScenario(undefined);
   };
 
+  const renderListView = () => {
+    if (!scenarios || scenarios.length === 0) {
+      return <div className="no-scenarios">No scenarios found</div>;
+    }
+
+    // Build hierarchical tree structure
+    const buildScenarioTree = () => {
+      const scenarioMap = new Map(scenarios.map(s => [s.id, { ...s, children: [] }]));
+      const roots: any[] = [];
+
+      scenarios.forEach(scenario => {
+        const scenarioNode = scenarioMap.get(scenario.id)!;
+        if (scenario.parent_scenario_id && scenarioMap.has(scenario.parent_scenario_id)) {
+          const parent = scenarioMap.get(scenario.parent_scenario_id)!;
+          parent.children.push(scenarioNode);
+        } else {
+          roots.push(scenarioNode);
+        }
+      });
+
+      return roots;
+    };
+
+    const renderScenarioNode = (scenario: any, level: number = 0, isLast: boolean = true, parentLines: boolean[] = []) => {
+      const indent = level * 24;
+      const hasChildren = scenario.children && scenario.children.length > 0;
+      
+      return (
+        <div key={scenario.id}>
+          <div className={`hierarchy-row ${scenario.scenario_type}`}>
+            <div className="hierarchy-indent" style={{ paddingLeft: `${indent}px` }}>
+              <div className="hierarchy-lines">
+                {/* Draw parent connection lines */}
+                {parentLines.map((showLine, index) => (
+                  <div
+                    key={index}
+                    className={`parent-line ${showLine ? 'visible' : ''}`}
+                    style={{ left: `${index * 24 + 12}px` }}
+                  />
+                ))}
+                
+                {/* Current level connector */}
+                {level > 0 && (
+                  <>
+                    <div 
+                      className="branch-line horizontal" 
+                      style={{ left: `${(level - 1) * 24 + 12}px` }}
+                    />
+                    <div 
+                      className={`branch-line vertical ${isLast ? 'last' : ''}`}
+                      style={{ left: `${(level - 1) * 24 + 12}px` }}
+                    />
+                  </>
+                )}
+                
+                {/* Node connector */}
+                <div className="node-connector" style={{ left: `${level * 24 + 12}px` }}>
+                  <div className={`connector-dot ${scenario.scenario_type}`}></div>
+                </div>
+              </div>
+              
+              <div className="hierarchy-content">
+                <div className="scenario-name-cell">
+                  <GitBranch size={16} />
+                  <div className="scenario-info">
+                    <div className="name">{scenario.name}</div>
+                    {scenario.description && (
+                      <div className="description">{scenario.description}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="hierarchy-meta">
+              <span className={`scenario-type ${scenario.scenario_type}`}>
+                {scenario.scenario_type}
+              </span>
+              <span className={`scenario-status ${scenario.status}`}>
+                {scenario.status}
+              </span>
+              <span className="created-by">{scenario.created_by_name}</span>
+              <span className="created-date">{new Date(scenario.created_at).toLocaleDateString()}</span>
+            </div>
+            
+            <div className="hierarchy-actions">
+              <button
+                onClick={() => handleBranch(scenario)}
+                className="action-button branch"
+                title="Create Branch"
+              >
+                <GitBranch size={14} />
+              </button>
+              <button
+                onClick={() => handleCompare(scenario)}
+                className="action-button compare"
+                title="Compare Scenarios"
+              >
+                <ArrowRightLeft size={14} />
+              </button>
+              {scenario.parent_scenario_id && scenario.status === 'active' && (
+                <button
+                  onClick={() => handleMerge(scenario)}
+                  className="action-button merge"
+                  title="Merge to Parent"
+                >
+                  <Merge size={14} />
+                </button>
+              )}
+              <button
+                onClick={() => handleEdit(scenario)}
+                className="action-button edit"
+                title="Edit Scenario"
+              >
+                <Edit3 size={14} />
+              </button>
+              {scenario.scenario_type !== 'baseline' && (
+                <button
+                  onClick={() => handleDelete(scenario)}
+                  className="action-button delete"
+                  title="Delete Scenario"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Render children */}
+          {hasChildren && scenario.children.map((child: any, index: number) => {
+            const isLastChild = index === scenario.children.length - 1;
+            const newParentLines = [...parentLines, !isLastChild];
+            return renderScenarioNode(child, level + 1, isLastChild, newParentLines);
+          })}
+        </div>
+      );
+    };
+
+    const scenarioTree = buildScenarioTree();
+
+    return (
+      <div className="scenarios-hierarchy">
+        <div className="hierarchy-header">
+          <div className="hierarchy-title">Scenario Hierarchy</div>
+          <div className="hierarchy-legend">
+            <div className="legend-item">
+              <div className="legend-dot baseline"></div>
+              <span>Baseline</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-dot branch"></div>
+              <span>Branch</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-dot sandbox"></div>
+              <span>Sandbox</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="hierarchy-content">
+          {scenarioTree.map((rootScenario, index) => 
+            renderScenarioNode(rootScenario, 0, index === scenarioTree.length - 1, [])
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderGraphicalView = () => {
+    if (!scenarios || scenarios.length === 0) {
+      return <div className="no-scenarios">No scenarios found</div>;
+    }
+
+    // Sort scenarios by creation date for vertical timeline (newest at top)
+    const sortedScenarios = [...scenarios].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    // Build commit graph structure like Git
+    const buildCommitGraph = () => {
+      const commits: any[] = [];
+      const branchLanes: Map<string, { color: string; scenarios: string[] }> = new Map();
+      const scenarioLanes: Map<string, number> = new Map();
+      
+      // Color palette for different branches
+      const branchColors = [
+        '#22c55e', // green - baseline
+        '#3b82f6', // blue - primary branch
+        '#f59e0b', // amber - sandbox
+        '#ef4444', // red
+        '#8b5cf6', // violet 
+        '#06b6d4', // cyan
+        '#f97316', // orange
+        '#84cc16', // lime
+      ];
+      
+      let nextLaneIndex = 0;
+      let colorIndex = 0;
+
+      sortedScenarios.forEach((scenario) => {
+        let laneIndex = 0;
+        let branchKey = scenario.parent_scenario_id || 'root';
+        
+        if (scenario.scenario_type === 'baseline') {
+          branchKey = 'baseline';
+        } else if (scenario.scenario_type === 'sandbox') {
+          branchKey = `sandbox-${scenario.id}`;
+        }
+
+        // Find or create lane for this branch
+        if (branchLanes.has(branchKey)) {
+          const existingBranch = branchLanes.get(branchKey)!;
+          // Find the lane index for this branch
+          laneIndex = Array.from(branchLanes.entries())
+            .findIndex(([key]) => key === branchKey);
+        } else {
+          // New branch - assign next available lane
+          laneIndex = nextLaneIndex++;
+          branchLanes.set(branchKey, {
+            color: branchColors[colorIndex % branchColors.length],
+            scenarios: []
+          });
+          colorIndex++;
+        }
+
+        branchLanes.get(branchKey)!.scenarios.push(scenario.id);
+        scenarioLanes.set(scenario.id, laneIndex);
+
+        commits.push({
+          ...scenario,
+          laneIndex,
+          branchKey,
+          color: branchLanes.get(branchKey)!.color
+        });
+      });
+
+      return { commits, branchLanes, scenarioLanes, maxLanes: nextLaneIndex };
+    };
+
+    const { commits, branchLanes, scenarioLanes, maxLanes } = buildCommitGraph();
+
+    return (
+      <div className="commit-graph">
+        <div className="graph-header">
+          <div className="graph-title">Scenario Commit Graph</div>
+          <div className="graph-legend">
+            <div className="legend-item">
+              <div className="commit-dot baseline"></div>
+              <span>Baseline</span>
+            </div>
+            <div className="legend-item">
+              <div className="commit-dot branch"></div>
+              <span>Branch</span>
+            </div>
+            <div className="legend-item">
+              <div className="commit-dot sandbox"></div>
+              <span>Sandbox</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="graph-container">
+          <div className="graph-lanes" style={{ width: `${maxLanes * 30 + 20}px` }}>
+            {/* Vertical branch lines */}
+            {Array.from(branchLanes.entries()).map(([branchKey, branch], index) => (
+              <div
+                key={branchKey}
+                className="branch-line"
+                style={{
+                  left: `${index * 30 + 15}px`,
+                  backgroundColor: branch.color,
+                }}
+              />
+            ))}
+            
+            {/* Commit dots and connections */}
+            {commits.map((commit, commitIndex) => {
+              const parentCommit = commits.find(c => c.id === commit.parent_scenario_id);
+              const parentLane = parentCommit ? scenarioLanes.get(parentCommit.id) : null;
+              const hasParentConnection = parentLane !== null && parentLane !== commit.laneIndex;
+              
+              return (
+                <div key={commit.id} className="commit-row" style={{ top: `${commitIndex * 60}px` }}>
+                  {/* Branch connection lines for merges/branches */}
+                  {hasParentConnection && (
+                    <svg
+                      className="branch-connection"
+                      style={{
+                        left: `${Math.min(commit.laneIndex, parentLane!) * 30}px`,
+                        width: `${Math.abs(commit.laneIndex - parentLane!) * 30 + 30}px`,
+                      }}
+                    >
+                      <path
+                        d={`M ${commit.laneIndex > parentLane! ? (parentLane! - Math.min(commit.laneIndex, parentLane!)) * 30 + 15 : 15} 30 
+                            Q ${commit.laneIndex > parentLane! ? (parentLane! - Math.min(commit.laneIndex, parentLane!)) * 30 + 15 : 15} 15 
+                              ${commit.laneIndex > parentLane! ? Math.abs(commit.laneIndex - parentLane!) * 30 + 15 : (commit.laneIndex - Math.min(commit.laneIndex, parentLane!)) * 30 + 15} 0`}
+                        stroke={commit.color}
+                        strokeWidth="2"
+                        fill="none"
+                      />
+                    </svg>
+                  )}
+                  
+                  {/* Commit dot */}
+                  <div
+                    className={`commit-dot ${commit.scenario_type}`}
+                    style={{
+                      left: `${commit.laneIndex * 30 + 10}px`,
+                      backgroundColor: commit.color,
+                    }}
+                    onClick={() => handleEdit(commit)}
+                  />
+                  
+                  {/* Commit info panel */}
+                  <div className="commit-info-panel" style={{ left: `${maxLanes * 30 + 40}px` }}>
+                    <div className="commit-summary">
+                      <div className="commit-title">{commit.name}</div>
+                      {commit.description && (
+                        <div className="commit-description">{commit.description}</div>
+                      )}
+                    </div>
+                    <div className="commit-metadata">
+                      <span className="commit-author">{commit.created_by_name}</span>
+                      <span className="commit-date">
+                        {new Date(commit.created_at).toLocaleDateString()}
+                      </span>
+                      <span className={`commit-status ${commit.status}`}>
+                        {commit.status}
+                      </span>
+                    </div>
+                    <div className="commit-actions">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleBranch(commit); }}
+                        className="action-btn branch"
+                        title="Create Branch"
+                      >
+                        <GitBranch size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleCompare(commit); }}
+                        className="action-btn compare"
+                        title="Compare"
+                      >
+                        <ArrowRightLeft size={14} />
+                      </button>
+                      {commit.parent_scenario_id && commit.status === 'active' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleMerge(commit); }}
+                          className="action-btn merge"
+                          title="Merge"
+                        >
+                          <Merge size={14} />
+                        </button>
+                      )}
+                      {commit.scenario_type !== 'baseline' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(commit); }}
+                          className="action-btn delete"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="scenarios-page">
@@ -322,18 +701,50 @@ export const Scenarios: React.FC = () => {
         </button>
       </div>
 
-      <div className="scenarios-grid">
-        {scenarios?.map((scenario) => (
-          <ScenarioCard
-            key={scenario.id}
-            scenario={scenario}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onBranch={handleBranch}
-            onMerge={handleMerge}
-            onCompare={handleCompare}
-          />
-        ))}
+      <div className="view-controls">
+        <div className="view-mode-toggle">
+          <button
+            className={`btn btn-sm ${viewMode === 'cards' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setViewMode('cards')}
+          >
+            <LayoutGrid size={14} />
+            Cards
+          </button>
+          <button
+            className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setViewMode('list')}
+          >
+            <List size={14} />
+            List
+          </button>
+          <button
+            className={`btn btn-sm ${viewMode === 'graphical' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setViewMode('graphical')}
+          >
+            <Network size={14} />
+            Graphical
+          </button>
+        </div>
+      </div>
+
+      <div className="scenarios-content">
+        {viewMode === 'cards' && (
+          <div className="scenarios-grid">
+            {scenarios?.map((scenario) => (
+              <ScenarioCard
+                key={scenario.id}
+                scenario={scenario}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onBranch={handleBranch}
+                onMerge={handleMerge}
+                onCompare={handleCompare}
+              />
+            ))}
+          </div>
+        )}
+        {viewMode === 'list' && renderListView()}
+        {viewMode === 'graphical' && renderGraphicalView()}
       </div>
 
       <CreateScenarioModal
