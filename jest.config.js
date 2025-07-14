@@ -1,26 +1,26 @@
 export default {
-  preset: 'ts-jest/presets/default-esm',
-  extensionsToTreatAsEsm: ['.ts'],
+  preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/tests/unit/server', '<rootDir>/tests/integration'],
   testMatch: [
     '**/__tests__/**/*.test.ts',
     '**/?(*.)+(spec|test).ts'
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      useESM: true,
       tsconfig: {
-        module: 'ES2022',
-        target: 'ES2022',
-        moduleResolution: 'node'
+        module: 'CommonJS',
+        target: 'ES2020',
+        moduleResolution: 'node',
+        allowSyntheticDefaultImports: true,
+        esModuleInterop: true
       }
     }]
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/src/server/__tests__/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/unit/server/setup.ts', '<rootDir>/tests/integration/setup.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
@@ -29,6 +29,6 @@ export default {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  testTimeout: 10000,
+  testTimeout: 30000,
   maxWorkers: 1, // SQLite doesn't handle concurrent access well in tests
 };

@@ -11,7 +11,8 @@ import cron from 'node-cron';
 import apiRoutes from './api/routes/index.js';
 
 // Load environment variables
-config();
+const envFile = process.env.NODE_ENV === 'development' ? '.env.development' : '.env';
+config({ path: envFile });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +36,7 @@ app.use(helmet({
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8090',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3120',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -43,7 +44,7 @@ const corsOptions = {
 
 if (isDev) {
   // Allow hot reloading in development
-  corsOptions.origin = ['http://localhost:8090', 'http://localhost:8091', 'http://localhost:8092', 'http://localhost:8093', 'http://localhost:8094'];
+  corsOptions.origin = ['http://localhost:3120', 'http://localhost:3121', 'http://localhost:8090', 'http://localhost:8091', 'http://localhost:8092'];
 }
 
 app.use(cors(corsOptions));
@@ -188,7 +189,7 @@ async function startServer() {
       console.log(`🎉 Server running on port ${PORT}`);
       console.log(`📱 Health check: http://localhost:${PORT}/api/health`);
       if (isDev) {
-        console.log(`🔗 Frontend dev server should be running on http://localhost:8090`);
+        console.log(`🔗 Frontend dev server should be running on http://localhost:3120`);
       } else {
         console.log(`🌐 Application: http://localhost:${PORT}`);
       }
