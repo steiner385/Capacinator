@@ -34,7 +34,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:3130',
     
     /* API base URL for request operations */
     extraHTTPHeaders: {
@@ -95,14 +95,14 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: 'npm run dev:server',
-      port: 3456,
+      command: 'npx cross-env NODE_ENV=test tsx src/server/index.ts',
+      port: 3131,
       timeout: 30000,
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'npm run dev:client',
-      port: 5173,
+      command: 'npx cross-env NODE_ENV=test vite --port 3130 --config client-vite.config.ts',
+      port: 3130,
       timeout: 30000,
       reuseExistingServer: !process.env.CI,
     }

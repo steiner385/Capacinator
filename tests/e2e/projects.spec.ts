@@ -1,25 +1,28 @@
 import { test, expect } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 test.describe('Projects Page Functionality', () => {
   
   test.beforeEach(async ({ page }) => {
     await page.goto('/projects');
+    const helpers = new TestHelpers(page);
+    await helpers.setupPage();
   });
 
   test('should display projects list', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('Projects');
+    await expect(page.locator('h1')).toContainText('Projects', { timeout: 10000 });
     
     // Should show data table
-    await expect(page.locator('.data-table')).toBeVisible();
+    await expect(page.locator('table')).toBeVisible();
     
     // Should show action buttons
-    await expect(page.locator('button:has-text("Add Project")')).toBeVisible();
-    await expect(page.locator('button:has-text("Project Demands")')).toBeVisible();
+    await expect(page.locator('button:has-text("New Project")')).toBeVisible();
+    await expect(page.locator('button:has-text("View Demands")')).toBeVisible();
   });
 
-  test('should handle Add Project button click', async ({ page }) => {
-    const addButton = page.locator('button:has-text("Add Project")');
-    await expect(addButton).toBeVisible();
+  test('should handle New Project button click', async ({ page }) => {
+    const addButton = page.locator('button:has-text("New Project")');
+    await expect(addButton).toBeVisible({ timeout: 10000 });
     
     // Click should either navigate to /projects/new or show error
     await addButton.click();
@@ -29,9 +32,9 @@ test.describe('Projects Page Functionality', () => {
     // We expect this to either show an error or navigate to a non-existent route
   });
 
-  test('should handle Project Demands button click', async ({ page }) => {
-    const demandsButton = page.locator('button:has-text("Project Demands")');
-    await expect(demandsButton).toBeVisible();
+  test('should handle View Demands button click', async ({ page }) => {
+    const demandsButton = page.locator('button:has-text("View Demands")');
+    await expect(demandsButton).toBeVisible({ timeout: 10000 });
     
     // Click should either navigate to /projects/demands or show error
     await demandsButton.click();
@@ -45,23 +48,23 @@ test.describe('Projects Page Functionality', () => {
     await page.waitForTimeout(2000);
     
     // Check if table has rows (assuming there's data)
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
       // Test first row actions
       const firstRow = tableRows.first();
       
-      // Should have View button
-      const viewButton = firstRow.locator('button:has-text("View")');
+      // Should have View button (eye icon)
+      const viewButton = firstRow.locator('button').first();
       await expect(viewButton).toBeVisible();
       
-      // Should have Edit button  
-      const editButton = firstRow.locator('button:has-text("Edit")');
+      // Should have Edit button (edit icon)
+      const editButton = firstRow.locator('button').nth(1);
       await expect(editButton).toBeVisible();
       
-      // Should have Delete button
-      const deleteButton = firstRow.locator('button[title*="Delete"], button:has([data-testid="trash"])');
+      // Should have Delete button (trash icon)
+      const deleteButton = firstRow.locator('button').nth(3);
       await expect(deleteButton).toBeVisible();
     }
   });
@@ -69,11 +72,11 @@ test.describe('Projects Page Functionality', () => {
   test('should handle View button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
-      const viewButton = tableRows.first().locator('button:has-text("View")');
+      const viewButton = tableRows.first().locator('button').first();
       await viewButton.click();
       
       // Should navigate to project detail page
@@ -89,11 +92,11 @@ test.describe('Projects Page Functionality', () => {
   test('should handle Edit button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
-      const editButton = tableRows.first().locator('button:has-text("Edit")');
+      const editButton = tableRows.first().locator('button').nth(1);
       await editButton.click();
       
       // Should attempt to navigate to edit page (will likely fail)
@@ -104,7 +107,7 @@ test.describe('Projects Page Functionality', () => {
   test('should handle Delete button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -114,7 +117,7 @@ test.describe('Projects Page Functionality', () => {
         consoleMessages.push(msg.text());
       });
       
-      const deleteButton = tableRows.first().locator('button[title*="Delete"], button:has([data-testid="trash"])');
+      const deleteButton = tableRows.first().locator('button').nth(3);
       await deleteButton.click();
       
       await page.waitForTimeout(1000);

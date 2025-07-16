@@ -12,7 +12,7 @@ ExecStart=/usr/bin/node dist/server/index.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
-Environment=PORT=3456
+Environment=PORT=3151
 Environment=DATABASE_PATH=/var/www/capacinator/data/capacinator.db
 Environment=CORS_ORIGIN=http://dev.capacinator.com
 Environment=LOG_LEVEL=info

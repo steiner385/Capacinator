@@ -66,7 +66,7 @@ export function AuditLog() {
       });
 
       const response = await apiClient.get(`/audit/search?${queryParams}`);
-      setEntries(response.data.data);
+      setEntries(response.data.data || []);
       setError(null);
     } catch (err) {
       setError('Failed to load audit data');
@@ -112,8 +112,11 @@ export function AuditLog() {
     return String(value);
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString();
+  const formatDate = (dateValue: string | number): string => {
+    // Handle both string dates and timestamp numbers
+    const date = typeof dateValue === 'number' ? new Date(dateValue) : new Date(dateValue);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return date.toLocaleString();
   };
 
   const getActionColor = (action: string): string => {
@@ -129,21 +132,27 @@ export function AuditLog() {
     {
       key: 'changed_at',
       header: 'Date/Time',
-      render: (entry: AuditEntry) => formatDate(entry.changed_at)
+      render: (value: any, entry: AuditEntry) => {
+        if (!entry || value === undefined || value === null) return 'N/A';
+        return formatDate(value);
+      }
     },
     {
       key: 'table_name',
       header: 'Table',
-      render: (entry: AuditEntry) => entry.table_name
+      render: (value: any, entry: AuditEntry) => {
+        if (!value) return 'N/A';
+        return value;
+      }
     },
     {
       key: 'action',
       header: 'Action',
-      render: (entry: AuditEntry) => {
-        const action = entry.action || 'UNKNOWN';
+      render: (value: any, entry: AuditEntry) => {
+        if (!value) return 'UNKNOWN';
         return (
-          <span className={`audit-action audit-action--${action.toLowerCase()}`}>
-            {action}
+          <span className={`audit-action audit-action--${value.toLowerCase()}`}>
+            {value}
           </span>
         );
       }
@@ -151,36 +160,43 @@ export function AuditLog() {
     {
       key: 'changed_by',
       header: 'Changed By',
-      render: (entry: AuditEntry) => entry.changed_by || 'System'
+      render: (value: any, entry: AuditEntry) => {
+        return value || 'System';
+      }
     },
     {
       key: 'changed_fields',
       header: 'Fields Changed',
-      render: (entry: AuditEntry) => 
-        entry.changed_fields ? entry.changed_fields.join(', ') : 'N/A'
+      render: (value: any, entry: AuditEntry) => {
+        if (!value || value.length === 0) return 'N/A';
+        return value.join(', ');
+      }
     },
     {
       key: 'actions',
       header: 'Actions',
-      render: (entry: AuditEntry) => (
-        <div className="audit-actions">
-          <button
-            onClick={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)}
-            className="btn btn--small btn--secondary"
-          >
-            {expandedEntry === entry.id ? 'Hide' : 'Details'}
-          </button>
-          {entry.action && entry.action !== 'DELETE' && (
+      render: (value: any, entry: AuditEntry) => {
+        if (!entry || !entry.id) return null;
+        return (
+          <div className="audit-actions">
             <button
-              onClick={() => handleUndoChange(entry.table_name, entry.record_id)}
-              disabled={undoingEntry === `${entry.table_name}:${entry.record_id}`}
-              className="btn btn--small btn--danger"
+              onClick={() => setExpandedEntry(expandedEntry === entry.id ? null : entry.id)}
+              className="btn btn--small btn--secondary"
             >
-              {undoingEntry === `${entry.table_name}:${entry.record_id}` ? 'Undoing...' : 'Undo'}
+              {expandedEntry === entry.id ? 'Hide' : 'Details'}
             </button>
-          )}
-        </div>
-      )
+            {entry.action && entry.action !== 'DELETE' && entry.table_name && entry.record_id && (
+              <button
+                onClick={() => handleUndoChange(entry.table_name, entry.record_id)}
+                disabled={undoingEntry === `${entry.table_name}:${entry.record_id}`}
+                className="btn btn--small btn--danger"
+              >
+                {undoingEntry === `${entry.table_name}:${entry.record_id}` ? 'Undoing...' : 'Undo'}
+              </button>
+            )}
+          </div>
+        );
+      }
     }
   ];
 

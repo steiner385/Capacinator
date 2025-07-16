@@ -100,6 +100,32 @@ export class TestHelpers {
   }
 
   /**
+   * Handle profile selection modal if present
+   */
+  async handleProfileSelection() {
+    // Check if profile selection modal is present
+    const profileModal = this.page.locator('text=Select Your Profile');
+    const profileModalCount = await profileModal.count();
+    
+    if (profileModalCount > 0) {
+      console.log('Profile selection modal detected, handling...');
+      // Select the first profile option
+      await this.page.selectOption('select', { index: 1 }); // Select first actual option (index 0 is placeholder)
+      await this.page.click('button:has-text("Continue")');
+      await this.page.waitForTimeout(2000); // Wait for modal to disappear and page to load
+    }
+  }
+
+  /**
+   * Complete page setup including profile selection and waiting for page load
+   */
+  async setupPage() {
+    await this.waitForReactApp();
+    await this.handleProfileSelection();
+    await this.waitForNavigation();
+  }
+
+  /**
    * Wait for data to load (tables, lists, etc)
    */
   async waitForDataLoad() {

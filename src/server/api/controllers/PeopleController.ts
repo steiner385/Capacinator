@@ -109,10 +109,23 @@ export class PeopleController extends BaseController {
   async create(req: Request, res: Response) {
     const personData = req.body;
 
+    // Filter out fields that don't exist in the people table (based on 001_complete_schema.ts)
+    const validFields = [
+      'name', 'email', 'primary_role_id', 'worker_type', 'supervisor_id',
+      'default_availability_percentage', 'default_hours_per_day'
+    ];
+    
+    const filteredData = Object.keys(personData)
+      .filter(key => validFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = personData[key];
+        return obj;
+      }, {} as any);
+
     const result = await this.executeQuery(async () => {
       const [person] = await this.db('people')
         .insert({
-          ...personData,
+          ...filteredData,
           created_at: new Date(),
           updated_at: new Date()
         })
@@ -143,11 +156,24 @@ export class PeopleController extends BaseController {
     const { id } = req.params;
     const updateData = req.body;
 
+    // Filter out fields that don't exist in the people table (based on 001_complete_schema.ts)
+    const validFields = [
+      'name', 'email', 'primary_role_id', 'worker_type', 'supervisor_id',
+      'default_availability_percentage', 'default_hours_per_day'
+    ];
+    
+    const filteredData = Object.keys(updateData)
+      .filter(key => validFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = updateData[key];
+        return obj;
+      }, {} as any);
+
     const result = await this.executeQuery(async () => {
       const [person] = await this.db('people')
         .where('id', id)
         .update({
-          ...updateData,
+          ...filteredData,
           updated_at: new Date()
         })
         .returning('*');

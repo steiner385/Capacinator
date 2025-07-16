@@ -112,8 +112,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     queryKey: ['phases'],
     queryFn: async () => {
       const response = await api.phases.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
-      return response.data?.data || response.data || [];
+      return response.data;
     }
   });
 
@@ -324,7 +323,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             onChange={(e) => handleChange('current_phase_id', e.target.value)}
           >
             <option value="">Select current phase</option>
-            {phases?.map((phase: any) => (
+            {phases?.data?.map((phase: any) => (
               <option key={phase.id} value={phase.id}>
                 {phase.name}
               </option>

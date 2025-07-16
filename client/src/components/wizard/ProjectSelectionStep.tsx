@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWizard, WizardProject } from '../../contexts/WizardContext';
 import { useThemeColors } from '../../lib/theme-colors';
-import { Calendar, Users, CheckCircle, Circle } from 'lucide-react';
+import { Calendar, Users, CheckCircle, Circle, CheckSquare, Square } from 'lucide-react';
 
 export function ProjectSelectionStep() {
   const { state, setProjects } = useWizard();
@@ -124,6 +124,20 @@ export function ProjectSelectionStep() {
       }, 0);
   };
 
+  const selectAll = () => {
+    const allProjectIds = new Set(availableProjects.map(p => p.id));
+    setSelectedProjectIds(allProjectIds);
+    setProjects(availableProjects);
+  };
+
+  const deselectAll = () => {
+    setSelectedProjectIds(new Set());
+    setProjects([]);
+  };
+
+  const isAllSelected = availableProjects.length > 0 && selectedProjectIds.size === availableProjects.length;
+  const isPartiallySelected = selectedProjectIds.size > 0 && selectedProjectIds.size < availableProjects.length;
+
   return (
     <div className="wizard-step">
       <h2>Select Projects</h2>
@@ -132,21 +146,62 @@ export function ProjectSelectionStep() {
         requirements and current staffing to identify gaps.
       </p>
 
-      {selectedProjectIds.size > 0 && (
-        <div className="wizard-stats">
-          <div className="wizard-stat">
-            <div className="wizard-stat-value">{selectedProjectIds.size}</div>
-            <div className="wizard-stat-label">Projects Selected</div>
-          </div>
-          <div className="wizard-stat">
-            <div className="wizard-stat-value">{getTotalGaps()}</div>
-            <div className="wizard-stat-label">Total Resource Gaps</div>
-          </div>
+      <div className="wizard-stats">
+        <div className="wizard-stat">
+          <div className="wizard-stat-value">{selectedProjectIds.size}</div>
+          <div className="wizard-stat-label">Projects Selected</div>
         </div>
-      )}
+        <div className="wizard-stat">
+          <div className="wizard-stat-value">{getTotalGaps()}</div>
+          <div className="wizard-stat-label">Total Resource Gaps</div>
+        </div>
+      </div>
 
       <div className="wizard-section">
-        <h3>Available Projects</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3>Available Projects</h3>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={isAllSelected ? deselectAll : selectAll}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                border: `1px solid ${colors.utility.border}`,
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                color: colors.utility.text,
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colors.utility.lightGray;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {isAllSelected ? (
+                <CheckSquare size={16} color={colors.status.complete} />
+              ) : isPartiallySelected ? (
+                <Square size={16} color={colors.status.pending} style={{ opacity: 0.7 }} />
+              ) : (
+                <Square size={16} />
+              )}
+              {isAllSelected ? 'Deselect All' : 'Select All'}
+            </button>
+            <span style={{ 
+              fontSize: '0.875rem', 
+              color: colors.utility.gray 
+            }}>
+              {selectedProjectIds.size} of {availableProjects.length} selected
+            </span>
+          </div>
+        </div>
         <div className="wizard-list">
           {availableProjects.map((project) => {
             const stats = getProjectStats(project);
@@ -157,8 +212,14 @@ export function ProjectSelectionStep() {
                 key={project.id}
                 className={`wizard-item ${selected ? 'selected' : ''}`}
                 onClick={() => toggleProject(project)}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}
               >
-                <div className="wizard-item-content">
+                <div className="wizard-item-checkbox" style={{ paddingTop: '0.25rem' }}>
+                  <div className={`wizard-checkbox ${selected ? 'checked' : ''}`}>
+                    {selected ? <CheckCircle size={20} /> : <Circle size={20} />}
+                  </div>
+                </div>
+                <div className="wizard-item-content" style={{ flex: 1 }}>
                   <div className="wizard-item-title">{project.name}</div>
                   <div className="wizard-item-details">
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -203,11 +264,6 @@ export function ProjectSelectionStep() {
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-                <div className="wizard-item-actions">
-                  <div className={`wizard-checkbox ${selected ? 'checked' : ''}`}>
-                    {selected && <CheckCircle size={14} />}
                   </div>
                 </div>
               </div>

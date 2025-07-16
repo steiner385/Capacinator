@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
+import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -29,6 +31,10 @@ export default defineConfig({
   },
   server: {
     port: parseInt(process.env.VITE_PORT || '3120'),
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, 'ssl/dev.capacinator.com.key')),
+      cert: fs.readFileSync(path.resolve(__dirname, 'ssl/dev.capacinator.com.crt')),
+    },
     hmr: {
       overlay: true,
       port: 3120,
@@ -36,14 +42,18 @@ export default defineConfig({
     watch: {
       usePolling: true,
       interval: 100,
-      ignored: ['**/node_modules/**', '**/dist/**', '**/.git/**'],
+      ignored: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/.env*'],
+    },
+    fs: {
+      allow: ['.', '../'],
+      deny: ['.git', '.env*', 'node_modules'],
     },
     cors: true,
     host: '0.0.0.0', // Allow external connections
     allowedHosts: ['dev.capacinator.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
-        target: 'http://localhost:3121',
+        target: `http://localhost:${process.env.PORT || '3121'}`,
         changeOrigin: true,
         secure: false,
         timeout: 10000,

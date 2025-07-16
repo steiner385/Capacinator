@@ -7,11 +7,19 @@ import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase, testConnection, backupDatabase } from './database/index.js';
+import { initializeE2EDatabase } from './database/init-e2e.js';
 import cron from 'node-cron';
 import apiRoutes from './api/routes/index.js';
 
 // Load environment variables
-const envFile = process.env.NODE_ENV === 'development' ? '.env.development' : '.env';
+let envFile = '.env';
+if (process.env.NODE_ENV === 'development') {
+  envFile = '.env.development';
+} else if (process.env.NODE_ENV === 'test') {
+  envFile = '.env.test';
+} else if (process.env.NODE_ENV === 'e2e') {
+  envFile = '.env.e2e';
+}
 config({ path: envFile });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +28,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8081;
 const isDev = process.env.NODE_ENV === 'development';
+const isE2E = process.env.NODE_ENV === 'e2e';
 
 // Security middleware
 app.use(helmet({
@@ -44,7 +53,10 @@ const corsOptions = {
 
 if (isDev) {
   // Allow hot reloading in development
-  corsOptions.origin = ['http://localhost:3120', 'http://localhost:3121', 'http://localhost:8090', 'http://localhost:8091', 'http://localhost:8092'];
+  corsOptions.origin = ['http://localhost:3120', 'http://localhost:3110', 'http://localhost:8090', 'http://localhost:8091', 'http://localhost:8092'];
+} else if (isE2E) {
+  // Allow E2E test origins
+  corsOptions.origin = ['http://localhost:3121', 'http://localhost:3111'];
 }
 
 app.use(cors(corsOptions));
@@ -101,17 +113,7 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Serve static files in production
-if (!isDev) {
-  // Serve the React app
-  const clientBuildPath = path.join(__dirname, '../../client/dist');
-  app.use(express.static(clientBuildPath));
-  
-  // Handle React Router (return `index.html` for non-API routes)
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientBuildPath, 'index.html'));
-  });
-}
+// Static file serving will be mounted AFTER API routes to avoid conflicts
 
 // Error handling middleware
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -131,8 +133,13 @@ async function startServer() {
     
     // Initialize database
     console.log('📊 Initializing database...');
-    await initializeDatabase();
-    console.log('✅ Database ready');
+    if (isE2E) {
+      await initializeE2EDatabase();
+      console.log('✅ E2E Database ready');
+    } else {
+      await initializeDatabase();
+      console.log('✅ Database ready');
+    }
     
     // Get audit service (initialized by database init)
     console.log('🔍 Getting audit service...');
@@ -162,6 +169,17 @@ async function startServer() {
         path: req.path
       });
     });
+    
+    // Serve static files in production (after API routes)
+    if (!isDev) {
+      const clientBuildPath = path.join(__dirname, '../../client/dist');
+      app.use(express.static(clientBuildPath));
+      
+      // Handle React Router (return `index.html` for non-API routes)
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(clientBuildPath, 'index.html'));
+      });
+    }
     
     // Schedule automatic backups if enabled
     if (process.env.DB_BACKUP_ENABLED === 'true') {

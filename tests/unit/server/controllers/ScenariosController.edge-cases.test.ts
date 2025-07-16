@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
-import { db } from '../../../../src/server/database/index.js';
+import { testDb } from '../../../integration/setup.js';
 
 /**
  * Comprehensive Edge Case Testing for ScenariosController
@@ -21,16 +21,44 @@ describe('ScenariosController - Complex Edge Cases', () => {
     app.use(express.json());
     
     // Get database instance
-    database = db;
+    database = testDb;
 
-    // Clear test data
-    await database('scenario_merge_conflicts').del();
-    await database('scenario_project_assignments').del();
-    await database('scenario_project_phases').del();
-    await database('scenarios').del();
-    await database('project_assignments').del();
-    await database('projects').del();
-    await database('people').del();
+    // Clear test data (check if tables exist first)
+    try {
+      await database('scenario_merge_conflicts').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await database('scenario_project_assignments').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await database('scenario_project_phases').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await database('scenarios').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await database('project_assignments').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await database('projects').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await database('people').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
 
     // Create test users
     testUsers = [
@@ -51,7 +79,7 @@ describe('ScenariosController - Complex Edge Cases', () => {
     ];
 
     for (const user of testUsers) {
-      await db('people').insert(user);
+      await testDb('people').insert(user);
     }
 
     // Create test projects
@@ -73,19 +101,47 @@ describe('ScenariosController - Complex Edge Cases', () => {
     ];
 
     for (const project of testProjects) {
-      await db('projects').insert(project);
+      await testDb('projects').insert(project);
     }
   });
 
   afterEach(async () => {
-    // Clean up test data
-    await db('scenario_merge_conflicts').del();
-    await db('scenario_project_assignments').del();
-    await db('scenario_project_phases').del();
-    await db('scenarios').del();
-    await db('project_assignments').del();
-    await db('projects').del();
-    await db('people').del();
+    // Clean up test data (check if tables exist first)
+    try {
+      await testDb('scenario_merge_conflicts').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('scenario_project_assignments').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('scenario_project_phases').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('scenarios').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('project_assignments').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('projects').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('people').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
   });
 
   describe('Multi-Level Hierarchy Edge Cases', () => {

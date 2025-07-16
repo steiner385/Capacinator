@@ -9,23 +9,24 @@ import {
   WifiOff,
   ChevronDown,
   Sun,
-  Moon
+  Moon,
+  LogOut
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
-import { useWorkingScenario } from '../contexts/WorkingScenarioContext';
+import { useScenario } from '../contexts/ScenarioContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
-import { Scenario } from '../types';
 import './AppHeader.css';
 
 export const AppHeader: React.FC = () => {
-  const { currentUser } = useUser();
-  const { workingScenario, setWorkingScenario } = useWorkingScenario();
+  const { currentUser, logout } = useUser();
+  const { currentScenario, scenarios, setCurrentScenario, isLoading } = useScenario();
   const { theme, toggleTheme } = useTheme();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isScenarioDropdownOpen, setIsScenarioDropdownOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   // Update time every minute
   useEffect(() => {
@@ -50,22 +51,27 @@ export const AppHeader: React.FC = () => {
     };
   }, []);
 
-  // Close dropdown when clicking outside or pressing escape
+
+  // Close dropdowns when clicking outside or pressing escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (!target.closest('.scenario-selector')) {
         setIsScenarioDropdownOpen(false);
       }
+      if (!target.closest('.profile-dropdown-container')) {
+        setIsProfileDropdownOpen(false);
+      }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsScenarioDropdownOpen(false);
+        setIsProfileDropdownOpen(false);
       }
     };
 
-    if (isScenarioDropdownOpen) {
+    if (isScenarioDropdownOpen || isProfileDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
       return () => {
@@ -73,7 +79,7 @@ export const AppHeader: React.FC = () => {
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isScenarioDropdownOpen]);
+  }, [isScenarioDropdownOpen, isProfileDropdownOpen]);
 
   // Get system health status
   const { data: healthData, isLoading: healthLoading } = useQuery({
@@ -83,24 +89,11 @@ export const AppHeader: React.FC = () => {
     retry: 1,
   });
 
-  // Get scenarios for dropdown
-  const { data: scenarios } = useQuery({
-    queryKey: ['scenarios'],
-    queryFn: async () => {
-      const response = await api.scenarios.list();
-      return response.data as Scenario[];
-    },
-  });
-
-  // Auto-select baseline scenario if no working scenario is selected
-  React.useEffect(() => {
-    if (scenarios && !workingScenario) {
-      const baseline = scenarios.find(s => s.scenario_type === 'baseline');
-      if (baseline) {
-        setWorkingScenario(baseline);
-      }
-    }
-  }, [scenarios, workingScenario, setWorkingScenario]);
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    setIsProfileDropdownOpen(false);
+  };
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
@@ -125,39 +118,42 @@ export const AppHeader: React.FC = () => {
         <div className="scenario-selector">
           <GitBranch size={12} />
           <button
-            className="scenario-button"
-            onClick={() => setIsScenarioDropdownOpen(!isScenarioDropdownOpen)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setIsScenarioDropdownOpen(!isScenarioDropdownOpen);
-              } else if (e.key === 'Escape') {
-                setIsScenarioDropdownOpen(false);
-              }
-            }}
-            title={workingScenario ? `Working Scenario: ${workingScenario.name}` : 'Select working scenario'}
+            className={`scenario-button ${isLoading ? 'disabled' : ''}`}
+            onClick={() => !isLoading && setIsScenarioDropdownOpen(!isScenarioDropdownOpen)}
+            disabled={isLoading}
+            title={currentScenario ? `Current Scenario: ${currentScenario.name}` : 'Select scenario'}
           >
             <span className="scenario-name">
-              {workingScenario?.name || 'Select scenario...'}
+              {isLoading ? 'Loading...' : currentScenario?.name || 'Select scenario...'}
             </span>
             <ChevronDown size={12} className={`chevron ${isScenarioDropdownOpen ? 'open' : ''}`} />
           </button>
           
-          {isScenarioDropdownOpen && (
+          {isScenarioDropdownOpen && !isLoading && (
             <div className="scenario-dropdown">
               {scenarios && scenarios.length > 0 ? (
                 scenarios.map((scenario) => (
                   <button
                     key={scenario.id}
-                    className={`scenario-option ${workingScenario?.id === scenario.id ? 'selected' : ''}`}
+                    className={`scenario-option ${currentScenario?.id === scenario.id ? 'selected' : ''}`}
                     onClick={() => {
-                      setWorkingScenario(scenario);
+                      setCurrentScenario(scenario);
                       setIsScenarioDropdownOpen(false);
                     }}
                   >
                     <div className="scenario-details">
                       <span className="scenario-option-name">{scenario.name}</span>
-                      <span className="scenario-type">{scenario.scenario_type}</span>
+                      <div className="scenario-badges">
+                        {scenario.scenario_type === 'baseline' && (
+                          <span className="baseline-star">★</span>
+                        )}
+                        <span className={`scenario-type-badge ${scenario.scenario_type}`}>
+                          {scenario.scenario_type}
+                        </span>
+                        <span className={`scenario-status-badge ${scenario.status}`}>
+                          {scenario.status}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 ))
@@ -178,7 +174,7 @@ export const AppHeader: React.FC = () => {
             onClick={toggleTheme}
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
-            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+            {theme === 'light' ? '🌙' : '☀️'}
           </button>
 
           <div className="status-indicators">
@@ -191,9 +187,37 @@ export const AppHeader: React.FC = () => {
           </div>
 
           {currentUser && (
-            <div className="user-display">
-              <User size={14} />
-              <span>{currentUser.name}</span>
+            <div className="profile-dropdown-container">
+              <button
+                className="profile-dropdown-trigger"
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              >
+                <User size={14} />
+                <span className="profile-name">{currentUser.first_name || 'User'}</span>
+                <ChevronDown size={12} className={`chevron ${isProfileDropdownOpen ? 'open' : ''}`} />
+              </button>
+
+              {isProfileDropdownOpen && (
+                <div className="profile-dropdown">
+                  <div className="profile-dropdown-header">
+                    <div className="profile-info">
+                      <User size={16} className="profile-avatar" />
+                      <div className="profile-details">
+                        <div className="profile-full-name">
+                          {currentUser.first_name} {currentUser.last_name}
+                        </div>
+                        <div className="profile-email">{currentUser.email}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="profile-dropdown-actions">
+                    <button className="profile-action" onClick={handleLogout}>
+                      <LogOut size={14} />
+                      Log Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

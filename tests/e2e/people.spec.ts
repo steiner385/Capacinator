@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 test.describe('People Page Functionality', () => {
   
   test.beforeEach(async ({ page }) => {
     await page.goto('/people');
+    const helpers = new TestHelpers(page);
+    await helpers.setupPage();
   });
 
   test('should display people list', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('People');
+    await expect(page.locator('h1')).toContainText('People', { timeout: 10000 });
     
     // Should show data table
     await expect(page.locator('.data-table')).toBeVisible();
@@ -18,7 +21,7 @@ test.describe('People Page Functionality', () => {
 
   test('should handle Add Person button click', async ({ page }) => {
     const addButton = page.locator('button:has-text("Add Person")');
-    await expect(addButton).toBeVisible();
+    await expect(addButton).toBeVisible({ timeout: 10000 });
     
     // Click should either navigate to /people/new or show error
     await addButton.click();

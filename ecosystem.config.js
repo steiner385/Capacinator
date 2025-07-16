@@ -7,7 +7,7 @@ module.exports = {
     cwd: '/var/www/capacinator',
     env: {
       NODE_ENV: 'production',
-      PORT: 3456,
+      PORT: 3151,
       DATABASE_PATH: '/var/www/capacinator/data/capacitizer.db',
       CORS_ORIGIN: 'https://dev.capacinator.com',
       LOG_LEVEL: 'info',

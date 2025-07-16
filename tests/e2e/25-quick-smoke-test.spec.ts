@@ -11,10 +11,10 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
   test('should load application and verify all pages', async ({ page }) => {
     // Go to homepage
     await helpers.gotoWithRetry('/');
-    await helpers.waitForReactApp();
+    await helpers.setupPage();
     
     // Check main navigation exists
-    await expect(page.locator('nav')).toBeVisible();
+    await expect(page.locator('.sidebar, nav')).toBeVisible();
     
     // Test each main page loads with data
     const pages = [
@@ -69,7 +69,7 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
   test('should verify data relationships work', async ({ page }) => {
     // Go to assignments
     await helpers.gotoWithRetry('/assignments');
-    await helpers.waitForReactApp();
+    await helpers.setupPage();
     await helpers.waitForDataLoad();
     
     // Click on a project link
@@ -101,7 +101,8 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
 
   test('should verify forms work', async ({ page }) => {
     // Test project creation form
-    await helpers.clickAndNavigate('nav a:has-text("Projects")', '/projects');
+    await helpers.gotoWithRetry('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataLoad();
     
     // Look for add button
@@ -124,7 +125,7 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
 
   test('should verify dashboard metrics update', async ({ page }) => {
     await helpers.gotoWithRetry('/');
-    await helpers.waitForReactApp();
+    await helpers.setupPage();
     
     // Get all metric values
     const metricElements = page.locator('.metric-value, .text-3xl, .stat-value');
@@ -142,10 +143,11 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
 // Performance test
 test.describe('Performance', () => {
   test('should load pages within acceptable time', async ({ page }) => {
+    const helpers = new TestHelpers(page);
     const startTime = Date.now();
     
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await helpers.setupPage();
     
     const loadTime = Date.now() - startTime;
     console.log(`Initial load time: ${loadTime}ms`);
@@ -155,7 +157,7 @@ test.describe('Performance', () => {
     
     // Test navigation speed
     const navStart = Date.now();
-    await page.click('nav a:has-text("Projects")');
+    await helpers.navigateViaSidebar('Projects');
     await page.waitForLoadState('networkidle');
     
     const navTime = Date.now() - navStart;

@@ -66,6 +66,19 @@ async function createTestTables() {
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
 
+  // Create project_assignments table
+  await testDb.schema.createTable('project_assignments', table => {
+    table.string('id').primary();
+    table.string('project_id').references('id').inTable('projects').onDelete('CASCADE');
+    table.string('person_id').references('id').inTable('people').onDelete('CASCADE');
+    table.string('role_id').references('id').inTable('roles').onDelete('CASCADE');
+    table.integer('allocation_percentage');
+    table.date('start_date');
+    table.date('end_date');
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
   // Create scenarios table
   await testDb.schema.createTable('scenarios', table => {
     table.string('id').primary();
@@ -322,6 +335,7 @@ beforeEach(async () => {
     'scenario_project_phases',
     'scenario_projects',
     'scenarios',
+    'project_assignments',
     'people',
     'projects',
     'roles'
