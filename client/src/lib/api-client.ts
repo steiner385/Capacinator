@@ -269,6 +269,18 @@ export const api = {
       apiClient.get(`/user-permissions/users/${userId}/check/${permissionName}`),
   },
 
+  // Notifications
+  notifications: {
+    sendNotification: (data: any) => apiClient.post('/notifications/send', data),
+    getUserNotificationPreferences: (userId: string) => apiClient.get(`/notifications/preferences/${userId}`),
+    updateUserNotificationPreferences: (userId: string, preferences: any) => apiClient.put(`/notifications/preferences/${userId}`, { preferences }),
+    getEmailTemplates: () => apiClient.get('/notifications/templates'),
+    getNotificationHistory: (userId?: string, params?: any) => apiClient.get(`/notifications/history/${userId || ''}`, { params }),
+    sendTestEmail: (email: string) => apiClient.post('/notifications/test', { email }),
+    checkEmailConfiguration: () => apiClient.get('/notifications/config'),
+    getNotificationStats: (userId?: string, params?: any) => apiClient.get(`/notifications/stats/${userId || ''}`, { params }),
+  },
+
   // Health check
   health: () => apiClient.get('/health'),
 };
