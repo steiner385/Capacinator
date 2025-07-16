@@ -6,6 +6,15 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 
+interface ImportSettings {
+  clearExistingData: boolean;
+  validateDuplicates: boolean;
+  autoCreateMissingRoles: boolean;
+  autoCreateMissingLocations: boolean;
+  defaultProjectPriority: number;
+  dateFormat: string;
+}
+
 export class ImportController extends BaseController {
   private upload = multer({
     dest: 'uploads/',
@@ -30,6 +39,51 @@ export class ImportController extends BaseController {
     return this.upload.single('excelFile');
   }
 
+  private async getImportSettings(): Promise<ImportSettings> {
+    try {
+      const result = await this.db('settings')
+        .where('category', 'import')
+        .first();
+
+      if (!result) {
+        // Return default settings if none found
+        return {
+          clearExistingData: false,
+          validateDuplicates: true,
+          autoCreateMissingRoles: false,
+          autoCreateMissingLocations: false,
+          defaultProjectPriority: 2,
+          dateFormat: 'MM/DD/YYYY'
+        };
+      }
+
+      return JSON.parse(result.settings);
+    } catch (error) {
+      console.error('Failed to load import settings:', error);
+      // Return default settings on error
+      return {
+        clearExistingData: false,
+        validateDuplicates: true,
+        autoCreateMissingRoles: false,
+        autoCreateMissingLocations: false,
+        defaultProjectPriority: 2,
+        dateFormat: 'MM/DD/YYYY'
+      };
+    }
+  }
+
+  async getImportSettingsEndpoint(req: Request, res: Response) {
+    try {
+      const settings = await this.getImportSettings();
+      res.json({
+        success: true,
+        data: settings
+      });
+    } catch (error) {
+      this.handleError(error, res, 'Failed to get import settings');
+    }
+  }
+
   async uploadExcel(req: Request, res: Response) {
     try {
       if (!req.file) {
@@ -39,16 +93,26 @@ export class ImportController extends BaseController {
         });
       }
 
-      const clearExisting = req.body.clearExisting === 'true' || req.body.clearExisting === true;
-      const useV2 = req.body.useV2 === 'true' || req.body.useV2 === true;
+      // Load saved import settings from database
+      const savedSettings = await this.getImportSettings();
+      
+      // Parse import options from request body with fallback to saved settings
+      const importOptions = {
+        clearExisting: req.body.clearExisting === 'true' || req.body.clearExisting === true || savedSettings.clearExistingData,
+        useV2: req.body.useV2 === 'true' || req.body.useV2 === true,
+        validateDuplicates: req.body.validateDuplicates === 'true' || req.body.validateDuplicates === true || savedSettings.validateDuplicates,
+        autoCreateMissingRoles: req.body.autoCreateMissingRoles === 'true' || req.body.autoCreateMissingRoles === true || savedSettings.autoCreateMissingRoles,
+        autoCreateMissingLocations: req.body.autoCreateMissingLocations === 'true' || req.body.autoCreateMissingLocations === true || savedSettings.autoCreateMissingLocations,
+        defaultProjectPriority: req.body.defaultProjectPriority ? parseInt(req.body.defaultProjectPriority) : savedSettings.defaultProjectPriority,
+        dateFormat: req.body.dateFormat || savedSettings.dateFormat
+      };
       
       console.log(`Starting Excel import from: ${req.file.path}`);
-      console.log(`Clear existing data: ${clearExisting}`);
-      console.log(`Use V2 importer: ${useV2}`);
+      console.log(`Import options:`, importOptions);
       
-      const result = useV2 
-        ? await new ExcelImporterV2().importFromFile(req.file.path, clearExisting)
-        : await new ExcelImporter().importFromFile(req.file.path, clearExisting);
+      const result = importOptions.useV2 
+        ? await new ExcelImporterV2().importFromFile(req.file.path, importOptions.clearExisting)
+        : await new ExcelImporter().importFromFile(req.file.path, importOptions.clearExisting);
 
       // Clean up uploaded file
       try {
