@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Settings as SettingsIcon, Save, RefreshCw, Database, 
-  Calendar, Users, AlertCircle, Check, X
+  Settings as SettingsIcon, Save, Database, 
+  Users, X
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 
@@ -16,7 +16,6 @@ interface SystemSettings {
   autoArchiveCompletedProjects: boolean;
   archiveAfterDays: number;
   enableEmailNotifications: boolean;
-  notificationRecipients: string[];
 }
 
 interface ImportSettings {
@@ -30,7 +29,7 @@ interface ImportSettings {
 
 export default function Settings() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'system' | 'import' | 'users' | 'audit'>('system');
+  const [activeTab, setActiveTab] = useState<'system' | 'import' | 'users'>('system');
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     defaultWorkHoursPerWeek: 40,
     defaultVacationDaysPerYear: 15,
@@ -40,8 +39,7 @@ export default function Settings() {
     requireApprovalForOverrides: true,
     autoArchiveCompletedProjects: false,
     archiveAfterDays: 90,
-    enableEmailNotifications: false,
-    notificationRecipients: []
+    enableEmailNotifications: false
   });
 
   const [importSettings, setImportSettings] = useState<ImportSettings>({
@@ -53,18 +51,28 @@ export default function Settings() {
     dateFormat: 'MM/DD/YYYY'
   });
 
-  const [newRecipient, setNewRecipient] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Fetch audit logs
-  const { data: auditLogs } = useQuery({
-    queryKey: ['audit-logs'],
+
+  // Fetch system settings
+  const { data: systemSettingsData } = useQuery({
+    queryKey: ['system-settings'],
     queryFn: async () => {
-      // Audit API not available yet, returning empty data
-      return [];
+      const response = await api.settings.getSystemSettings();
+      return response.data.data;
     },
-    enabled: activeTab === 'audit'
+    enabled: activeTab === 'system'
+  });
+
+  // Fetch import settings
+  const { data: importSettingsData } = useQuery({
+    queryKey: ['import-settings'],
+    queryFn: async () => {
+      const response = await api.settings.getImportSettings();
+      return response.data.data;
+    },
+    enabled: activeTab === 'import'
   });
 
   // Fetch user permissions
@@ -77,17 +85,32 @@ export default function Settings() {
     enabled: activeTab === 'users'
   });
 
+  // Update local state when API data loads
+  useEffect(() => {
+    if (systemSettingsData) {
+      setSystemSettings(systemSettingsData);
+    }
+  }, [systemSettingsData]);
+
+  useEffect(() => {
+    if (importSettingsData) {
+      setImportSettings(importSettingsData);
+    }
+  }, [importSettingsData]);
+
   const handleSaveSystemSettings = async () => {
     setIsSaving(true);
     setSaveMessage('');
     
     try {
-      // In a real app, this would save to the backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.settings.saveSystemSettings(systemSettings);
       setSaveMessage('System settings saved successfully!');
-      queryClient.invalidateQueries();
-    } catch (error) {
-      setSaveMessage('Error saving settings. Please try again.');
+      
+      // Invalidate and refetch settings
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+    } catch (error: any) {
+      console.error('Error saving system settings:', error);
+      setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 3000);
@@ -99,33 +122,20 @@ export default function Settings() {
     setSaveMessage('');
     
     try {
-      // In a real app, this would save to the backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await api.settings.saveImportSettings(importSettings);
       setSaveMessage('Import settings saved successfully!');
-    } catch (error) {
-      setSaveMessage('Error saving settings. Please try again.');
+      
+      // Invalidate and refetch settings
+      queryClient.invalidateQueries({ queryKey: ['import-settings'] });
+    } catch (error: any) {
+      console.error('Error saving import settings:', error);
+      setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 3000);
     }
   };
 
-  const handleAddRecipient = () => {
-    if (newRecipient && newRecipient.includes('@')) {
-      setSystemSettings({
-        ...systemSettings,
-        notificationRecipients: [...systemSettings.notificationRecipients, newRecipient]
-      });
-      setNewRecipient('');
-    }
-  };
-
-  const handleRemoveRecipient = (email: string) => {
-    setSystemSettings({
-      ...systemSettings,
-      notificationRecipients: systemSettings.notificationRecipients.filter(r => r !== email)
-    });
-  };
 
   const renderSystemSettings = () => (
     <div className="settings-section">
@@ -247,44 +257,12 @@ export default function Settings() {
               type="checkbox"
               checked={systemSettings.enableEmailNotifications}
               onChange={(e) => setSystemSettings({...systemSettings, enableEmailNotifications: e.target.checked})}
+              disabled
             />
             Enable Email Notifications
+            <span className="help-text">Email notifications not yet implemented</span>
           </label>
         </div>
-        
-        {systemSettings.enableEmailNotifications && (
-          <div className="setting-item">
-            <label>Notification Recipients</label>
-            <div className="recipients-list">
-              {systemSettings.notificationRecipients.map(email => (
-                <div key={email} className="recipient-item">
-                  <span>{email}</span>
-                  <button 
-                    className="btn-icon btn-danger"
-                    onClick={() => handleRemoveRecipient(email)}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="add-recipient">
-              <input
-                type="email"
-                value={newRecipient}
-                onChange={(e) => setNewRecipient(e.target.value)}
-                placeholder="Add email address"
-                className="form-input"
-              />
-              <button 
-                className="btn btn-secondary"
-                onClick={handleAddRecipient}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="settings-actions">
@@ -406,6 +384,16 @@ export default function Settings() {
     <div className="settings-section">
       <h2>User Permissions</h2>
       
+      <div className="info-message">
+        <p>User permissions functionality needs backend implementation.</p>
+        <p>The following features need to be developed:</p>
+        <ul>
+          <li>Permission management API endpoints</li>
+          <li>Role-based access control</li>
+          <li>User authentication system</li>
+        </ul>
+      </div>
+      
       <table className="table">
         <thead>
           <tr>
@@ -427,18 +415,20 @@ export default function Settings() {
                 <input 
                   type="checkbox" 
                   checked={user.can_plan_for_others || false}
-                  onChange={() => {/* Handle permission change */}}
+                  disabled
+                  title="Backend implementation needed"
                 />
               </td>
               <td>
                 <input 
                   type="checkbox" 
                   checked={user.can_approve_overrides || false}
-                  onChange={() => {/* Handle permission change */}}
+                  disabled
+                  title="Backend implementation needed"
                 />
               </td>
               <td>
-                <button className="btn-icon" title="Edit Permissions">
+                <button className="btn-icon" title="Backend implementation needed" disabled>
                   <SettingsIcon size={16} />
                 </button>
               </td>
@@ -449,41 +439,6 @@ export default function Settings() {
     </div>
   );
 
-  const renderAuditLogs = () => (
-    <div className="settings-section">
-      <h2>Audit Logs</h2>
-      
-      <div className="audit-filters">
-        <button className="btn btn-secondary">
-          <RefreshCw size={20} />
-          Refresh
-        </button>
-      </div>
-      
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Date/Time</th>
-            <th>User</th>
-            <th>Action</th>
-            <th>Entity</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {auditLogs?.map((log: any) => (
-            <tr key={log.id}>
-              <td>{new Date(log.created_at).toLocaleString()}</td>
-              <td>{log.user_name}</td>
-              <td>{log.action}</td>
-              <td>{log.entity_type}</td>
-              <td>{log.details}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <div className="page-container">
@@ -513,20 +468,12 @@ export default function Settings() {
           <Users size={20} />
           User Permissions
         </button>
-        <button 
-          className={`tab ${activeTab === 'audit' ? 'active' : ''}`}
-          onClick={() => setActiveTab('audit')}
-        >
-          <AlertCircle size={20} />
-          Audit Logs
-        </button>
       </div>
 
       <div className="settings-content">
         {activeTab === 'system' && renderSystemSettings()}
         {activeTab === 'import' && renderImportSettings()}
         {activeTab === 'users' && renderUserPermissions()}
-        {activeTab === 'audit' && renderAuditLogs()}
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-BASE_URL="${BASE_URL:-http://dev.capacinator.com}"
+BASE_URL="${BASE_URL:-https://dev.capacinator.com}"
 HEADLESS="${HEADLESS:-true}"
 
 echo "📍 Target URL: $BASE_URL"

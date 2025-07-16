@@ -2,14 +2,14 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #fafafa;
+  background: var(--bg-primary);
   overflow: hidden; /* Prevent scrollbar on main container */
 }
 
 /* Header */
 .roadmap-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
@@ -23,12 +23,12 @@
   gap: 0.5rem;
   font-size: 1.875rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0 0 0.25rem 0;
 }
 
 .subtitle {
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;
 }
@@ -54,11 +54,11 @@
 
 .timeline-range {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-weight: 500;
   padding: 0.375rem 0.75rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   white-space: nowrap;
 }
@@ -67,27 +67,27 @@
 .header-date-picker {
   height: 36px;
   padding: 0 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
-  background: white;
+  color: var(--text-primary);
+  background: var(--input-bg);
   cursor: pointer;
   transition: all 0.15s ease;
   min-width: 140px;
 }
 
 .header-date-picker:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
 .header-date-picker:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--input-focus-border);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-  background: white;
+  background: var(--input-bg);
 }
 
 .header-date-picker::-webkit-calendar-picker-indicator {
@@ -130,56 +130,58 @@
 .search-box svg {
   position: absolute;
   left: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-secondary);
   pointer-events: none;
 }
 
 .search-box input {
   padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   font-size: 0.875rem;
   min-width: 200px;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .search-filters select {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   font-size: 0.875rem;
-  background: white;
+  background: var(--input-bg);
 }
 
 .zoom-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: white;
+  background: var(--bg-secondary);
 }
 
 .zoom-controls button {
   padding: 0.5rem;
   border: none;
   background: none;
-  color: #6b7280;
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
 }
 
 .zoom-controls button:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .zoom-level {
   padding: 0 0.75rem;
   font-size: 0.875rem;
-  color: #374151;
-  border-left: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
+  color: var(--text-primary);
+  border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
 }
 
 /* Content */
@@ -203,8 +205,8 @@
   position: sticky;
   top: 0;
   height: 80px; /* Increased to accommodate year bar */
-  background: linear-gradient(to bottom, #ffffff, #f8fafc);
-  border-bottom: 2px solid #e5e7eb;
+  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-tertiary));
+  border-bottom: 2px solid var(--border-color);
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   margin-left: 320px; /* Align with timeline area only */
@@ -222,12 +224,12 @@
   align-items: center;
   gap: 4px;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-secondary);
   backdrop-filter: blur(4px);
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
 }
 
 .timeline-nav-btn {
@@ -238,7 +240,7 @@
   height: 28px;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -247,12 +249,12 @@
 }
 
 .timeline-nav-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .timeline-nav-btn:active {
-  background: #e5e7eb;
+  background: var(--bg-active);
   transform: scale(0.95);
 }
 
@@ -261,24 +263,24 @@
   padding: 0 8px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--primary-color);
 }
 
 .timeline-nav-btn.today-btn:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--bg-active);
+  color: var(--primary-color);
 }
 
 /* Timeline Date Picker */
 .timeline-date-picker {
   height: 28px;
   padding: 0 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
-  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
   backdrop-filter: blur(4px);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -286,17 +288,17 @@
 }
 
 .timeline-date-picker:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-  color: #374151;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .timeline-date-picker:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--input-focus-border);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-  background: white;
-  color: #374151;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .timeline-date-picker::-webkit-calendar-picker-indicator {
@@ -376,26 +378,26 @@
 .timeline-years {
   position: relative;
   height: 30px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .timeline-header-year {
   position: absolute;
   top: 0;
   height: 100%;
-  border-right: 1px solid #d1d5db;
+  border-right: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1f2937;
-  background: rgba(249, 250, 251, 0.8);
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
 }
 
 .year-label {
   font-weight: 700;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 /* Month Header Row */
@@ -409,22 +411,22 @@
   position: absolute;
   top: 0;
   height: 100%;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
-  background: white;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 
 .month-label {
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
-  background: linear-gradient(to bottom, #ffffff, #f8fafc);
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-tertiary));
+  border: 1px solid var(--border-color);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   font-weight: 600;
   white-space: nowrap;
@@ -454,7 +456,7 @@
 
 .project-row {
   display: flex;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-color);
   min-height: 60px;
   position: relative;
   transition: min-height 0.2s ease-in-out;
@@ -465,14 +467,14 @@
 }
 
 .project-row:hover {
-  background: #f9fafb;
+  background: var(--bg-hover);
 }
 
 .project-info {
   width: 320px;
   padding: 0.75rem;
-  background: white;
-  border-right: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   flex-shrink: 0;
   position: sticky;
   left: 0;
@@ -498,7 +500,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--text-secondary);
   padding: 0.25rem;
   border-radius: 4px;
   display: flex;
@@ -507,8 +509,8 @@
 }
 
 .collapse-toggle:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .project-details {
@@ -556,7 +558,7 @@
 .project-name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0 0 0.125rem 0;
   line-height: 1.2;
 }
@@ -607,23 +609,23 @@
 
 .project-owner {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0.125rem 0 0 0;
 }
 
 .owner-label {
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .date-range {
   font-weight: 500;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 .project-dates {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -732,7 +734,7 @@
 }
 
 .modal-container {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 8px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   max-width: 500px;
@@ -751,22 +753,22 @@
 .modal-header h3 {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .modal-header button {
   background: none;
   border: none;
-  color: #6b7280;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
 }
 
 .modal-header button:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .modal-content {
@@ -781,21 +783,23 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .form-group input {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   font-size: 0.875rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--input-focus-border);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -833,14 +837,14 @@
 }
 
 .btn-secondary {
-  background: white;
-  color: #374151;
-  border-color: #d1d5db;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
 /* Responsive Design */
@@ -955,13 +959,13 @@ body.dragging * {
 .project-detail-section {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .project-detail-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0 0 0.75rem 0;
   line-height: 1.3;
 }
@@ -991,13 +995,13 @@ body.dragging * {
 .project-detail-item label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .project-detail-item p {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -1014,26 +1018,26 @@ body.dragging * {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   transition: all 0.15s ease;
 }
 
 .phase-item:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
 .phase-item .phase-name {
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
 }
 
 .phase-item .phase-dates {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-weight: 400;
 }
 

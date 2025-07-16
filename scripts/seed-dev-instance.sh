@@ -62,7 +62,7 @@ echo "  People: $PEOPLE_COUNT"
 
 echo ""
 echo "✅ Dev instance seeded successfully!"
-echo "🌐 Visit http://dev.capacinator.com to see the data"
+echo "🌐 Visit https://dev.capacinator.com to see the data"
 echo ""
 echo "📝 To restore from backup if needed:"
 echo "   sudo cp $BACKUP_FILE $DATABASE_PATH"

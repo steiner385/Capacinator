@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_URL="http://dev.capacinator.com"
+BASE_URL="https://dev.capacinator.com"
 
 echo "Testing Capacinator API Endpoints..."
 echo "===================================="
