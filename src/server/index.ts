@@ -10,6 +10,7 @@ import { initializeDatabase, testConnection, backupDatabase } from './database/i
 import { initializeE2EDatabase } from './database/init-e2e.js';
 import cron from 'node-cron';
 import apiRoutes from './api/routes/index.js';
+import { notificationScheduler } from './services/NotificationScheduler.js';
 
 // Load environment variables
 let envFile = '.env';
@@ -163,6 +164,11 @@ async function startServer() {
       next();
     }, apiRoutes);
     
+    // Initialize notification scheduler
+    console.log('📧 Initializing notification scheduler...');
+    notificationScheduler.start();
+    console.log('✅ Notification scheduler started');
+    
     // 404 handler for API routes (must be after all routes)
     app.use('/api/*', (req, res) => {
       res.status(404).json({
@@ -217,6 +223,7 @@ async function startServer() {
     // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('📴 SIGTERM received, shutting down gracefully...');
+      notificationScheduler.stop();
       server.close(() => {
         console.log('✅ Server closed');
         process.exit(0);
@@ -225,6 +232,7 @@ async function startServer() {
 
     process.on('SIGINT', () => {
       console.log('📴 SIGINT received, shutting down gracefully...');
+      notificationScheduler.stop();
       server.close(() => {
         console.log('✅ Server closed');
         process.exit(0);
