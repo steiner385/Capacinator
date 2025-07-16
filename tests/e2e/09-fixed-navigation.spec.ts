@@ -7,7 +7,7 @@ test.describe('Fixed Navigation Tests', () => {
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
     await helpers.navigateTo('/');
-    await helpers.waitForReactHydration();
+    await helpers.setupPage();
   });
 
   test('should load and display the app correctly', async ({ page }) => {

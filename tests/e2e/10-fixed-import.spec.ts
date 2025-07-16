@@ -7,7 +7,7 @@ test.describe('Fixed Excel Import Tests', () => {
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
     await page.goto('/import');
-    await helpers.waitForReactHydration();
+    await helpers.setupPage();
   });
 
   test('should display import page correctly', async ({ page }) => {

@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 test.describe('Reports Validation - Data Accuracy', () => {
   test('should show accurate capacity gaps and not claim sufficient capacity when there are major gaps', async ({ page }) => {
     // Navigate to reports page
+    const helpers = new TestHelpers(page);
     await page.goto('/reports');
-    await page.waitForLoadState('networkidle');
+    await helpers.setupPage();
     
     // Click on Gaps Analysis tab
     await page.click('button:has-text("Gaps Analysis")');
