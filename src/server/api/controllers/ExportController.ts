@@ -11,8 +11,8 @@ export class ExportController extends BaseController {
         return res.status(400).json({ error: 'Report type is required' });
       }
       
-      const ExcelJS = require('exceljs');
-      const workbook = new ExcelJS.Workbook();
+      const { Workbook } = await import('exceljs');
+      const workbook = new Workbook();
       
       // Set workbook properties
       workbook.creator = 'Capacinator';
@@ -114,7 +114,7 @@ export class ExportController extends BaseController {
         return res.status(400).json({ error: 'Report type is required' });
       }
       
-      const puppeteer = require('puppeteer-core');
+      const puppeteer = await import('puppeteer-core');
       
       // Generate HTML content for the report
       let htmlContent = '';
@@ -559,34 +559,181 @@ export class ExportController extends BaseController {
   }
   
   private async getCapacityData(filters: any) {
-    // This would typically call the same logic as the reporting controller
-    // For now, return mock data structure
+    // Use the same logic as ReportingController.getCapacityReport
+    const { startDate, endDate } = filters;
+    
+    // Get capacity gaps
+    const capacityGaps = await this.db('capacity_gaps_view').select('*');
+    
+    // Get person utilization
+    const personUtilization = await this.db('person_utilization_view').select('*');
+    
+    // Transform capacity gaps to role-based data
+    const byRole = capacityGaps.map(gap => ({
+      role: gap.role_name,
+      capacity: Math.round(gap.total_capacity_fte * 160), // Convert FTE to hours
+      utilized: Math.round((gap.total_capacity_fte - Math.abs(gap.gap_fte || 0)) * 160),
+      gap_fte: gap.gap_fte
+    }));
+    
+    // Calculate totals
+    const totalCapacity = byRole.reduce((sum, r) => sum + r.capacity, 0);
+    const utilizedCapacity = byRole.reduce((sum, r) => sum + r.utilized, 0);
+    
     return {
-      totalCapacity: 0,
-      utilizedCapacity: 0,
-      availableCapacity: 0,
-      byRole: []
+      totalCapacity,
+      utilizedCapacity,
+      availableCapacity: totalCapacity - utilizedCapacity,
+      byRole,
+      capacityGaps,
+      personUtilization
     };
   }
   
   private async getUtilizationData(filters: any) {
+    // Use the same logic as ReportingController.getCapacityReport
+    const capacityReport = await this.getCapacityData(filters);
+    
+    // Transform person utilization data
+    const peopleUtilization = capacityReport.personUtilization.map(person => ({
+      id: person.person_id,
+      name: person.person_name,
+      role: person.primary_role,
+      utilization: Math.round(person.total_allocation || 0)
+    }));
+    
     return {
-      averageUtilization: 0,
-      peopleUtilization: []
+      peopleUtilization,
+      averageUtilization: Math.round(
+        peopleUtilization.reduce((sum, p) => sum + p.utilization, 0) / 
+        (peopleUtilization.length || 1)
+      )
     };
   }
   
   private async getDemandData(filters: any) {
+    // Use the same logic as DemandController.getDemandSummary
+    const { startDate, endDate, projectTypeId, locationId } = filters;
+    
+    // Build base query
+    let query = this.db('project_demands_view')
+      .join('projects', 'project_demands_view.project_id', 'projects.id')
+      .join('roles', 'project_demands_view.role_id', 'roles.id')
+      .where('projects.include_in_demand', true);
+    
+    // Apply filters
+    if (startDate) {
+      query = query.where('project_demands_view.end_date', '>=', startDate);
+    }
+    if (endDate) {
+      query = query.where('project_demands_view.start_date', '<=', endDate);
+    }
+    if (locationId) {
+      query = query.where('projects.location_id', locationId);
+    }
+    if (projectTypeId) {
+      query = query.where('projects.project_type_id', projectTypeId);
+    }
+    
+    // Get demands
+    const demands = await query.select(
+      'project_demands_view.*',
+      'projects.name as project_name',
+      'projects.priority as project_priority',
+      'roles.name as role_name'
+    );
+    
+    // Calculate summary by role (used as project type in export)
+    const roleMap = new Map();
+    demands.forEach(demand => {
+      if (!roleMap.has(demand.role_id)) {
+        roleMap.set(demand.role_id, {
+          role_id: demand.role_id,
+          role_name: demand.role_name,
+          total_hours: 0,
+          total_fte: 0,
+          project_count: new Set(),
+          demands: []
+        });
+      }
+      
+      const role = roleMap.get(demand.role_id);
+      role.total_hours += demand.demand_hours;
+      role.total_fte += this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date);
+      role.project_count.add(demand.project_id);
+      role.demands.push(demand);
+    });
+    
+    const byProjectType = Array.from(roleMap.values()).map(role => ({
+      type: role.role_name,
+      demand: role.total_hours
+    }));
+    
     return {
-      totalDemand: 0,
-      byProjectType: []
+      totalDemand: demands.reduce((sum, d) => sum + d.demand_hours, 0),
+      byProjectType
     };
   }
   
   private async getGapsData(filters: any) {
+    // Use the same logic as DemandController.getDemandGaps
+    const gaps = await this.db('capacity_gaps_view')
+      .where('status', 'GAP')
+      .select('*');
+    
+    // Get detailed demand vs capacity for each gap
+    const detailedGaps = await Promise.all(gaps.map(async (gap) => {
+      // Get current demand
+      const currentDemand = await this.db('project_demands_view')
+        .join('projects', 'project_demands_view.project_id', 'projects.id')
+        .where('project_demands_view.role_id', gap.role_id)
+        .where('project_demands_view.start_date', '<=', new Date())
+        .where('project_demands_view.end_date', '>=', new Date())
+        .where('projects.include_in_demand', true)
+        .select(
+          'projects.id as project_id',
+          'projects.name as project_name',
+          'projects.priority',
+          'project_demands_view.demand_hours'
+        );
+      
+      return {
+        ...gap,
+        current_demands: currentDemand,
+        gap_details: {
+          capacity_fte: gap.total_capacity_fte,
+          demand_fte: gap.total_demand_fte,
+          shortage_fte: gap.gap_fte,
+          shortage_percentage: Math.abs((gap.gap_fte / gap.total_capacity_fte) * 100)
+        }
+      };
+    }));
+    
+    // Sort by shortage
+    detailedGaps.sort((a, b) => a.gap_fte - b.gap_fte);
+    
+    const gapsByRole = detailedGaps.map(gap => ({
+      roleId: gap.role_id,
+      roleName: gap.role_name,
+      demand: Math.round(gap.total_demand_fte * 160), // Convert FTE to hours
+      capacity: Math.round(gap.total_capacity_fte * 160),
+      gap: Math.round(gap.gap_fte * 160)
+    }));
+    
     return {
-      totalGap: 0,
-      gapsByRole: []
+      totalGap: detailedGaps.reduce((sum, g) => sum + Math.abs(g.gap_fte), 0) * 160,
+      gapsByRole
     };
+  }
+  
+  private calculateFte(hours: number, startDate: string, endDate: string): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysInPeriod = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
+    const workingDaysInPeriod = Math.ceil(daysInPeriod * (5/7)); // Approximate working days
+    const hoursPerDay = 8;
+    const totalWorkingHours = workingDaysInPeriod * hoursPerDay;
+    
+    return totalWorkingHours > 0 ? hours / totalWorkingHours : 0;
   }
 }
