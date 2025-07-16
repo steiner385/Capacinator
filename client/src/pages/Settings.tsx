@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Settings as SettingsIcon, Save, Database, 
-  Users, X
+  Users, X, Mail, Bell
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 
@@ -29,7 +29,7 @@ interface ImportSettings {
 
 export default function Settings() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'system' | 'import' | 'users'>('system');
+  const [activeTab, setActiveTab] = useState<'system' | 'import' | 'users' | 'notifications'>('system');
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     defaultWorkHoursPerWeek: 40,
     defaultVacationDaysPerYear: 15,
@@ -53,6 +53,8 @@ export default function Settings() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [notificationPreferences, setNotificationPreferences] = useState<any[]>([]);
 
 
   // Fetch system settings
@@ -103,6 +105,26 @@ export default function Settings() {
       return response.data.data;
     },
     enabled: activeTab === 'users'
+  });
+
+  // Fetch email configuration
+  const { data: emailConfig } = useQuery({
+    queryKey: ['email-config'],
+    queryFn: async () => {
+      const response = await api.notifications.checkEmailConfiguration();
+      return response.data.data;
+    },
+    enabled: activeTab === 'notifications'
+  });
+
+  // Fetch notification templates
+  const { data: notificationTemplates } = useQuery({
+    queryKey: ['notification-templates'],
+    queryFn: async () => {
+      const response = await api.notifications.getEmailTemplates();
+      return response.data.data;
+    },
+    enabled: activeTab === 'notifications'
   });
 
   // Update local state when API data loads
@@ -156,6 +178,26 @@ export default function Settings() {
     }
   };
 
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress) {
+      setSaveMessage('Please enter an email address');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage('');
+    
+    try {
+      await api.notifications.sendTestEmail(testEmailAddress);
+      setSaveMessage('Test email sent successfully!');
+    } catch (error: any) {
+      console.error('Error sending test email:', error);
+      setSaveMessage(error.response?.data?.error || 'Error sending test email. Please try again.');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
 
   const renderSystemSettings = () => (
     <div className="settings-section">
@@ -277,6 +319,7 @@ export default function Settings() {
               type="checkbox"
               checked={systemSettings.enableEmailNotifications}
               onChange={(e) => setSystemSettings({...systemSettings, enableEmailNotifications: e.target.checked})}
+              disabled
             />
             Enable Email Notifications
             <span className="help-text">Configure SMTP settings in environment variables to enable email notifications</span>
@@ -490,6 +533,102 @@ export default function Settings() {
     </div>
   );
 
+  const renderNotificationSettings = () => (
+    <div className="settings-section">
+      <h2>Email Notifications</h2>
+      
+      <div className="settings-group">
+        <h3>Email Configuration</h3>
+        <div className="config-status">
+          <div className="status-indicator">
+            <span className={`status-badge ${emailConfig?.configured ? 'success' : 'warning'}`}>
+              {emailConfig?.configured ? 'Configured' : 'Not Configured'}
+            </span>
+            <span className="status-message">
+              {emailConfig?.message || 'Loading...'}
+            </span>
+          </div>
+          {emailConfig?.configured && (
+            <div className="connection-test">
+              <span className={`status-badge ${emailConfig.connectionTest ? 'success' : 'error'}`}>
+                {emailConfig.connectionTest ? 'Connection OK' : 'Connection Failed'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3>Test Email</h3>
+        <div className="test-email-section">
+          <div className="setting-item">
+            <label>Test Email Address</label>
+            <input
+              type="email"
+              value={testEmailAddress}
+              onChange={(e) => setTestEmailAddress(e.target.value)}
+              placeholder="Enter email address"
+              className="form-input"
+            />
+          </div>
+          <button 
+            onClick={handleSendTestEmail}
+            disabled={isSaving || !emailConfig?.configured}
+            className="btn btn-primary"
+          >
+            <Mail size={16} />
+            Send Test Email
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3>Notification Templates</h3>
+        <div className="templates-list">
+          {notificationTemplates?.map((template: any) => (
+            <div key={template.id} className="template-item">
+              <div className="template-header">
+                <h4>{template.name}</h4>
+                <span className="template-type">{template.type}</span>
+              </div>
+              <div className="template-details">
+                <p><strong>Subject:</strong> {template.subject}</p>
+                <p><strong>Status:</strong> {template.is_active ? 'Active' : 'Inactive'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3>System Settings</h3>
+        <div className="setting-item">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={systemSettings.enableEmailNotifications}
+              onChange={(e) => setSystemSettings({...systemSettings, enableEmailNotifications: e.target.checked})}
+            />
+            Enable Email Notifications System-wide
+          </label>
+          <p className="setting-description">
+            When enabled, users will receive email notifications based on their individual preferences.
+          </p>
+        </div>
+      </div>
+
+      <div className="settings-actions">
+        <button 
+          onClick={handleSaveSystemSettings}
+          disabled={isSaving}
+          className="btn btn-primary"
+        >
+          <Save size={16} />
+          {isSaving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="page-container">
@@ -519,12 +658,20 @@ export default function Settings() {
           <Users size={20} />
           User Permissions
         </button>
+        <button 
+          className={`tab ${activeTab === 'notifications' ? 'active' : ''}`}
+          onClick={() => setActiveTab('notifications')}
+        >
+          <Bell size={20} />
+          Email Notifications
+        </button>
       </div>
 
       <div className="settings-content">
         {activeTab === 'system' && renderSystemSettings()}
         {activeTab === 'import' && renderImportSettings()}
         {activeTab === 'users' && renderUserPermissions()}
+        {activeTab === 'notifications' && renderNotificationSettings()}
       </div>
     </div>
   );

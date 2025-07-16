@@ -305,6 +305,7 @@ export const api = {
     getNotificationStats: (userId?: string, params?: any) => apiClient.get(`/notifications/stats/${userId || ''}`, { params }),
   },
 
+
   // Health check
   health: () => apiClient.get('/health'),
 };
