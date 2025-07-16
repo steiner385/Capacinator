@@ -252,6 +252,23 @@ export const api = {
     updateImportSettings: (data: any) => apiClient.put('/settings/import', data),
   },
 
+  // User Permissions
+  userPermissions: {
+    getSystemPermissions: () => apiClient.get('/user-permissions/permissions'),
+    getUserRoles: () => apiClient.get('/user-permissions/roles'),
+    getRolePermissions: (roleId: string) => apiClient.get(`/user-permissions/roles/${roleId}/permissions`),
+    updateRolePermissions: (roleId: string, permissionIds: string[]) => apiClient.put(`/user-permissions/roles/${roleId}/permissions`, { permissionIds }),
+    getUsersList: () => apiClient.get('/user-permissions/users'),
+    getUserPermissions: (userId: string) => apiClient.get(`/user-permissions/users/${userId}/permissions`),
+    updateUserRole: (userId: string, roleId: string) => apiClient.put(`/user-permissions/users/${userId}/role`, { roleId }),
+    updateUserPermission: (userId: string, permissionId: string, granted: boolean, reason?: string) => 
+      apiClient.put(`/user-permissions/users/${userId}/permissions`, { permissionId, granted, reason }),
+    removeUserPermissionOverride: (userId: string, permissionId: string) => 
+      apiClient.delete(`/user-permissions/users/${userId}/permissions/${permissionId}`),
+    checkUserPermission: (userId: string, permissionName: string) => 
+      apiClient.get(`/user-permissions/users/${userId}/check/${permissionName}`),
+  },
+
   // Health check
   health: () => apiClient.get('/health'),
 };

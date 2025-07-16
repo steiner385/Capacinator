@@ -79,7 +79,27 @@ export default function Settings() {
   const { data: users } = useQuery({
     queryKey: ['users-permissions'],
     queryFn: async () => {
-      const response = await api.people.list();
+      const response = await api.userPermissions.getUsersList();
+      return response.data.data;
+    },
+    enabled: activeTab === 'users'
+  });
+
+  // Fetch user roles
+  const { data: userRoles } = useQuery({
+    queryKey: ['user-roles'],
+    queryFn: async () => {
+      const response = await api.userPermissions.getUserRoles();
+      return response.data.data;
+    },
+    enabled: activeTab === 'users'
+  });
+
+  // Fetch system permissions
+  const { data: systemPermissions } = useQuery({
+    queryKey: ['system-permissions'],
+    queryFn: async () => {
+      const response = await api.userPermissions.getSystemPermissions();
       return response.data.data;
     },
     enabled: activeTab === 'users'
@@ -385,13 +405,49 @@ export default function Settings() {
       <h2>User Permissions</h2>
       
       <div className="info-message">
-        <p>User permissions functionality needs backend implementation.</p>
-        <p>The following features need to be developed:</p>
+        <p>User permissions system is now implemented with role-based access control.</p>
+        <p>Features available:</p>
         <ul>
-          <li>Permission management API endpoints</li>
+          <li>System permissions and user roles</li>
           <li>Role-based access control</li>
-          <li>User authentication system</li>
+          <li>Individual permission overrides</li>
+          <li>System administrator privileges</li>
         </ul>
+      </div>
+      
+      <div className="settings-group">
+        <h3>User Roles</h3>
+        <div className="roles-grid">
+          {userRoles?.map((role: any) => (
+            <div key={role.id} className="role-card">
+              <h4>{role.name}</h4>
+              <p>{role.description}</p>
+              <div className="role-info">
+                <span className="priority">Priority: {role.priority}</span>
+                {role.is_system_admin && <span className="admin-badge">System Admin</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <h3>System Permissions</h3>
+        <div className="permissions-grid">
+          {systemPermissions?.permissionsByCategory && Object.entries(systemPermissions.permissionsByCategory).map(([category, permissions]: [string, any]) => (
+            <div key={category} className="permission-category">
+              <h4>{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+              <div className="permissions-list">
+                {permissions.map((permission: any) => (
+                  <div key={permission.id} className="permission-item">
+                    <strong>{permission.name}</strong>
+                    <span>{permission.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
       
       <table className="table">
@@ -399,10 +455,12 @@ export default function Settings() {
           <tr>
             <th>Name</th>
             <th>Email</th>
-            <th>Role</th>
-            <th>Can Plan For Others</th>
-            <th>Can Approve Overrides</th>
-            <th>Actions</th>
+            <th>User Role</th>
+            <th>Primary Role</th>
+            <th>System Admin</th>
+            <th>Permission Overrides</th>
+            <th>Last Login</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -410,27 +468,21 @@ export default function Settings() {
             <tr key={user.id}>
               <td>{user.name}</td>
               <td>{user.email}</td>
-              <td>{user.primary_role?.name}</td>
+              <td>{user.role_name || 'None'}</td>
+              <td>{user.primary_role_name || 'None'}</td>
               <td>
-                <input 
-                  type="checkbox" 
-                  checked={user.can_plan_for_others || false}
-                  disabled
-                  title="Backend implementation needed"
-                />
+                <span className={`status-badge ${user.is_system_admin ? 'admin' : 'user'}`}>
+                  {user.is_system_admin ? 'Yes' : 'No'}
+                </span>
               </td>
               <td>
-                <input 
-                  type="checkbox" 
-                  checked={user.can_approve_overrides || false}
-                  disabled
-                  title="Backend implementation needed"
-                />
+                <span className="override-count">{user.permission_overrides || 0}</span>
               </td>
+              <td>{user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
               <td>
-                <button className="btn-icon" title="Backend implementation needed" disabled>
-                  <SettingsIcon size={16} />
-                </button>
+                <span className={`status-badge ${user.is_active ? 'active' : 'inactive'}`}>
+                  {user.is_active ? 'Active' : 'Inactive'}
+                </span>
               </td>
             </tr>
           ))}
