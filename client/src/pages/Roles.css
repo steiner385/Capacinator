@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 768px) {

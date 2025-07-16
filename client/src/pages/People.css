@@ -17,15 +17,15 @@
 }
 
 .text-success {
-  color: #22c55e;
+  color: var(--success);
 }
 
 .text-warning {
-  color: #f59e0b;
+  color: var(--warning);
 }
 
 .text-danger {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 @media (max-width: 768px) {

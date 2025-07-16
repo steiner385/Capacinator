@@ -18,6 +18,7 @@ import testDataRoutes from './test-data.js';
 import projectTypeHierarchyRoutes from './project-type-hierarchy.js';
 import projectAllocationRoutes from './project-allocations.js';
 import scenariosRoutes from './scenarios.js';
+import settingsRoutes from './settings.js';
 import { createAuditRoutes } from './audit.js';
 import { getAuditService } from '../../services/audit/index.js';
 
@@ -42,6 +43,7 @@ router.use('/reporting', reportingRoutes);
 router.use('/import', importRoutes);
 router.use('/export', exportRoutes);
 router.use('/demands', demandRoutes);
+router.use('/settings', settingsRoutes);
 
 // Test data cleanup routes (for e2e tests)
 router.use('/test-data', testDataRoutes);

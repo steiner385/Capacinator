@@ -226,6 +226,32 @@ export const api = {
     merge: (id: string, data?: any) => apiClient.post(`/scenarios/${id}/merge`, data || {}),
   },
 
+  // Audit
+  audit: {
+    getHistory: (tableName: string, recordId: string, limit?: number) => 
+      apiClient.get(`/audit/history/${tableName}/${recordId}`, { params: { limit } }),
+    getRecentChanges: (changedBy?: string, limit?: number, offset?: number) => 
+      apiClient.get('/audit/recent', { params: { changedBy, limit, offset } }),
+    searchAuditLog: (filters: any) => 
+      apiClient.get('/audit/search', { params: filters }),
+    getStats: () => apiClient.get('/audit/stats'),
+    undoLastChange: (tableName: string, recordId: string, comment?: string) => 
+      apiClient.post(`/audit/undo/${tableName}/${recordId}`, { comment }),
+    undoLastNChanges: (changedBy: string, count: number, comment?: string) => 
+      apiClient.post(`/audit/undo-batch/${changedBy}/${count}`, { comment }),
+    cleanupExpiredEntries: () => apiClient.post('/audit/cleanup'),
+  },
+
+  // Settings
+  settings: {
+    getSystemSettings: () => apiClient.get('/settings/system'),
+    saveSystemSettings: (data: any) => apiClient.post('/settings/system', data),
+    updateSystemSettings: (data: any) => apiClient.put('/settings/system', data),
+    getImportSettings: () => apiClient.get('/settings/import'),
+    saveImportSettings: (data: any) => apiClient.post('/settings/import', data),
+    updateImportSettings: (data: any) => apiClient.put('/settings/import', data),
+  },
+
   // Health check
   health: () => apiClient.get('/health'),
 };
