@@ -9,6 +9,7 @@ test.describe('Dashboard Charts and Metrics', () => {
     
     // Ensure we have test data loaded
     await helpers.navigateTo('/import');
+    await helpers.setupPage();
     await helpers.uploadFile('simple-test-data.xlsx');
     
     const clearExistingCheckbox = page.locator('input[type="checkbox"]').filter({ hasText: 'Clear existing' }).or(
@@ -231,6 +232,7 @@ test.describe('Dashboard Charts and Metrics', () => {
   test('should display charts with empty data gracefully', async ({ page }) => {
     // Clear all data first
     await helpers.navigateTo('/import');
+    await helpers.setupPage();
     await helpers.uploadFile('simple-test-data.xlsx');
     
     const clearExistingCheckbox = page.locator('input[type="checkbox"]').filter({ hasText: 'Clear existing' }).or(
@@ -276,6 +278,7 @@ test.describe('Dashboard Charts and Metrics', () => {
       
       // Import additional test data
       await helpers.navigateTo('/import');
+      await helpers.setupPage();
       await helpers.uploadFile('complex-test-data.xlsx');
       
       const clearExistingCheckbox = page.locator('input[type="checkbox"]').filter({ hasText: 'Clear existing' }).or(

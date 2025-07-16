@@ -73,7 +73,7 @@ export class TestDataGenerator {
   private request: APIRequestContext;
   private baseURL: string;
 
-  constructor(request: APIRequestContext, baseURL: string = 'http://localhost:3456') {
+  constructor(request: APIRequestContext, baseURL: string = 'http://localhost:3111') {
     this.request = request;
     this.baseURL = baseURL;
   }

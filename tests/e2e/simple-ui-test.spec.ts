@@ -104,7 +104,7 @@ test.describe('Simple UI Test', () => {
     // Test API from browser context
     const apiTest = await page.evaluate(async () => {
       try {
-        const response = await fetch('http://localhost:3456/api/scenarios');
+        const response = await fetch('http://localhost:3111/api/scenarios');
         const data = await response.json();
         return {
           success: true,

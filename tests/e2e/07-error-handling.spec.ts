@@ -70,6 +70,7 @@ test.describe('Error Handling and Edge Cases', () => {
 
   test('should handle invalid file uploads', async ({ page }) => {
     await helpers.navigateTo('/import');
+    await helpers.setupPage();
     
     // Try to upload invalid file types (mock by creating a fake file input)
     const fileInput = page.locator('input[type="file"]');
@@ -93,6 +94,7 @@ test.describe('Error Handling and Edge Cases', () => {
 
   test('should handle corrupted Excel file upload', async ({ page }) => {
     await helpers.navigateTo('/import');
+    await helpers.setupPage();
     
     // Mock corrupted file upload response
     await page.route('**/api/import**', route => {

@@ -7,6 +7,7 @@ test.describe('Excel Import Functionality', () => {
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
     await helpers.navigateTo('/import');
+    await helpers.setupPage();
   });
 
   test('should display import page correctly', async ({ page }) => {

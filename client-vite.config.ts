@@ -53,7 +53,7 @@ export default defineConfig({
     allowedHosts: ['dev.capacinator.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
-        target: `http://localhost:3110`,
+        target: `http://localhost:${process.env.NODE_ENV === 'e2e' ? '3111' : '3110'}`,
         changeOrigin: true,
         secure: false,
         timeout: 10000,
