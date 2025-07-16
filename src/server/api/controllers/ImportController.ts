@@ -90,39 +90,107 @@ export class ImportController extends BaseController {
 
   async downloadTemplate(req: Request, res: Response) {
     try {
-      // TODO: Generate and return an Excel template file
-      // For now, return a 501 with instructions
-      res.status(501).json({
-        error: 'Template download not yet implemented',
-        message: 'Please create an Excel file with the following worksheets and columns:',
-        expectedFormat: {
-          'Projects': [
-            'Project Name',
-            'Project Type', 
-            'Location',
-            'Priority',
-            'Description',
-            'Start Date',
-            'End Date',
-            'Owner'
-          ],
-          'Rosters': [
-            'Name',
-            'Email', 
-            'Primary Role',
-            'Worker Type',
-            'Supervisor',
-            'Availability %',
-            'Hours Per Day'
-          ],
-          'Standard Allocations': [
-            'Project Type',
-            'Phase',
-            'Role',
-            'Allocation %'
-          ]
-        }
+      const ExcelJS = require('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      
+      // Create Projects worksheet
+      const projectsSheet = workbook.addWorksheet('Projects');
+      projectsSheet.columns = [
+        { header: 'Project Name', key: 'name', width: 30 },
+        { header: 'Project Type', key: 'type', width: 20 },
+        { header: 'Location', key: 'location', width: 20 },
+        { header: 'Priority', key: 'priority', width: 15 },
+        { header: 'Description', key: 'description', width: 40 },
+        { header: 'Start Date', key: 'startDate', width: 15 },
+        { header: 'End Date', key: 'endDate', width: 15 },
+        { header: 'Owner', key: 'owner', width: 25 }
+      ];
+      
+      // Style the header row
+      projectsSheet.getRow(1).font = { bold: true };
+      projectsSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6E6FA' }
+      };
+      
+      // Add sample data
+      projectsSheet.addRow({
+        name: 'Sample Project',
+        type: 'Development',
+        location: 'San Francisco',
+        priority: 'High',
+        description: 'This is a sample project description',
+        startDate: '2024-01-01',
+        endDate: '2024-06-30',
+        owner: 'John Doe'
       });
+      
+      // Create Rosters worksheet
+      const rostersSheet = workbook.addWorksheet('Rosters');
+      rostersSheet.columns = [
+        { header: 'Name', key: 'name', width: 25 },
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Primary Role', key: 'role', width: 20 },
+        { header: 'Worker Type', key: 'workerType', width: 15 },
+        { header: 'Supervisor', key: 'supervisor', width: 25 },
+        { header: 'Availability %', key: 'availability', width: 15 },
+        { header: 'Hours Per Day', key: 'hoursPerDay', width: 15 }
+      ];
+      
+      // Style the header row
+      rostersSheet.getRow(1).font = { bold: true };
+      rostersSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6E6FA' }
+      };
+      
+      // Add sample data
+      rostersSheet.addRow({
+        name: 'Alice Johnson',
+        email: 'alice@example.com',
+        role: 'Developer',
+        workerType: 'Full-time',
+        supervisor: 'Bob Smith',
+        availability: 100,
+        hoursPerDay: 8
+      });
+      
+      // Create Standard Allocations worksheet
+      const allocationsSheet = workbook.addWorksheet('Standard Allocations');
+      allocationsSheet.columns = [
+        { header: 'Project Type', key: 'projectType', width: 20 },
+        { header: 'Phase', key: 'phase', width: 20 },
+        { header: 'Role', key: 'role', width: 20 },
+        { header: 'Allocation %', key: 'allocation', width: 15 }
+      ];
+      
+      // Style the header row
+      allocationsSheet.getRow(1).font = { bold: true };
+      allocationsSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6E6FA' }
+      };
+      
+      // Add sample data
+      allocationsSheet.addRow({
+        projectType: 'Development',
+        phase: 'Planning',
+        role: 'Project Manager',
+        allocation: 25
+      });
+      
+      // Generate Excel buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      // Set response headers
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=capacinator-import-template.xlsx');
+      
+      // Send the file
+      res.send(buffer);
 
     } catch (error) {
       this.handleError(error, res, 'Failed to generate template');

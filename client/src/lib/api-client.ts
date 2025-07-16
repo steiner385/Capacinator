@@ -139,8 +139,26 @@ export const api = {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
-    getTemplate: () => apiClient.get('/import/template'),
+    getTemplate: () => apiClient.get('/import/template', {
+      responseType: 'blob',
+    }),
     getHistory: () => apiClient.get('/import/history'),
+  },
+
+  // Export
+  export: {
+    reportAsExcel: (reportType: string, filters?: any) => 
+      apiClient.post('/export/reports/excel', { reportType, filters }, {
+        responseType: 'blob',
+      }),
+    reportAsCSV: (reportType: string, filters?: any) => 
+      apiClient.post('/export/reports/csv', { reportType, filters }, {
+        responseType: 'blob',
+      }),
+    reportAsPDF: (reportType: string, filters?: any) => 
+      apiClient.post('/export/reports/pdf', { reportType, filters }, {
+        responseType: 'blob',
+      }),
   },
 
   // Simple endpoints

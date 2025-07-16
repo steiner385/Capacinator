@@ -13,6 +13,7 @@ import availabilityRoutes from './availability.js';
 import reportingRoutes from './reporting.js';
 import importRoutes from './import.js';
 import demandRoutes from './demands.js';
+import exportRoutes from './export.js';
 import testDataRoutes from './test-data.js';
 import projectTypeHierarchyRoutes from './project-type-hierarchy.js';
 import projectAllocationRoutes from './project-allocations.js';
@@ -39,6 +40,7 @@ router.use('/assignments', assignmentsRoutes);
 router.use('/availability', availabilityRoutes);
 router.use('/reporting', reportingRoutes);
 router.use('/import', importRoutes);
+router.use('/export', exportRoutes);
 router.use('/demands', demandRoutes);
 
 // Test data cleanup routes (for e2e tests)
