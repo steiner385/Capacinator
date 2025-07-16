@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
   BarChart3, PieChart, TrendingUp, Users, Calendar, 
-  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, ClipboardList
+  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, ClipboardList, ChevronDown
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
@@ -46,6 +46,7 @@ export default function Reports() {
     startDate: '2024-09-01', // Set to match actual data range
     endDate: '2024-12-31'
   });
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   // Fetch report data
   const { data: capacityReport, isLoading: capacityLoading, refetch: refetchCapacity } = useQuery({
@@ -232,35 +233,23 @@ export default function Reports() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async (format: 'excel' | 'csv' | 'pdf' = 'excel') => {
     try {
       let data: any = null;
-      let filename = '';
       
+      // Check if we have data for the active report
       switch (activeReport) {
         case 'capacity':
-          if (capacityReport) {
-            data = capacityReport;
-            filename = 'capacity-report';
-          }
+          data = capacityReport;
           break;
         case 'utilization':
-          if (utilizationReport) {
-            data = utilizationReport;
-            filename = 'utilization-report';
-          }
+          data = utilizationReport;
           break;
         case 'demand':
-          if (demandReport) {
-            data = demandReport;
-            filename = 'demand-report';
-          }
+          data = demandReport;
           break;
         case 'gaps':
-          if (gapsReport) {
-            data = gapsReport;
-            filename = 'capacity-gaps-report';
-          }
+          data = gapsReport;
           break;
         default:
           throw new Error('No data available for export');
@@ -271,9 +260,44 @@ export default function Reports() {
         return;
       }
 
-      // Export as JSON for all report types
-      exportAsJSON(data, `${filename}.json`);
+      // Export using the new API
+      let response;
+      switch (format) {
+        case 'excel':
+          response = await api.export.reportAsExcel(activeReport, filters);
+          break;
+        case 'csv':
+          response = await api.export.reportAsCSV(activeReport, filters);
+          break;
+        case 'pdf':
+          response = await api.export.reportAsPDF(activeReport, filters);
+          break;
+        default:
+          // Fallback to JSON export
+          exportAsJSON(data, `${activeReport}-report.json`);
+          return;
+      }
+
+      // Download the file
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers['content-disposition'];
+      const filename = contentDisposition
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `${activeReport}-report.${format}`;
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
     } catch (error) {
+      console.error('Export error:', error);
       alert('Error exporting data. Please try again.');
     }
   };
@@ -646,10 +670,73 @@ export default function Reports() {
             <RefreshCw size={20} />
             Refresh
           </button>
-          <button className="btn btn-primary" onClick={handleExport}>
-            <Download size={20} />
-            Export
-          </button>
+          <div className="dropdown" style={{ position: 'relative' }}>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Download size={20} />
+              Export
+              <ChevronDown size={16} />
+            </button>
+            {showExportDropdown && (
+              <div className="dropdown-menu" style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                backgroundColor: 'white',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                zIndex: 1000,
+                minWidth: '120px'
+              }}>
+                <button 
+                  className="dropdown-item" 
+                  onClick={() => { handleExport('excel'); setShowExportDropdown(false); }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px 16px', 
+                    border: 'none', 
+                    background: 'none', 
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Excel (.xlsx)
+                </button>
+                <button 
+                  className="dropdown-item" 
+                  onClick={() => { handleExport('csv'); setShowExportDropdown(false); }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px 16px', 
+                    border: 'none', 
+                    background: 'none', 
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  CSV (.csv)
+                </button>
+                <button 
+                  className="dropdown-item" 
+                  onClick={() => { handleExport('pdf'); setShowExportDropdown(false); }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '8px 16px', 
+                    border: 'none', 
+                    background: 'none', 
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  PDF (.pdf)
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

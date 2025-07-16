@@ -14,7 +14,7 @@ RestartSec=10
 Environment=NODE_ENV=production
 Environment=PORT=3151
 Environment=DATABASE_PATH=/var/www/capacinator/data/capacinator.db
-Environment=CORS_ORIGIN=http://dev.capacinator.com
+Environment=CORS_ORIGIN=https://dev.capacinator.com
 Environment=LOG_LEVEL=info
 Environment=TRUST_PROXY=true
 

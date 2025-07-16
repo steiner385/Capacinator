@@ -6,7 +6,8 @@ test.describe('Navigation and Basic UI', () => {
 
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
-    await helpers.navigateTo('/');
+    await page.goto('/');
+    await helpers.setupPage();
   });
 
   test('should load the dashboard page by default', async ({ page }) => {
@@ -37,15 +38,15 @@ test.describe('Navigation and Basic UI', () => {
     await expect(page).toHaveURL(/.*\/people/);
     await helpers.verifyPageTitle('People');
     
-    // Navigate to Roles
-    await helpers.navigateViaSidebar('Roles');
-    await expect(page).toHaveURL(/.*\/roles/);
-    await helpers.verifyPageTitle('Roles');
-    
     // Navigate to Assignments
     await helpers.navigateViaSidebar('Assignments');
     await expect(page).toHaveURL(/.*\/assignments/);
     await helpers.verifyPageTitle('Assignments');
+    
+    // Navigate to Reports
+    await helpers.navigateViaSidebar('Reports');
+    await expect(page).toHaveURL(/.*\/reports/);
+    await helpers.verifyPageTitle('Reports');
     
     // Navigate to Import
     await helpers.navigateViaSidebar('Import');
@@ -64,12 +65,12 @@ test.describe('Navigation and Basic UI', () => {
       'Dashboard',
       'Projects', 
       'People',
-      'Roles',
       'Assignments',
-      'Allocations',
-      'Availability',
+      'Allocation Wizard',
+      'Scenarios',
       'Reports',
       'Import',
+      'Audit Log',
       'Settings'
     ];
 
@@ -99,7 +100,7 @@ test.describe('Navigation and Basic UI', () => {
     // Navigate through several pages
     await helpers.navigateViaSidebar('Projects');
     await helpers.navigateViaSidebar('People');
-    await helpers.navigateViaSidebar('Roles');
+    await helpers.navigateViaSidebar('Assignments');
     
     // Use browser back
     await page.goBack();

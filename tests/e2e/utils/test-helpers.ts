@@ -109,10 +109,65 @@ export class TestHelpers {
     
     if (profileModalCount > 0) {
       console.log('Profile selection modal detected, handling...');
-      // Select the first profile option
-      await this.page.selectOption('select', { index: 1 }); // Select first actual option (index 0 is placeholder)
+      
+      // Wait for the select dropdown to be visible and ready
+      await this.page.waitForSelector('select#person-select', { timeout: 10000 });
+      
+      // Wait for options to be loaded
+      await this.page.waitForTimeout(1000);
+      
+      // Try to select an option by value first, then by index
+      let selectionSuccessful = false;
+      
+      try {
+        // Try selecting by value (E2E test user)
+        const selectOptions = await this.page.locator('select#person-select option').all();
+        console.log(`Found ${selectOptions.length} options in select dropdown`);
+        
+        // Try to find and select the first E2E test user
+        for (const option of selectOptions) {
+          const value = await option.getAttribute('value');
+          const text = await option.textContent();
+          
+          if (value && value !== '' && text?.includes('E2E Test User')) {
+            console.log(`Selecting E2E test user: ${text} (value: ${value})`);
+            await this.page.selectOption('select#person-select', { value });
+            selectionSuccessful = true;
+            break;
+          }
+        }
+        
+        // If no E2E test user found, select the first non-empty option
+        if (!selectionSuccessful) {
+          console.log('No E2E test user found, selecting first available option...');
+          await this.page.selectOption('select#person-select', { index: 1 });
+          selectionSuccessful = true;
+        }
+      } catch (error) {
+        console.log('Failed to select by value/text, trying by index...');
+        await this.page.selectOption('select#person-select', { index: 1 });
+        selectionSuccessful = true;
+      }
+      
+      if (!selectionSuccessful) {
+        throw new Error('Failed to select any profile option');
+      }
+      
+      // Click continue button
+      console.log('Clicking Continue button...');
       await this.page.click('button:has-text("Continue")');
-      await this.page.waitForTimeout(2000); // Wait for modal to disappear and page to load
+      
+      // Wait for login to complete and navigation to happen
+      console.log('Waiting for login to complete...');
+      await this.page.waitForTimeout(2000);
+      
+      // Wait for modal to be gone
+      await this.page.waitForSelector('text=Select Your Profile', { state: 'detached', timeout: 10000 });
+      
+      // Wait for navigation to complete
+      await this.page.waitForLoadState('networkidle', { timeout: 10000 });
+      
+      console.log('Profile selection completed successfully');
     }
   }
 

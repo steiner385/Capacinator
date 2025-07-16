@@ -13,8 +13,8 @@
   width: 40px;
   height: 40px;
   margin: 0 auto 1rem;
-  border: 3px solid #f3f4f6;
-  border-top-color: #3b82f6;
+  border: 3px solid var(--bg-tertiary);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -26,6 +26,6 @@
 }
 
 .loading-spinner p {
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0;
 }

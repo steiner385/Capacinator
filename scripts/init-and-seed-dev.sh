@@ -101,4 +101,4 @@ echo "  People: $PEOPLE_COUNT"
 
 echo ""
 echo "✅ Dev instance initialized and seeded successfully!"
-echo "🌐 Visit http://dev.capacinator.com to explore the data"
+echo "🌐 Visit https://dev.capacinator.com to explore the data"
