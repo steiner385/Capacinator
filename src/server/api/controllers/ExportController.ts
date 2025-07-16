@@ -11,8 +11,8 @@ export class ExportController extends BaseController {
         return res.status(400).json({ error: 'Report type is required' });
       }
       
-      const { Workbook } = await import('exceljs');
-      const workbook = new Workbook();
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
       
       // Set workbook properties
       workbook.creator = 'Capacinator';
