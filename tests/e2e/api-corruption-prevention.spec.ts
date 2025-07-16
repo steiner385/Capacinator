@@ -75,7 +75,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
 
     // Test 3: Verify UI still functions after operations
     const scenarioCards = await page.locator('.scenario-card').count();
-    console.log(`📊 Total scenarios visible: ${scenarioCards}`);
+    console.log('📊 Total scenarios visible: ' + scenarioCards);
     expect(scenarioCards).toBeGreaterThan(0);
 
     // Test 4: Verify database integrity by checking if we can still create scenarios
@@ -117,15 +117,15 @@ test.describe('Database Corruption Prevention UI Tests', () => {
         await page.click('button:has-text("New Scenario")');
         await page.waitForSelector('.modal-content', { timeout: 5000 });
         
-        await page.fill('input[id="scenario-name"]', `Concurrent UI Test ${index + 1}`);
-        await page.fill('textarea[id="scenario-description"]', `Testing concurrent UI operations ${index + 1}`);
+        await page.fill('input[id="scenario-name"]', 'Concurrent UI Test ' + (index + 1));
+        await page.fill('textarea[id="scenario-description"]', 'Testing concurrent UI operations ' + (index + 1));
         await page.selectOption('select[id="scenario-type"]', 'branch');
         
         await page.click('button:has-text("Create Scenario")');
         await page.waitForTimeout(2000);
         
         // Verify scenario was created
-        const scenarioExists = await page.locator(`.scenario-card:has-text("Concurrent UI Test ${index + 1}")`).count() > 0;
+        const scenarioExists = await page.locator('.scenario-card:has-text("Concurrent UI Test ' + (index + 1) + '")').count() > 0;
         return { success: scenarioExists, index };
       } catch (error) {
         return { success: false, index, error: error.toString() };
@@ -141,7 +141,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
 
     // Verify both scenarios exist
     for (let i = 0; i < 2; i++) {
-      await expect(pages[0].locator(`.scenario-card:has-text("Concurrent UI Test ${i + 1}")').first()).toBeVisible();
+      await expect(pages[0].locator('.scenario-card:has-text("Concurrent UI Test ' + (i + 1) + '")').first()).toBeVisible();
     }
 
     // Take final screenshot
@@ -159,13 +159,13 @@ test.describe('Database Corruption Prevention UI Tests', () => {
 
     // Create multiple scenarios rapidly to test UI responsiveness
     for (let i = 1; i <= 3; i++) {
-      console.log(`Creating scenario ${i}/3`);
+      console.log('Creating scenario ' + i + '/3');
       
       await page.click('button:has-text("New Scenario")');
       await page.waitForSelector('.modal-content', { timeout: 5000 });
       
-      await page.fill('input[id="scenario-name"]', `Rapid Creation Test ${i}`);
-      await page.fill('textarea[id="scenario-description"]', `Testing rapid UI operations ${i}`);
+      await page.fill('input[id="scenario-name"]', 'Rapid Creation Test ' + i);
+      await page.fill('textarea[id="scenario-description"]', 'Testing rapid UI operations ' + i);
       await page.click('button:has-text("Create Scenario")');
       
       await page.waitForTimeout(1000);
@@ -177,7 +177,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
 
     // Verify all scenarios were created
     for (let i = 1; i <= 3; i++) {
-      await expect(page.locator(`.scenario-card:has-text("Rapid Creation Test ${i}")').first()).toBeVisible();
+      await expect(page.locator('.scenario-card:has-text("Rapid Creation Test ' + i + '")').first()).toBeVisible();
     }
 
     console.log('✅ UI remained responsive during rapid database operations');

@@ -10,6 +10,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should display and interact with Projects table', async ({ page }) => {
     await helpers.navigateTo('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Table should be visible
@@ -42,6 +43,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should handle Projects table filtering', async ({ page }) => {
     await helpers.navigateTo('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Test status filter if available
@@ -63,6 +65,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should display and interact with People table', async ({ page }) => {
     await helpers.navigateTo('/people');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Table should be visible
@@ -84,6 +87,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should display and interact with Roles table', async ({ page }) => {
     await helpers.navigateTo('/roles');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Table should be visible
@@ -102,6 +106,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should display and interact with Assignments table', async ({ page }) => {
     await helpers.navigateTo('/assignments');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Table should be visible
@@ -116,6 +121,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should handle table pagination', async ({ page }) => {
     await helpers.navigateTo('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Check if pagination is present (only if there are enough rows)
@@ -144,6 +150,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should handle table row clicks', async ({ page }) => {
     await helpers.navigateTo('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     const rowCount = await helpers.getTableRowCount();
@@ -158,6 +165,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should handle action buttons in tables', async ({ page }) => {
     await helpers.navigateTo('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     const rowCount = await helpers.getTableRowCount();
@@ -178,6 +186,7 @@ test.describe('Data Tables Functionality', () => {
   test('should handle empty table states', async ({ page }) => {
     // Navigate to a page that might be empty
     await helpers.navigateTo('/people');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Search for something that doesn't exist
@@ -198,6 +207,7 @@ test.describe('Data Tables Functionality', () => {
 
   test('should maintain table state across navigation', async ({ page }) => {
     await helpers.navigateTo('/projects');
+    await helpers.setupPage();
     await helpers.waitForDataTable();
     
     // Apply a search filter
