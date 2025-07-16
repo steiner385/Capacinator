@@ -278,7 +278,6 @@ export default function Settings() {
               type="checkbox"
               checked={systemSettings.enableEmailNotifications}
               onChange={(e) => setSystemSettings({...systemSettings, enableEmailNotifications: e.target.checked})}
-              disabled
             />
             Enable Email Notifications
             <span className="help-text">Configure SMTP settings in environment variables to enable email notifications</span>
