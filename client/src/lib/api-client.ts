@@ -123,11 +123,34 @@ export const api = {
 
   // Import
   import: {
-    uploadExcel: (file: File, clearExisting: boolean = false, useV2: boolean = true) => {
+    uploadExcel: (file: File, options: {
+      clearExisting?: boolean;
+      useV2?: boolean;
+      validateDuplicates?: boolean;
+      autoCreateMissingRoles?: boolean;
+      autoCreateMissingLocations?: boolean;
+      defaultProjectPriority?: number;
+      dateFormat?: string;
+    } = {}) => {
       const formData = new FormData();
       formData.append('excelFile', file);
-      formData.append('clearExisting', clearExisting.toString());
-      formData.append('useV2', useV2.toString());
+      formData.append('clearExisting', (options.clearExisting || false).toString());
+      formData.append('useV2', (options.useV2 !== undefined ? options.useV2 : true).toString());
+      if (options.validateDuplicates !== undefined) {
+        formData.append('validateDuplicates', options.validateDuplicates.toString());
+      }
+      if (options.autoCreateMissingRoles !== undefined) {
+        formData.append('autoCreateMissingRoles', options.autoCreateMissingRoles.toString());
+      }
+      if (options.autoCreateMissingLocations !== undefined) {
+        formData.append('autoCreateMissingLocations', options.autoCreateMissingLocations.toString());
+      }
+      if (options.defaultProjectPriority !== undefined) {
+        formData.append('defaultProjectPriority', options.defaultProjectPriority.toString());
+      }
+      if (options.dateFormat) {
+        formData.append('dateFormat', options.dateFormat);
+      }
       return apiClient.post('/import/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -139,6 +162,7 @@ export const api = {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
+    getSettings: () => apiClient.get('/import/settings'),
     getTemplate: () => apiClient.get('/import/template', {
       responseType: 'blob',
     }),
@@ -268,6 +292,19 @@ export const api = {
     checkUserPermission: (userId: string, permissionName: string) => 
       apiClient.get(`/user-permissions/users/${userId}/check/${permissionName}`),
   },
+
+  // Notifications
+  notifications: {
+    sendNotification: (data: any) => apiClient.post('/notifications/send', data),
+    getUserNotificationPreferences: (userId: string) => apiClient.get(`/notifications/preferences/${userId}`),
+    updateUserNotificationPreferences: (userId: string, preferences: any) => apiClient.put(`/notifications/preferences/${userId}`, { preferences }),
+    getEmailTemplates: () => apiClient.get('/notifications/templates'),
+    getNotificationHistory: (userId?: string, params?: any) => apiClient.get(`/notifications/history/${userId || ''}`, { params }),
+    sendTestEmail: (email: string) => apiClient.post('/notifications/test', { email }),
+    checkEmailConfiguration: () => apiClient.get('/notifications/config'),
+    getNotificationStats: (userId?: string, params?: any) => apiClient.get(`/notifications/stats/${userId || ''}`, { params }),
+  },
+
 
   // Health check
   health: () => apiClient.get('/health'),
