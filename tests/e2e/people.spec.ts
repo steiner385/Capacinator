@@ -13,7 +13,7 @@ test.describe('People Page Functionality', () => {
     await expect(page.locator('h1')).toContainText('People', { timeout: 10000 });
     
     // Should show data table
-    await expect(page.locator('.data-table')).toBeVisible();
+    await expect(page.locator('table')).toBeVisible();
     
     // Should show Add Person button
     await expect(page.locator('button:has-text("Add Person")')).toBeVisible();
@@ -34,7 +34,7 @@ test.describe('People Page Functionality', () => {
     // Wait for data to load
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -61,7 +61,7 @@ test.describe('People Page Functionality', () => {
   test('should navigate to person details via name click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -82,7 +82,7 @@ test.describe('People Page Functionality', () => {
   test('should handle View button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -100,7 +100,7 @@ test.describe('People Page Functionality', () => {
   test('should handle Edit button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -115,7 +115,7 @@ test.describe('People Page Functionality', () => {
   test('should handle Delete button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    const tableRows = page.locator('.data-table tbody tr');
+    const tableRows = page.locator('table tbody tr');
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -144,7 +144,7 @@ test.describe('People Page Functionality', () => {
       await page.waitForTimeout(1000);
       
       // Should filter results
-      const tableRows = page.locator('.data-table tbody tr');
+      const tableRows = page.locator('table tbody tr');
       const rowCount = await tableRows.count();
       
       if (rowCount > 0) {
