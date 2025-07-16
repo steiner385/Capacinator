@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { notificationScheduler } from '../../services/NotificationScheduler.js';
 
 export class ProjectsController extends BaseController {
   /**
@@ -190,10 +191,11 @@ export class ProjectsController extends BaseController {
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Get current project to track timeline changes
+      const currentProject = await this.db('projects').where('id', id).first();
+      
       // Validate project type and sub-type relationship
       if (updateData.project_type_id || updateData.project_sub_type_id) {
-        // Get current project to determine current type if not being updated
-        const currentProject = await this.db('projects').where('id', id).first();
         const typeId = updateData.project_type_id || currentProject?.project_type_id;
         const subTypeId = updateData.project_sub_type_id || currentProject?.project_sub_type_id;
         
@@ -211,6 +213,29 @@ export class ProjectsController extends BaseController {
       if (!project) {
         this.handleNotFound(res, 'Project');
         return null;
+      }
+
+      // Send timeline change notifications if dates changed
+      if (currentProject && (updateData.aspiration_start || updateData.aspiration_finish)) {
+        try {
+          const oldStart = currentProject.aspiration_start ? new Date(currentProject.aspiration_start) : null;
+          const newStart = updateData.aspiration_start ? new Date(updateData.aspiration_start) : oldStart;
+          const oldEnd = currentProject.aspiration_finish ? new Date(currentProject.aspiration_finish) : null;
+          const newEnd = updateData.aspiration_finish ? new Date(updateData.aspiration_finish) : oldEnd;
+          
+          // Only send if dates actually changed
+          if ((oldStart?.getTime() !== newStart?.getTime()) || (oldEnd?.getTime() !== newEnd?.getTime())) {
+            await notificationScheduler.sendProjectTimelineNotification(
+              id,
+              oldStart,
+              newStart,
+              oldEnd,
+              newEnd
+            );
+          }
+        } catch (error) {
+          console.error('Failed to send project timeline notification:', error);
+        }
       }
 
       return project;

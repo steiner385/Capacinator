@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
+import { notificationScheduler } from '../../services/NotificationScheduler.js';
 
 interface AssignmentConflict {
   person_id: string;
@@ -140,6 +141,18 @@ export class AssignmentsController extends BaseController {
 
       // Return assignment with computed dates
       const assignmentWithDates = { ...assignment, ...computedDates };
+      
+      // Send notification for assignment creation
+      try {
+        await notificationScheduler.sendAssignmentNotification(
+          assignmentData.person_id,
+          'created',
+          assignmentData
+        );
+      } catch (error) {
+        console.error('Failed to send assignment notification:', error);
+      }
+      
       return transformDates(assignmentWithDates, [
         ...COMMON_DATE_FIELDS,
         'computed_start_date',
@@ -220,6 +233,17 @@ export class AssignmentsController extends BaseController {
           updated_at: new Date()
         })
         .returning('*');
+
+      // Send notification for assignment update
+      try {
+        await notificationScheduler.sendAssignmentNotification(
+          updateData.person_id || existing.person_id,
+          'updated',
+          { ...existing, ...updateData }
+        );
+      } catch (error) {
+        console.error('Failed to send assignment notification:', error);
+      }
 
       return transformDates(updated, COMMON_DATE_FIELDS);
     }, res, 'Failed to update assignment');
