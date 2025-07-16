@@ -3,15 +3,15 @@
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger);
   border-radius: 8px;
   margin: 2rem auto;
   max-width: 600px;
 }
 
 .error-icon {
-  color: #ef4444;
+  color: var(--danger);
   flex-shrink: 0;
 }
 
@@ -20,13 +20,13 @@
 }
 
 .error-text {
-  color: #991b1b;
+  color: var(--danger-hover);
   font-weight: 500;
   margin: 0;
 }
 
 .error-details {
-  color: #7f1d1d;
+  color: var(--danger-hover);
   font-size: 0.875rem;
   margin: 0.5rem 0 0 0;
 }

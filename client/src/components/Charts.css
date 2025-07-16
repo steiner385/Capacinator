@@ -1,28 +1,28 @@
 /* Chart Container Styles */
 .chart-container {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   margin: 20px 0;
   padding: 20px;
 }
 
 .chart-header {
   margin-bottom: 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 15px;
 }
 
 .chart-header h3 {
   margin: 0 0 5px 0;
-  color: #111827;
+  color: var(--text-primary);
   font-size: 1.25rem;
   font-weight: 600;
 }
 
 .chart-subtitle {
   margin: 0;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
@@ -39,22 +39,22 @@
   justify-content: center;
   height: 200px;
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .chart-error {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .chart-empty {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 /* Chart Summary Cards */
 .chart-summary {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
 }
 
 .summary-cards {
@@ -64,8 +64,8 @@
 }
 
 .summary-card {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 15px;
   text-align: center;
@@ -74,13 +74,13 @@
 .summary-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 5px;
 }
 
 .summary-label {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -88,12 +88,12 @@
 .chart-breakdown {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-color);
 }
 
 .chart-breakdown h4 {
   margin: 0 0 15px 0;
-  color: #111827;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
 }
@@ -119,7 +119,7 @@
 
 .breakdown-label {
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 /* Responsive Design */
@@ -145,8 +145,8 @@
 }
 
 .recharts-tooltip-content {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid #e5e7eb !important;
+  background: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
@@ -173,17 +173,17 @@
 }
 
 .chart-container .recharts-cartesian-grid line {
-  stroke: #f3f4f6;
+  stroke: var(--bg-tertiary);
 }
 
 .chart-container .recharts-xaxis text,
 .chart-container .recharts-yaxis text {
-  fill: #6b7280;
+  fill: var(--text-secondary);
   font-size: 12px;
 }
 
 .chart-container .recharts-xaxis .recharts-cartesian-axis-label,
 .chart-container .recharts-yaxis .recharts-cartesian-axis-label {
-  fill: #374151;
+  fill: var(--text-primary);
   font-weight: 500;
 }

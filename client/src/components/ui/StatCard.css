@@ -18,7 +18,7 @@
 
 .stat-card-primary .stat-card-icon {
   background-color: var(--badge-primary-bg);
-  color: #3b82f6;
+  color: var(--color-blue);
 }
 
 .stat-card-success {
@@ -78,14 +78,14 @@
 
 .stat-card-title {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem 0;
 }
 
 .stat-card-value {
   font-size: 2rem;
   font-weight: 600;
-  color: #1a1d23;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -96,11 +96,11 @@
 }
 
 .stat-card-trend.positive {
-  color: #10b981;
+  color: var(--success);
 }
 
 .stat-card-trend.negative {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .stat-card-icon {

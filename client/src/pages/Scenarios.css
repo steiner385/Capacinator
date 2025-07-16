@@ -105,7 +105,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--success), #22c55e);
+  background: linear-gradient(90deg, var(--success), var(--success));
   border-radius: 8px 8px 0 0;
 }
 
@@ -1052,19 +1052,19 @@
 
 .scenario-type-badge.baseline {
   background: rgba(34, 197, 94, 0.2);
-  color: #16a34a;
+  color: var(--success);
   font-weight: 700;
 }
 
 .scenario-type-badge.branch {
   background: rgba(59, 130, 246, 0.2);
-  color: #2563eb;
+  color: var(--primary);
   font-weight: 700;
 }
 
 .scenario-type-badge.sandbox {
   background: rgba(245, 158, 11, 0.2);
-  color: #d97706;
+  color: var(--warning);
   font-weight: 700;
 }
 
@@ -1266,25 +1266,25 @@
 }
 
 .action-button.edit {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--warning);
+  color: var(--warning);
 }
 
 .action-button.edit:hover {
-  background: #f59e0b;
+  background: var(--warning);
   color: white;
-  border-color: #f59e0b;
+  border-color: var(--warning);
 }
 
 .action-button.delete {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .action-button.delete:hover {
-  background: #ef4444;
+  background: var(--danger);
   color: white;
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 
 .action-button.merge {
@@ -1299,14 +1299,14 @@
 }
 
 .action-button.compare {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  border-color: var(--color-purple);
+  color: var(--color-purple);
 }
 
 .action-button.compare:hover {
-  background: #8b5cf6;
+  background: var(--color-purple);
   color: white;
-  border-color: #8b5cf6;
+  border-color: var(--color-purple);
 }
 
 /* Responsive button layout */
@@ -1573,7 +1573,7 @@
 
 .scenario-phase-indicator.planning {
   background: rgba(168, 85, 247, 0.1);
-  color: #8B5CF6;
+  color: var(--color-purple);
   border: 1px solid rgba(168, 85, 247, 0.2);
 }
 
@@ -1611,7 +1611,7 @@
 
 .scenario-priority-indicator.critical {
   background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
+  color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
@@ -1660,7 +1660,7 @@
 
 .scenario-impact-indicator.significant {
   background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
+  color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
