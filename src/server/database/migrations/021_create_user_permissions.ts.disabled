@@ -2,6 +2,9 @@ import { Knex } from 'knex';
 
 export async function up(knex: Knex): Promise<void> {
   console.log('Creating user permissions system...');
+  
+  // Temporarily disable foreign key checks for SQLite
+  await knex.raw('PRAGMA foreign_keys = OFF');
 
   // 1. Create system_permissions table
   await knex.schema.createTable('system_permissions', (table) => {
@@ -40,13 +43,13 @@ export async function up(knex: Knex): Promise<void> {
     table.index(['user_role_id', 'permission_id']);
   });
 
-  // 4. Create user_permissions table (user-specific overrides)
+  // 4. Create user_permissions table (user-specific overrides) - create without foreign keys first
   await knex.schema.createTable('user_permissions', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('(lower(hex(randomblob(4))) || \'-\' || lower(hex(randomblob(2))) || \'-4\' || substr(lower(hex(randomblob(2))),2) || \'-\' || substr(\'89ab\',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || \'-\' || lower(hex(randomblob(6))))'));
-    table.uuid('person_id').references('id').inTable('people').onDelete('CASCADE');
-    table.uuid('permission_id').references('id').inTable('system_permissions').onDelete('CASCADE');
+    table.uuid('person_id').notNullable();
+    table.uuid('permission_id').notNullable();
     table.boolean('granted').notNullable(); // true = granted, false = denied
-    table.uuid('granted_by').references('id').inTable('people').onDelete('SET NULL');
+    table.uuid('granted_by').nullable();
     table.timestamp('granted_at').defaultTo(knex.fn.now());
     table.string('reason').nullable();
     table.timestamps(true, true);
@@ -69,7 +72,7 @@ export async function up(knex: Knex): Promise<void> {
 
   // 6. Add user_role_id to people table
   await knex.schema.table('people', (table) => {
-    table.uuid('user_role_id').references('id').inTable('user_roles').onDelete('SET NULL');
+    table.uuid('user_role_id').nullable();
     table.boolean('is_system_admin').defaultTo(false);
     table.boolean('is_active').defaultTo(true);
     table.timestamp('last_login').nullable();
@@ -77,6 +80,11 @@ export async function up(knex: Knex): Promise<void> {
     table.index('user_role_id');
     table.index('is_system_admin');
     table.index('is_active');
+  });
+  
+  // Add foreign key constraint after the column is created
+  await knex.schema.table('people', (table) => {
+    table.foreign('user_role_id').references('id').inTable('user_roles').onDelete('SET NULL');
   });
 
   // 7. Recreate views that depend on people table
@@ -490,11 +498,26 @@ export async function up(knex: Knex): Promise<void> {
   // 11. Set default user role for existing users (give them Viewer role)
   const viewerRoleId = insertedRoles.find(r => r.name === 'Viewer')?.id;
   if (viewerRoleId) {
-    await knex('people').update({ user_role_id: viewerRoleId });
-    console.log('✅ Assigned default Viewer role to existing users');
+    const peopleCount = await knex('people').count('* as count').first();
+    if (peopleCount && peopleCount.count > 0) {
+      await knex('people').update({ user_role_id: viewerRoleId });
+      console.log('✅ Assigned default Viewer role to existing users');
+    } else {
+      console.log('✅ No existing users found, skipping role assignment');
+    }
   }
 
+  // 12. Add foreign key constraints after all data is populated
+  await knex.schema.table('user_permissions', (table) => {
+    table.foreign('person_id').references('id').inTable('people').onDelete('CASCADE');
+    table.foreign('permission_id').references('id').inTable('system_permissions').onDelete('CASCADE');
+    table.foreign('granted_by').references('id').inTable('people').onDelete('SET NULL');
+  });
+
   console.log('✅ User permissions system created successfully');
+  
+  // Re-enable foreign key checks
+  await knex.raw('PRAGMA foreign_keys = ON');
 }
 
 export async function down(knex: Knex): Promise<void> {

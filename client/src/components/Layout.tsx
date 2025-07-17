@@ -7,7 +7,6 @@ import {
   UserCog,
   Calendar,
   BarChart3,
-  FileSpreadsheet,
   Settings,
   GitBranch,
   ClipboardList,
@@ -31,7 +30,6 @@ const navigation = [
   { name: 'Allocation Wizard', href: '/wizard', icon: Wand2 },
   { name: 'Scenarios', href: '/scenarios', icon: GitBranch },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Import', href: '/import', icon: FileSpreadsheet },
   { name: 'Audit Log', href: '/audit-log', icon: History },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

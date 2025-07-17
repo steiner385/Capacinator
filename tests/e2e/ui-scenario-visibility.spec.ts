@@ -111,7 +111,7 @@ test.describe('Scenario UI Visibility Tests', () => {
 
     // Check if the API is responding
     try {
-      const response = await page.request.get('http://localhost:3456/api/scenarios');
+      const response = await page.request.get('http://localhost:3111/api/scenarios');
       console.log('🌐 API Response Status:', response.status());
       if (response.ok()) {
         const data = await response.json();

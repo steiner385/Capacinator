@@ -1,3 +1,12 @@
+/**
+ * Import Routes - ADMIN/UTILITY USE ONLY
+ * 
+ * These routes are maintained for administrative utility access only.
+ * The Excel import functionality has been removed from the main UI.
+ * 
+ * Use the command-line utility instead:
+ * npm run import:excel -- --file=data.xlsx [options]
+ */
 import { Router } from 'express';
 import { ImportController } from '../controllers/ImportController.js';
 

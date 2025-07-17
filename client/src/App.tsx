@@ -28,7 +28,6 @@ import { AllocationWizard } from './pages/AllocationWizard';
 import Availability from './pages/Availability';
 import { AuditLog } from './pages/AuditLog';
 import Reports from './pages/Reports';
-import Import from './pages/Import';
 import Settings from './pages/Settings';
 import './App.css';
 
@@ -73,7 +72,6 @@ const AppContent: React.FC = () => {
         <Route path="/availability" element={<Navigate to="/people" replace />} />
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/reports" element={<Reports />} />
-        <Route path="/import" element={<Import />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>

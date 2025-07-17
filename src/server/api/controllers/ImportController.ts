@@ -15,6 +15,18 @@ interface ImportSettings {
   dateFormat: string;
 }
 
+/**
+ * ImportController
+ * 
+ * ADMIN/UTILITY USE ONLY
+ * 
+ * This controller is maintained for administrative utility access only.
+ * The Excel import functionality has been removed from the main UI to
+ * streamline the user experience. Import operations should now be performed
+ * using the command-line utility script: scripts/import-excel.js
+ * 
+ * Usage: npm run import:excel -- --file=data.xlsx [options]
+ */
 export class ImportController extends BaseController {
   private upload = multer({
     dest: 'uploads/',

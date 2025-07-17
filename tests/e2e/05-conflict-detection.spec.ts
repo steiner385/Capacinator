@@ -9,6 +9,7 @@ test.describe('Assignment Conflict Detection', () => {
     
     // Ensure we have test data loaded
     await helpers.navigateTo('/import');
+    await helpers.setupPage();
     await helpers.uploadFile('simple-test-data.xlsx');
     
     const clearExistingCheckbox = page.locator('input[type="checkbox"]').filter({ hasText: 'Clear existing' }).or(
