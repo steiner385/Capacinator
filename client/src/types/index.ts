@@ -15,8 +15,6 @@ export interface Project extends BaseEntity {
   description?: string;
   data_restrictions?: string;
   include_in_demand: boolean;
-  aspiration_start?: string;
-  aspiration_finish?: string;
   external_id?: string;
   owner_id?: string;
   current_phase_id?: string; // References project_phases.id, manually set to track progress

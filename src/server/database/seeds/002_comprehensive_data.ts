@@ -591,9 +591,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_id: peopleIds.grace,
       data_restrictions: 'Customer data must be handled according to GDPR requirements',
       include_in_demand: true,
-      external_id: 'CUST-2023-001',
-      aspiration_start: '2023-10-01',
-      aspiration_finish: '2023-12-31'
+      external_id: 'CUST-2025-001',
     },
     {
       id: projectIds.aiChatbot,
@@ -606,9 +604,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_id: peopleIds.henry,
       data_restrictions: 'Customer conversation data privacy requirements',
       include_in_demand: true,
-      external_id: 'AI-2023-002',
-      aspiration_start: '2023-08-01',
-      aspiration_finish: '2023-11-30'
+      external_id: 'AI-2025-002',
     },
     {
       id: projectIds.mobileApp,
@@ -621,9 +617,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_id: peopleIds.frank,
       data_restrictions: 'Financial data security requirements, PCI DSS compliance',
       include_in_demand: true,
-      external_id: 'MOB-2023-003',
-      aspiration_start: '2023-05-01',
-      aspiration_finish: '2023-09-15'
+      external_id: 'MOB-2025-003',
     },
     {
       id: projectIds.cloudMigration,
@@ -636,9 +630,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_id: peopleIds.eve,
       data_restrictions: 'Enterprise data migration security protocols',
       include_in_demand: true,
-      external_id: 'AWS-2024-004',
-      aspiration_start: '2024-03-01',
-      aspiration_finish: '2024-10-31'
+      external_id: 'AWS-2025-004',
     },
     {
       id: projectIds.securityAudit,
@@ -651,9 +643,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_id: peopleIds.alice,
       data_restrictions: 'Confidential security findings, limited access',
       include_in_demand: true,
-      external_id: 'SEC-2024-005',
-      aspiration_start: '2024-06-01',
-      aspiration_finish: '2024-12-15'
+      external_id: 'SEC-2025-005',
     },
     {
       id: projectIds.dataWarehouse,
@@ -666,9 +656,7 @@ export async function seed(knex: Knex): Promise<void> {
       owner_id: peopleIds.henry,
       data_restrictions: 'Sensitive business intelligence data',
       include_in_demand: true,
-      external_id: 'DATA-2024-006',
-      aspiration_start: '2024-09-01',
-      aspiration_finish: '2025-03-31'
+      external_id: 'DATA-2025-006',
     },
     {
       id: projectIds.iosApp,
@@ -682,8 +670,6 @@ export async function seed(knex: Knex): Promise<void> {
       data_restrictions: 'Health data privacy (HIPAA considerations)',
       include_in_demand: true,
       external_id: 'FIT-2025-007',
-      aspiration_start: '2025-02-01',
-      aspiration_finish: '2025-07-31'
     },
     {
       id: projectIds.mlPlatform,
@@ -697,8 +683,6 @@ export async function seed(knex: Knex): Promise<void> {
       data_restrictions: 'Proprietary ML models and training data',
       include_in_demand: true,
       external_id: 'CV-2025-008',
-      aspiration_start: '2025-04-01',
-      aspiration_finish: '2025-10-30'
     },
     {
       id: projectIds.complianceProject,
@@ -712,8 +696,6 @@ export async function seed(knex: Knex): Promise<void> {
       data_restrictions: 'Financial audit data, SOX compliance requirements',
       include_in_demand: true,
       external_id: 'SOX-2025-009',
-      aspiration_start: '2025-06-01',
-      aspiration_finish: '2025-11-15'
     },
     {
       id: projectIds.ecommerce,
@@ -727,8 +709,6 @@ export async function seed(knex: Knex): Promise<void> {
       data_restrictions: 'Customer payment data, PCI DSS compliance',
       include_in_demand: true,
       external_id: 'ECOM-2025-010',
-      aspiration_start: '2025-08-01',
-      aspiration_finish: '2026-01-30'
     }
   ]);
 

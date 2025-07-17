@@ -190,8 +190,6 @@ export async function seed(knex: Knex): Promise<void> {
       location_id: 'loc-e2e-001',
       priority: 1,
       description: 'First E2E test project',
-      aspiration_start: '2024-01-01',
-      aspiration_finish: '2024-03-31',
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -202,8 +200,6 @@ export async function seed(knex: Knex): Promise<void> {
       location_id: 'loc-e2e-002',
       priority: 2,
       description: 'Second E2E test project',
-      aspiration_start: '2024-02-01',
-      aspiration_finish: '2024-05-31',
       created_at: new Date(),
       updated_at: new Date()
     }

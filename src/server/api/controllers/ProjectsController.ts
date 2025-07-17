@@ -41,6 +41,16 @@ export class ProjectsController extends BaseController {
       throw new Error(`Project sub-type "${projectSubType.name}" is not active`);
     }
   }
+  async debugQuery(req: Request, res: Response) {
+    const testQuery = await this.db('projects')
+      .select('id', 'name')
+      .select(this.db.raw('(SELECT MIN(start_date) FROM project_phases_timeline WHERE project_id = projects.id) as start_date'))
+      .select(this.db.raw('(SELECT MAX(end_date) FROM project_phases_timeline WHERE project_id = projects.id) as end_date'))
+      .limit(3);
+    
+    res.json({ debug: testQuery });
+  }
+
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -65,13 +75,32 @@ export class ProjectsController extends BaseController {
           this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
           'project_sub_types.name as project_sub_type_name',
           'owner.name as owner_name',
-          'current_phase.name as current_phase_name'
+          'current_phase.name as current_phase_name',
+          // Calculate start_date and end_date from project phases timeline
+          this.db.raw(`(
+            SELECT MIN(start_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as start_date`),
+          this.db.raw(`(
+            SELECT MAX(end_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as end_date`)
         );
 
       query = this.buildFilters(query, filters);
       query = this.paginate(query, page, limit);
 
       const projects = await query;
+      
+      // DEBUG: Test if raw SQL is working
+      const testQuery = await this.db('projects')
+        .select('id', 'name')
+        .select(this.db.raw('(SELECT MIN(start_date) FROM project_phases_timeline WHERE project_id = projects.id) as start_date'))
+        .limit(1);
+      console.log('DEBUG - Test query result:', JSON.stringify(testQuery[0], null, 2));
+      
       const total = await this.db('projects').count('* as count').first();
 
       return {
@@ -107,7 +136,18 @@ export class ProjectsController extends BaseController {
           this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
           'project_sub_types.name as project_sub_type_name',
           'owner.name as owner_name',
-          'current_phase.name as current_phase_name'
+          'current_phase.name as current_phase_name',
+          // Calculate start_date and end_date from project phases timeline
+          this.db.raw(`(
+            SELECT MIN(start_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as start_date`),
+          this.db.raw(`(
+            SELECT MAX(end_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as end_date`)
         )
         .where('projects.id', id)
         .first();
