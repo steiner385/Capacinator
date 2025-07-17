@@ -26,7 +26,7 @@ if (!fs.existsSync(dataPath)) {
 const config: Knex.Config = {
   client: 'better-sqlite3',
   connection: {
-    filename: path.join(dataPath, process.env.DB_FILENAME || 'project-capacitizer.db')
+    filename: path.join(dataPath, process.env.DB_FILENAME || 'capacinator.db')
   },
   useNullAsDefault: true,
   acquireConnectionTimeout: 10000,

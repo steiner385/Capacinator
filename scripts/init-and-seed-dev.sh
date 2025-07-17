@@ -6,7 +6,7 @@ echo "=========================================="
 
 # Configuration
 DEPLOY_PATH="/var/www/capacinator"
-DATABASE_PATH="/var/www/capacinator/data/capacitizer.db"
+DATABASE_PATH="/var/www/capacinator/data/capacinator.db"
 SOURCE_PATH="/home/tony/GitHub/Capacinator"
 
 # Check if running with proper permissions
@@ -63,7 +63,7 @@ chown www-data:www-data $DEPLOY_PATH/scripts/seed-dev-data.ts
 # Backup existing data if any
 if [ "$TABLE_COUNT" -gt 0 ]; then
     echo "💾 Creating backup..."
-    BACKUP_FILE="/var/www/capacinator/data/capacitizer-backup-$(date +%Y%m%d_%H%M%S).db"
+    BACKUP_FILE="/var/www/capacinator/data/capacinator-backup-$(date +%Y%m%d_%H%M%S).db"
     cp "$DATABASE_PATH" "$BACKUP_FILE"
     echo "✅ Backup created: $BACKUP_FILE"
 fi

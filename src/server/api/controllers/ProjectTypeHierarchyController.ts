@@ -64,7 +64,7 @@ export class ProjectTypeHierarchyController extends BaseController {
     }, res);
   };
 
-  // Create child project type
+  // Create Project Sub-Type
   createChild = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {
       const { parentId } = req.params;
@@ -72,10 +72,10 @@ export class ProjectTypeHierarchyController extends BaseController {
       
       const parent = await this.db('project_types').where('id', parentId).first();
       if (!parent) {
-        return res.status(404).json({ error: 'Parent project type not found' });
+        return res.status(404).json({ error: 'Project Type not found' });
       }
 
-      // Get max sort order for children of this parent
+      // Get max sort order for Project Sub-Types of this Project Type
       const maxSortOrder = await this.db('project_types')
         .where('parent_id', parentId)
         .max('sort_order as max')
@@ -93,12 +93,12 @@ export class ProjectTypeHierarchyController extends BaseController {
         sort_order: nextSortOrder
       }).returning('*');
 
-      // Update parent to mark as parent
+      // Update Project Type to mark as having Project Sub-Types
       await this.db('project_types')
         .where('id', parentId)
         .update({ is_parent: true });
 
-      // Inherit phases from parent
+      // Inherit phases from Project Type
       await this.inheritPhases(child[0].id, parentId);
       
       return res.json({ 
@@ -108,22 +108,22 @@ export class ProjectTypeHierarchyController extends BaseController {
     }, res);
   };
 
-  // Add phase to project type (only allowed for parent types)
+  // Add phase to project type (only allowed for Project Types)
   addPhase = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {
       const { projectTypeId } = req.params;
       const { phaseId, orderIndex } = req.body;
 
-      // Check if this is a parent type (phases can only be added to parent types)
+      // Check if this is a Project Type (phases can only be added to Project Types)
       const projectType = await this.db('project_types').where('id', projectTypeId).first();
       if (!projectType) {
         return res.status(404).json({ error: 'Project type not found' });
       }
 
-      // Only allow adding phases to parent types or root-level types
+      // Only allow adding phases to Project Types or root-level types
       if (projectType.parent_id !== null) {
         return res.status(400).json({ 
-          error: 'Phases can only be added to parent project types. Child types inherit phases from their parent.' 
+          error: 'Phases can only be added to Project Types. Project Sub-Types inherit phases from their Project Type.' 
         });
       }
 
@@ -146,28 +146,28 @@ export class ProjectTypeHierarchyController extends BaseController {
         order_index: actualOrderIndex
       });
 
-      // Propagate to children
+      // Propagate to Project Sub-Types
       await this.propagatePhaseToChildren(projectTypeId, phaseId, actualOrderIndex);
 
       return res.json({ success: true });
     }, res);
   };
 
-  // Remove phase from project type (only allowed for parent types)
+  // Remove phase from project type (only allowed for Project Types)
   removePhase = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {
       const { projectTypeId, phaseId } = req.params;
 
-      // Check if this is a parent type (phases can only be removed from parent types)
+      // Check if this is a Project Type (phases can only be removed from Project Types)
       const projectType = await this.db('project_types').where('id', projectTypeId).first();
       if (!projectType) {
         return res.status(404).json({ error: 'Project type not found' });
       }
 
-      // Only allow removing phases from parent types or root-level types
+      // Only allow removing phases from Project Types or root-level types
       if (projectType.parent_id !== null) {
         return res.status(400).json({ 
-          error: 'Phases can only be removed from parent project types. Child types inherit phases from their parent.' 
+          error: 'Phases can only be removed from Project Types. Project Sub-Types inherit phases from their Project Type.' 
         });
       }
 
@@ -189,7 +189,7 @@ export class ProjectTypeHierarchyController extends BaseController {
         .where({ project_type_id: projectTypeId, phase_id: phaseId })
         .delete();
 
-      // Remove from children too
+      // Remove from Project Sub-Types too
       await this.removePhaseFromChildren(projectTypeId, phaseId);
 
       return res.json({ success: true });
@@ -224,13 +224,13 @@ export class ProjectTypeHierarchyController extends BaseController {
           updates.parent_id = newParentId;
           updates.level = newParent.level + 1;
 
-          // Mark new parent as parent
+          // Mark new Project Type as having Project Sub-Types
           await this.db('project_types')
             .where('id', newParentId)
             .update({ is_parent: true });
         }
 
-        // Update all descendants' levels
+        // Update all Project Sub-Types' levels
         await this.updateDescendantLevels(projectTypeId, updates.level);
       }
 
@@ -293,11 +293,11 @@ export class ProjectTypeHierarchyController extends BaseController {
         children: []
       };
 
-      // Find sub-types for this project type
+      // Find Project Sub-Types for this Project Type
       const subTypes = projectSubTypes.filter(st => st.project_type_id === pt.id);
       
       subTypes.forEach(st => {
-        const childItem: ProjectTypeWithHierarchy = {
+        const subTypeItem: ProjectTypeWithHierarchy = {
           id: st.id,
           name: st.name,
           description: st.description || '',
@@ -309,10 +309,10 @@ export class ProjectTypeHierarchyController extends BaseController {
           children: []
         };
         
-        hierarchyItem.children!.push(childItem);
+        hierarchyItem.children!.push(subTypeItem);
       });
 
-      // Sort children by sort_order and name
+      // Sort Project Sub-Types by sort_order and name
       hierarchyItem.children!.sort((a, b) => {
         if (a.sort_order !== b.sort_order) {
           return a.sort_order - b.sort_order;
@@ -366,13 +366,13 @@ export class ProjectTypeHierarchyController extends BaseController {
   }
 
   private async propagatePhaseToChildren(parentId: string, phaseId: string, orderIndex: number): Promise<void> {
-    const children = await this.db('project_types').where('parent_id', parentId);
+    const subTypes = await this.db('project_types').where('parent_id', parentId);
     
-    for (const child of children) {
-      // Add inherited phase to child
+    for (const subType of subTypes) {
+      // Add inherited phase to Project Sub-Type
       await this.db('project_type_phases')
         .insert({
-          project_type_id: child.id,
+          project_type_id: subType.id,
           phase_id: phaseId,
           is_inherited: true,
           order_index: orderIndex
@@ -380,26 +380,26 @@ export class ProjectTypeHierarchyController extends BaseController {
         .onConflict(['project_type_id', 'phase_id'])
         .ignore();
 
-      // Recurse to grandchildren
-      await this.propagatePhaseToChildren(child.id, phaseId, orderIndex);
+      // Recurse to nested Project Sub-Types
+      await this.propagatePhaseToChildren(subType.id, phaseId, orderIndex);
     }
   }
 
   private async removePhaseFromChildren(parentId: string, phaseId: string): Promise<void> {
-    const children = await this.db('project_types').where('parent_id', parentId);
+    const subTypes = await this.db('project_types').where('parent_id', parentId);
     
-    for (const child of children) {
+    for (const subType of subTypes) {
       // Remove only inherited phases (not direct assignments)
       await this.db('project_type_phases')
         .where({
-          project_type_id: child.id,
+          project_type_id: subType.id,
           phase_id: phaseId,
           is_inherited: true
         })
         .delete();
 
-      // Recurse to grandchildren
-      await this.removePhaseFromChildren(child.id, phaseId);
+      // Recurse to nested Project Sub-Types
+      await this.removePhaseFromChildren(subType.id, phaseId);
     }
   }
 
@@ -413,16 +413,16 @@ export class ProjectTypeHierarchyController extends BaseController {
   }
 
   private async updateDescendantLevels(projectTypeId: string, newLevel: number): Promise<void> {
-    const children = await this.db('project_types').where('parent_id', projectTypeId);
+    const subTypes = await this.db('project_types').where('parent_id', projectTypeId);
     
-    for (const child of children) {
-      const childLevel = newLevel + 1;
+    for (const subType of subTypes) {
+      const subTypeLevel = newLevel + 1;
       await this.db('project_types')
-        .where('id', child.id)
-        .update({ level: childLevel });
+        .where('id', subType.id)
+        .update({ level: subTypeLevel });
 
-      // Recurse to update grandchildren
-      await this.updateDescendantLevels(child.id, childLevel);
+      // Recurse to update nested Project Sub-Types
+      await this.updateDescendantLevels(subType.id, subTypeLevel);
     }
   }
 }

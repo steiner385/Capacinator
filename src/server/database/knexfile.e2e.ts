@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const config: Knex.Config = {
   client: 'better-sqlite3',
   connection: {
-    filename: path.join(process.cwd(), 'data', 'project-capacitizer-e2e.db'),
+    filename: path.join(process.cwd(), 'data', process.env.DB_FILENAME || 'capacinator-e2e.db'),
   },
   useNullAsDefault: true,
   migrations: {

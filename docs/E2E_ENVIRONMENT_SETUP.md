@@ -6,7 +6,7 @@ This document describes the isolated E2E test environment setup for Capacinator.
 
 The E2E environment provides complete isolation from the development environment with:
 - **Separate ports**: E2E runs on ports 3121 (frontend) and 3457 (backend)
-- **Separate database**: Uses `project-capacitizer-e2e.db`
+- **Separate database**: Uses `capacinator-e2e.db`
 - **Separate configuration**: Uses `.env.e2e` file
 - **Separate test data**: Dedicated E2E seed data
 
@@ -17,7 +17,7 @@ Development Environment     E2E Environment
 ┌─────────────────────┐    ┌─────────────────────┐
 │ Frontend: 3120      │    │ Frontend: 3121      │
 │ Backend: 3456       │    │ Backend: 3457       │
-│ DB: capacitizer.db  │    │ DB: capacitizer-e2e.db│
+│ DB: capacinator.db  │    │ DB: capacinator-e2e.db│
 │ Config: .env.dev    │    │ Config: .env.e2e    │
 └─────────────────────┘    └─────────────────────┘
 ```
@@ -58,7 +58,7 @@ Contains E2E-specific environment variables:
 - `NODE_ENV=e2e`
 - `PORT=3457` (backend)
 - `FRONTEND_PORT=3121`
-- `DB_FILENAME=project-capacitizer-e2e.db`
+- `DB_FILENAME=capacinator-e2e.db`
 - Performance optimizations for testing
 
 ### `playwright.e2e.config.ts`
@@ -184,7 +184,7 @@ lsof -i :3457
 npm run e2e:reset
 
 # Check database file
-ls -la data/project-capacitizer-e2e.db
+ls -la data/capacinator-e2e.db
 ```
 
 #### Test Failures

@@ -107,7 +107,7 @@ export async function up(knex: Knex): Promise<void> {
         0 as is_override
       FROM projects p
       INNER JOIN project_phases_timeline ppt ON p.id = ppt.project_id
-      INNER JOIN standard_allocations sa ON p.project_type_id = sa.project_type_id 
+      INNER JOIN resource_templates sa ON p.project_type_id = sa.project_type_id 
         AND ppt.phase_id = sa.phase_id
       WHERE p.include_in_demand = 1
     ),
@@ -281,7 +281,7 @@ export async function up(knex: Knex): Promise<void> {
         ELSE CAST(
           COALESCE(
             (
-              SELECT SUM(pa.allocation_percentage * pa.default_hours_per_day)
+              SELECT SUM(pa.allocation_percentage * pe.default_hours_per_day)
               FROM project_assignments pa
               INNER JOIN people pe ON pa.person_id = pe.id
               WHERE pa.project_id = p.id
@@ -559,7 +559,7 @@ export async function down(knex: Knex): Promise<void> {
         0 as is_override
       FROM projects p
       INNER JOIN project_phases_timeline ppt ON p.id = ppt.project_id
-      INNER JOIN standard_allocations sa ON p.project_type_id = sa.project_type_id 
+      INNER JOIN resource_templates sa ON p.project_type_id = sa.project_type_id 
         AND ppt.phase_id = sa.phase_id
       WHERE p.include_in_demand = 1
     ),

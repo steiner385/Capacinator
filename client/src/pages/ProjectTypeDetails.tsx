@@ -51,13 +51,21 @@ export default function ProjectTypeDetails() {
     queryKey: ['phases'],
     queryFn: async () => {
       const response = await api.phases.list();
-      const sortedPhases = (response.data as ProjectPhase[]).sort((a, b) => a.order_index - b.order_index);
+      // Handle the case where the response might be wrapped in a data property
+      const phasesArray = response.data?.data || response.data;
+      
+      if (!Array.isArray(phasesArray)) {
+        console.error('Phases response is not an array:', phasesArray);
+        return [];
+      }
+      
+      const sortedPhases = (phasesArray as ProjectPhase[]).sort((a, b) => a.order_index - b.order_index);
       return sortedPhases;
     }
   });
 
   // Fetch resource templates for this project type
-  const { data: resourceTemplates } = useQuery({
+  const { data: resourceTemplates, isLoading: resourceTemplatesLoading } = useQuery({
     queryKey: ['resourceTemplates', 'byProjectType', id],
     queryFn: async () => {
       if (!id) return [];
@@ -363,28 +371,28 @@ export default function ProjectTypeDetails() {
           </section>
         )}
 
-        {/* Child Project Types Section (only for parent types) */}
+        {/* Project Sub-Types Section (only for project types) */}
         {!projectType.parent_id && (
-          <section className="child-project-types-section">
+          <section className="project-sub-types-section">
             <div className="section-header">
               <h2>
                 <GitBranch size={20} />
-                Child Project Types
+                Project Sub-Types
               </h2>
               <p className="text-muted">
-                Manage sub-types of this project type. Child types inherit phases from their parent.
+                Manage sub-types of this project type. Sub-types inherit phases from their project type.
               </p>
             </div>
 
           {childProjectTypes && childProjectTypes.length > 0 ? (
-            <div className="child-types-grid">
+            <div className="sub-types-grid">
               {childProjectTypes.map((child: any) => (
-                <div key={child.id} className={`child-type-card ${child.is_default ? 'default-child' : ''}`}>
-                  <div className="child-type-header">
-                    <div className="child-type-info">
-                      <div className="child-type-name">
+                <div key={child.id} className={`sub-type-card ${child.is_default ? 'default-sub-type' : ''}`}>
+                  <div className="sub-type-header">
+                    <div className="sub-type-info">
+                      <div className="sub-type-name">
                         <div 
-                          className="child-type-color"
+                          className="sub-type-color"
                           style={{ backgroundColor: child.color_code || '#6b7280' }}
                         />
                         <h4>
@@ -394,7 +402,7 @@ export default function ProjectTypeDetails() {
                           )}
                         </h4>
                       </div>
-                      <p className="child-type-description">
+                      <p className="sub-type-description">
                         {child.description || 'No description'}
                         {child.is_default && (
                           <span className="read-only-note">
@@ -403,7 +411,7 @@ export default function ProjectTypeDetails() {
                         )}
                       </p>
                     </div>
-                    <div className="child-type-actions">
+                    <div className="sub-type-actions">
                       {!child.is_default && (
                         <>
                           <button
@@ -433,7 +441,7 @@ export default function ProjectTypeDetails() {
                       )}
                     </div>
                   </div>
-                  <div className="child-type-meta">
+                  <div className="sub-type-meta">
                     <span className="level-badge">Level {child.level}</span>
                     <span className="phases-count">
                       {child.phases?.length || 0} phases
@@ -553,7 +561,7 @@ export default function ProjectTypeDetails() {
             )}
           </div>
 
-          {roles && phases && localTemplates !== undefined ? (
+          {roles && phases && !resourceTemplatesLoading && resourceTemplates !== undefined ? (
             <div className="templates-grid">
               {projectType.parent_id && (
                 <div className="inheritance-legend">
@@ -571,7 +579,7 @@ export default function ProjectTypeDetails() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: '200px' }}>Role</th>
-                    {phases.map(phase => (
+                    {phases?.map(phase => (
                       <th key={phase.id} style={{ minWidth: '120px', textAlign: 'center' }}>
                         {phase.name}
                       </th>
@@ -579,7 +587,7 @@ export default function ProjectTypeDetails() {
                   </tr>
                 </thead>
                 <tbody>
-                  {roles.map(role => (
+                  {roles?.map(role => (
                     <tr key={role.id}>
                       <td style={{ verticalAlign: 'top', padding: '12px' }}>
                         <div>
@@ -591,7 +599,7 @@ export default function ProjectTypeDetails() {
                           </div>
                         </div>
                       </td>
-                      {phases.map(phase => {
+                      {phases?.map(phase => {
                         const template = localTemplates.find(
                           t => String(t.role_id) === String(role.id) && 
                                String(t.phase_id) === String(phase.id)

@@ -203,7 +203,7 @@ export const api = {
     // Hierarchy methods
     getHierarchy: () => apiClient.get('/project-type-hierarchy/hierarchy'),
     getPhases: (id: string) => apiClient.get(`/project-type-hierarchy/${id}/phases`),
-    createChild: (parentId: string, data: any) => apiClient.post(`/project-type-hierarchy/${parentId}/children`, data),
+    createSubType: (parentId: string, data: any) => apiClient.post(`/project-type-hierarchy/${parentId}/children`, data),
     addPhase: (id: string, data: any) => apiClient.post(`/project-type-hierarchy/${id}/phases`, data),
     removePhase: (id: string, phaseId: string) => apiClient.delete(`/project-type-hierarchy/${id}/phases/${phaseId}`),
     updateHierarchy: (id: string, data: any) => apiClient.put(`/project-type-hierarchy/${id}/hierarchy`, data),

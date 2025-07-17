@@ -163,7 +163,7 @@ function createMenu() {
         {
           label: 'User Guide',
           click: () => {
-            shell.openExternal('https://github.com/your-org/project-capacitizer/wiki');
+            shell.openExternal('https://github.com/your-org/capacinator/wiki');
           }
         }
       ]

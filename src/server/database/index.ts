@@ -52,7 +52,7 @@ export async function backupDatabase(): Promise<string> {
   const backupFile = path.join(backupDir, `backup-${timestamp}.db`);
   
   // SQLite backup is just a file copy
-  const sourceFile = path.join(getDataPath(), process.env.DB_FILENAME || 'project-capacitizer.db');
+  const sourceFile = path.join(getDataPath(), process.env.DB_FILENAME || 'capacinator.db');
   fs.copyFileSync(sourceFile, backupFile);
   
   // Clean old backups

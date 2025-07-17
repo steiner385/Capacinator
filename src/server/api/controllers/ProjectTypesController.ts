@@ -55,24 +55,56 @@ export class ProjectTypesController extends BaseController {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
-      const projectType = await this.db('project_types')
+      // First try to find in main project_types table
+      let projectType = await this.db('project_types')
         .where('id', id)
         .first();
+
+      // If not found, check in project_sub_types table
+      if (!projectType) {
+        const subType = await this.db('project_sub_types')
+          .where('id', id)
+          .first();
+        
+        if (subType) {
+          // Get the parent project type info
+          const parentType = await this.db('project_types')
+            .where('id', subType.project_type_id)
+            .first();
+          
+          // Create a project type response that looks like a child type
+          projectType = {
+            id: subType.id,
+            name: subType.name,
+            description: subType.description,
+            color_code: subType.color_code,
+            parent_id: subType.project_type_id,
+            parent_name: parentType?.name,
+            is_default: subType.is_default,
+            is_active: subType.is_active,
+            created_at: subType.created_at,
+            updated_at: subType.updated_at,
+            is_sub_type: true // Flag to indicate this is a sub-type
+          };
+        }
+      }
 
       if (!projectType) {
         this.handleNotFound(res, 'Project type');
         return null;
       }
 
-      // Get associated sub-types
-      const subTypes = await this.db('project_sub_types')
+      // Get associated sub-types (only for parent types)
+      const subTypes = projectType.is_sub_type ? [] : await this.db('project_sub_types')
         .where('project_type_id', id)
         .orderBy('name');
 
       // Get phases associated with this project type
+      // For sub-types, get phases from the parent project type
+      const phaseQueryId = projectType.is_sub_type ? projectType.parent_id : id;
       const phases = await this.db('project_type_phases')
         .join('project_phases', 'project_type_phases.phase_id', 'project_phases.id')
-        .where('project_type_phases.project_type_id', id)
+        .where('project_type_phases.project_type_id', phaseQueryId)
         .whereNull('project_type_phases.project_sub_type_id')
         .select(
           'project_phases.*',

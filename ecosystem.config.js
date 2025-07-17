@@ -8,7 +8,7 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 3151,
-      DATABASE_PATH: '/var/www/capacinator/data/capacitizer.db',
+      DATABASE_PATH: '/var/www/capacinator/data/capacinator.db',
       CORS_ORIGIN: 'https://dev.capacinator.com',
       LOG_LEVEL: 'info',
       TRUST_PROXY: 'true'

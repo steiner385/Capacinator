@@ -176,12 +176,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     }
   };
 
-  // Filter project types to only show child project types (not parents)
+  // Filter project types to only show project sub-types (not main project types)
   const filteredProjectTypes = useMemo(() => {
     if (!projectTypes) return [];
     
-    // Only show child project types (those with parent_id)
-    // Projects should not be associated with parent project types
+    // Only show project sub-types (those with parent_id)
+    // Projects should not be associated with main project types
     return projectTypes.filter((type: any) => type.parent_id !== null);
   }, [projectTypes]);
 

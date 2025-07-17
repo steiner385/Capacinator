@@ -62,11 +62,11 @@ if [ "$API_STATUS" = "$EXPECTED_STATUS" ]; then
 fi
 
 # Check system resources on server (if run locally)
-if [ -f "/var/www/capacinator/data/capacitizer.db" ]; then
+if [ -f "/var/www/capacinator/data/capacinator.db" ]; then
     echo "📊 System Resources:"
     echo "   Disk usage: $(df -h /var/www/capacinator | tail -1 | awk '{print $5}')"
     echo "   Memory usage: $(free -h | grep Mem | awk '{print $3"/"$2}')"
-    echo "   Database size: $(ls -lh /var/www/capacinator/data/capacitizer.db | awk '{print $5}')"
+    echo "   Database size: $(ls -lh /var/www/capacinator/data/capacinator.db | awk '{print $5}')"
 fi
 
 echo "================================"

@@ -103,7 +103,7 @@
   letter-spacing: 0.5px;
 }
 
-.child-badge {
+.sub-type-badge {
   background: #fef3c7;
   color: #92400e;
   padding: 2px 8px;
@@ -119,7 +119,7 @@
   border-left: 4px solid #3b82f6;
 }
 
-.project-type-row.child-type {
+.project-type-row.sub-type {
   background: var(--warning-bg);
 }
 

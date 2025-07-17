@@ -93,7 +93,7 @@ export async function cleanupE2EDatabase(): Promise<void> {
   
   // Optionally remove the database file
   if (process.env.E2E_RESET_DB === 'true') {
-    const dbPath = path.join(process.cwd(), 'data', 'project-capacitizer-e2e.db');
+    const dbPath = path.join(process.cwd(), 'data', process.env.DB_FILENAME || 'capacinator-e2e.db');
     if (fs.existsSync(dbPath)) {
       fs.unlinkSync(dbPath);
       console.log('✅ E2E database file removed');

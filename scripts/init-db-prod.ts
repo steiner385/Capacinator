@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function initializeDatabase() {
-  const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../data/capacitizer.db');
+  const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../data/capacinator.db');
   console.log(`🔧 Initializing database at: ${dbPath}`);
   
   const db = knex({

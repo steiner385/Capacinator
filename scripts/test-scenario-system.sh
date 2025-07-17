@@ -47,8 +47,8 @@ check_database() {
 # Function to backup database before tests
 backup_database() {
     print_status "Creating database backup..."
-    if [ -f "data/project-capacitizer.db" ]; then
-        cp "data/project-capacitizer.db" "data/project-capacitizer.db.backup.$(date +%Y%m%d_%H%M%S)"
+    if [ -f "data/capacinator.db" ]; then
+        cp "data/capacinator.db" "data/capacinator.db.backup.$(date +%Y%m%d_%H%M%S)"
         print_success "Database backed up"
     else
         print_warning "No database file found to backup"
@@ -67,11 +67,11 @@ restore_database() {
         print_error "Database corruption detected!"
         
         # Find the most recent backup
-        BACKUP_FILE=$(ls -t data/project-capacitizer.db.backup.* 2>/dev/null | head -1)
+        BACKUP_FILE=$(ls -t data/capacinator.db.backup.* 2>/dev/null | head -1)
         
         if [ -n "$BACKUP_FILE" ]; then
             print_status "Restoring from backup: $BACKUP_FILE"
-            cp "$BACKUP_FILE" "data/project-capacitizer.db"
+            cp "$BACKUP_FILE" "data/capacinator.db"
             print_success "Database restored from backup"
         else
             print_error "No backup file found! Database may be permanently corrupted."

@@ -3,7 +3,7 @@ set -e
 
 # Update script for Capacinator
 APP_NAME="capacitor-dev"
-DEPLOY_PATH="/var/www/capacitizer"
+DEPLOY_PATH="/var/www/capacinator"
 SOURCE_PATH="/home/tony/GitHub/Capacinator"
 
 echo "🔄 Updating Capacinator..."
@@ -27,14 +27,14 @@ npm run build
 
 # Backup current version
 echo "💾 Creating backup..."
-BACKUP_DIR="/var/backups/capacitizer/$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR="/var/backups/capacinator/$(date +%Y%m%d_%H%M%S)"
 mkdir -p $BACKUP_DIR
 cp -r $DEPLOY_PATH/client/dist $BACKUP_DIR/
-cp $DEPLOY_PATH/data/capacitizer.db $BACKUP_DIR/ 2>/dev/null || echo "⚠️ No database found to backup"
+cp $DEPLOY_PATH/data/capacinator.db $BACKUP_DIR/ 2>/dev/null || echo "⚠️ No database found to backup"
 
 # Stop application
 echo "🛑 Stopping application..."
-pm2 stop $APP_NAME || systemctl stop capacitizer || echo "⚠️ Application may not be running"
+pm2 stop $APP_NAME || systemctl stop capacinator || echo "⚠️ Application may not be running"
 
 # Update files
 echo "📦 Updating application files..."
@@ -53,7 +53,7 @@ chmod -R 755 $DEPLOY_PATH
 # Start application
 echo "🚀 Starting application..."
 cd $DEPLOY_PATH
-pm2 start ecosystem.config.js || systemctl start capacitizer
+pm2 start ecosystem.config.js || systemctl start capacinator
 
 # Verify deployment
 echo "🧪 Verifying deployment..."
@@ -62,7 +62,7 @@ sleep 5
 # Check if application is running
 if pm2 list | grep -q $APP_NAME; then
     echo "✅ PM2 process is running"
-elif systemctl is-active --quiet capacitizer; then
+elif systemctl is-active --quiet capacinator; then
     echo "✅ systemd service is running"
 else
     echo "❌ Application is not running!"
@@ -75,7 +75,7 @@ else
 fi
 
 # Test health endpoint
-if curl -f -s https://dev.capacitizer.com/api/health > /dev/null; then
+if curl -f -s https://dev.capacinator.com/api/health > /dev/null; then
     echo "✅ Health check passed"
 else
     echo "⚠️ Health check failed - application may still be starting"
@@ -83,10 +83,10 @@ fi
 
 # Cleanup old backups (keep last 5)
 echo "🧹 Cleaning up old backups..."
-find /var/backups/capacitizer -type d -name "20*" | sort -r | tail -n +6 | xargs rm -rf 2>/dev/null || true
+find /var/backups/capacinator -type d -name "20*" | sort -r | tail -n +6 | xargs rm -rf 2>/dev/null || true
 
 echo ""
 echo "✅ Update completed successfully!"
-echo "🌍 Application: https://dev.capacitizer.com"
+echo "🌍 Application: https://dev.capacinator.com"
 echo "📊 Status: pm2 status"
 echo "📝 Logs: pm2 logs $APP_NAME"

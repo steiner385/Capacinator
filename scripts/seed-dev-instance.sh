@@ -6,7 +6,7 @@ echo "================================================"
 
 # Configuration
 DEPLOY_PATH="/var/www/capacinator"
-DATABASE_PATH="/var/www/capacinator/data/capacitizer.db"
+DATABASE_PATH="/var/www/capacinator/data/capacinator.db"
 
 # Check if running with proper permissions
 if [[ $EUID -ne 0 ]]; then
@@ -16,7 +16,7 @@ fi
 
 # Backup existing database
 echo "💾 Creating backup of existing database..."
-BACKUP_FILE="/var/www/capacinator/data/capacitizer-backup-$(date +%Y%m%d_%H%M%S).db"
+BACKUP_FILE="/var/www/capacinator/data/capacinator-backup-$(date +%Y%m%d_%H%M%S).db"
 if [ -f "$DATABASE_PATH" ]; then
     cp "$DATABASE_PATH" "$BACKUP_FILE"
     echo "✅ Backup created: $BACKUP_FILE"

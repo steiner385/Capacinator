@@ -6,7 +6,7 @@ import path from 'path';
 const db = knex({
   client: 'better-sqlite3',
   connection: {
-    filename: process.env.DATABASE_PATH || path.join(__dirname, '../../data/capacitizer.db')
+    filename: process.env.DATABASE_PATH || path.join(__dirname, '../../data/capacinator.db')
   },
   useNullAsDefault: true
 });

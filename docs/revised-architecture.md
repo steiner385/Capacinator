@@ -26,7 +26,7 @@ A completely standalone project capacity planning application that requires zero
 ## Application Structure
 
 ```
-project-capacitizer.exe
+capacinator.exe
 ├── Embedded Node.js runtime
 ├── SQLite database file (auto-created)
 ├── Web server (Express)

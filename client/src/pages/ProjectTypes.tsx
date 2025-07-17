@@ -90,9 +90,9 @@ export default function ProjectTypes() {
     });
   };
 
-  const handleCreateChild = (parentId: string) => {
-    // TODO: Implement child creation modal
-    console.log('Create child for:', parentId);
+  const handleCreateSubType = (parentId: string) => {
+    // TODO: Implement sub-type creation modal
+    console.log('Create sub-type for:', parentId);
   };
 
   const columns: Column<ProjectType>[] = [
@@ -173,7 +173,7 @@ export default function ProjectTypes() {
     return (
       <div className="project-type-node">
         <div 
-          className={`project-type-row ${isParentType ? 'parent-type' : 'child-type'}`}
+          className={`project-type-row ${isParentType ? 'parent-type' : 'sub-type'}`}
           style={{ paddingLeft: `${indent}px` }}
         >
           <div className="project-type-content">
@@ -195,7 +195,7 @@ export default function ProjectTypes() {
                 />
                 <span className="name">{projectType.name}</span>
                 {isParentType && <span className="parent-badge">Project Type</span>}
-                {isSubType && <span className="child-badge">Sub-Type</span>}
+                {isSubType && <span className="sub-type-badge">Project Sub-Type</span>}
               </div>
               <div className="project-type-meta">
                 <span className="description">{projectType.description || 'No description'}</span>
@@ -208,11 +208,11 @@ export default function ProjectTypes() {
             {projectType.is_parent && (
               <button
                 className="btn btn-sm btn-secondary"
-                onClick={() => handleCreateChild(projectType.id)}
-                title="Add Child"
+                onClick={() => handleCreateSubType(projectType.id)}
+                title="Add Project Sub-Type"
               >
                 <Plus size={14} />
-                Child
+                Sub-Type
               </button>
             )}
             <button

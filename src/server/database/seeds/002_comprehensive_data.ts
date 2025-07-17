@@ -146,6 +146,7 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('person_roles').del();
   await knex('people').del();
   await knex('roles').del();
+  await knex('project_type_phases').del(); // Clear project type-phase assignments
   await knex('project_phases').del();
   await knex('project_sub_types').del(); // Delete sub-types first due to foreign key
   await knex('project_types').del();
@@ -338,6 +339,99 @@ export async function seed(knex: Knex): Promise<void> {
     { id: phaseIds.hypercare, name: 'Hypercare', description: 'Post-deployment support and monitoring', order_index: 8 },
     { id: phaseIds.support, name: 'Support', description: 'Ongoing support and maintenance', order_index: 9 }
   ]);
+
+  // Add project type-specific phases
+  console.log('🌱 Adding project type-specific phases...');
+  
+  const allProjectTypes = await knex('project_types').select('*');
+  const allPhases = await knex('project_phases').select('*');
+  
+  // Default phases for all project types (parent types only)
+  const defaultPhaseAssignments = [];
+  
+  // Assign default phases to all project types
+  for (const projectType of allProjectTypes) {
+    for (const phase of allPhases) {
+      defaultPhaseAssignments.push({
+        id: uuidv4(),
+        project_type_id: projectType.id,
+        phase_id: phase.id,
+        is_inherited: false,
+        order_index: phase.order_index,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+  }
+  
+  // Insert default phase assignments
+  await knex('project_type_phases').insert(defaultPhaseAssignments);
+  
+  // Add custom duration for specific project types
+  
+  // Mobile App specific phases - longer validation phase for app store review
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.mobileApp)
+    .where('phase_id', phaseIds.validation)
+    .update({
+      duration_weeks: 2, // Mobile validation takes longer due to app store review
+      updated_at: new Date().toISOString()
+    });
+  
+  // AI/ML specific phases - longer development phase
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.aiml)
+    .where('phase_id', phaseIds.development)
+    .update({
+      duration_weeks: 16, // AI/ML development takes longer
+      updated_at: new Date().toISOString()
+    });
+  
+  // Security projects - longer validation phase
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.security)
+    .where('phase_id', phaseIds.validation)
+    .update({
+      duration_weeks: 3, // Security validation takes longer
+      updated_at: new Date().toISOString()
+    });
+  
+  // Data Analytics projects - longer development phase
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.dataAnalytics)
+    .where('phase_id', phaseIds.development)
+    .update({
+      duration_weeks: 12, // Data analytics development takes longer
+      updated_at: new Date().toISOString()
+    });
+  
+  // Infrastructure projects - longer cutover phase
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.infrastructure)
+    .where('phase_id', phaseIds.cutover)
+    .update({
+      duration_weeks: 2, // Infrastructure cutover takes longer
+      updated_at: new Date().toISOString()
+    });
+  
+  // Cloud Migration projects - longer testing and cutover phases
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.cloudMigration)
+    .where('phase_id', phaseIds.testing)
+    .update({
+      duration_weeks: 4, // Cloud migration testing takes longer
+      updated_at: new Date().toISOString()
+    });
+    
+  await knex('project_type_phases')
+    .where('project_type_id', projectTypeIds.cloudMigration)
+    .where('phase_id', phaseIds.cutover)
+    .update({
+      duration_weeks: 3, // Cloud migration cutover takes longer
+      updated_at: new Date().toISOString()
+    });
+  
+  console.log(`✅ Added ${defaultPhaseAssignments.length} project type-phase assignments with custom durations`);
 
   // Seed roles
   const roleIds = {
@@ -771,11 +865,10 @@ export async function seed(knex: Knex): Promise<void> {
   // Get all project sub-types that we just created
   const projectSubTypes = await knex('project_sub_types').select('*');
   
-  // Generate resource templates for each project sub-type combination
-  for (const projectSubType of projectSubTypes) {
-    // Get the parent project type to determine allocations
-    const parentProjectType = projectTypes.find(pt => pt.id === projectSubType.project_type_id);
-    const projectTypeAllocations = parentProjectType ? (allocationMatrix[parentProjectType.name] || defaultAllocations) : defaultAllocations;
+  // Generate resource templates ONLY for parent project types
+  // The inheritance system will auto-create child templates
+  for (const projectType of projectTypes) {
+    const projectTypeAllocations = allocationMatrix[projectType.name] || defaultAllocations;
     
     for (const phase of phases) {
       const phaseAllocations = projectTypeAllocations[phase.name] || {};
@@ -786,10 +879,12 @@ export async function seed(knex: Knex): Promise<void> {
         if (allocationPercentage && allocationPercentage > 0) {
           resourceTemplates.push({
             id: uuidv4(),
-            project_sub_type_id: projectSubType.id,
+            project_type_id: projectType.id,
             phase_id: phase.id,
             role_id: role.id,
             allocation_percentage: allocationPercentage,
+            is_inherited: false,
+            parent_template_id: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });

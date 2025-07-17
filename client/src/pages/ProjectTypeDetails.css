@@ -1,5 +1,5 @@
 /* ProjectTypeDetails hierarchy styles */
-.child-project-types-section,
+.project-sub-types-section,
 .project-phases-section,
 .parent-info-section {
   margin-bottom: 32px;
@@ -17,14 +17,14 @@
   color: var(--text-primary);
 }
 
-.child-types-grid {
+.sub-types-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
 
-.child-type-card {
+.sub-type-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -32,57 +32,57 @@
   transition: box-shadow 0.2s, border-color 0.2s;
 }
 
-.child-type-card:hover {
+.sub-type-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: var(--border-hover);
 }
 
-.child-type-header {
+.sub-type-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
 }
 
-.child-type-info {
+.sub-type-info {
   flex: 1;
 }
 
-.child-type-name {
+.sub-type-name {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
 }
 
-.child-type-name h4 {
+.sub-type-name h4 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.child-type-color {
+.sub-type-color {
   width: 16px;
   height: 16px;
   border-radius: 3px;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.child-type-description {
+.sub-type-description {
   margin: 0;
   color: #64748b;
   font-size: 14px;
   line-height: 1.4;
 }
 
-.child-type-actions {
+.sub-type-actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
 }
 
-.child-type-meta {
+.sub-type-meta {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -296,14 +296,14 @@
   border-color: var(--border-hover);
 }
 
-/* Default Child Project Type Styles */
-.child-type-card.default-child {
+/* Default Project Sub-Type Styles */
+.sub-type-card.default-sub-type {
   background: #fafafa;
   border: 2px dashed #d1d5db;
   opacity: 0.85;
 }
 
-.child-type-card.default-child:hover {
+.sub-type-card.default-sub-type:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   border-color: #9ca3af;
 }
