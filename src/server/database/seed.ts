@@ -10,8 +10,9 @@ async function runSeed() {
   try {
     console.log('🌱 Running seed...');
     await seedComprehensiveData(db);
-    await seedScenariosData(db);
-    await seedEnhancedDiversityData(db);
+    // Skip scenarios and enhanced diversity for baseline - not essential for core functionality
+    // await seedScenariosData(db);
+    // await seedEnhancedDiversityData(db);
     console.log('✅ Seed completed successfully!');
   } catch (error) {
     console.error('❌ Seed failed:', error);
