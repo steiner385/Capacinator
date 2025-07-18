@@ -129,7 +129,8 @@ describe('PeopleController', () => {
       // Verify complex join query was built correctly
       expect((controller as any).db).toHaveBeenCalledWith('people');
       expect(mockDbQuery.leftJoin).toHaveBeenCalledWith('people as supervisor', 'people.supervisor_id', 'supervisor.id');
-      expect(mockDbQuery.leftJoin).toHaveBeenCalledWith('roles as primary_role', 'people.primary_role_id', 'primary_role.id');
+      expect(mockDbQuery.leftJoin).toHaveBeenCalledWith('person_roles as primary_person_role', 'people.primary_person_role_id', 'primary_person_role.id');
+      expect(mockDbQuery.leftJoin).toHaveBeenCalledWith('roles as primary_role', 'primary_person_role.role_id', 'primary_role.id');
       
       expect(res.json).toHaveBeenCalledWith({
         data: mockPeople,
@@ -225,7 +226,6 @@ describe('PeopleController', () => {
       req.body = {
         name: 'New Employee',
         email: 'new.employee@company.com',
-        primary_role_id: 'role-123',
         worker_type: 'FULL_TIME'
       };
 
@@ -440,7 +440,7 @@ describe('PeopleController', () => {
       req.body = {
         name: '', // Empty name
         email: 'invalid-email', // Invalid email format
-        primary_role_id: null,
+        primary_person_role_id: null,
         worker_type: 'INVALID_TYPE'
       };
 
@@ -562,7 +562,7 @@ describe('PeopleController', () => {
       req.body = {
         name: 'New Employee',
         supervisor_id: 'person-123', // Valid supervisor
-        primary_role_id: 'role-456'
+        primary_person_role_id: 'person-role-456'
       };
 
       const mockPerson = {
@@ -581,7 +581,7 @@ describe('PeopleController', () => {
       expect(mockDbQuery.insert).toHaveBeenCalledWith({
         name: 'New Employee',
         supervisor_id: 'person-123',
-        primary_role_id: 'role-456',
+        primary_person_role_id: 'person-role-456',
         created_at: expect.any(Date),
         updated_at: expect.any(Date)
       });
@@ -618,7 +618,7 @@ describe('PeopleController', () => {
       req.body = {
         name: 'Manager',
         supervisor_id: 'person-subordinate', // Circular reference - subordinate as supervisor
-        primary_role_id: 'role-manager'
+        primary_person_role_id: 'person-role-manager'
       };
 
       const mockDbQuery = createChainableMock();

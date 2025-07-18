@@ -3,28 +3,28 @@ import { jest } from '@jest/globals';
 
 // Mock nodemailer
 const mockTransporter = {
-  verify: jest.fn(),
-  sendMail: jest.fn()
+  verify: jest.fn() as any,
+  sendMail: jest.fn() as any
 };
 
 const mockNodemailer = {
-  createTransporter: jest.fn().mockReturnValue(mockTransporter)
+  createTransport: jest.fn().mockReturnValue(mockTransporter)
 };
 
 // Mock database
 const createMockQuery = () => {
   const query = {
-    where: jest.fn().mockReturnThis(),
-    whereNotNull: jest.fn().mockReturnThis(),
-    first: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    join: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis()
+    where: jest.fn().mockReturnThis() as any,
+    whereNotNull: jest.fn().mockReturnThis() as any,
+    first: jest.fn().mockReturnThis() as any,
+    insert: jest.fn().mockReturnThis() as any,
+    join: jest.fn().mockReturnThis() as any,
+    select: jest.fn().mockReturnThis() as any
   };
   return query;
 };
 
-const mockDb = jest.fn(() => createMockQuery());
+const mockDb = jest.fn(() => createMockQuery()) as any;
 mockDb.fn = { now: jest.fn() };
 
 describe('EmailService', () => {
@@ -78,7 +78,7 @@ describe('EmailService', () => {
     });
 
     it('should create transporter when SMTP credentials are provided', () => {
-      expect(mockNodemailer.createTransporter).toHaveBeenCalledWith({
+      expect(mockNodemailer.createTransport).toHaveBeenCalledWith({
         host: 'smtp.test.com',
         port: 587,
         secure: false,

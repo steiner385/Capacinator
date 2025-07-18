@@ -71,7 +71,7 @@ export class EmailService {
 
     // Only create transporter if SMTP is configured
     if (this.config.auth.user && this.config.auth.pass) {
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         host: this.config.host,
         port: this.config.port,
         secure: this.config.secure,

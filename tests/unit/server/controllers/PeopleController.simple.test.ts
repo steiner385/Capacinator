@@ -37,9 +37,7 @@ class MockPeopleController {
         throw new Error('Invalid email format');
       }
 
-      if (req.body.primary_role_id === 'invalid-role') {
-        throw new Error('Invalid primary role');
-      }
+      // Note: primary_role_id validation removed - handled via addRole API
 
       const mockPerson = {
         id: 'person-123',
@@ -256,7 +254,7 @@ describe('PeopleController Business Logic', () => {
       req.body = {
         name: 'New Employee',
         email: 'new.employee@company.com',
-        primary_role_id: 'role-123',
+        // primary_role_id removed - use addRole API instead
         worker_type: 'FULL_TIME'
       };
 
@@ -310,18 +308,20 @@ describe('PeopleController Business Logic', () => {
       });
     });
 
-    test('should validate primary role', async () => {
+    test('should create person without primary role', async () => {
       req.body = {
         name: 'Test Person',
-        primary_role_id: 'invalid-role'
+        email: 'test@example.com'
+        // Note: primary roles are now added via addRole API
       };
 
       await controller.create(req as Request, res as Response);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Invalid primary role'
-      });
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Test Person',
+        email: 'test@example.com'
+      }));
     });
 
     test('should fetch all people with pagination', async () => {
@@ -564,7 +564,7 @@ describe('PeopleController Business Logic', () => {
       req.body = {
         name: 'New Employee',
         supervisor_id: 'person-manager',
-        primary_role_id: 'role-junior'
+        primary_person_role_id: 'person-role-junior'
       };
 
       await controller.create(req as Request, res as Response);

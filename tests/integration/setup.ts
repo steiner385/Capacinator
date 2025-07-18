@@ -54,6 +54,7 @@ async function createTestTables() {
   await testDb.schema.createTable('projects', table => {
     table.string('id').primary();
     table.string('name').notNullable();
+    table.text('description'); // Add description field to match schema
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
