@@ -3,6 +3,13 @@ import request from 'supertest';
 import express from 'express';
 import { testDb } from '../../../integration/setup.js';
 
+// Mock the database import to use testDb BEFORE importing the controller
+jest.mock('../../../../src/server/database/index.js', () => ({
+  db: testDb
+}));
+
+import { ScenariosController } from '../../../../src/server/api/controllers/ScenariosController.js';
+
 /**
  * Comprehensive Edge Case Testing for ScenariosController
  * Tests complex scenarios, race conditions, data integrity, and error handling
@@ -19,6 +26,25 @@ describe('ScenariosController - Complex Edge Cases', () => {
     // Setup test app
     app = express();
     app.use(express.json());
+    
+    // Setup scenarios routes manually with test database
+    const scenariosController = new ScenariosController();
+    // Override the db property to use testDb
+    (scenariosController as any).db = testDb;
+    const router = express.Router();
+    
+    router.get('/', scenariosController.getAll.bind(scenariosController));
+    router.post('/', scenariosController.create.bind(scenariosController));
+    router.get('/:id', scenariosController.getById.bind(scenariosController));
+    router.put('/:id', scenariosController.update.bind(scenariosController));
+    router.delete('/:id', scenariosController.delete.bind(scenariosController));
+    router.get('/:id/assignments', scenariosController.getAssignments.bind(scenariosController));
+    router.post('/:id/assignments', scenariosController.upsertAssignment.bind(scenariosController));
+    router.delete('/:id/assignments/:assignmentId', scenariosController.removeAssignment.bind(scenariosController));
+    router.get('/:id/compare', scenariosController.compare.bind(scenariosController));
+    router.post('/:id/merge', scenariosController.merge.bind(scenariosController));
+    
+    app.use('/api/scenarios', router);
     
     // Get database instance
     database = testDb;

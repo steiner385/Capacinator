@@ -14,17 +14,17 @@ jest.mock('../../../../src/server/config/auditConfig.js', () => ({
 // Create chainable mock methods with proper typing
 const createChainableMock = (): any => {
   const chainable = {
-    select: jest.fn().mockReturnThis(),
-    leftJoin: jest.fn().mockReturnThis(),
-    join: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    first: jest.fn(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    del: jest.fn(),
-    returning: jest.fn(),
-    count: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis()
+    select: jest.fn().mockReturnThis() as any,
+    leftJoin: jest.fn().mockReturnThis() as any,
+    join: jest.fn().mockReturnThis() as any,
+    where: jest.fn().mockReturnThis() as any,
+    first: jest.fn() as any,
+    insert: jest.fn().mockReturnThis() as any,
+    update: jest.fn().mockReturnThis() as any,
+    del: jest.fn() as any,
+    returning: jest.fn() as any,
+    count: jest.fn().mockReturnThis() as any,
+    orderBy: jest.fn().mockReturnThis() as any
   };
   return chainable;
 };
@@ -194,9 +194,9 @@ describe('PeopleController', () => {
       
       (controller as any).db = jest.fn()
         .mockReturnValueOnce(mockDbQuery) // Main person query
-        .mockReturnValueOnce({...createChainableMock(), select: jest.fn().mockResolvedValue(mockRoles)}) // Roles query
-        .mockReturnValueOnce({...createChainableMock(), orderBy: jest.fn().mockResolvedValue(mockAssignments)}) // Assignments query
-        .mockReturnValueOnce({...createChainableMock(), orderBy: jest.fn().mockResolvedValue(mockAvailabilityOverrides)}); // Availability query
+        .mockReturnValueOnce({...createChainableMock(), select: (jest.fn() as any).mockResolvedValue(mockRoles)}) // Roles query
+        .mockReturnValueOnce({...createChainableMock(), orderBy: (jest.fn() as any).mockResolvedValue(mockAssignments)}) // Assignments query
+        .mockReturnValueOnce({...createChainableMock(), orderBy: (jest.fn() as any).mockResolvedValue(mockAvailabilityOverrides)}); // Availability query
 
       await controller.getById(req as Request, res as Response);
 
@@ -544,9 +544,9 @@ describe('PeopleController', () => {
       
       (controller as any).db = jest.fn()
         .mockReturnValueOnce(mockDbQuery)
-        .mockReturnValueOnce({...createChainableMock(), select: jest.fn().mockResolvedValue(mockRoles)})
-        .mockReturnValueOnce({...createChainableMock(), orderBy: jest.fn().mockResolvedValue(mockAssignments)})
-        .mockReturnValueOnce({...createChainableMock(), orderBy: jest.fn().mockResolvedValue([])});
+        .mockReturnValueOnce({...createChainableMock(), select: (jest.fn() as any).mockResolvedValue(mockRoles)})
+        .mockReturnValueOnce({...createChainableMock(), orderBy: (jest.fn() as any).mockResolvedValue(mockAssignments)})
+        .mockReturnValueOnce({...createChainableMock(), orderBy: (jest.fn() as any).mockResolvedValue([])});
 
       await controller.getById(req as Request, res as Response);
 
@@ -603,9 +603,9 @@ describe('PeopleController', () => {
       
       (controller as any).db = jest.fn()
         .mockReturnValueOnce(mockDbQuery) // Main person query
-        .mockReturnValueOnce({...createChainableMock(), select: jest.fn().mockResolvedValue([])}) // Roles
+        .mockReturnValueOnce({...createChainableMock(), select: (jest.fn() as any).mockResolvedValue([])}) // Roles
         .mockReturnValueOnce(mockAssignmentQuery) // Assignments with date filter
-        .mockReturnValueOnce({...createChainableMock(), orderBy: jest.fn().mockResolvedValue([])}); // Availability
+        .mockReturnValueOnce({...createChainableMock(), orderBy: (jest.fn() as any).mockResolvedValue([])}); // Availability
 
       await controller.getById(req as Request, res as Response);
 
