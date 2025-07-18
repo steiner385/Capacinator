@@ -15,7 +15,9 @@ router.put('/:id', (req, res) => controller.update(req, res));
 router.delete('/:id', (req, res) => controller.delete(req, res));
 
 // Person role management
+router.get('/:id/roles', (req, res) => controller.getRoles(req, res));
 router.post('/:id/roles', (req, res) => controller.addRole(req, res));
+router.put('/:id/roles/:roleId', (req, res) => controller.updateRole(req, res));
 router.delete('/:id/roles/:roleId', (req, res) => controller.removeRole(req, res));
 
 // Dashboard/reporting endpoints

@@ -10,7 +10,7 @@ interface PersonFormData {
   title: string;
   department: string;
   location_id: string;
-  primary_role_id: string;
+  primary_person_role_id: string;
   supervisor_id: string;
   worker_type: string;
   default_availability_percentage: number;
@@ -43,7 +43,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     title: '',
     department: '',
     location_id: '',
-    primary_role_id: '',
+    primary_person_role_id: '',
     supervisor_id: '',
     worker_type: 'FTE',
     default_availability_percentage: 100,
@@ -65,7 +65,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
         title: editingPerson.title || '',
         department: editingPerson.department || '',
         location_id: editingPerson.location_id || '',
-        primary_role_id: editingPerson.primary_role_id || '',
+        primary_person_role_id: editingPerson.primary_person_role_id || '',
         supervisor_id: editingPerson.supervisor_id || '',
         worker_type: editingPerson.worker_type || 'FTE',
         default_availability_percentage: editingPerson.default_availability_percentage || 100,
@@ -82,7 +82,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
         title: '',
         department: '',
         location_id: '',
-        primary_role_id: '',
+        primary_person_role_id: '',
         supervisor_id: '',
         worker_type: 'FTE',
         default_availability_percentage: 100,
@@ -161,7 +161,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (formData.email && !formData.email.includes('@')) newErrors.email = 'Valid email is required';
-    if (!formData.primary_role_id) newErrors.primary_role_id = 'Primary role is required';
+    if (!formData.primary_person_role_id) newErrors.primary_person_role_id = 'Primary role is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -309,12 +309,12 @@ export const PersonModal: React.FC<PersonModalProps> = ({
         </div>
 
         <div className="form-group">
-          <label htmlFor="primary_role_id">Primary Role *</label>
+          <label htmlFor="primary_person_role_id">Primary Role *</label>
           <select
-            id="primary_role_id"
-            className={`form-select ${errors.primary_role_id ? 'error' : ''}`}
-            value={formData.primary_role_id}
-            onChange={(e) => handleChange('primary_role_id', e.target.value)}
+            id="primary_person_role_id"
+            className={`form-select ${errors.primary_person_role_id ? 'error' : ''}`}
+            value={formData.primary_person_role_id}
+            onChange={(e) => handleChange('primary_person_role_id', e.target.value)}
           >
             <option value="">Select primary role</option>
             {filteredRoles?.map((role: any) => (
@@ -323,7 +323,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
               </option>
             ))}
           </select>
-          {errors.primary_role_id && <span className="error-message">{errors.primary_role_id}</span>}
+          {errors.primary_person_role_id && <span className="error-message">{errors.primary_person_role_id}</span>}
         </div>
 
         <div className="form-group">

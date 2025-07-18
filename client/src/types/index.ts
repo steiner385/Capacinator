@@ -36,7 +36,7 @@ export interface Project extends BaseEntity {
 export interface Person extends BaseEntity {
   name: string;
   email?: string;
-  primary_role_id?: string;
+  primary_person_role_id?: string;
   worker_type: 'FTE' | 'Contractor' | 'Consultant';
   supervisor_id?: string;
   location_id?: string;

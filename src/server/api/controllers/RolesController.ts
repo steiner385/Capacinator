@@ -196,4 +196,21 @@ export class RolesController extends BaseController {
       res.json(result);
     }
   }
+
+  async getExpertiseLevels(req: Request, res: Response) {
+    try {
+      const expertiseLevels = [
+        { level: 1, name: 'Novice', description: 'Learning the fundamentals, requires supervision' },
+        { level: 2, name: 'Beginner', description: 'Some experience, occasional guidance needed' },
+        { level: 3, name: 'Intermediate', description: 'Solid competency, works independently' },
+        { level: 4, name: 'Advanced', description: 'Highly skilled, mentors others' },
+        { level: 5, name: 'Expert', description: 'Domain expert, thought leader' }
+      ];
+
+      res.json({ data: expertiseLevels });
+    } catch (error) {
+      console.error('Error fetching expertise levels:', error);
+      res.status(500).json({ error: 'Failed to fetch expertise levels' });
+    }
+  }
 }

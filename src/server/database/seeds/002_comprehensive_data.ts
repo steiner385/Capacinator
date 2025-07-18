@@ -478,12 +478,12 @@ export async function seed(knex: Knex): Promise<void> {
     henry: '123e4567-e89b-12d3-a456-426614174007'
   };
 
+  // First, create people without primary role reference
   await knex('people').insert([
     {
       id: peopleIds.alice,
       name: 'Alice Johnson',
       email: 'alice@company.com',
-      primary_role_id: roleIds.projectManager,
       location_id: locationIds.nyc,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -493,7 +493,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.bob,
       name: 'Bob Smith',
       email: 'bob@company.com',
-      primary_role_id: roleIds.seniorDeveloper,
       location_id: locationIds.sf,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -503,7 +502,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.charlie,
       name: 'Charlie Brown',
       email: 'charlie@company.com',
-      primary_role_id: roleIds.businessAnalyst,
       location_id: locationIds.nyc,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -513,7 +511,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.diana,
       name: 'Diana Prince',
       email: 'diana@company.com',
-      primary_role_id: roleIds.qaEngineer,
       location_id: locationIds.london,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -523,7 +520,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.eve,
       name: 'Eve Davis',
       email: 'eve@company.com',
-      primary_role_id: roleIds.devopsEngineer,
       location_id: locationIds.remote,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -533,7 +529,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.frank,
       name: 'Frank Miller',
       email: 'frank@company.com',
-      primary_role_id: roleIds.uxDesigner,
       location_id: locationIds.sf,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -543,7 +538,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.grace,
       name: 'Grace Hopper',
       email: 'grace@company.com',
-      primary_role_id: roleIds.productManager,
       location_id: locationIds.nyc,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -553,7 +547,6 @@ export async function seed(knex: Knex): Promise<void> {
       id: peopleIds.henry,
       name: 'Henry Ford',
       email: 'henry@company.com',
-      primary_role_id: roleIds.dataScientist,
       location_id: locationIds.sf,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -561,17 +554,48 @@ export async function seed(knex: Knex): Promise<void> {
     }
   ]);
 
-  // Seed person roles (additional roles for people)
+  // Create primary person_roles with specific IDs so we can reference them
+  const primaryPersonRoleIds = {
+    aliceProjectManager: uuidv4(),
+    bobSeniorDeveloper: uuidv4(),
+    charlieBusinessAnalyst: uuidv4(),
+    dianaQaEngineer: uuidv4(),
+    eveDevopsEngineer: uuidv4(),
+    frankUxDesigner: uuidv4(),
+    graceProductManager: uuidv4(),
+    henryDataScientist: uuidv4()
+  };
+
   await knex('person_roles').insert([
-    { person_id: peopleIds.alice, role_id: roleIds.businessAnalyst },
-    { person_id: peopleIds.bob, role_id: roleIds.devopsEngineer },
-    { person_id: peopleIds.charlie, role_id: roleIds.projectManager },
-    { person_id: peopleIds.diana, role_id: roleIds.businessAnalyst },
-    { person_id: peopleIds.eve, role_id: roleIds.seniorDeveloper },
-    { person_id: peopleIds.frank, role_id: roleIds.frontendDeveloper },
-    { person_id: peopleIds.grace, role_id: roleIds.businessAnalyst },
-    { person_id: peopleIds.henry, role_id: roleIds.dataAnalyst }
+    // Primary roles
+    { id: primaryPersonRoleIds.aliceProjectManager, person_id: peopleIds.alice, role_id: roleIds.projectManager, proficiency_level: 4, is_primary: true },
+    { id: primaryPersonRoleIds.bobSeniorDeveloper, person_id: peopleIds.bob, role_id: roleIds.seniorDeveloper, proficiency_level: 5, is_primary: true },
+    { id: primaryPersonRoleIds.charlieBusinessAnalyst, person_id: peopleIds.charlie, role_id: roleIds.businessAnalyst, proficiency_level: 4, is_primary: true },
+    { id: primaryPersonRoleIds.dianaQaEngineer, person_id: peopleIds.diana, role_id: roleIds.qaEngineer, proficiency_level: 4, is_primary: true },
+    { id: primaryPersonRoleIds.eveDevopsEngineer, person_id: peopleIds.eve, role_id: roleIds.devopsEngineer, proficiency_level: 5, is_primary: true },
+    { id: primaryPersonRoleIds.frankUxDesigner, person_id: peopleIds.frank, role_id: roleIds.uxDesigner, proficiency_level: 4, is_primary: true },
+    { id: primaryPersonRoleIds.graceProductManager, person_id: peopleIds.grace, role_id: roleIds.productManager, proficiency_level: 4, is_primary: true },
+    { id: primaryPersonRoleIds.henryDataScientist, person_id: peopleIds.henry, role_id: roleIds.dataScientist, proficiency_level: 4, is_primary: true },
+    // Secondary roles
+    { person_id: peopleIds.alice, role_id: roleIds.businessAnalyst, proficiency_level: 3, is_primary: false },
+    { person_id: peopleIds.bob, role_id: roleIds.devopsEngineer, proficiency_level: 3, is_primary: false },
+    { person_id: peopleIds.charlie, role_id: roleIds.projectManager, proficiency_level: 2, is_primary: false },
+    { person_id: peopleIds.diana, role_id: roleIds.businessAnalyst, proficiency_level: 3, is_primary: false },
+    { person_id: peopleIds.eve, role_id: roleIds.seniorDeveloper, proficiency_level: 3, is_primary: false },
+    { person_id: peopleIds.frank, role_id: roleIds.frontendDeveloper, proficiency_level: 4, is_primary: false },
+    { person_id: peopleIds.grace, role_id: roleIds.businessAnalyst, proficiency_level: 3, is_primary: false },
+    { person_id: peopleIds.henry, role_id: roleIds.dataAnalyst, proficiency_level: 4, is_primary: false }
   ]);
+
+  // Now update people with their primary_person_role_id
+  await knex('people').where('id', peopleIds.alice).update({ primary_person_role_id: primaryPersonRoleIds.aliceProjectManager });
+  await knex('people').where('id', peopleIds.bob).update({ primary_person_role_id: primaryPersonRoleIds.bobSeniorDeveloper });
+  await knex('people').where('id', peopleIds.charlie).update({ primary_person_role_id: primaryPersonRoleIds.charlieBusinessAnalyst });
+  await knex('people').where('id', peopleIds.diana).update({ primary_person_role_id: primaryPersonRoleIds.dianaQaEngineer });
+  await knex('people').where('id', peopleIds.eve).update({ primary_person_role_id: primaryPersonRoleIds.eveDevopsEngineer });
+  await knex('people').where('id', peopleIds.frank).update({ primary_person_role_id: primaryPersonRoleIds.frankUxDesigner });
+  await knex('people').where('id', peopleIds.grace).update({ primary_person_role_id: primaryPersonRoleIds.graceProductManager });
+  await knex('people').where('id', peopleIds.henry).update({ primary_person_role_id: primaryPersonRoleIds.henryDataScientist });
 
   // Create multiple sample projects
   const projectIds = {
@@ -900,71 +924,71 @@ export async function seed(knex: Knex): Promise<void> {
   const createdRoles = await knex('roles').select('*');
   const createdPhases = await knex('project_phases').select('*');
   
-  // Create assignments for a few key projects to reduce gaps
-  const activeProjects = createdProjects.slice(0, 6); // Assign people to first 6 projects
+  // Create realistic assignments to avoid over-allocation
+  // Strategy: Assign people to different projects with non-overlapping or compatible allocations
   
-  for (const project of activeProjects) {
+  const activeProjects = createdProjects.slice(0, 4); // Reduce to 4 projects to avoid over-allocation
+  const pmRole = createdRoles.find(r => r.name === 'Project Manager');
+  const devRole = createdRoles.find(r => r.name === 'Senior Developer');
+  const qaRole = createdRoles.find(r => r.name === 'QA Engineer');
+  const baRole = createdRoles.find(r => r.name === 'Business Analyst');
+  
+  // Assign each person to 1-2 projects max with appropriate allocations
+  for (let i = 0; i < activeProjects.length; i++) {
+    const project = activeProjects[i];
+    
     // Get project phase timeline entries for this project
     const projectPhases = await knex('project_phases_timeline')
       .where('project_id', project.id)
+      .orderBy('start_date')
       .select('*');
     
-    // Assign key people to key roles for each phase
-    for (const phaseEntry of projectPhases.slice(0, 3)) { // Assign to first 3 phases per project
-      // Assign Project Manager (assuming first person is PM)
-      const pmRole = createdRoles.find(r => r.name === 'Project Manager');
-      const pmPerson = createdPeople[0]; // First person as PM
-      
-      if (pmRole && pmPerson) {
+    // Assign different people to different projects to avoid over-allocation
+    const personIndex = i % createdPeople.length; // Rotate through people
+    const assignedPerson = createdPeople[personIndex];
+    
+    // Assign to just the main development phase (not all phases)
+    const developmentPhase = projectPhases.find(p => {
+      const phaseName = createdPhases.find(ph => ph.id === p.phase_id)?.name;
+      return phaseName === 'Development';
+    }) || projectPhases[1]; // fallback to second phase if no Development phase
+    
+    if (developmentPhase && assignedPerson) {
+      // Assign PM role to this person for this project
+      if (pmRole) {
         projectAssignments.push({
           id: uuidv4(),
           project_id: project.id,
-          person_id: pmPerson.id,
+          person_id: assignedPerson.id,
           role_id: pmRole.id,
-          phase_id: phaseEntry.phase_id,
-          start_date: phaseEntry.start_date,
-          end_date: phaseEntry.end_date,
-          allocation_percentage: 75, // 75% allocation
+          phase_id: developmentPhase.phase_id,
+          start_date: developmentPhase.start_date,
+          end_date: developmentPhase.end_date,
+          allocation_percentage: 40, // Reduced to 40% to allow for multiple assignments
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
         assignmentCount++;
       }
+    }
+    
+    // Add some cross-project assignments with lower allocations
+    if (i < 2) { // Only for first 2 projects
+      const qaPhase = projectPhases.find(p => {
+        const phaseName = createdPhases.find(ph => ph.id === p.phase_id)?.name;
+        return phaseName === 'System Integration Testing';
+      }) || projectPhases[2];
       
-      // Assign Senior Developer
-      const devRole = createdRoles.find(r => r.name === 'Senior Developer');
-      const devPerson = createdPeople[1]; // Second person as developer
-      
-      if (devRole && devPerson) {
+      if (qaPhase && qaRole && createdPeople[2]) {
         projectAssignments.push({
           id: uuidv4(),
           project_id: project.id,
-          person_id: devPerson.id,
-          role_id: devRole.id,
-          phase_id: phaseEntry.phase_id,
-          start_date: phaseEntry.start_date,
-          end_date: phaseEntry.end_date,
-          allocation_percentage: 80, // 80% allocation
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        assignmentCount++;
-      }
-      
-      // Assign QA Engineer
-      const qaRole = createdRoles.find(r => r.name === 'QA Engineer');
-      const qaPerson = createdPeople[2]; // Third person as QA
-      
-      if (qaRole && qaPerson) {
-        projectAssignments.push({
-          id: uuidv4(),
-          project_id: project.id,
-          person_id: qaPerson.id,
+          person_id: createdPeople[2].id, // Third person as QA
           role_id: qaRole.id,
-          phase_id: phaseEntry.phase_id,
-          start_date: phaseEntry.start_date,
-          end_date: phaseEntry.end_date,
-          allocation_percentage: 60, // 60% allocation
+          phase_id: qaPhase.phase_id,
+          start_date: qaPhase.start_date,
+          end_date: qaPhase.end_date,
+          allocation_percentage: 30, // Low allocation for QA testing
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });

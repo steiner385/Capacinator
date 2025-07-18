@@ -17,7 +17,7 @@ export default function People() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     search: '',
-    primary_role_id: '',
+    primary_role_id: '', // API filter name still uses this for backwards compatibility
     worker_type: '',
     location: ''
   });
@@ -89,7 +89,7 @@ export default function People() {
   const handleResetFilters = () => {
     setFilters({
       search: '',
-      primary_role_id: '',
+      primary_role_id: '', // API filter name still uses this for backwards compatibility
       worker_type: '',
       location: ''
     });

@@ -52,8 +52,13 @@ export default function Reports() {
   const { data: capacityReport, isLoading: capacityLoading, refetch: refetchCapacity } = useQuery({
     queryKey: ['report-capacity', filters],
     queryFn: async () => {
-      const response = await api.reporting.getCapacity(filters);
-      const data = response.data;
+      const [capacityResponse, peopleResponse] = await Promise.all([
+        api.reporting.getCapacity(filters),
+        api.people.list()
+      ]);
+      
+      const data = capacityResponse.data;
+      const peopleData = peopleResponse.data?.data || [];
       
       // Transform the API data to match chart requirements
       if (data) {
@@ -73,15 +78,24 @@ export default function Reports() {
         const totalCapacity = byRole.reduce((sum: number, r: any) => sum + r.capacity, 0);
         const utilizedCapacity = byRole.reduce((sum: number, r: any) => sum + r.utilized, 0);
         
-        // Generate location-based capacity data for the pie chart
-        // Since the API doesn't provide this, distribute capacity evenly across locations
-        const byLocation = totalCapacity > 0 ? [
-          { location: 'San Francisco', capacity: Math.round(totalCapacity * 0.3), percentage: 30 },
-          { location: 'New York', capacity: Math.round(totalCapacity * 0.25), percentage: 25 },
-          { location: 'London', capacity: Math.round(totalCapacity * 0.2), percentage: 20 },
-          { location: 'Chicago', capacity: Math.round(totalCapacity * 0.15), percentage: 15 },
-          { location: 'Berlin', capacity: Math.round(totalCapacity * 0.1), percentage: 10 }
-        ] : [];
+        // Calculate actual location-based capacity using people data
+        const locationCapacity = new Map();
+        
+        peopleData.forEach((person: any) => {
+          const locationName = person.location_name || 'Unknown';
+          const personCapacity = Math.round((person.default_availability_percentage || 100) * (person.default_hours_per_day || 8) * 20 / 100); // Monthly hours
+          
+          if (!locationCapacity.has(locationName)) {
+            locationCapacity.set(locationName, 0);
+          }
+          locationCapacity.set(locationName, locationCapacity.get(locationName) + personCapacity);
+        });
+        
+        // Convert to array format for the chart
+        const byLocation = Array.from(locationCapacity.entries()).map(([location, capacity]) => {
+          const percentage = totalCapacity > 0 ? Math.round((capacity / totalCapacity) * 100) : 0;
+          return { location, capacity, percentage };
+        }).filter(item => item.capacity > 0);
 
         return {
           ...data,
@@ -113,13 +127,25 @@ export default function Reports() {
           utilization: Math.round(person.total_allocation || 0)
         }));
         
+        const averageUtilization = Math.round(
+          peopleUtilization.reduce((sum: number, p: any) => sum + p.utilization, 0) / 
+          (peopleUtilization.length || 1)
+        );
+        
+        // Create utilization distribution chart instead of fake trend data
+        const utilizationDistribution = [
+          { range: '0-25%', count: peopleUtilization.filter((p: any) => p.utilization >= 0 && p.utilization < 25).length },
+          { range: '25-50%', count: peopleUtilization.filter((p: any) => p.utilization >= 25 && p.utilization < 50).length },
+          { range: '50-75%', count: peopleUtilization.filter((p: any) => p.utilization >= 50 && p.utilization < 75).length },
+          { range: '75-100%', count: peopleUtilization.filter((p: any) => p.utilization >= 75 && p.utilization <= 100).length },
+          { range: '>100%', count: peopleUtilization.filter((p: any) => p.utilization > 100).length }
+        ];
+
         return {
           ...data,
           peopleUtilization,
-          averageUtilization: Math.round(
-            peopleUtilization.reduce((sum: number, p: any) => sum + p.utilization, 0) / 
-            (peopleUtilization.length || 1)
-          ),
+          averageUtilization,
+          utilizationDistribution,
           overAllocatedCount: data.summary?.overAllocated || 0,
           underUtilizedCount: data.summary?.underAllocated || 0,
           optimalCount: peopleUtilization.filter((p: any) => p.utilization >= 70 && p.utilization <= 100).length
@@ -444,17 +470,15 @@ export default function Reports() {
         </div>
 
         <div className="chart-container">
-          <h3>Utilization Trend</h3>
+          <h3>Utilization Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={utilizationReport.trend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+            <BarChart data={utilizationReport.utilizationDistribution || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+              <XAxis dataKey="range" />
               <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="utilization" stroke={CHART_COLORS[0]} strokeWidth={2} />
-              <Line type="monotone" dataKey="target" stroke={CHART_COLORS[2]} strokeDasharray="5 5" strokeWidth={2} />
-            </LineChart>
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="count" fill={CHART_COLORS[1]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
 

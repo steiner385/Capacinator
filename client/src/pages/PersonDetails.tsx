@@ -21,7 +21,7 @@ interface PersonDetails {
   department?: string;
   location_id?: string;
   location_name?: string;
-  primary_role_id?: string;
+  primary_person_role_id?: string;
   primary_role_name?: string;
   supervisor_id?: string | null;
   supervisor_name?: string | null;

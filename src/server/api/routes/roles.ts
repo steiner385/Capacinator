@@ -4,6 +4,9 @@ import { RolesController } from '../controllers/RolesController.js';
 const router = Router();
 const controller = new RolesController();
 
+// Expertise levels endpoint
+router.get('/expertise-levels', (req, res) => controller.getExpertiseLevels(req, res));
+
 // Role CRUD operations
 router.get('/', (req, res) => controller.getAll(req, res));
 router.get('/:id', (req, res) => controller.getById(req, res));

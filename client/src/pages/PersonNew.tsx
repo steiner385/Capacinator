@@ -12,7 +12,7 @@ interface PersonFormData {
   title: string;
   department: string;
   location_id: string;
-  primary_role_id: string;
+  primary_role_id: string; // Keep for form UI, will be handled specially in submission
   supervisor_id: string;
   worker_type: string;
   default_availability_percentage: number;
@@ -75,7 +75,8 @@ export function PersonNew() {
   // Create person mutation
   const createPersonMutation = useMutation({
     mutationFn: async (data: PersonFormData) => {
-      const response = await api.people.create({
+      // First create the person without primary role
+      const personData = {
         ...data,
         phone: data.phone || null,
         title: data.title || null,
@@ -84,8 +85,23 @@ export function PersonNew() {
         supervisor_id: data.supervisor_id || null,
         start_date: data.start_date || null,
         end_date: data.end_date || null
-      });
-      return response.data;
+      };
+      // Remove primary_role_id as it's not a valid field in the new schema
+      delete (personData as any).primary_role_id;
+      
+      const response = await api.people.create(personData);
+      const createdPerson = response.data;
+      
+      // If a primary role was selected, add it as a person role
+      if (data.primary_role_id) {
+        await api.people.addRole(createdPerson.id, {
+          role_id: data.primary_role_id,
+          proficiency_level: 3, // Default intermediate level
+          is_primary: true
+        });
+      }
+      
+      return createdPerson;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['people'] });

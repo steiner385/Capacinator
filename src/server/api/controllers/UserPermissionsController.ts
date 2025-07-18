@@ -343,7 +343,8 @@ export class UserPermissionsController extends BaseController {
     try {
       const users = await this.db('people')
         .leftJoin('user_roles', 'people.user_role_id', 'user_roles.id')
-        .leftJoin('roles as primary_role', 'people.primary_role_id', 'primary_role.id')
+        .leftJoin('person_roles as primary_person_role', 'people.primary_person_role_id', 'primary_person_role.id')
+        .leftJoin('roles as primary_role', 'primary_person_role.role_id', 'primary_role.id')
         .select(
           'people.id',
           'people.name',

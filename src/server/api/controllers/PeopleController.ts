@@ -8,7 +8,7 @@ export class PeopleController extends BaseController {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const filters = {
-      primary_role_id: req.query.primary_role_id,
+      primary_role_id: req.query.primary_role_id, // Still allow filtering by role_id for API compatibility
       supervisor_id: req.query.supervisor_id,
       worker_type: req.query.worker_type,
       location_id: req.query.location_id || req.query.location
@@ -17,17 +17,19 @@ export class PeopleController extends BaseController {
     const result = await this.executeQuery(async () => {
       let query = this.db('people')
         .leftJoin('people as supervisor', 'people.supervisor_id', 'supervisor.id')
-        .leftJoin('roles as primary_role', 'people.primary_role_id', 'primary_role.id')
+        .leftJoin('person_roles as primary_person_role', 'people.primary_person_role_id', 'primary_person_role.id')
+        .leftJoin('roles as primary_role', 'primary_person_role.role_id', 'primary_role.id')
         .leftJoin('locations', 'people.location_id', 'locations.id')
         .select(
           'people.*',
           'supervisor.name as supervisor_name',
           'primary_role.name as primary_role_name',
+          'primary_person_role.proficiency_level as primary_role_proficiency_level',
           'locations.name as location_name'
         );
 
       // Apply filters manually to handle table prefixes correctly
-      if (filters.primary_role_id) query = query.where('people.primary_role_id', filters.primary_role_id);
+      if (filters.primary_role_id) query = query.where('primary_role.id', filters.primary_role_id);
       if (filters.supervisor_id) query = query.where('people.supervisor_id', filters.supervisor_id);
       if (filters.worker_type) query = query.where('people.worker_type', filters.worker_type);
       if (filters.location_id) query = query.where('people.location_id', filters.location_id);
@@ -58,12 +60,14 @@ export class PeopleController extends BaseController {
     const result = await this.executeQuery(async () => {
       const person = await this.db('people')
         .leftJoin('people as supervisor', 'people.supervisor_id', 'supervisor.id')
-        .leftJoin('roles as primary_role', 'people.primary_role_id', 'primary_role.id')
+        .leftJoin('person_roles as primary_person_role', 'people.primary_person_role_id', 'primary_person_role.id')
+        .leftJoin('roles as primary_role', 'primary_person_role.role_id', 'primary_role.id')
         .leftJoin('locations', 'people.location_id', 'locations.id')
         .select(
           'people.*',
           'supervisor.name as supervisor_name',
           'primary_role.name as primary_role_name',
+          'primary_person_role.proficiency_level as primary_role_proficiency_level',
           'locations.name as location_name'
         )
         .where('people.id', id)
@@ -118,10 +122,10 @@ export class PeopleController extends BaseController {
   async create(req: Request, res: Response) {
     const personData = req.body;
 
-    // Filter out fields that don't exist in the people table (based on 001_complete_schema.ts)
+    // Filter out fields that don't exist in the people table (based on 002_fix_primary_role_foreign_key.ts)
     const validFields = [
-      'name', 'email', 'primary_role_id', 'worker_type', 'supervisor_id',
-      'default_availability_percentage', 'default_hours_per_day'
+      'name', 'email', 'primary_person_role_id', 'worker_type', 'supervisor_id',
+      'default_availability_percentage', 'default_hours_per_day', 'location_id'
     ];
     
     const filteredData = Object.keys(personData)
@@ -165,10 +169,10 @@ export class PeopleController extends BaseController {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Filter out fields that don't exist in the people table (based on 001_complete_schema.ts)
+    // Filter out fields that don't exist in the people table (based on 002_fix_primary_role_foreign_key.ts)
     const validFields = [
-      'name', 'email', 'primary_role_id', 'worker_type', 'supervisor_id',
-      'default_availability_percentage', 'default_hours_per_day'
+      'name', 'email', 'primary_person_role_id', 'worker_type', 'supervisor_id',
+      'default_availability_percentage', 'default_hours_per_day', 'location_id'
     ];
     
     const filteredData = Object.keys(updateData)
@@ -245,25 +249,174 @@ export class PeopleController extends BaseController {
 
   async addRole(req: Request, res: Response) {
     const { id } = req.params;
-    const { role_id, proficiency_level, years_experience, notes } = req.body;
+    const { role_id, proficiency_level = 3, is_primary = false } = req.body;
+
+    // Validate proficiency level
+    if (proficiency_level < 1 || proficiency_level > 5) {
+      return res.status(400).json({ 
+        error: 'Proficiency level must be between 1 (novice) and 5 (expert)' 
+      });
+    }
 
     const result = await this.executeQuery(async () => {
-      const [personRole] = await this.db('person_roles')
-        .insert({
-          person_id: id,
-          role_id,
-          proficiency_level,
-          years_experience,
-          notes,
-          assigned_at: new Date()
-        })
-        .returning('*');
+      return await this.db.transaction(async (trx) => {
+        // Check if person already has this role
+        const existingPersonRole = await trx('person_roles')
+          .where('person_id', id)
+          .where('role_id', role_id)
+          .first();
 
-      return personRole;
+        if (existingPersonRole) {
+          throw new Error('Person already has this role. Use PUT to update expertise level.');
+        }
+
+        // If setting as primary, remove primary flag from other roles
+        if (is_primary) {
+          await trx('person_roles')
+            .where('person_id', id)
+            .update({ is_primary: false });
+
+        }
+
+        // Insert the new person role
+        const [insertedPersonRole] = await trx('person_roles')
+          .insert({
+            person_id: id,
+            role_id,
+            proficiency_level,
+            is_primary
+          })
+          .returning('*');
+
+        // If this is the primary role, update the people table reference
+        if (is_primary) {
+          await trx('people')
+            .where('id', id)
+            .update({ primary_person_role_id: insertedPersonRole.id });
+        }
+
+        // Return the created person role with role details
+        const personRole = await trx('person_roles as pr')
+          .join('roles as r', 'pr.role_id', 'r.id')
+          .where('pr.id', insertedPersonRole.id)
+          .select(
+            'pr.id',
+            'pr.person_id',
+            'pr.role_id',
+            'pr.proficiency_level',
+            'pr.is_primary',
+            'r.name as role_name',
+            'r.description as role_description'
+          )
+          .first();
+
+        return personRole;
+      });
     }, res, 'Failed to add role to person');
 
     if (result) {
       res.status(201).json(result);
+    }
+  }
+
+  async getRoles(req: Request, res: Response) {
+    const { id } = req.params;
+
+    const result = await this.executeQuery(async () => {
+      const personRoles = await this.db('person_roles as pr')
+        .join('roles as r', 'pr.role_id', 'r.id')
+        .join('people as p', 'pr.person_id', 'p.id')
+        .where('pr.person_id', id)
+        .select(
+          'pr.id',
+          'pr.person_id',
+          'pr.role_id',
+          'pr.proficiency_level',
+          'pr.is_primary',
+          'r.name as role_name',
+          'r.description as role_description',
+          'p.name as person_name'
+        )
+        .orderBy('pr.is_primary', 'desc')
+        .orderBy('pr.proficiency_level', 'desc');
+
+      return personRoles;
+    }, res, 'Failed to fetch person roles');
+
+    if (result) {
+      res.json({ data: result });
+    }
+  }
+
+  async updateRole(req: Request, res: Response) {
+    const { id, roleId } = req.params;
+    const { proficiency_level, is_primary } = req.body;
+
+    // Validate proficiency level if provided
+    if (proficiency_level !== undefined && (proficiency_level < 1 || proficiency_level > 5)) {
+      return res.status(400).json({ 
+        error: 'Proficiency level must be between 1 (novice) and 5 (expert)' 
+      });
+    }
+
+    const result = await this.executeQuery(async () => {
+      // Check if person role exists
+      const existingPersonRole = await this.db('person_roles')
+        .where('person_id', id)
+        .where('role_id', roleId)
+        .first();
+
+      if (!existingPersonRole) {
+        throw new Error('Person role not found');
+      }
+
+      return await this.db.transaction(async (trx) => {
+        // If setting as primary, remove primary flag from other roles
+        if (is_primary) {
+          await trx('person_roles')
+            .where('person_id', id)
+            .update({ is_primary: false });
+        }
+
+        // Update the person role
+        const updateData: any = {};
+        if (proficiency_level !== undefined) updateData.proficiency_level = proficiency_level;
+        if (is_primary !== undefined) updateData.is_primary = is_primary;
+
+        await trx('person_roles')
+          .where('person_id', id)
+          .where('role_id', roleId)
+          .update(updateData);
+
+        // If setting as primary, update the primary_person_role_id in people table
+        if (is_primary) {
+          await trx('people')
+            .where('id', id)
+            .update({ primary_person_role_id: existingPersonRole.id });
+        }
+
+        // Return the updated person role with role details
+        const updatedPersonRole = await trx('person_roles as pr')
+          .join('roles as r', 'pr.role_id', 'r.id')
+          .where('pr.person_id', id)
+          .where('pr.role_id', roleId)
+          .select(
+            'pr.id',
+            'pr.person_id',
+            'pr.role_id',
+            'pr.proficiency_level',
+            'pr.is_primary',
+            'r.name as role_name',
+            'r.description as role_description'
+          )
+          .first();
+
+        return updatedPersonRole;
+      });
+    }, res, 'Failed to update person role');
+
+    if (result) {
+      res.json({ data: result });
     }
   }
 
