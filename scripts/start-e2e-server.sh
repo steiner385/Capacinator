@@ -7,6 +7,9 @@ set -e
 
 echo "🚀 Starting E2E Server Environment..."
 
+# Create log directory
+mkdir -p /tmp/capacinator-logs
+
 # Load E2E environment variables
 export $(cat .env.e2e | grep -v '^#' | sed 's/#.*//' | grep -v '^$' | xargs)
 
@@ -24,7 +27,7 @@ npx tsx src/server/database/init-e2e.ts
 
 # Start backend server in E2E mode
 echo "🖥️  Starting E2E backend server on port 3111..."
-NODE_ENV=e2e PORT=3111 npx tsx src/server/index.ts &
+NODE_ENV=e2e PORT=3111 npx tsx src/server/index.ts > /tmp/capacinator-logs/e2e-backend.log 2>&1 &
 E2E_SERVER_PID=$!
 
 # Wait for backend to be ready
@@ -48,7 +51,7 @@ fi
 
 # Start frontend server in E2E mode
 echo "🌐 Starting E2E frontend server on port 3121..."
-NODE_ENV=e2e npx vite --port 3121 --host --config client-vite.config.ts &
+NODE_ENV=e2e npx vite --port 3121 --host --config client-vite.config.ts > /tmp/capacinator-logs/e2e-frontend.log 2>&1 &
 E2E_FRONTEND_PID=$!
 
 # Wait for frontend to be ready
@@ -79,6 +82,16 @@ echo "📝 Process IDs: Backend=$E2E_SERVER_PID, Frontend=$E2E_FRONTEND_PID"
 # Store PIDs for cleanup
 echo $E2E_SERVER_PID > /tmp/e2e-backend.pid
 echo $E2E_FRONTEND_PID > /tmp/e2e-frontend.pid
+echo "$E2E_SERVER_PID,$E2E_FRONTEND_PID" > /tmp/e2e-servers.pid
 
-# Wait for both processes
-wait
+echo ""
+echo "✅ E2E servers started in background"
+echo "📄 Backend PID: $E2E_SERVER_PID"
+echo "📄 Frontend PID: $E2E_FRONTEND_PID"
+echo "📄 Backend logs: /tmp/capacinator-logs/e2e-backend.log"
+echo "📄 Frontend logs: /tmp/capacinator-logs/e2e-frontend.log"
+echo ""
+echo "Commands:"
+echo "  npm run e2e:stop  - Stop the E2E servers"
+echo "  npm run e2e:stop:cleanup  - Stop and cleanup database"
+echo "  npm run e2e:logs  - View live logs"
