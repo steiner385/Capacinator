@@ -11,12 +11,14 @@ export class ReportingController extends BaseController {
       // (start date in past, end date in future)
       const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       
-      // Get summary stats - only count current projects (ongoing projects)
+      // Get summary stats - count projects that have active phases
       console.log('📊 Getting current project count...');
       const projectCount = await this.db('projects')
-        .count('* as count')
-        .where('aspiration_start', '<=', currentDate)
-        .where('aspiration_finish', '>=', currentDate)
+        .join('project_phases_timeline', 'projects.id', 'project_phases_timeline.project_id')
+        .where('project_phases_timeline.start_date', '<=', currentDate)
+        .where('project_phases_timeline.end_date', '>=', currentDate)
+        .where('projects.include_in_demand', true)
+        .countDistinct('projects.id as count')
         .first();
       console.log('📊 Current project count result:', projectCount);
       
@@ -33,19 +35,18 @@ export class ReportingController extends BaseController {
       
       // Get current projects and their phase status
       const currentProjects = await this.db('projects')
-        .leftJoin('project_phases_timeline', 'projects.id', 'project_phases_timeline.project_id')
-        .leftJoin('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
+        .join('project_phases_timeline', 'projects.id', 'project_phases_timeline.project_id')
+        .join('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
         .select(
           'projects.id',
           'projects.name',
-          'projects.aspiration_start',
-          'projects.aspiration_finish',
           'project_phases_timeline.start_date as phase_start',
           'project_phases_timeline.end_date as phase_end',
           'project_phases.name as phase_name'
         )
-        .where('projects.aspiration_start', '<=', currentDate)
-        .where('projects.aspiration_finish', '>=', currentDate)
+        .where('project_phases_timeline.start_date', '<=', currentDate)
+        .where('project_phases_timeline.end_date', '>=', currentDate)
+        .where('projects.include_in_demand', true)
         .orderBy(['projects.id', 'project_phases_timeline.start_date']);
       
       // Calculate project health status
@@ -76,9 +77,12 @@ export class ReportingController extends BaseController {
       
       // Get assignments for current projects only
       const currentProjectIds = await this.db('projects')
-        .select('id')
-        .where('aspiration_start', '<=', currentDate)
-        .where('aspiration_finish', '>=', currentDate);
+        .join('project_phases_timeline', 'projects.id', 'project_phases_timeline.project_id')
+        .select('projects.id')
+        .where('project_phases_timeline.start_date', '<=', currentDate)
+        .where('project_phases_timeline.end_date', '>=', currentDate)
+        .where('projects.include_in_demand', true)
+        .distinct();
       
       const currentProjectIdList = currentProjectIds.map(p => p.id);
       

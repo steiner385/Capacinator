@@ -121,7 +121,7 @@ export default function PersonDetails() {
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.roles.list();
-      return response.data.data;
+      return response.data;
     }
   });
 

@@ -14,6 +14,7 @@ import {
   History,
   GanttChart,
   Wand2,
+  MapPin,
 } from 'lucide-react';
 import { AppHeader } from './AppHeader';
 import './Layout.css';
@@ -30,6 +31,7 @@ const navigation = [
   { name: 'Allocation Wizard', href: '/wizard', icon: Wand2 },
   { name: 'Scenarios', href: '/scenarios', icon: GitBranch },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
+  { name: 'Locations', href: '/locations', icon: MapPin },
   { name: 'Audit Log', href: '/audit-log', icon: History },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

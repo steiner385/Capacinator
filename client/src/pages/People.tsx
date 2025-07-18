@@ -47,6 +47,15 @@ export default function People() {
     }
   });
 
+  // Fetch locations for filter
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const response = await api.locations.list();
+      return response.data.data as Location[];
+    }
+  });
+
   // Delete person mutation
   const deletePersonMutation = useMutation({
     mutationFn: async (personId: string) => {
@@ -131,8 +140,8 @@ export default function People() {
       )
     },
     {
-      key: 'supervisor_name',
-      header: 'Supervisor',
+      key: 'location_name',
+      header: 'Location',
       sortable: true,
       render: (value) => value || '-'
     },
@@ -151,11 +160,6 @@ export default function People() {
       header: 'Hours/Day',
       sortable: true,
       render: (value) => `${value}h`
-    },
-    {
-      key: 'is_bubble',
-      header: 'Bubble',
-      render: (value) => value ? '🟡' : ''
     },
     {
       key: 'actions',
@@ -220,6 +224,12 @@ export default function People() {
         { value: 'Contractor', label: 'Contractor' },
         { value: 'Consultant', label: 'Consultant' }
       ]
+    },
+    {
+      name: 'location',
+      label: 'Location',
+      type: 'select' as const,
+      options: locations?.map(location => ({ value: location.id, label: location.name })) || []
     }
   ];
 

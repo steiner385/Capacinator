@@ -10,20 +10,27 @@ export class PeopleController extends BaseController {
     const filters = {
       primary_role_id: req.query.primary_role_id,
       supervisor_id: req.query.supervisor_id,
-      worker_type: req.query.worker_type
+      worker_type: req.query.worker_type,
+      location_id: req.query.location_id || req.query.location
     };
 
     const result = await this.executeQuery(async () => {
       let query = this.db('people')
         .leftJoin('people as supervisor', 'people.supervisor_id', 'supervisor.id')
         .leftJoin('roles as primary_role', 'people.primary_role_id', 'primary_role.id')
+        .leftJoin('locations', 'people.location_id', 'locations.id')
         .select(
           'people.*',
           'supervisor.name as supervisor_name',
-          'primary_role.name as primary_role_name'
+          'primary_role.name as primary_role_name',
+          'locations.name as location_name'
         );
 
-      query = this.buildFilters(query, filters);
+      // Apply filters manually to handle table prefixes correctly
+      if (filters.primary_role_id) query = query.where('people.primary_role_id', filters.primary_role_id);
+      if (filters.supervisor_id) query = query.where('people.supervisor_id', filters.supervisor_id);
+      if (filters.worker_type) query = query.where('people.worker_type', filters.worker_type);
+      if (filters.location_id) query = query.where('people.location_id', filters.location_id);
       query = this.paginate(query, page, limit);
 
       const people = await query;
@@ -52,10 +59,12 @@ export class PeopleController extends BaseController {
       const person = await this.db('people')
         .leftJoin('people as supervisor', 'people.supervisor_id', 'supervisor.id')
         .leftJoin('roles as primary_role', 'people.primary_role_id', 'primary_role.id')
+        .leftJoin('locations', 'people.location_id', 'locations.id')
         .select(
           'people.*',
           'supervisor.name as supervisor_name',
-          'primary_role.name as primary_role_name'
+          'primary_role.name as primary_role_name',
+          'locations.name as location_name'
         )
         .where('people.id', id)
         .first();

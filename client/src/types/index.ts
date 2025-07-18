@@ -39,12 +39,14 @@ export interface Person extends BaseEntity {
   primary_role_id?: string;
   worker_type: 'FTE' | 'Contractor' | 'Consultant';
   supervisor_id?: string;
+  location_id?: string;
   default_availability_percentage: number;
   default_hours_per_day: number;
   is_bubble?: boolean;
   // Relations
   primary_role_name?: string;
   supervisor_name?: string;
+  location_name?: string;
   roles?: PersonRole[];
   assignments?: ProjectAssignment[];
   availabilityOverrides?: PersonAvailabilityOverride[];

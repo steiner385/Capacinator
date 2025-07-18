@@ -484,6 +484,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Alice Johnson',
       email: 'alice@company.com',
       primary_role_id: roleIds.projectManager,
+      location_id: locationIds.nyc,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -493,6 +494,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Bob Smith',
       email: 'bob@company.com',
       primary_role_id: roleIds.seniorDeveloper,
+      location_id: locationIds.sf,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -502,6 +504,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Charlie Brown',
       email: 'charlie@company.com',
       primary_role_id: roleIds.businessAnalyst,
+      location_id: locationIds.nyc,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -511,6 +514,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Diana Prince',
       email: 'diana@company.com',
       primary_role_id: roleIds.qaEngineer,
+      location_id: locationIds.london,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -520,6 +524,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Eve Davis',
       email: 'eve@company.com',
       primary_role_id: roleIds.devopsEngineer,
+      location_id: locationIds.remote,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -529,6 +534,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Frank Miller',
       email: 'frank@company.com',
       primary_role_id: roleIds.uxDesigner,
+      location_id: locationIds.sf,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -538,6 +544,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Grace Hopper',
       email: 'grace@company.com',
       primary_role_id: roleIds.productManager,
+      location_id: locationIds.nyc,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
@@ -547,6 +554,7 @@ export async function seed(knex: Knex): Promise<void> {
       name: 'Henry Ford',
       email: 'henry@company.com',
       primary_role_id: roleIds.dataScientist,
+      location_id: locationIds.sf,
       worker_type: 'FTE',
       default_availability_percentage: 100,
       default_hours_per_day: 8
