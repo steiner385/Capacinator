@@ -5,6 +5,25 @@ import { BrowserRouter } from 'react-router-dom';
 import ProjectRoadmap from '@client/pages/ProjectRoadmap';
 import { vi } from 'vitest';
 
+// Mock Lucide icons
+vi.mock('lucide-react', () => ({
+  Calendar: () => <div data-testid="calendar-icon" />,
+  Edit2: () => <div data-testid="edit-icon" />,
+  Save: () => <div data-testid="save-icon" />,
+  X: () => <div data-testid="x-icon" />,
+  ZoomIn: () => <div data-testid="zoom-in-icon" />,
+  ZoomOut: () => <div data-testid="zoom-out-icon" />,
+  Filter: () => <div data-testid="filter-icon" />,
+  Search: () => <div data-testid="search-icon" />,
+  ChevronDown: () => <div data-testid="chevron-down-icon" />,
+  ChevronRight: () => <div data-testid="chevron-right-icon" />,
+  ChevronLeft: () => <div data-testid="chevron-left-icon" />,
+  SkipBack: () => <div data-testid="skip-back-icon" />,
+  SkipForward: () => <div data-testid="skip-forward-icon" />,
+  Maximize2: () => <div data-testid="maximize-icon" />,
+  Minimize2: () => <div data-testid="minimize-icon" />,
+}));
+
 // Mock the API with more comprehensive data for scrolling tests
 vi.mock('@client/lib/api-client', () => ({
   api: {

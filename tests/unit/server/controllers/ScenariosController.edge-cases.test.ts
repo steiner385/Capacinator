@@ -129,6 +129,50 @@ describe('ScenariosController - Complex Edge Cases', () => {
     for (const project of testProjects) {
       await testDb('projects').insert(project);
     }
+
+    // Create test roles
+    const testRoles = [
+      {
+        id: 'role1-000-0000-0000-000000000001',
+        name: 'Developer',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: 'role2-000-0000-0000-000000000002',
+        name: 'Designer',
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    ];
+
+    for (const role of testRoles) {
+      await testDb('roles').insert(role);
+    }
+
+    // Create test person_roles
+    const testPersonRoles = [
+      {
+        id: 'pr1-0000-0000-0000-000000000001',
+        person_id: 'user1-0000-0000-0000-000000000001',
+        role_id: 'role1-000-0000-0000-000000000001',
+        expertise_level: 3,
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: 'pr2-0000-0000-0000-000000000002',
+        person_id: 'user2-0000-0000-0000-000000000002',
+        role_id: 'role2-000-0000-0000-000000000002',
+        expertise_level: 2,
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    ];
+
+    for (const personRole of testPersonRoles) {
+      await testDb('person_roles').insert(personRole);
+    }
   });
 
   afterEach(async () => {
@@ -164,7 +208,17 @@ describe('ScenariosController - Complex Edge Cases', () => {
       // Table doesn't exist, skip
     }
     try {
+      await testDb('person_roles').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
       await testDb('people').del();
+    } catch (error) {
+      // Table doesn't exist, skip
+    }
+    try {
+      await testDb('roles').del();
     } catch (error) {
       // Table doesn't exist, skip
     }

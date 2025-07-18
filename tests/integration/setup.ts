@@ -41,13 +41,41 @@ beforeAll(async () => {
 });
 
 async function createTestTables() {
-  // Create people table
+  // Create roles table first
+  await testDb.schema.createTable('roles', table => {
+    table.string('id').primary();
+    table.string('name').notNullable();
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create people table (without foreign key references first)
   await testDb.schema.createTable('people', table => {
     table.string('id').primary();
     table.string('name').notNullable();
     table.string('email').notNullable();
+    table.string('supervisor_id');
+    table.string('primary_person_role_id');
+    table.string('location');
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create person_roles table
+  await testDb.schema.createTable('person_roles', table => {
+    table.string('id').primary();
+    table.string('person_id').references('id').inTable('people').onDelete('CASCADE');
+    table.string('role_id').references('id').inTable('roles').onDelete('CASCADE');
+    table.integer('expertise_level').notNullable().defaultTo(1);
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+    table.unique(['person_id', 'role_id']);
+  });
+
+  // Add foreign key constraints to people table
+  await testDb.schema.alterTable('people', table => {
+    table.foreign('supervisor_id').references('id').inTable('people').onDelete('SET NULL');
+    table.foreign('primary_person_role_id').references('id').inTable('person_roles').onDelete('SET NULL');
   });
 
   // Create projects table
@@ -55,14 +83,6 @@ async function createTestTables() {
     table.string('id').primary();
     table.string('name').notNullable();
     table.text('description'); // Add description field to match schema
-    table.timestamp('created_at').defaultTo(testDb.fn.now());
-    table.timestamp('updated_at').defaultTo(testDb.fn.now());
-  });
-
-  // Create roles table
-  await testDb.schema.createTable('roles', table => {
-    table.string('id').primary();
-    table.string('name').notNullable();
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
@@ -319,6 +339,41 @@ async function createTestTables() {
       WHERE scenario_id = NEW.scenario_id AND project_id = NEW.project_id AND phase_id = NEW.phase_id;
     END;
   `);
+
+  // Create email_templates table
+  await testDb.schema.createTable('email_templates', table => {
+    table.string('id').primary();
+    table.string('name').notNullable();
+    table.string('type').notNullable();
+    table.string('subject').notNullable();
+    table.text('body_text');
+    table.text('body_html');
+    table.boolean('is_active').defaultTo(true);
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create notification_preferences table
+  await testDb.schema.createTable('notification_preferences', table => {
+    table.string('id').primary();
+    table.string('user_id').references('id').inTable('people').onDelete('CASCADE');
+    table.string('type').notNullable();
+    table.boolean('enabled').defaultTo(true);
+    table.boolean('email_enabled').defaultTo(true);
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create notification_history table
+  await testDb.schema.createTable('notification_history', table => {
+    table.string('id').primary();
+    table.string('user_id').references('id').inTable('people').onDelete('CASCADE');
+    table.string('type').notNullable();
+    table.string('method').notNullable();
+    table.string('status').notNullable();
+    table.text('details');
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+  });
 }
 
 afterAll(async () => {
@@ -337,6 +392,10 @@ beforeEach(async () => {
     'scenario_projects',
     'scenarios',
     'project_assignments',
+    'notification_history',
+    'notification_preferences',
+    'email_templates',
+    'person_roles',
     'people',
     'projects',
     'roles'
@@ -382,4 +441,17 @@ export const createTestProject = async (overrides: any = {}) => {
     ...overrides
   }).returning('*');
   return project;
+};
+
+export const createTestPersonRole = async (overrides: any = {}) => {
+  const [personRole] = await testDb('person_roles').insert({
+    id: overrides.id || 'test-person-role-1',
+    person_id: overrides.person_id || 'test-user-1',
+    role_id: overrides.role_id || 'test-role-1',
+    expertise_level: overrides.expertise_level || 1,
+    created_at: new Date(),
+    updated_at: new Date(),
+    ...overrides
+  }).returning('*');
+  return personRole;
 };

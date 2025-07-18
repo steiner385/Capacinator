@@ -99,7 +99,7 @@ If you encounter port conflicts within the 3100-3199 range:
 | Environment | Frontend | Backend | Command |
 |-------------|----------|---------|---------|
 | Development | 3120     | 3121    | `npm run dev` |
-| E2E Testing | 3130     | 3131    | `npm run dev:e2e` |
-| QA          | 3140     | 3141    | `npm run dev:qa` |
-| Production  | 3150     | 3151    | `npm start` |
-| Staging     | 3160     | 3161    | `npm run start:staging` |
+| E2E Testing | 3130     | 3131    | `npm run e2e:start` |
+| QA          | 3140     | 3141    | `npm run qa:start` (to be implemented) |
+| Production  | 3150     | 3151    | `npm run prod:start` |
+| Staging     | 3160     | 3161    | `npm run staging:start` (to be implemented) |

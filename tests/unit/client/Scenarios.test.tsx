@@ -43,6 +43,11 @@ vi.mock('lucide-react', () => ({
   LayoutGrid: () => <div data-testid="layout-grid-icon" />,
   List: () => <div data-testid="list-icon" />,
   Network: () => <div data-testid="network-icon" />,
+  Search: () => <div data-testid="search-icon" />,
+  Filter: () => <div data-testid="filter-icon" />,
+  X: () => <div data-testid="x-icon" />,
+  ChevronDown: () => <div data-testid="chevron-down-icon" />,
+  ArrowRight: () => <div data-testid="arrow-right-icon" />,
 }));
 
 const mockScenarios = [

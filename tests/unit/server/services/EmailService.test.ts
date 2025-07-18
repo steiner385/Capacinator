@@ -11,15 +11,18 @@ const mockNodemailer = {
   createTransport: jest.fn().mockReturnValue(mockTransporter)
 };
 
+// Mock nodemailer module
+jest.mock('nodemailer', () => mockNodemailer);
+
 // Mock database
 const createMockQuery = () => {
   const query = {
-    where: jest.fn().mockReturnThis() as any,
-    whereNotNull: jest.fn().mockReturnThis() as any,
-    first: jest.fn().mockReturnThis() as any,
-    insert: jest.fn().mockReturnThis() as any,
-    join: jest.fn().mockReturnThis() as any,
-    select: jest.fn().mockReturnThis() as any
+    where: jest.fn().mockReturnThis(),
+    whereNotNull: jest.fn().mockReturnThis(),
+    first: jest.fn().mockResolvedValue(null),
+    insert: jest.fn().mockResolvedValue([]),
+    join: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis()
   };
   return query;
 };

@@ -27,12 +27,76 @@ export async function seed(knex: Knex): Promise<void> {
     paul: '456e7890-e89b-12d3-a456-426614174015'
   };
 
+  // First create primary person_roles for each person
+  const primaryPersonRoleIds = {
+    isabella: uuidv4(),
+    jack: uuidv4(),
+    kate: uuidv4(),
+    liam: uuidv4(),
+    maya: uuidv4(),
+    noah: uuidv4(),
+    olivia: uuidv4(),
+    paul: uuidv4()
+  };
+
+  await knex('person_roles').insert([
+    {
+      id: primaryPersonRoleIds.isabella,
+      person_id: newPeopleIds.isabella,
+      role_id: existingRoles.find(r => r.name === 'Senior Developer')?.id,
+      proficiency_level: 4
+    },
+    {
+      id: primaryPersonRoleIds.jack,
+      person_id: newPeopleIds.jack,
+      role_id: existingRoles.find(r => r.name === 'Senior Architect')?.id,
+      proficiency_level: 5
+    },
+    {
+      id: primaryPersonRoleIds.kate,
+      person_id: newPeopleIds.kate,
+      role_id: existingRoles.find(r => r.name === 'Backend Developer')?.id,
+      proficiency_level: 3
+    },
+    {
+      id: primaryPersonRoleIds.liam,
+      person_id: newPeopleIds.liam,
+      role_id: existingRoles.find(r => r.name === 'Security Specialist')?.id,
+      proficiency_level: 5
+    },
+    {
+      id: primaryPersonRoleIds.maya,
+      person_id: newPeopleIds.maya,
+      role_id: existingRoles.find(r => r.name === 'Data Analyst')?.id,
+      proficiency_level: 4
+    },
+    {
+      id: primaryPersonRoleIds.noah,
+      person_id: newPeopleIds.noah,
+      role_id: existingRoles.find(r => r.name === 'Frontend Developer')?.id,
+      proficiency_level: 3
+    },
+    {
+      id: primaryPersonRoleIds.olivia,
+      person_id: newPeopleIds.olivia,
+      role_id: existingRoles.find(r => r.name === 'UX Designer')?.id,
+      proficiency_level: 4
+    },
+    {
+      id: primaryPersonRoleIds.paul,
+      person_id: newPeopleIds.paul,
+      role_id: existingRoles.find(r => r.name === 'DevOps Engineer')?.id,
+      proficiency_level: 4
+    }
+  ]);
+
+  // Now create people with references to their primary person_roles
   await knex('people').insert([
     {
       id: newPeopleIds.isabella,
       name: 'Isabella Chen',
       email: 'isabella.contractor@external.com',
-      primary_role_id: existingRoles.find(r => r.name === 'Senior Developer')?.id,
+      primary_person_role_id: primaryPersonRoleIds.isabella,
       location_id: existingLocations.find(l => l.name === 'San Francisco')?.id,
       worker_type: 'Contractor',
       default_availability_percentage: 80, // Part-time contractor
@@ -42,7 +106,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.jack,
       name: 'Jack Thompson',
       email: 'jack.consultant@consulting.com',
-      primary_role_id: existingRoles.find(r => r.name === 'Senior Architect')?.id,
+      primary_person_role_id: primaryPersonRoleIds.jack,
       location_id: existingLocations.find(l => l.name === 'New York City')?.id,
       worker_type: 'Consultant',
       default_availability_percentage: 100,
@@ -52,7 +116,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.kate,
       name: 'Kate Williams',
       email: 'kate@company.com',
-      primary_role_id: existingRoles.find(r => r.name === 'Backend Developer')?.id,
+      primary_person_role_id: primaryPersonRoleIds.kate,
       location_id: existingLocations.find(l => l.name === 'Remote')?.id,
       worker_type: 'FTE',
       default_availability_percentage: 60, // Part-time FTE
@@ -62,7 +126,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.liam,
       name: 'Liam O\'Connor',
       email: 'liam.contractor@external.com',
-      primary_role_id: existingRoles.find(r => r.name === 'Security Specialist')?.id,
+      primary_person_role_id: primaryPersonRoleIds.liam,
       location_id: existingLocations.find(l => l.name === 'London')?.id,
       worker_type: 'Contractor',
       default_availability_percentage: 100,
@@ -72,7 +136,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.maya,
       name: 'Maya Patel',
       email: 'maya@company.com',
-      primary_role_id: existingRoles.find(r => r.name === 'Data Analyst')?.id,
+      primary_person_role_id: primaryPersonRoleIds.maya,
       location_id: existingLocations.find(l => l.name === 'San Francisco')?.id,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -82,7 +146,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.noah,
       name: 'Noah Garcia',
       email: 'noah.consultant@consulting.com',
-      primary_role_id: existingRoles.find(r => r.name === 'Frontend Developer')?.id,
+      primary_person_role_id: primaryPersonRoleIds.noah,
       location_id: existingLocations.find(l => l.name === 'Remote')?.id,
       worker_type: 'Consultant',
       default_availability_percentage: 75, // 3/4 time consultant
@@ -92,7 +156,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.olivia,
       name: 'Olivia Rodriguez',
       email: 'olivia@company.com',
-      primary_role_id: existingRoles.find(r => r.name === 'UX Designer')?.id,
+      primary_person_role_id: primaryPersonRoleIds.olivia,
       location_id: existingLocations.find(l => l.name === 'New York City')?.id,
       worker_type: 'FTE',
       default_availability_percentage: 100,
@@ -102,7 +166,7 @@ export async function seed(knex: Knex): Promise<void> {
       id: newPeopleIds.paul,
       name: 'Paul Kim',
       email: 'paul.contractor@external.com',
-      primary_role_id: existingRoles.find(r => r.name === 'DevOps Engineer')?.id,
+      primary_person_role_id: primaryPersonRoleIds.paul,
       location_id: existingLocations.find(l => l.name === 'London')?.id,
       worker_type: 'Contractor',
       default_availability_percentage: 90,
@@ -112,14 +176,14 @@ export async function seed(knex: Knex): Promise<void> {
 
   // Add additional person roles for cross-training
   await knex('person_roles').insert([
-    { person_id: newPeopleIds.isabella, role_id: existingRoles.find(r => r.name === 'Frontend Developer')?.id },
-    { person_id: newPeopleIds.jack, role_id: existingRoles.find(r => r.name === 'Project Manager')?.id },
-    { person_id: newPeopleIds.kate, role_id: existingRoles.find(r => r.name === 'DevOps Engineer')?.id },
-    { person_id: newPeopleIds.liam, role_id: existingRoles.find(r => r.name === 'Senior Architect')?.id },
-    { person_id: newPeopleIds.maya, role_id: existingRoles.find(r => r.name === 'Data Scientist')?.id },
-    { person_id: newPeopleIds.noah, role_id: existingRoles.find(r => r.name === 'UX Designer')?.id },
-    { person_id: newPeopleIds.olivia, role_id: existingRoles.find(r => r.name === 'Product Manager')?.id },
-    { person_id: newPeopleIds.paul, role_id: existingRoles.find(r => r.name === 'Security Specialist')?.id }
+    { id: uuidv4(), person_id: newPeopleIds.isabella, role_id: existingRoles.find(r => r.name === 'Frontend Developer')?.id, proficiency_level: 2 },
+    { id: uuidv4(), person_id: newPeopleIds.jack, role_id: existingRoles.find(r => r.name === 'Project Manager')?.id, proficiency_level: 4 },
+    { id: uuidv4(), person_id: newPeopleIds.kate, role_id: existingRoles.find(r => r.name === 'DevOps Engineer')?.id, proficiency_level: 3 },
+    { id: uuidv4(), person_id: newPeopleIds.liam, role_id: existingRoles.find(r => r.name === 'Senior Architect')?.id, proficiency_level: 3 },
+    { id: uuidv4(), person_id: newPeopleIds.maya, role_id: existingRoles.find(r => r.name === 'Data Scientist')?.id, proficiency_level: 4 },
+    { id: uuidv4(), person_id: newPeopleIds.noah, role_id: existingRoles.find(r => r.name === 'UX Designer')?.id, proficiency_level: 2 },
+    { id: uuidv4(), person_id: newPeopleIds.olivia, role_id: existingRoles.find(r => r.name === 'Product Manager')?.id, proficiency_level: 3 },
+    { id: uuidv4(), person_id: newPeopleIds.paul, role_id: existingRoles.find(r => r.name === 'Security Specialist')?.id, proficiency_level: 5 }
   ]);
 
   // Create projects using the unused sub-types

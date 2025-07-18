@@ -23,9 +23,50 @@ export async function initializeE2EDatabase(): Promise<knex.Knex> {
     await e2eDb.raw('SELECT 1');
     console.log('✅ E2E database connection successful');
     
-    // Run migrations
-    await e2eDb.migrate.latest();
-    console.log('✅ E2E database migrations completed');
+    // Run migrations - reset if corrupted
+    try {
+      await e2eDb.migrate.latest();
+      console.log('✅ E2E database migrations completed');
+    } catch (error: any) {
+      if (error.message.includes('migration directory is corrupt') || 
+          error.message.includes('files are missing') ||
+          error.message.includes('already exists')) {
+        console.log('🔄 Migration corruption detected, resetting entire database...');
+        
+        // Get all tables and views
+        const objects = await e2eDb.raw(`
+          SELECT name, type FROM sqlite_master 
+          WHERE type IN ('table', 'view') 
+          AND name NOT LIKE 'sqlite_%'
+        `);
+        
+        // Disable foreign key constraints temporarily
+        await e2eDb.raw('PRAGMA foreign_keys = OFF');
+        
+        // Drop all views first (they depend on tables)
+        for (const obj of objects) {
+          if (obj.type === 'view') {
+            await e2eDb.raw(`DROP VIEW IF EXISTS "${obj.name}"`);
+          }
+        }
+        
+        // Then drop all tables
+        for (const obj of objects) {
+          if (obj.type === 'table') {
+            await e2eDb.schema.dropTableIfExists(obj.name);
+          }
+        }
+        
+        // Re-enable foreign key constraints
+        await e2eDb.raw('PRAGMA foreign_keys = ON');
+        
+        // Re-run migrations on clean database
+        await e2eDb.migrate.latest();
+        console.log('✅ E2E database migrations completed after complete reset');
+      } else {
+        throw error;
+      }
+    }
     
     // Check if we need to seed data
     if (process.env.E2E_SEED_DATA === 'true') {

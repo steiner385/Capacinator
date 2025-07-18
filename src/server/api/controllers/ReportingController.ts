@@ -72,90 +72,65 @@ export class ReportingController extends BaseController {
       
       console.log('📊 Project health result:', projectHealth);
 
-      // Calculate capacity gaps - only for current projects
-      console.log('📊 Calculating capacity gaps for current projects...');
+      // Calculate capacity gaps - use comprehensive capacity gaps view
+      console.log('📊 Calculating capacity gaps from capacity_gaps_view...');
       
-      // Get assignments for current projects only
-      const currentProjectIds = await this.db('projects')
-        .join('project_phases_timeline', 'projects.id', 'project_phases_timeline.project_id')
-        .select('projects.id')
-        .where('project_phases_timeline.start_date', '<=', currentDate)
-        .where('project_phases_timeline.end_date', '>=', currentDate)
-        .where('projects.include_in_demand', true)
-        .distinct();
+      const capacityGapsData = await this.db('capacity_gaps_view').select('*');
       
-      const currentProjectIdList = currentProjectIds.map(p => p.id);
+      // Categorize roles by capacity status
+      let gapRoles = 0;
+      let okRoles = 0;
+      let tightRoles = 0;
       
-      // Count roles with assignments in current projects
-      const currentAssignmentRoles = await this.db('project_assignments')
-        .whereIn('project_id', currentProjectIdList)
-        .countDistinct('role_id as role_count')
-        .first();
-      
-      // Count distinct roles needed for current projects (from resource templates)
-      const currentDemandRoles = await this.db('resource_templates')
-        .join('project_sub_types', 'resource_templates.project_sub_type_id', 'project_sub_types.id')
-        .join('projects', 'project_sub_types.id', 'projects.project_sub_type_id')
-        .whereIn('projects.id', currentProjectIdList)
-        .countDistinct('resource_templates.role_id as role_count')
-        .first();
-      
-      console.log('📊 Current project assignments roles:', currentAssignmentRoles?.role_count || 0);
-      console.log('📊 Current project demand roles:', currentDemandRoles?.role_count || 0);
-      
-      const rolesWithCurrentDemands = currentDemandRoles?.role_count || 0;
-      const rolesWithCurrentAssignments = currentAssignmentRoles?.role_count || 0;
-      const gapRoles = Math.max(0, rolesWithCurrentDemands - rolesWithCurrentAssignments);
+      capacityGapsData.forEach(role => {
+        const demandVsCapacity = role.total_demand_fte - role.total_capacity_fte;
+        if (demandVsCapacity > 0.5) {
+          gapRoles++;
+        } else if (demandVsCapacity > 0) {
+          tightRoles++;
+        } else {
+          okRoles++;
+        }
+      });
       
       const capacityGaps = { 
         GAP: gapRoles, 
-        OK: rolesWithCurrentAssignments 
+        TIGHT: tightRoles,
+        OK: okRoles 
       };
       
-      console.log('📊 Current project capacity gaps result:', capacityGaps);
+      console.log('📊 Capacity gaps from view:', capacityGaps);
 
-      // Get utilization overview - focus on in-progress projects (default filter)
-      console.log('📊 Calculating utilization for in-progress projects...');
+      // Get utilization overview - use comprehensive person utilization view
+      console.log('📊 Calculating utilization from person_utilization_view...');
       
-      const currentProjectUtilization = await this.db('project_assignments')
-        .select('person_id')
-        .sum('allocation_percentage as total_allocation')
-        .whereIn('project_id', currentProjectIdList)
-        .groupBy('person_id');
+      const personUtilizationData = await this.db('person_utilization_view').select('*');
       
       // Categorize utilization levels
-      const utilizationStats = currentProjectUtilization.reduce((acc, person) => {
-        const allocation = person.total_allocation || 0;
-        if (allocation > 100) {
-          acc.OVER_ALLOCATED = (acc.OVER_ALLOCATED || 0) + 1;
-        } else if (allocation >= 80) {
-          acc.FULLY_ALLOCATED = (acc.FULLY_ALLOCATED || 0) + 1;
-        } else if (allocation > 0) {
-          acc.UNDER_ALLOCATED = (acc.UNDER_ALLOCATED || 0) + 1;
-        }
+      const utilizationStats = personUtilizationData.reduce((acc, person) => {
+        const status = person.allocation_status;
+        acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
       
-      // If no assignments exist for in-progress projects, show availability instead
       const utilization = Object.keys(utilizationStats).length > 0 
         ? utilizationStats 
-        : { 'NO_ASSIGNMENTS': 0 };
+        : { 'NO_DATA': 0 };
       
-      console.log('📊 In-progress project utilization result:', utilization);
+      console.log('📊 Person utilization from view:', utilization);
 
-      // Get availability overview - people not in current projects are available
-      console.log('📊 Calculating availability for current projects...');
+      // Get availability overview from person utilization view
+      console.log('📊 Calculating availability from person_utilization_view...');
       
-      const totalPeople = peopleCount?.count || 0;
-      const peopleInCurrentProjects = currentProjectUtilization.length;
-      const availablePeople = totalPeople - peopleInCurrentProjects;
+      const availablePeople = personUtilizationData.filter(person => person.allocation_status === 'AVAILABLE').length;
+      const assignedPeople = personUtilizationData.filter(person => person.allocation_status !== 'AVAILABLE').length;
       
       const availability = { 
         AVAILABLE: availablePeople,
-        ASSIGNED: peopleInCurrentProjects
+        ASSIGNED: assignedPeople
       };
       
-      console.log('📊 Current project availability result:', availability);
+      console.log('📊 Person availability from view:', availability);
 
       return {
         summary: {
