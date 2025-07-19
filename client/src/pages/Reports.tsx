@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
   BarChart3, PieChart, TrendingUp, Users, Calendar, 
-  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, ClipboardList, ChevronDown
+  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, ClipboardList, ChevronDown,
+  Briefcase, User, Plus
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
@@ -43,8 +44,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function Reports() {
   const [activeReport, setActiveReport] = useState<'capacity' | 'utilization' | 'demand' | 'gaps'>('capacity');
   const [filters, setFilters] = useState<ReportFilters>({
-    startDate: '2024-09-01', // Set to match actual data range
-    endDate: '2024-12-31'
+    startDate: '2023-08-01', // Set to match actual data range
+    endDate: '2023-12-31'
   });
   const [showExportDropdown, setShowExportDropdown] = useState(false);
 
@@ -62,17 +63,30 @@ export default function Reports() {
       
       // Transform the API data to match chart requirements
       if (data) {
-        // Calculate capacity by role from capacity gaps
-        const byRole = data.capacityGaps?.reduce((acc: any[], gap: any) => {
-          if (gap.total_capacity_fte && gap.total_capacity_fte > 0) {
-            acc.push({
-              role: gap.role_name,
-              capacity: Math.round(gap.total_capacity_fte * 160), // Convert FTE to hours (160 hours/month)
-              utilized: Math.round((gap.total_capacity_fte - Math.abs(gap.gap_fte || 0)) * 160)
-            });
+        // Calculate capacity by role from person utilization data
+        const roleUtilization = new Map();
+        
+        data.personUtilization?.forEach((person: any) => {
+          const roleName = person.primary_role_name || 'Unknown';
+          const capacity = person.available_hours || 0;
+          const utilized = person.total_allocated_hours || 0;
+          
+          if (!roleUtilization.has(roleName)) {
+            roleUtilization.set(roleName, { capacity: 0, utilized: 0 });
           }
-          return acc;
-        }, []) || [];
+          
+          const current = roleUtilization.get(roleName);
+          roleUtilization.set(roleName, {
+            capacity: current.capacity + capacity,
+            utilized: current.utilized + utilized
+          });
+        });
+        
+        const byRole = Array.from(roleUtilization.entries()).map(([role, data]) => ({
+          role,
+          capacity: Math.round(data.capacity * 20), // Convert daily hours to monthly (20 working days)
+          utilized: Math.round(data.utilized * 20)
+        })).filter(item => item.capacity > 0);
         
         // Calculate totals
         const totalCapacity = byRole.reduce((sum: number, r: any) => sum + r.capacity, 0);
@@ -123,8 +137,8 @@ export default function Reports() {
         const peopleUtilization = data.personUtilization.map((person: any) => ({
           id: person.person_id,
           name: person.person_name,
-          role: person.primary_role,
-          utilization: Math.round(person.total_allocation || 0)
+          role: person.primary_role_name,
+          utilization: Math.round(person.total_allocation_percentage || 0)
         }));
         
         const averageUtilization = Math.round(
@@ -146,8 +160,8 @@ export default function Reports() {
           peopleUtilization,
           averageUtilization,
           utilizationDistribution,
-          overAllocatedCount: data.summary?.overAllocated || 0,
-          underUtilizedCount: data.summary?.underAllocated || 0,
+          overAllocatedCount: peopleUtilization.filter((p: any) => p.utilization > 100).length,
+          underUtilizedCount: peopleUtilization.filter((p: any) => p.utilization < 70).length,
           optimalCount: peopleUtilization.filter((p: any) => p.utilization >= 70 && p.utilization <= 100).length
         };
       }
@@ -160,32 +174,39 @@ export default function Reports() {
     queryKey: ['report-demand', filters],
     queryFn: async () => {
       const response = await api.demands.getSummary({
-        // Don't apply date filters for now to show all demand data
+        start_date: filters.startDate,
+        end_date: filters.endDate,
         project_type_id: filters.projectTypeId,
         location_id: filters.locationId
       });
       const data = response.data;
       
       if (data) {
-        // Transform by_role to byProjectType for the chart
-        const byProjectType = data.by_role?.map((role: any) => ({
-          type: role.role_name,
-          demand: role.total_hours
+        // Use actual project type data
+        const byProjectType = data.by_project_type?.map((projectType: any) => ({
+          type: projectType.project_type_name,
+          demand: projectType.total_hours
         })) || [];
         
         // Create forecast from timeline data if available
         const forecast = data.timeline?.map((item: any) => ({
           month: item.month,
-          demand: item.total_hours,
+          demand: item.total_hours || 0,
           capacity: 0 // We don't have capacity in this view yet
-        })) || [];
+        })).filter((item: any) => item.demand > 0) || [];
+        
+        // Calculate peak month from timeline data
+        const peakMonth = data.timeline?.reduce((max: any, month: any) => {
+          return (month.total_hours || 0) > (max?.total_hours || 0) ? month : max;
+        }, null)?.month || null;
         
         return {
           ...data,
           totalDemand: data.summary?.total_hours || 0,
           projectCount: data.summary?.total_projects || 0,
           byProjectType,
-          forecast
+          forecast,
+          peakMonth
         };
       }
       return data;
@@ -215,8 +236,17 @@ export default function Reports() {
           ...data,
           totalGap: data.summary?.total_shortage_fte ? Math.round(data.summary.total_shortage_fte * 160) : 0,
           criticalRolesCount: data.summary?.critical_gaps || 0,
-          gapPercentage: data.gaps.length > 0 ? 
-            Math.round((data.summary?.total_shortage_fte / data.gaps.reduce((sum: number, g: any) => sum + g.total_capacity_fte, 0)) * 100) : 0,
+          gapPercentage: (() => {
+            if (!data.gaps.length) return 0;
+            const totalCapacity = data.gaps.reduce((sum: number, g: any) => sum + g.total_capacity_fte, 0);
+            const totalShortage = data.summary?.total_shortage_fte || 0;
+            // If no capacity exists, show percentage based on total demand
+            if (totalCapacity === 0) {
+              const totalDemand = data.gaps.reduce((sum: number, g: any) => sum + g.total_demand_fte, 0);
+              return totalDemand > 0 ? 100 : 0; // 100% gap if there's demand but no capacity
+            }
+            return Math.round((totalShortage / totalCapacity) * 100);
+          })(),
           gapsByRole
         };
       }
@@ -376,59 +406,190 @@ export default function Reports() {
         <div className="report-summary">
           <div className="summary-card">
             <h3>Total Capacity</h3>
-            <div className="metric">{capacityReport.totalCapacity} hours</div>
+            <div className="metric">{capacityReport.totalCapacity || 0} hours</div>
           </div>
           <div className="summary-card">
-            <h3>Utilized</h3>
-            <div className="metric">{capacityReport.utilizedCapacity} hours</div>
+            <h3># People with Capacity</h3>
+            <div className="metric">{capacityReport.personUtilization?.length || 0}</div>
+            <Link to={`/people?from=capacity-report&action=view-capacity&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+              <Users size={14} /> View People
+            </Link>
           </div>
           <div className="summary-card">
-            <h3>Available</h3>
-            <div className="metric">{capacityReport.availableCapacity} hours</div>
+            <h3># Roles with Capacity</h3>
+            <div className="metric">{capacityReport.byRole?.length || 0}</div>
           </div>
           <div className="summary-card">
-            <h3>Utilization Rate</h3>
-            <div className="metric">{capacityReport.utilizationRate}%</div>
+            <h3>Peak Month</h3>
+            <div className="metric">N/A</div>
           </div>
         </div>
 
         <div className="charts-grid">
           <div className="chart-container">
-            <h3>Capacity by Role</h3>
+            <h3>Capacity by Person</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={capacityReport.byRole}>
+              <BarChart data={capacityReport.personUtilization?.slice(0, 10) || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                <XAxis dataKey="role" />
+                <XAxis dataKey="person_name" />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="capacity" fill={CHART_COLORS[0]} />
-                <Bar dataKey="utilized" fill={CHART_COLORS[1]} />
+                <Bar dataKey="available_hours" fill={CHART_COLORS[0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="chart-container">
-            <h3>Capacity by Location</h3>
+            <h3>Capacity by Role</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <RechartsPieChart>
-                <Pie
-                  data={capacityReport.byLocation || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => entry.location ? `${entry.location}: ${entry.percentage}%` : ''}
-                  outerRadius={80}
-                  fill={CHART_COLORS[0]}
-                  dataKey="capacity"
-                >
-                  {capacityReport.byLocation?.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
+              <BarChart data={capacityReport.byRole || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="role" />
+                <YAxis />
                 <Tooltip content={<CustomTooltip />} />
-              </RechartsPieChart>
+                <Bar dataKey="capacity" fill={CHART_COLORS[0]} />
+              </BarChart>
             </ResponsiveContainer>
+          </div>
+
+          <div className="chart-container">
+            <h3>Capacity Trend Over Time</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={capacityReport.timeline || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="capacity" stroke={CHART_COLORS[0]} strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="full-width-tables">
+          <div className="table-container">
+            <h3>People Capacity Overview</h3>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Daily Hours</th>
+                  <th>Availability</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(capacityReport.personUtilization || []).map((person: any) => (
+                  <tr key={person.person_id} className={
+                    person.allocation_status === 'AVAILABLE' ? 'row-success' :
+                    person.allocation_status === 'FULLY_ALLOCATED' ? 'row-warning' :
+                    person.allocation_status === 'OVER_ALLOCATED' ? 'row-danger' : ''
+                  }>
+                    <td><strong>{person.person_name}</strong></td>
+                    <td>{person.available_hours} hrs/day</td>
+                    <td>{person.default_availability_percentage || 100}%</td>
+                    <td>
+                      <span className={`badge ${
+                        person.allocation_status === 'AVAILABLE' ? 'badge-success' :
+                        person.allocation_status === 'FULLY_ALLOCATED' ? 'badge-warning' :
+                        person.allocation_status === 'OVER_ALLOCATED' ? 'badge-danger' : 'badge-secondary'
+                      }`}>
+                        {person.allocation_status === 'AVAILABLE' ? 'Available' :
+                         person.allocation_status === 'FULLY_ALLOCATED' ? 'Fully Allocated' :
+                         person.allocation_status === 'OVER_ALLOCATED' ? 'Over Allocated' : 'Unknown'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <Link to={`/people/${person.person_id}?from=capacity-report&status=${person.allocation_status}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                          <User size={14} /> Profile
+                        </Link>
+                        {person.allocation_status === 'AVAILABLE' && (
+                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=assign&from=capacity-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                            <Plus size={14} /> Assign
+                          </Link>
+                        )}
+                        {person.allocation_status === 'FULLY_ALLOCATED' && (
+                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=view&from=capacity-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-warning">
+                            <ClipboardList size={14} /> View Load
+                          </Link>
+                        )}
+                        {person.allocation_status === 'OVER_ALLOCATED' && (
+                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=reduce&from=capacity-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                            <ClipboardList size={14} /> Reduce Load
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="table-container">
+            <h3>Role Capacity Analysis</h3>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th>Total Capacity (hrs)</th>
+                  <th>Utilized (hrs)</th>
+                  <th>Available (hrs)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(capacityReport.byRole || []).map((role: any) => {
+                  const utilized = role.utilized || 0;
+                  const available = role.capacity - utilized;
+                  const utilizationRate = role.capacity > 0 ? (utilized / role.capacity) * 100 : 0;
+                  
+                  return (
+                    <tr key={role.id || role.role} className={
+                      available > 100 ? 'row-success' :
+                      available > 50 ? 'row-info' :
+                      available > 0 ? 'row-warning' : 'row-danger'
+                    }>
+                      <td><strong>{role.role}</strong></td>
+                      <td>{role.capacity}</td>
+                      <td>{utilized}</td>
+                      <td>{available}</td>
+                      <td>
+                        <span className={`badge ${
+                          available > 100 ? 'badge-success' :
+                          available > 50 ? 'badge-info' :
+                          available > 0 ? 'badge-warning' : 'badge-danger'
+                        }`}>
+                          {available > 100 ? 'High Capacity' :
+                           available > 50 ? 'Moderate Capacity' :
+                           available > 0 ? 'Limited Capacity' : 'At Capacity'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <Link to={`/people?role=${encodeURIComponent(role.role)}&from=capacity-report&capacity=${role.capacity}&available=${available}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                            <Users size={14} /> View People
+                          </Link>
+                          {available > 50 && (
+                            <Link to={`/assignments?role=${encodeURIComponent(role.role)}&action=assign&from=capacity-report&available=${available}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                              <Briefcase size={14} /> Assign Work
+                            </Link>
+                          )}
+                          {available <= 50 && (
+                            <Link to={`/people?role=${encodeURIComponent(role.role)}&action=hire&from=capacity-report&shortage=${Math.abs(available)}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-warning">
+                              <UserPlus size={14} /> Hire More
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -442,90 +603,182 @@ export default function Reports() {
       <div className="report-content">
         <div className="report-summary">
           <div className="summary-card">
-            <h3>Average Utilization</h3>
-            <div className="metric">{utilizationReport.averageUtilization}%</div>
+            <h3>Utilization %</h3>
+            <div className="metric">{utilizationReport.averageUtilization || 0}%</div>
           </div>
           <div className="summary-card">
-            <h3>Over-allocated</h3>
-            <div className="metric text-danger">{utilizationReport.overAllocatedCount} people</div>
+            <h3># People Overutilized</h3>
+            <div className="metric text-danger">{utilizationReport.overAllocatedCount || 0}</div>
             {utilizationReport.overAllocatedCount > 0 && (
-              <Link to="/assignments" className="card-action-link">
+              <Link to={`/assignments?action=manage-overutilized&from=utilization-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
                 <ClipboardList size={14} /> Manage Assignments
               </Link>
             )}
           </div>
           <div className="summary-card">
-            <h3>Under-utilized</h3>
-            <div className="metric text-warning">{utilizationReport.underUtilizedCount} people</div>
+            <h3># People Underutilized</h3>
+            <div className="metric text-warning">{utilizationReport.underUtilizedCount || 0}</div>
             {utilizationReport.underUtilizedCount > 0 && (
-              <Link to="/assignments" className="card-action-link">
+              <Link to={`/assignments?action=find-projects&from=utilization-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
                 <ClipboardList size={14} /> Find Projects
               </Link>
             )}
           </div>
           <div className="summary-card">
-            <h3>Optimal</h3>
-            <div className="metric text-success">{utilizationReport.optimalCount} people</div>
+            <h3># People Optimally Utilized</h3>
+            <div className="metric text-success">{utilizationReport.optimalCount || 0}</div>
           </div>
         </div>
 
-        <div className="chart-container">
-          <h3>Utilization Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={utilizationReport.utilizationDistribution || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-              <XAxis dataKey="range" />
-              <YAxis />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="count" fill={CHART_COLORS[1]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <div className="charts-grid">
+          <div className="chart-container">
+            <h3>Utilization by Person</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={utilizationReport.peopleUtilization || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="utilization" fill={CHART_COLORS[1]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-        <div className="people-list">
-          <h3>People by Utilization</h3>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Utilization</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {utilizationReport.peopleUtilization?.map((person: any) => (
-                <tr key={person.id}>
-                  <td>{person.name}</td>
-                  <td>{person.role}</td>
-                  <td>{person.utilization}%</td>
-                  <td>
-                    <span className={`badge ${
-                      person.utilization > 100 ? 'badge-danger' :
-                      person.utilization < 70 ? 'badge-warning' :
-                      'badge-success'
-                    }`}>
-                      {person.utilization > 100 ? 'Over-allocated' :
-                       person.utilization < 70 ? 'Under-utilized' :
-                       'Optimal'}
-                    </span>
-                  </td>
-                  <td>
-                    {(person.utilization > 100 || person.utilization < 70) && (
-                      <Link 
-                        to={`/assignments?person=${encodeURIComponent(person.name)}`}
-                        className="btn btn-sm btn-outline"
-                        title="Manage assignments"
-                      >
-                        <ClipboardList size={14} /> View Assignments
+          <div className="chart-container">
+            <h3>Utilization by Role</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={utilizationReport.byRole || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="avgUtilization" fill={CHART_COLORS[2]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="chart-container">
+            <h3>Utilization Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={utilizationReport.timeline || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="utilization" stroke={CHART_COLORS[1]} strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="chart-container">
+            <h3>Actionable People</h3>
+            <div className="actionable-list">
+              <div className="list-section">
+                <h4>Overutilized People</h4>
+                {(utilizationReport.peopleUtilization || [])
+                  .filter((person: any) => person.utilization > 100)
+                  .map((person: any) => (
+                  <div key={person.id} className="actionable-item danger">
+                    <div className="item-info">
+                      <strong>{person.name}</strong>
+                      <span className="item-detail">{person.utilization}% utilized</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=reduce-load&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <User size={14} /> View Profile
                       </Link>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=reduce&from=utilization-report&utilization=${person.utilization}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                        <ClipboardList size={14} /> Reduce Load
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization > 100).length === 0 && (
+                  <p className="no-items">No overutilized people</p>
+                )}
+              </div>
+              
+              <div className="list-section">
+                <h4>Underutilized People</h4>
+                {(utilizationReport.peopleUtilization || [])
+                  .filter((person: any) => person.utilization < 70)
+                  .map((person: any) => (
+                  <div key={person.id} className="actionable-item warning">
+                    <div className="item-info">
+                      <strong>{person.name}</strong>
+                      <span className="item-detail">{person.utilization}% utilized</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=add-work&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <User size={14} /> View Profile
+                      </Link>
+                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=assign&from=utilization-report&utilization=${person.utilization}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                        <Plus size={14} /> Add Projects
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization < 70).length === 0 && (
+                  <p className="no-items">No underutilized people</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="chart-container">
+            <h3>Actionable Roles</h3>
+            <div className="actionable-list">
+              <div className="list-section">
+                <h4>Overcommitted Roles</h4>
+                {(utilizationReport.byRole || [])
+                  .filter((role: any) => role.avgUtilization > 100)
+                  .map((role: any) => (
+                  <div key={role.id || role.name} className="actionable-item danger">
+                    <div className="item-info">
+                      <strong>{role.name}</strong>
+                      <span className="item-detail">{role.avgUtilization}% average utilization</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/people?role=${encodeURIComponent(role.name)}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> View People
+                      </Link>
+                      <Link to="/people" className="btn btn-sm btn-danger">
+                        <UserPlus size={14} /> Hire More
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(utilizationReport.byRole || []).filter((role: any) => role.avgUtilization > 100).length === 0 && (
+                  <p className="no-items">No overcommitted roles</p>
+                )}
+              </div>
+
+              <div className="list-section">
+                <h4>Underutilized Roles</h4>
+                {(utilizationReport.byRole || [])
+                  .filter((role: any) => role.avgUtilization < 70)
+                  .map((role: any) => (
+                  <div key={role.id || role.name} className="actionable-item warning">
+                    <div className="item-info">
+                      <strong>{role.name}</strong>
+                      <span className="item-detail">{role.avgUtilization}% average utilization</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/people?role=${encodeURIComponent(role.name)}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> View People
+                      </Link>
+                      <Link to="/projects" className="btn btn-sm btn-primary">
+                        <Briefcase size={14} /> Find Projects
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(utilizationReport.byRole || []).filter((role: any) => role.avgUtilization < 70).length === 0 && (
+                  <p className="no-items">No underutilized roles</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -539,14 +792,18 @@ export default function Reports() {
         <div className="report-summary">
           <div className="summary-card">
             <h3>Total Demand</h3>
-            <div className="metric">{demandReport.totalDemand || 0} hours</div>
+            <div className="metric">{demandReport.summary?.total_hours || 0} hours</div>
           </div>
           <div className="summary-card">
-            <h3>Projects</h3>
-            <div className="metric">{demandReport.projectCount || 0}</div>
-            <Link to="/projects" className="card-action-link">
+            <h3># Projects with Demand</h3>
+            <div className="metric">{demandReport.summary?.total_projects || 0}</div>
+            <Link to={`/projects?from=demand-report&action=view-high-demand&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
               <ExternalLink size={14} /> View Projects
             </Link>
+          </div>
+          <div className="summary-card">
+            <h3># Roles with Demand</h3>
+            <div className="metric">{demandReport.by_role?.length || 0}</div>
           </div>
           <div className="summary-card">
             <h3>Peak Month</h3>
@@ -556,11 +813,11 @@ export default function Reports() {
 
         <div className="charts-grid">
           <div className="chart-container">
-            <h3>Demand by Project Type</h3>
+            <h3>Demand by Project</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={demandReport.byProjectType || []}>
+              <BarChart data={demandReport.byProject || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                <XAxis dataKey="type" />
+                <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="demand" fill={CHART_COLORS[0]} />
@@ -569,18 +826,83 @@ export default function Reports() {
           </div>
 
           <div className="chart-container">
-            <h3>Demand Forecast</h3>
+            <h3>Demand by Role</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={demandReport.forecast || []}>
+              <BarChart data={demandReport.by_role || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="role_name" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="total_hours" fill={CHART_COLORS[1]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="chart-container">
+            <h3>Demand Trend Over Time</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={demandReport.timeline || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Line type="monotone" dataKey="demand" stroke={CHART_COLORS[3]} strokeWidth={2} />
-                <Line type="monotone" dataKey="capacity" stroke={CHART_COLORS[1]} strokeWidth={2} />
+                <Line type="monotone" dataKey="total_hours" stroke={CHART_COLORS[3]} strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="action-lists">
+          <div className="list-container">
+            <h3>High-Demand Projects</h3>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Demand</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(demandReport.byProject || []).slice(0, 5).map((project: any) => (
+                  <tr key={project.id}>
+                    <td>{project.name}</td>
+                    <td>{project.demand} hrs</td>
+                    <td>
+                      <Link to={`/projects/${project.id}?from=demand-report&demand=${project.demand}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <ExternalLink size={14} /> View Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="list-container">
+            <h3>High-Demand Roles</h3>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th>Demand</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(demandReport.by_role || []).slice(0, 5).map((role: any) => (
+                  <tr key={role.role_id}>
+                    <td>{role.role_name}</td>
+                    <td>{role.total_hours} hrs</td>
+                    <td>
+                      <Link to={`/people?role=${encodeURIComponent(role.role_name)}&from=demand-report&demand=${role.total_hours}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> Find People
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -594,91 +916,185 @@ export default function Reports() {
       <div className="report-content">
         <div className="report-summary">
           <div className="summary-card">
-            <h3>Total Gap</h3>
+            <h3>Total Gap in Hours</h3>
             <div className="metric text-danger">{gapsReport.totalGap || 0} hours</div>
             {gapsReport.totalGap > 0 && (
-              <Link to="/people" className="card-action-link">
+              <Link to={`/people?action=hire&from=gaps-report&gap=${gapsReport.totalGap}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
                 <UserPlus size={14} /> Add People
               </Link>
             )}
           </div>
           <div className="summary-card">
-            <h3>Critical Roles</h3>
+            <h3># Projects with Gaps</h3>
+            <div className="metric">{gapsReport.summary?.total_gaps || 0}</div>
+            <Link to={`/projects?from=demand-report&action=view-high-demand&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+              <ExternalLink size={14} /> View Projects
+            </Link>
+          </div>
+          <div className="summary-card">
+            <h3># Roles with Gaps</h3>
             <div className="metric">{gapsReport.criticalRolesCount || 0}</div>
             {gapsReport.criticalRolesCount > 0 && (
-              <Link to="/roles" className="card-action-link">
+              <Link to={`/roles?from=gaps-report&action=address-gaps&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
                 <Users size={14} /> View Roles
               </Link>
             )}
           </div>
           <div className="summary-card">
-            <h3>Gap Percentage</h3>
-            <div className="metric">{gapsReport.gapPercentage || 0}%</div>
+            <h3># Unutilized Hours</h3>
+            <div className="metric">N/A</div>
           </div>
         </div>
 
-        <div className="gaps-analysis">
-          <h3>Capacity Gaps by Role</h3>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Role</th>
-                <th>Demand</th>
-                <th>Capacity</th>
-                <th>Gap</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(gapsReport.gapsByRole || []).map((gap: any) => (
-                <tr key={gap.roleId} className={gap.gap < 0 ? 'highlight-danger' : ''}>
-                  <td>{gap.roleName}</td>
-                  <td>{gap.demand} hrs</td>
-                  <td>{gap.capacity} hrs</td>
-                  <td className={gap.gap < 0 ? 'text-danger' : 'text-success'}>
-                    {gap.gap < 0 ? `${gap.gap}` : `+${gap.gap}`} hrs
-                  </td>
-                  <td>
-                    {gap.gap < 0 ? (
-                      <div className="action-cell">
-                        <span className="badge badge-danger">
-                          <AlertTriangle size={14} /> Gap ({Math.abs(gap.gap)} hrs short)
-                        </span>
-                        <Link 
-                          to={`/people?role=${encodeURIComponent(gap.roleName)}`}
-                          className="btn btn-sm btn-outline"
-                          title="View people with this role"
-                        >
-                          <Users size={14} /> View People
-                        </Link>
-                        <Link 
-                          to="/people"
-                          className="btn btn-sm btn-primary"
-                          title="Add new person"
-                        >
-                          <UserPlus size={14} /> Add Person
-                        </Link>
-                      </div>
-                    ) : (
-                      <span className="badge badge-success">Sufficient</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {gapsReport.recommendations && gapsReport.recommendations.length > 0 && (
-          <div className="recommendations">
-            <h3>Recommendations</h3>
-            <ul>
-              {gapsReport.recommendations.map((rec: any, index: number) => (
-                <li key={index}>{rec}</li>
-              ))}
-            </ul>
+        <div className="charts-grid">
+          <div className="chart-container">
+            <h3>Gaps by Project</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={gapsReport.gapsByProject || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="projectName" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="gap" fill={CHART_COLORS[3]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        )}
+
+          <div className="chart-container">
+            <h3>Gaps by Role</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={gapsReport.gapsByRole || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="roleName" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="gap" fill={CHART_COLORS[0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="chart-container">
+            <h3>Gap Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={gapsReport.timeline || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="gap" stroke={CHART_COLORS[3]} strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="chart-container">
+            <h3>Actionable Projects</h3>
+            <div className="actionable-list">
+              <div className="list-section">
+                <h4>Projects with Critical Gaps</h4>
+                {(gapsReport.gapsByProject || [])
+                  .filter((project: any) => project.gap > 0)
+                  .map((project: any) => (
+                  <div key={project.id} className="actionable-item danger">
+                    <div className="item-info">
+                      <strong>{project.projectName}</strong>
+                      <span className="item-detail">{project.gap} hours short</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/projects/${project.id}?from=gaps-report&gap=${project.gap}&action=address-gap&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <Briefcase size={14} /> View Project
+                      </Link>
+                      <Link to={`/assignments?project=${encodeURIComponent(project.projectName)}&action=add-resources&from=gaps-report&gap=${project.gap}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                        <ClipboardList size={14} /> Add Resources
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(gapsReport.gapsByProject || []).filter((project: any) => project.gap > 0).length === 0 && (
+                  <p className="no-items">No projects with critical gaps</p>
+                )}
+              </div>
+
+              <div className="list-section">
+                <h4>Well-Staffed Projects</h4>
+                {(gapsReport.gapsByProject || [])
+                  .filter((project: any) => project.gap <= 0)
+                  .slice(0, 5)
+                  .map((project: any) => (
+                  <div key={project.id} className="actionable-item success">
+                    <div className="item-info">
+                      <strong>{project.projectName}</strong>
+                      <span className="item-detail">Adequately staffed</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/projects/${project.id}?from=gaps-report&status=well-staffed&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <Briefcase size={14} /> View Project
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(gapsReport.gapsByProject || []).filter((project: any) => project.gap <= 0).length === 0 && (
+                  <p className="no-items">No well-staffed projects</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="chart-container">
+            <h3>Actionable Roles</h3>
+            <div className="actionable-list">
+              <div className="list-section">
+                <h4>Roles with Critical Shortages</h4>
+                {(gapsReport.gapsByRole || [])
+                  .filter((role: any) => role.gap > 0)
+                  .map((role: any) => (
+                  <div key={role.roleId} className="actionable-item danger">
+                    <div className="item-info">
+                      <strong>{role.roleName}</strong>
+                      <span className="item-detail">{role.gap} hours short</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&gap=${role.gap}&action=address-shortage&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> View People
+                      </Link>
+                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&action=hire&from=gaps-report&gap=${role.gap}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                        <UserPlus size={14} /> Hire More
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(gapsReport.gapsByRole || []).filter((role: any) => role.gap > 0).length === 0 && (
+                  <p className="no-items">No roles with critical shortages</p>
+                )}
+              </div>
+
+              <div className="list-section">
+                <h4>Roles with Adequate Capacity</h4>
+                {(gapsReport.gapsByRole || [])
+                  .filter((role: any) => role.gap <= 0)
+                  .slice(0, 5)
+                  .map((role: any) => (
+                  <div key={role.roleId} className="actionable-item success">
+                    <div className="item-info">
+                      <strong>{role.roleName}</strong>
+                      <span className="item-detail">Sufficient capacity</span>
+                    </div>
+                    <div className="item-actions">
+                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&status=adequate-capacity&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> View People
+                      </Link>
+                      <Link to={`/assignments?role=${encodeURIComponent(role.roleName)}&action=assign&from=gaps-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                        <Plus size={14} /> Assign More Work
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+                {(gapsReport.gapsByRole || []).filter((role: any) => role.gap <= 0).length === 0 && (
+                  <p className="no-items">No roles with adequate capacity</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -766,6 +1182,13 @@ export default function Reports() {
 
       <div className="report-tabs">
         <button 
+          className={`tab ${activeReport === 'demand' ? 'active' : ''}`}
+          onClick={() => setActiveReport('demand')}
+        >
+          <PieChart size={20} />
+          Demand Report
+        </button>
+        <button 
           className={`tab ${activeReport === 'capacity' ? 'active' : ''}`}
           onClick={() => setActiveReport('capacity')}
         >
@@ -778,13 +1201,6 @@ export default function Reports() {
         >
           <TrendingUp size={20} />
           Utilization Report
-        </button>
-        <button 
-          className={`tab ${activeReport === 'demand' ? 'active' : ''}`}
-          onClick={() => setActiveReport('demand')}
-        >
-          <PieChart size={20} />
-          Demand Report
         </button>
         <button 
           className={`tab ${activeReport === 'gaps' ? 'active' : ''}`}

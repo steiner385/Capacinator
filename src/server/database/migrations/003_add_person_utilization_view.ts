@@ -55,17 +55,16 @@ export async function up(knex: Knex): Promise<void> {
       rt.role_id,
       r.name as role_name,
       rt.allocation_percentage,
-      rt.people_count,
-      rt.allocation_percentage * rt.people_count as total_demand_percentage,
+      1 as people_count,
+      rt.allocation_percentage as total_demand_percentage,
       CASE 
         WHEN pt.end_date < date('now') THEN 'PAST'
         WHEN pt.start_date > date('now') THEN 'FUTURE'
         ELSE 'CURRENT'
       END as time_status
     FROM projects p
-    JOIN project_phases_timeline pt ON p.id = pt.project_id
-    JOIN project_sub_types pst ON p.project_sub_type_id = pst.id
-    JOIN resource_templates rt ON pst.id = rt.project_sub_type_id
+    JOIN project_phases pt ON p.id = pt.project_id
+    JOIN resource_templates rt ON p.project_type_id = rt.project_type_id AND pt.phase_id = rt.phase_id
     JOIN roles r ON rt.role_id = r.id
     WHERE p.include_in_demand = true
     ORDER BY pt.start_date, p.priority DESC

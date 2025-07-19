@@ -191,13 +191,31 @@ export class ReportingController extends BaseController {
 
       const projectDemands = await demandsQuery.orderBy('project_demands_view.start_date');
 
+      // Calculate status for each gap based on demand vs capacity
+      const capacityGapsWithStatus = capacityGaps.map(role => {
+        const demandVsCapacity = role.total_demand_fte - role.total_capacity_fte;
+        let status;
+        if (demandVsCapacity > 0.5) {
+          status = 'GAP';
+        } else if (demandVsCapacity > 0) {
+          status = 'TIGHT';
+        } else {
+          status = 'OK';
+        }
+        return { ...role, status };
+      });
+
+      // Calculate timeline data for capacity over time
+      const timeline = await this.calculateCapacityTimeline(startDate as string, endDate as string);
+
       return {
-        capacityGaps,
+        capacityGaps: capacityGapsWithStatus,
         personUtilization,
         projectDemands,
+        timeline,
         summary: {
-          totalGaps: capacityGaps.filter(gap => gap.status === 'GAP').length,
-          totalTight: capacityGaps.filter(gap => gap.status === 'TIGHT').length,
+          totalGaps: capacityGapsWithStatus.filter(gap => gap.status === 'GAP').length,
+          totalTight: capacityGapsWithStatus.filter(gap => gap.status === 'TIGHT').length,
           overAllocated: personUtilization.filter(person => person.allocation_status === 'OVER_ALLOCATED').length,
           underAllocated: personUtilization.filter(person => person.allocation_status === 'UNDER_ALLOCATED').length
         }
@@ -318,5 +336,56 @@ export class ReportingController extends BaseController {
     if (result) {
       res.json(result);
     }
+  }
+
+  private async calculateCapacityTimeline(startDate?: string, endDate?: string): Promise<any[]> {
+    // Get all people with their default hours and availability
+    const people = await this.db('people')
+      .select(
+        'id',
+        'name',
+        'default_hours_per_day',
+        'default_availability_percentage'
+      )
+      .where('is_active', true);
+
+    // Calculate monthly capacity over the time period
+    const monthlyMap = new Map<string, number>();
+    
+    // Default date range if not provided
+    const filterStart = startDate ? new Date(startDate) : new Date('2023-01-01');
+    const filterEnd = endDate ? new Date(endDate) : new Date('2024-12-31');
+
+    // Generate months between start and end dates
+    let currentDate = new Date(filterStart);
+    currentDate.setDate(1); // First day of month
+    
+    while (currentDate <= filterEnd) {
+      const monthKey = currentDate.toISOString().slice(0, 7); // YYYY-MM format
+      
+      // Calculate total capacity for this month
+      let monthlyCapacity = 0;
+      
+      people.forEach(person => {
+        // Assume ~22 working days per month
+        const workingDaysPerMonth = 22;
+        const dailyHours = person.default_hours_per_day || 8;
+        const availabilityPercent = (person.default_availability_percentage || 100) / 100;
+        
+        const monthlyPersonCapacity = workingDaysPerMonth * dailyHours * availabilityPercent;
+        monthlyCapacity += monthlyPersonCapacity;
+      });
+
+      monthlyMap.set(monthKey, monthlyCapacity);
+      
+      // Move to next month
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    // Convert to timeline format expected by frontend
+    return Array.from(monthlyMap.entries()).map(([month, capacity]) => ({
+      period: month,
+      capacity: Math.round(capacity)
+    }));
   }
 }

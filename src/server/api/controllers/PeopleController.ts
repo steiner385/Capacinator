@@ -178,7 +178,12 @@ export class PeopleController extends BaseController {
     const filteredData = Object.keys(updateData)
       .filter(key => validFields.includes(key))
       .reduce((obj, key) => {
-        obj[key] = updateData[key];
+        let value = updateData[key];
+        // Convert empty strings to null for foreign key fields to avoid constraint violations
+        if ((key === 'supervisor_id' || key === 'primary_person_role_id' || key === 'location_id') && value === '') {
+          value = null;
+        }
+        obj[key] = value;
         return obj;
       }, {} as any);
 

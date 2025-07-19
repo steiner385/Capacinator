@@ -676,10 +676,17 @@ export class ExportController extends BaseController {
   }
   
   private async getGapsData(filters: any) {
-    // Use the same logic as DemandController.getDemandGaps
-    const gaps = await this.db('capacity_gaps_view')
-      .where('status', 'GAP')
-      .select('*');
+    // Use the same logic as DemandController.getDemandGaps - calculate gaps based on demand vs capacity
+    const gapsData = await this.db('capacity_gaps_view').select('*');
+    
+    // Filter for actual gaps where demand exceeds capacity
+    const gaps = gapsData.map(role => {
+      const gapFte = role.total_demand_fte - role.total_capacity_fte;
+      return {
+        ...role,
+        gap_fte: gapFte
+      };
+    }).filter(role => role.gap_fte > 0); // Only include roles with actual gaps
     
     // Get detailed demand vs capacity for each gap
     const detailedGaps = await Promise.all(gaps.map(async (gap) => {

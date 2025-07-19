@@ -9,6 +9,7 @@ import {
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { PersonAllocationChart } from '../components/PersonAllocationChart';
+import PersonRoleModal from '../components/modals/PersonRoleModal';
 import './PersonDetails.css';
 import '../components/Charts.css';
 
@@ -91,6 +92,10 @@ export default function PersonDetails() {
     availability: true,
     history: false
   });
+  
+  // Role management modal state
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<any>(null);
 
   // TODO: Replace with proper auth context when authentication is implemented
   // For now, check localStorage or default to allowing edits
@@ -188,6 +193,28 @@ export default function PersonDetails() {
       ...prev,
       [section]: !prev[section]
     }));
+  };
+
+  // Role management handlers
+  const handleAddRole = () => {
+    setEditingRole(null);
+    setRoleModalOpen(true);
+  };
+
+  const handleEditRole = (role: any) => {
+    setEditingRole(role);
+    setRoleModalOpen(true);
+  };
+
+  const handleRoleModalSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['person', id] });
+    setRoleModalOpen(false);
+    setEditingRole(null);
+  };
+
+  const handleRoleModalClose = () => {
+    setRoleModalOpen(false);
+    setEditingRole(null);
   };
 
   if (isLoading) return <div className="loading">Loading person details...</div>;
@@ -444,22 +471,36 @@ export default function PersonDetails() {
                       <h4>{role.role_name}</h4>
                       <p>{role.role_description}</p>
                       <div className="role-meta">
-                        <span className="badge badge-primary">{role.proficiency_level}</span>
+                        <span className="badge badge-primary">Level {role.proficiency_level}</span>
+                        {role.is_primary ? <span className="badge badge-success">Primary</span> : null}
                         {role.start_date && <span className="text-muted">Since {formatDate(role.start_date)}</span>}
                       </div>
                     </div>
-                    {isEditing && canEdit && (
-                      <button
-                        className="btn btn-icon btn-danger"
-                        onClick={() => removeRoleMutation.mutate(role.role_id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    {canEdit && (
+                      <div className="role-actions">
+                        <button
+                          className="btn btn-icon btn-sm"
+                          onClick={() => handleEditRole(role)}
+                          title="Edit Role"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          className="btn btn-icon btn-sm btn-danger"
+                          onClick={() => removeRoleMutation.mutate(role.role_id)}
+                          title="Remove Role"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
-                {isEditing && (
-                  <button className="btn btn-outline">
+                {canEdit && (
+                  <button 
+                    className="btn btn-outline"
+                    onClick={handleAddRole}
+                  >
                     <Plus size={16} />
                     Add Role
                   </button>
@@ -628,6 +669,15 @@ export default function PersonDetails() {
           )}
         </div>
       </div>
+      
+      {/* Role Management Modal */}
+      <PersonRoleModal
+        isOpen={roleModalOpen}
+        onClose={handleRoleModalClose}
+        onSuccess={handleRoleModalSuccess}
+        personId={id!}
+        editingRole={editingRole}
+      />
     </div>
   );
 }

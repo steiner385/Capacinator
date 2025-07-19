@@ -16,6 +16,15 @@ interface DemandCalculation {
 }
 
 export class DemandController extends BaseController {
+  
+  private calculateWorkDays(startDate: string, endDate: string): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Rough estimate: 5 work days per 7 calendar days
+    return Math.round(diffDays * (5/7));
+  }
   async getProjectDemands(req: Request, res: Response) {
     const { project_id } = req.params;
 
@@ -103,38 +112,57 @@ export class DemandController extends BaseController {
 
   async getDemandSummary(req: Request, res: Response) {
     const { start_date, end_date, location_id, project_type_id } = req.query;
+    console.log('🔍 getDemandSummary called with filters:', { start_date, end_date, location_id, project_type_id });
 
     const result = await this.executeQuery(async () => {
-      // Build base query
-      let query = this.db('project_demands_view')
-        .join('projects', 'project_demands_view.project_id', 'projects.id')
-        .join('roles', 'project_demands_view.role_id', 'roles.id')
-        .where('projects.include_in_demand', true);
+      // Use direct query approach to calculate demand from project assignments
+      let baseQuery = this.db('project_assignments as pa')
+        .join('projects as p', 'pa.project_id', 'p.id')
+        .join('roles as r', 'pa.role_id', 'r.id')
+        .where('p.include_in_demand', true);
 
       // Apply filters
       if (start_date) {
-        query = query.where('project_demands_view.end_date', '>=', start_date);
+        baseQuery = baseQuery.where('pa.end_date', '>=', start_date);
       }
       if (end_date) {
-        query = query.where('project_demands_view.start_date', '<=', end_date);
+        baseQuery = baseQuery.where('pa.start_date', '<=', end_date);
       }
       if (location_id) {
-        query = query.where('projects.location_id', location_id);
+        baseQuery = baseQuery.where('p.location_id', location_id);
       }
       if (project_type_id) {
-        query = query.where('projects.project_type_id', project_type_id);
+        baseQuery = baseQuery.where('p.project_type_id', project_type_id);
       }
 
-      // Get demands
-      const demands = await query.select(
-        'project_demands_view.*',
-        'projects.name as project_name',
-        'projects.priority as project_priority',
-        'roles.name as role_name'
-      );
+      // Get demands from actual assignments including project type
+      const demands = await baseQuery
+        .leftJoin('project_types as pt', 'p.project_type_id', 'pt.id')
+        .select(
+          'pa.id',
+          'pa.project_id',
+          'pa.role_id', 
+          'pa.allocation_percentage',
+          'pa.start_date',
+          'pa.end_date',
+          'p.name as project_name',
+          'p.priority as project_priority',
+          'p.project_type_id',
+          'pt.name as project_type_name',
+          'r.name as role_name'
+        );
+
+      console.log('🔍 Demand query results:', demands.length, 'assignments found');
+      if (demands.length > 0) {
+        console.log('📋 Sample demand:', demands[0]);
+      }
 
       // Calculate summary by role
       const roleMap = new Map();
+      
+      // Calculate summary by project type 
+      const projectTypeMap = new Map();
+      
       demands.forEach(demand => {
         if (!roleMap.has(demand.role_id)) {
           roleMap.set(demand.role_id, {
@@ -147,11 +175,34 @@ export class DemandController extends BaseController {
           });
         }
 
+        // Calculate hours from allocation percentage (assume 8 hours/day, 20 days/month)
+        const durationDays = this.calculateWorkDays(demand.start_date, demand.end_date);
+        const demandHours = (demand.allocation_percentage / 100) * durationDays * 8;
+        
         const role = roleMap.get(demand.role_id);
-        role.total_hours += demand.demand_hours;
-        role.total_fte += this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date);
+        role.total_hours += demandHours;
+        role.total_fte += demand.allocation_percentage / 100; // FTE is allocation percentage
         role.project_count.add(demand.project_id);
-        role.demands.push(demand);
+        role.demands.push({ ...demand, demand_hours: demandHours });
+
+        // Project type aggregation
+        const projectTypeKey = demand.project_type_id || 'unknown';
+        if (!projectTypeMap.has(projectTypeKey)) {
+          projectTypeMap.set(projectTypeKey, {
+            project_type_id: demand.project_type_id,
+            project_type_name: demand.project_type_name || 'Unknown',
+            total_hours: 0,
+            total_fte: 0,
+            project_count: new Set(),
+            demands: []
+          });
+        }
+
+        const projectType = projectTypeMap.get(projectTypeKey);
+        projectType.total_hours += demandHours;
+        projectType.total_fte += demand.allocation_percentage / 100;
+        projectType.project_count.add(demand.project_id);
+        projectType.demands.push({ ...demand, demand_hours: demandHours });
       });
 
       const rolesSummary = Array.from(roleMap.values()).map(role => ({
@@ -160,18 +211,26 @@ export class DemandController extends BaseController {
         demands: undefined // Remove detailed demands from summary
       })).sort((a, b) => b.total_fte - a.total_fte);
 
-      // Calculate timeline summary (monthly)
-      const timelineSummary = this.calculateMonthlyDemand(demands);
+      const projectTypesSummary = Array.from(projectTypeMap.values()).map(projectType => ({
+        ...projectType,
+        project_count: projectType.project_count.size,
+        demands: undefined // Remove detailed demands from summary
+      })).sort((a, b) => b.total_fte - a.total_fte);
+
+      // Calculate timeline summary (monthly) using processed demands with hours
+      // We need to use the demand hours that were calculated earlier
+      const timelineSummary = this.calculateTimelineFromDemands(demands, start_date, end_date);
 
       return {
         filters: { start_date, end_date, location_id, project_type_id },
         summary: {
           total_demands: demands.length,
           total_projects: new Set(demands.map(d => d.project_id)).size,
-          total_hours: demands.reduce((sum, d) => sum + d.demand_hours, 0),
+          total_hours: rolesSummary.reduce((sum, r) => sum + r.total_hours, 0),
           total_fte: rolesSummary.reduce((sum, r) => sum + r.total_fte, 0)
         },
         by_role: rolesSummary,
+        by_project_type: projectTypesSummary,
         timeline: timelineSummary
       };
     }, res, 'Failed to fetch demand summary');
@@ -333,49 +392,27 @@ export class DemandController extends BaseController {
 
   async getDemandGaps(req: Request, res: Response) {
     const result = await this.executeQuery(async () => {
-      // Get capacity gaps from view
-      const gaps = await this.db('capacity_gaps_view')
-        .where('status', 'GAP')
-        .select('*');
-
-      // Get detailed demand vs capacity for each gap
-      const detailedGaps = await Promise.all(gaps.map(async (gap) => {
-        // Get current demand
-        const currentDemand = await this.db('project_demands_view')
-          .join('projects', 'project_demands_view.project_id', 'projects.id')
-          .where('project_demands_view.role_id', gap.role_id)
-          .where('project_demands_view.start_date', '<=', new Date())
-          .where('project_demands_view.end_date', '>=', new Date())
-          .where('projects.include_in_demand', true)
-          .select(
-            'projects.id as project_id',
-            'projects.name as project_name',
-            'projects.priority',
-            'project_demands_view.demand_hours'
-          );
-
+      // Get capacity gaps from view - calculate gaps based on demand vs capacity
+      const gapsData = await this.db('capacity_gaps_view').select('*');
+      
+      // Filter for actual gaps where demand exceeds capacity and map to the expected format
+      const gaps = gapsData.map(role => {
+        const gapFte = role.total_demand_fte - role.total_capacity_fte;
         return {
-          ...gap,
-          current_demands: currentDemand,
-          gap_details: {
-            capacity_fte: gap.total_capacity_fte,
-            demand_fte: gap.total_demand_fte,
-            shortage_fte: gap.gap_fte,
-            shortage_percentage: Math.abs((gap.gap_fte / gap.total_capacity_fte) * 100)
-          }
+          role_id: role.role_id,
+          role_name: role.role_name,
+          total_demand_fte: role.total_demand_fte || 0,
+          total_capacity_fte: role.total_capacity_fte || 0,
+          gap_fte: gapFte
         };
-      }));
-
-      // Sort by shortage
-      detailedGaps.sort((a, b) => a.gap_fte - b.gap_fte);
+      }).filter(role => role.gap_fte > 0); // Only include roles with actual gaps
 
       return {
-        gaps: detailedGaps,
+        gaps: gaps,
         summary: {
-          total_gaps: detailedGaps.length,
-          total_shortage_fte: detailedGaps.reduce((sum, g) => sum + Math.abs(g.gap_fte), 0),
-          critical_gaps: detailedGaps.filter(g => g.gap_details.shortage_percentage > 20).length,
-          roles_affected: detailedGaps.map(g => g.role_name)
+          total_gaps: gaps.length,
+          total_shortage_fte: gaps.reduce((sum, g) => sum + Math.abs(g.gap_fte), 0),
+          critical_gaps: gaps.filter(g => Math.abs(g.gap_fte / (g.total_capacity_fte || 1)) > 0.2).length
         }
       };
     }, res, 'Failed to fetch demand gaps');
@@ -468,14 +505,83 @@ export class DemandController extends BaseController {
     return hours / totalAvailableHours;
   }
 
-  private calculateMonthlyDemand(demands: any[]): any[] {
+  private calculateTimelineFromDemands(demands: any[], filterStartDate?: string, filterEndDate?: string): any[] {
     const monthlyMap = new Map();
+
+    // Define the filter range bounds
+    const filterStart = filterStartDate ? new Date(filterStartDate) : null;
+    const filterEnd = filterEndDate ? new Date(filterEndDate) : null;
 
     demands.forEach(demand => {
       const startDate = new Date(demand.start_date);
       const endDate = new Date(demand.end_date);
       
+      // Calculate hours from allocation percentage 
+      const durationDays = this.calculateWorkDays(demand.start_date, demand.end_date);
+      const demandHours = (demand.allocation_percentage / 100) * durationDays * 8;
+      
+      // Calculate the duration in months
+      const durationMonths = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+      const hoursPerMonth = demandHours / durationMonths;
+      
       let currentDate = new Date(startDate);
+      currentDate.setDate(1); // Set to first day of month
+      
+      while (currentDate <= endDate) {
+        const monthKey = currentDate.toISOString().slice(0, 7);
+        const monthDate = new Date(monthKey + '-01');
+        
+        // Only include months that fall within the filter range
+        if (filterStart) {
+          const filterStartMonth = new Date(filterStart.getFullYear(), filterStart.getMonth(), 1);
+          if (monthDate < filterStartMonth) {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            continue;
+          }
+        }
+        if (filterEnd) {
+          const filterEndMonth = new Date(filterEnd.getFullYear(), filterEnd.getMonth(), 1);
+          if (monthDate > filterEndMonth) {
+            break;
+          }
+        }
+        
+        if (!monthlyMap.has(monthKey)) {
+          monthlyMap.set(monthKey, {
+            month: monthKey,
+            total_hours: 0,
+            total_fte: 0,
+            role_breakdown: {}
+          });
+        }
+
+        const monthData = monthlyMap.get(monthKey);
+        monthData.total_hours += hoursPerMonth;
+        monthData.total_fte += hoursPerMonth / 160; // Assume 160 hours per month (8 hours * 20 days)
+
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+    });
+
+    return Array.from(monthlyMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  private calculateMonthlyDemand(demands: any[]): any[] {
+    console.log('🗓️ calculateMonthlyDemand called with', demands.length, 'demands');
+    const monthlyMap = new Map();
+
+    demands.forEach(demand => {
+      const startDate = new Date(demand.start_date);
+      const endDate = new Date(demand.end_date);
+      const demandHours = demand.demand_hours || 0;
+      
+      // Calculate the duration in months
+      const durationMonths = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+      const hoursPerMonth = demandHours / durationMonths;
+      
+      let currentDate = new Date(startDate);
+      currentDate.setDate(1); // Set to first day of month
+      
       while (currentDate <= endDate) {
         const monthKey = currentDate.toISOString().slice(0, 7);
         
@@ -489,9 +595,8 @@ export class DemandController extends BaseController {
         }
 
         const monthData = monthlyMap.get(monthKey);
-        // Simplified - in production would calculate exact portion
-        monthData.total_hours += demand.demand_hours / 3; // Assume 3 months average
-        monthData.total_fte += this.calculateFte(demand.demand_hours / 3, demand.start_date, demand.end_date);
+        monthData.total_hours += hoursPerMonth;
+        monthData.total_fte += hoursPerMonth / 160; // Assume 160 hours per month (8 hours * 20 days)
 
         currentDate.setMonth(currentDate.getMonth() + 1);
       }

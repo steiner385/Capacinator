@@ -52,6 +52,7 @@ export const api = {
     update: (id: string, data: any) => apiClient.put(`/people/${id}`, data),
     delete: (id: string) => apiClient.delete(`/people/${id}`),
     addRole: (id: string, data: any) => apiClient.post(`/people/${id}/roles`, data),
+    updateRole: (id: string, roleId: string, data: any) => apiClient.put(`/people/${id}/roles/${roleId}`, data),
     removeRole: (id: string, roleId: string) => apiClient.delete(`/people/${id}/roles/${roleId}`),
     getUtilization: () => apiClient.get('/people/dashboard/utilization'),
     getAvailability: () => apiClient.get('/people/dashboard/availability'),
