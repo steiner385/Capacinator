@@ -411,7 +411,7 @@ export default function Reports() {
           <div className="summary-card">
             <h3># People with Capacity</h3>
             <div className="metric">{capacityReport.personUtilization?.length || 0}</div>
-            <Link to={`/people?from=capacity-report&action=view-capacity&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+            <Link to={`/people?from=capacity-report&action=view-capacity&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
               <Users size={14} /> View People
             </Link>
           </div>
@@ -502,21 +502,21 @@ export default function Reports() {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <Link to={`/people/${person.person_id}?from=capacity-report&status=${person.allocation_status}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                        <Link to={`/people/${person.person_id}?from=capacity-report&status=${person.allocation_status}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                           <User size={14} /> Profile
                         </Link>
                         {person.allocation_status === 'AVAILABLE' && (
-                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=assign&from=capacity-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=assign&from=capacity-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
                             <Plus size={14} /> Assign
                           </Link>
                         )}
                         {person.allocation_status === 'FULLY_ALLOCATED' && (
-                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=view&from=capacity-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-warning">
+                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=view&from=capacity-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-warning">
                             <ClipboardList size={14} /> View Load
                           </Link>
                         )}
                         {person.allocation_status === 'OVER_ALLOCATED' && (
-                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=reduce&from=capacity-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                          <Link to={`/assignments?person=${encodeURIComponent(person.person_name)}&action=reduce&from=capacity-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
                             <ClipboardList size={14} /> Reduce Load
                           </Link>
                         )}
@@ -570,16 +570,16 @@ export default function Reports() {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          <Link to={`/people?role=${encodeURIComponent(role.role)}&from=capacity-report&capacity=${role.capacity}&available=${available}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                          <Link to={`/people?role=${encodeURIComponent(role.role)}&from=capacity-report&capacity=${role.capacity}&available=${available}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                             <Users size={14} /> View People
                           </Link>
                           {available > 50 && (
-                            <Link to={`/assignments?role=${encodeURIComponent(role.role)}&action=assign&from=capacity-report&available=${available}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                            <Link to={`/assignments?role=${encodeURIComponent(role.role)}&action=assign&from=capacity-report&available=${available}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
                               <Briefcase size={14} /> Assign Work
                             </Link>
                           )}
                           {available <= 50 && (
-                            <Link to={`/people?role=${encodeURIComponent(role.role)}&action=hire&from=capacity-report&shortage=${Math.abs(available)}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-warning">
+                            <Link to={`/people?role=${encodeURIComponent(role.role)}&action=hire&from=capacity-report&shortage=${Math.abs(available)}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-warning">
                               <UserPlus size={14} /> Hire More
                             </Link>
                           )}
@@ -610,7 +610,7 @@ export default function Reports() {
             <h3># People Overutilized</h3>
             <div className="metric text-danger">{utilizationReport.overAllocatedCount || 0}</div>
             {utilizationReport.overAllocatedCount > 0 && (
-              <Link to={`/assignments?action=manage-overutilized&from=utilization-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+              <Link to={`/assignments?action=manage-overutilized&from=utilization-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
                 <ClipboardList size={14} /> Manage Assignments
               </Link>
             )}
@@ -619,7 +619,7 @@ export default function Reports() {
             <h3># People Underutilized</h3>
             <div className="metric text-warning">{utilizationReport.underUtilizedCount || 0}</div>
             {utilizationReport.underUtilizedCount > 0 && (
-              <Link to={`/assignments?action=find-projects&from=utilization-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+              <Link to={`/assignments?action=find-projects&from=utilization-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
                 <ClipboardList size={14} /> Find Projects
               </Link>
             )}
@@ -684,10 +684,10 @@ export default function Reports() {
                       <span className="item-detail">{person.utilization}% utilized</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=reduce-load&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=reduce-load&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <User size={14} /> View Profile
                       </Link>
-                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=reduce&from=utilization-report&utilization=${person.utilization}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=reduce&from=utilization-report&utilization=${person.utilization}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
                         <ClipboardList size={14} /> Reduce Load
                       </Link>
                     </div>
@@ -709,10 +709,10 @@ export default function Reports() {
                       <span className="item-detail">{person.utilization}% utilized</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=add-work&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=add-work&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <User size={14} /> View Profile
                       </Link>
-                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=assign&from=utilization-report&utilization=${person.utilization}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=assign&from=utilization-report&utilization=${person.utilization}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
                         <Plus size={14} /> Add Projects
                       </Link>
                     </div>
@@ -797,7 +797,7 @@ export default function Reports() {
           <div className="summary-card">
             <h3># Projects with Demand</h3>
             <div className="metric">{demandReport.summary?.total_projects || 0}</div>
-            <Link to={`/projects?from=demand-report&action=view-high-demand&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+            <Link to={`/projects?from=demand-report&action=view-high-demand&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
               <ExternalLink size={14} /> View Projects
             </Link>
           </div>
@@ -869,7 +869,7 @@ export default function Reports() {
                     <td>{project.name}</td>
                     <td>{project.demand} hrs</td>
                     <td>
-                      <Link to={`/projects/${project.id}?from=demand-report&demand=${project.demand}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/projects/${project.id}?from=demand-report&demand=${project.demand}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <ExternalLink size={14} /> View Details
                       </Link>
                     </td>
@@ -895,7 +895,7 @@ export default function Reports() {
                     <td>{role.role_name}</td>
                     <td>{role.total_hours} hrs</td>
                     <td>
-                      <Link to={`/people?role=${encodeURIComponent(role.role_name)}&from=demand-report&demand=${role.total_hours}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/people?role=${encodeURIComponent(role.role_name)}&from=demand-report&demand=${role.total_hours}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <Users size={14} /> Find People
                       </Link>
                     </td>
@@ -919,7 +919,7 @@ export default function Reports() {
             <h3>Total Gap in Hours</h3>
             <div className="metric text-danger">{gapsReport.totalGap || 0} hours</div>
             {gapsReport.totalGap > 0 && (
-              <Link to={`/people?action=hire&from=gaps-report&gap=${gapsReport.totalGap}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+              <Link to={`/people?action=hire&from=gaps-report&gap=${gapsReport.totalGap}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
                 <UserPlus size={14} /> Add People
               </Link>
             )}
@@ -927,7 +927,7 @@ export default function Reports() {
           <div className="summary-card">
             <h3># Projects with Gaps</h3>
             <div className="metric">{gapsReport.summary?.total_gaps || 0}</div>
-            <Link to={`/projects?from=demand-report&action=view-high-demand&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+            <Link to={`/projects?from=demand-report&action=view-high-demand&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
               <ExternalLink size={14} /> View Projects
             </Link>
           </div>
@@ -935,7 +935,7 @@ export default function Reports() {
             <h3># Roles with Gaps</h3>
             <div className="metric">{gapsReport.criticalRolesCount || 0}</div>
             {gapsReport.criticalRolesCount > 0 && (
-              <Link to={`/roles?from=gaps-report&action=address-gaps&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="card-action-link">
+              <Link to={`/roles?from=gaps-report&action=address-gaps&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
                 <Users size={14} /> View Roles
               </Link>
             )}
@@ -1000,10 +1000,10 @@ export default function Reports() {
                       <span className="item-detail">{project.gap} hours short</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/projects/${project.id}?from=gaps-report&gap=${project.gap}&action=address-gap&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/projects/${project.id}?from=gaps-report&gap=${project.gap}&action=address-gap&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <Briefcase size={14} /> View Project
                       </Link>
-                      <Link to={`/assignments?project=${encodeURIComponent(project.projectName)}&action=add-resources&from=gaps-report&gap=${project.gap}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                      <Link to={`/assignments?project=${encodeURIComponent(project.projectName)}&action=add-resources&from=gaps-report&gap=${project.gap}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
                         <ClipboardList size={14} /> Add Resources
                       </Link>
                     </div>
@@ -1026,7 +1026,7 @@ export default function Reports() {
                       <span className="item-detail">Adequately staffed</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/projects/${project.id}?from=gaps-report&status=well-staffed&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/projects/${project.id}?from=gaps-report&status=well-staffed&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <Briefcase size={14} /> View Project
                       </Link>
                     </div>
@@ -1053,10 +1053,10 @@ export default function Reports() {
                       <span className="item-detail">{role.gap} hours short</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&gap=${role.gap}&action=address-shortage&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&gap=${role.gap}&action=address-shortage&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <Users size={14} /> View People
                       </Link>
-                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&action=hire&from=gaps-report&gap=${role.gap}&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-danger">
+                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&action=hire&from=gaps-report&gap=${role.gap}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
                         <UserPlus size={14} /> Hire More
                       </Link>
                     </div>
@@ -1079,10 +1079,10 @@ export default function Reports() {
                       <span className="item-detail">Sufficient capacity</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&status=adequate-capacity&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-outline">
+                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&status=adequate-capacity&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
                         <Users size={14} /> View People
                       </Link>
-                      <Link to={`/assignments?role=${encodeURIComponent(role.roleName)}&action=assign&from=gaps-report&startDate=${startDate || ''}&endDate=${endDate || ''}`} className="btn btn-sm btn-primary">
+                      <Link to={`/assignments?role=${encodeURIComponent(role.roleName)}&action=assign&from=gaps-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
                         <Plus size={14} /> Assign More Work
                       </Link>
                     </div>
