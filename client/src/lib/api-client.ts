@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Force use of proxy for E2E testing
+const API_BASE_URL = '/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -118,6 +119,9 @@ export const api = {
   reporting: {
     getDashboard: () => apiClient.get('/reporting/dashboard'),
     getCapacity: (params?: any) => apiClient.get('/reporting/capacity', { params }),
+    getDemand: (params?: any) => apiClient.get('/reporting/demand', { params }),
+    getUtilization: (params?: any) => apiClient.get('/reporting/utilization', { params }),
+    getGaps: (params?: any) => apiClient.get('/reporting/gaps', { params }),
     getProjects: (params?: any) => apiClient.get('/reporting/projects', { params }),
     getTimeline: (params?: any) => apiClient.get('/reporting/timeline', { params }),
   },

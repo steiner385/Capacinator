@@ -49,6 +49,12 @@ if [ $counter -eq $timeout ]; then
     exit 1
 fi
 
+# Create local environment override for Vite E2E mode
+echo "🔧 Creating Vite environment override for E2E..."
+cat > .env.local << EOF
+NODE_ENV=e2e
+EOF
+
 # Start frontend server in E2E mode
 echo "🌐 Starting E2E frontend server on port 3121..."
 NODE_ENV=e2e npx vite --port 3121 --host --config client-vite.config.ts > /tmp/capacinator-logs/e2e-frontend.log 2>&1 &

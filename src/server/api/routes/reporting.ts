@@ -8,6 +8,9 @@ const controller = new ReportingController();
 router.get('/dashboard', (req, res) => controller.getDashboard(req, res));
 router.get('/test', (req, res) => controller.getTest(req, res));
 router.get('/capacity', (req, res) => controller.getCapacityReport(req, res));
+router.get('/demand', (req, res) => controller.getDemandReport(req, res));
+router.get('/utilization', (req, res) => controller.getUtilizationReport(req, res));
+router.get('/gaps', (req, res) => controller.getGapsAnalysis(req, res));
 router.get('/projects', (req, res) => controller.getProjectReport(req, res));
 router.get('/timeline', (req, res) => controller.getTimelineReport(req, res));
 

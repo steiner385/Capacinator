@@ -31,6 +31,10 @@ echo "🔍 Force killing any remaining processes on E2E ports..."
 lsof -ti:3111 | xargs -r kill -9 2>/dev/null || true
 lsof -ti:3121 | xargs -r kill -9 2>/dev/null || true
 
+# Cleanup E2E environment files
+echo "🧹 Cleaning up E2E environment files..."
+rm -f .env.local
+
 # Cleanup E2E database if requested
 if [ "$1" == "--cleanup-db" ]; then
     echo "🗑️  Cleaning up E2E database..."

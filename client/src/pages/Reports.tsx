@@ -129,7 +129,7 @@ export default function Reports() {
   const { data: utilizationReport, isLoading: utilizationLoading, refetch: refetchUtilization } = useQuery({
     queryKey: ['report-utilization', filters],
     queryFn: async () => {
-      const response = await api.reporting.getCapacity(filters);
+      const response = await api.reporting.getUtilization(filters);
       const data = response.data;
       
       if (data && data.personUtilization) {
@@ -173,10 +173,10 @@ export default function Reports() {
   const { data: demandReport, isLoading: demandLoading, refetch: refetchDemand } = useQuery({
     queryKey: ['report-demand', filters],
     queryFn: async () => {
-      const response = await api.demands.getSummary({
-        start_date: filters.startDate,
-        end_date: filters.endDate,
-        project_type_id: filters.projectTypeId,
+      const response = await api.reporting.getDemand({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        projectTypeId: filters.projectTypeId,
         location_id: filters.locationId
       });
       const data = response.data;
@@ -217,7 +217,7 @@ export default function Reports() {
   const { data: gapsReport, isLoading: gapsLoading, refetch: refetchGaps } = useQuery({
     queryKey: ['report-gaps', filters],
     queryFn: async () => {
-      const response = await api.demands.getGaps();
+      const response = await api.reporting.getGaps(filters);
       const data = response.data;
       
       if (data && data.gaps) {

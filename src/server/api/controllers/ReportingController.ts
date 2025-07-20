@@ -338,6 +338,190 @@ export class ReportingController extends BaseController {
     }
   }
 
+  async getDemandReport(req: Request, res: Response) {
+    console.log('📊 Demand report endpoint called');
+    const { startDate, endDate } = req.query;
+
+    const result = await this.executeQuery(async () => {
+      console.log('📊 Getting demand data from project_demands_view...');
+      
+      // Get demand data from the corrected view
+      let demandQuery = this.db('project_demands_view')
+        .select('*');
+      
+      if (startDate) {
+        demandQuery = demandQuery.where('start_date', '>=', startDate);
+      }
+      if (endDate) {
+        demandQuery = demandQuery.where('end_date', '<=', endDate);
+      }
+      
+      const demandData = await demandQuery;
+      console.log(`📊 Found ${demandData.length} demand records`);
+      
+      // Aggregate by project
+      const projectDemands = await this.db('project_demands_view')
+        .select('project_id', 'project_name')
+        .sum('total_demand_percentage as total_demand')
+        .groupBy('project_id', 'project_name')
+        .orderBy('total_demand', 'desc');
+      
+      // Aggregate by role
+      const roleDemands = await this.db('project_demands_view')
+        .select('role_id', 'role_name')
+        .sum('total_demand_percentage as total_demand')
+        .groupBy('role_id', 'role_name')
+        .orderBy('total_demand', 'desc');
+      
+      // Get summary metrics
+      const totalDemand = await this.db('project_demands_view')
+        .sum('total_demand_percentage as total')
+        .first();
+      
+      const projectsWithDemand = await this.db('project_demands_view')
+        .countDistinct('project_id as count')
+        .first();
+      
+      const rolesWithDemand = await this.db('project_demands_view')
+        .countDistinct('role_id as count')
+        .first();
+      
+      return {
+        demandData,
+        projectDemands,
+        roleDemands,
+        summary: {
+          totalDemand: totalDemand?.total || 0,
+          projectsWithDemand: projectsWithDemand?.count || 0,
+          rolesWithDemand: rolesWithDemand?.count || 0
+        }
+      };
+    }, res, 'Failed to fetch demand report');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async getUtilizationReport(req: Request, res: Response) {
+    console.log('📊 Utilization report endpoint called');
+
+    const result = await this.executeQuery(async () => {
+      console.log('📊 Getting utilization data from person_utilization_view...');
+      
+      // Get all people utilization data
+      const utilizationData = await this.db('person_utilization_view')
+        .select('*')
+        .orderBy('total_allocation_percentage', 'desc');
+      
+      console.log(`📊 Found ${utilizationData.length} utilization records`);
+      
+      // Get people by utilization status
+      const overutilized = utilizationData.filter(p => p.allocation_status === 'OVER_ALLOCATED');
+      const underutilized = utilizationData.filter(p => p.allocation_status === 'UNDER_ALLOCATED' || p.allocation_status === 'AVAILABLE');
+      
+      // Calculate average utilization
+      const avgUtilization = utilizationData.reduce((sum, p) => sum + (p.total_allocation_percentage || 0), 0) / utilizationData.length;
+      
+      // Find peak utilization
+      const peakUtilization = Math.max(...utilizationData.map(p => p.total_allocation_percentage || 0));
+      
+      return {
+        utilizationData,
+        overutilized,
+        underutilized,
+        summary: {
+          peopleOverutilized: overutilized.length,
+          peopleUnderutilized: underutilized.length,
+          averageUtilization: Math.round(avgUtilization * 100) / 100,
+          peakUtilization
+        }
+      };
+    }, res, 'Failed to fetch utilization report');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async getGapsAnalysis(req: Request, res: Response) {
+    console.log('📊 Gaps analysis endpoint called');
+
+    const result = await this.executeQuery(async () => {
+      console.log('📊 Getting gaps data from capacity_gaps_view and project_health_view...');
+      
+      // Get capacity gaps data
+      const capacityGapsRaw = await this.db('capacity_gaps_view')
+        .select('*');
+      
+      console.log(`📊 Found ${capacityGapsRaw.length} capacity gap records`);
+      
+      // Calculate gap percentage and status for each role
+      const capacityGaps = capacityGapsRaw.map(gap => {
+        const demandVsCapacity = (gap.total_demand_fte || 0) - (gap.total_capacity_fte || 0);
+        const gapPercentage = gap.total_capacity_fte > 0 
+          ? (demandVsCapacity / gap.total_capacity_fte) * 100 
+          : (gap.total_demand_fte > 0 ? 100 : 0);
+        
+        let status;
+        if (demandVsCapacity > 0.5) {
+          status = 'GAP';
+        } else if (demandVsCapacity > 0) {
+          status = 'TIGHT';
+        } else {
+          status = 'OK';
+        }
+        
+        return {
+          ...gap,
+          gap_percentage: Math.round(gapPercentage * 100) / 100,
+          demand_vs_capacity: Math.round(demandVsCapacity * 100) / 100,
+          status
+        };
+      }).sort((a, b) => b.gap_percentage - a.gap_percentage);
+      
+      // Get project health data
+      const projectHealth = await this.db('project_health_view')
+        .select('*')
+        .orderBy('total_allocation_percentage', 'asc');
+      
+      console.log(`📊 Found ${projectHealth.length} project health records`);
+      
+      // Identify critical gaps (>50% gap)
+      const criticalRoleGaps = capacityGaps.filter(gap => gap.status === 'GAP' && gap.gap_percentage > 50);
+      const criticalProjectGaps = projectHealth.filter(p => p.allocation_health === 'UNDER_ALLOCATED');
+      
+      // Calculate summary metrics
+      const totalGapHours = capacityGaps.reduce((sum, gap) => {
+        const demandVsCapacity = (gap.total_demand_fte || 0) - (gap.total_capacity_fte || 0);
+        return sum + Math.max(0, demandVsCapacity) * 8 * 5; // Convert FTE to weekly hours
+      }, 0);
+      
+      // Calculate unutilized hours (capacity that's not being used)
+      const unutilizedHours = capacityGaps.reduce((sum, gap) => {
+        const demandVsCapacity = (gap.total_demand_fte || 0) - (gap.total_capacity_fte || 0);
+        return sum + Math.max(0, -demandVsCapacity) * 8 * 5; // Negative demand vs capacity means unused capacity
+      }, 0);
+      
+      return {
+        capacityGaps,
+        projectHealth,
+        criticalRoleGaps,
+        criticalProjectGaps,
+        summary: {
+          totalGapHours: Math.round(totalGapHours * 100) / 100,
+          projectsWithGaps: criticalProjectGaps.length,
+          rolesWithGaps: criticalRoleGaps.length,
+          unutilizedHours: Math.round(unutilizedHours * 100) / 100
+        }
+      };
+    }, res, 'Failed to fetch gaps analysis');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
   private async calculateCapacityTimeline(startDate?: string, endDate?: string): Promise<any[]> {
     // Get all people with their default hours and availability
     const people = await this.db('people')
