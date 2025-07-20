@@ -7,7 +7,7 @@ test.describe('Write Operations - CRUD', () => {
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
     await helpers.gotoWithRetry('/');
-    await helpers.waitForReactApp();
+    await helpers.setupPage();
   });
 
   test.describe('Projects CRUD', () => {

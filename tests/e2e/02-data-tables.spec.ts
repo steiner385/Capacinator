@@ -72,7 +72,7 @@ test.describe('Data Tables Functionality', () => {
     await expect(page.locator('.data-table-wrapper')).toBeVisible();
     
     // Should have appropriate headers
-    const headers = ['Name', 'Primary Role', 'Type', 'Supervisor', 'Availability', 'Hours/Day', 'Bubble', 'Actions'];
+    const headers = ['NAME', 'PRIMARY ROLE', 'TYPE', 'LOCATION', 'AVAILABILITY', 'HOURS/DAY', 'ACTIONS'];
     for (const header of headers) {
       await expect(page.locator(`th:has-text("${header}")`)).toBeVisible();
     }
@@ -95,7 +95,7 @@ test.describe('Data Tables Functionality', () => {
     await expect(page.locator('.data-table-wrapper')).toBeVisible();
     
     // Should have people-specific headers (since roles are integrated into people)
-    const headers = ['Name', 'Primary Role', 'Type', 'Supervisor', 'Availability', 'Hours/Day', 'Bubble', 'Actions'];
+    const headers = ['NAME', 'PRIMARY ROLE', 'TYPE', 'LOCATION', 'AVAILABILITY', 'HOURS/DAY', 'ACTIONS'];
     for (const header of headers) {
       await expect(page.locator(`th:has-text("${header}")`)).toBeVisible();
     }

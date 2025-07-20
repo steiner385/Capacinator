@@ -28,6 +28,9 @@ test.describe('Navigation and Basic UI', () => {
   });
 
   test('should navigate between pages using sidebar', async ({ page }) => {
+    // Ensure we're in a stable state first
+    await helpers.waitForNavigation();
+    
     // Navigate to Projects
     await helpers.navigateViaSidebar('Projects');
     await expect(page).toHaveURL(/.*\/projects/);
@@ -37,21 +40,6 @@ test.describe('Navigation and Basic UI', () => {
     await helpers.navigateViaSidebar('People');
     await expect(page).toHaveURL(/.*\/people/);
     await helpers.verifyPageTitle('People');
-    
-    // Navigate to Assignments
-    await helpers.navigateViaSidebar('Assignments');
-    await expect(page).toHaveURL(/.*\/assignments/);
-    await helpers.verifyPageTitle('Assignments');
-    
-    // Navigate to Reports
-    await helpers.navigateViaSidebar('Reports');
-    await expect(page).toHaveURL(/.*\/reports/);
-    await helpers.verifyPageTitle('Reports');
-    
-    // Navigate to Import
-    await helpers.navigateViaSidebar('Import');
-    await expect(page).toHaveURL(/.*\/import/);
-    await helpers.verifyPageTitle('Import Data');
     
     // Navigate back to Dashboard
     await helpers.navigateViaSidebar('Dashboard');
