@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, Edit2, Save, X, Calendar, Briefcase, Users, Clock, 
   Shield, Mail, Phone, MapPin, Award, AlertCircle, History,
-  Plus, Trash2, ChevronDown, ChevronUp
+  Plus, Trash2, ChevronDown, ChevronUp, UserPlus, UserMinus,
+  Search, TrendingUp, TrendingDown, Target, Zap
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
@@ -222,6 +223,95 @@ export default function PersonDetails() {
 
   const displayPerson = isEditing ? editedPerson! : person;
 
+  // Calculate allocation insights
+  const allocationInsights = useMemo(() => {
+    const totalAllocation = person.assignments.reduce((sum, assignment) => {
+      return sum + assignment.allocation_percentage;
+    }, 0);
+    
+    const availability = person.default_availability_percentage;
+    const utilizationPercentage = availability > 0 ? (totalAllocation / availability) * 100 : 0;
+    
+    let status: 'over_allocated' | 'fully_allocated' | 'under_allocated' | 'available';
+    let statusColor: string;
+    let actions: Array<{ label: string; action: string; icon: any; variant: string }> = [];
+    
+    if (utilizationPercentage > 100) {
+      status = 'over_allocated';
+      statusColor = 'danger';
+      actions = [
+        { label: 'Reduce Workload', action: 'reduce_workload', icon: UserMinus, variant: 'danger' },
+        { label: 'Find Coverage', action: 'find_coverage', icon: Search, variant: 'warning' },
+        { label: 'Extend Timeline', action: 'extend_timeline', icon: Calendar, variant: 'secondary' }
+      ];
+    } else if (utilizationPercentage >= 80) {
+      status = 'fully_allocated';
+      statusColor = 'warning';
+      actions = [
+        { label: 'Monitor Load', action: 'monitor_load', icon: TrendingUp, variant: 'warning' },
+        { label: 'Plan Ahead', action: 'plan_ahead', icon: Target, variant: 'secondary' }
+      ];
+    } else if (utilizationPercentage >= 40) {
+      status = 'under_allocated';
+      statusColor = 'info';
+      actions = [
+        { label: 'Assign More Work', action: 'assign_more', icon: UserPlus, variant: 'primary' },
+        { label: 'Find Projects', action: 'find_projects', icon: Search, variant: 'info' }
+      ];
+    } else {
+      status = 'available';
+      statusColor = 'success';
+      actions = [
+        { label: 'Assign to Project', action: 'assign_project', icon: Plus, variant: 'success' },
+        { label: 'View Opportunities', action: 'view_opportunities', icon: Zap, variant: 'primary' }
+      ];
+    }
+    
+    return {
+      totalAllocation,
+      availability,
+      utilizationPercentage,
+      status,
+      statusColor,
+      actions,
+      hasUpcomingTimeOff: person.availabilityOverrides.some(override => 
+        new Date(override.start_date) > new Date()
+      ),
+      currentProjects: person.assignments.length,
+      skillsCount: person.roles.length
+    };
+  }, [person]);
+
+  const handleActionClick = (action: string) => {
+    switch (action) {
+      case 'reduce_workload':
+        navigate(`/assignments?person=${person.id}&action=reduce`);
+        break;
+      case 'find_coverage':
+        navigate(`/people?skills=${person.roles.map(r => r.role_id).join(',')}&available=true`);
+        break;
+      case 'extend_timeline':
+        navigate(`/projects?assignee=${person.id}`);
+        break;
+      case 'assign_more':
+      case 'assign_project':
+        navigate(`/assignments/new?person=${person.id}`);
+        break;
+      case 'find_projects':
+      case 'view_opportunities':
+        navigate(`/projects?needs_role=${person.primary_person_role_id}&status=active`);
+        break;
+      case 'monitor_load':
+        navigate(`/reports?type=utilization&person=${person.id}`);
+        break;
+      case 'plan_ahead':
+        navigate(`/assignments?person=${person.id}&view=timeline`);
+        break;
+      default:
+        console.log('Action not implemented:', action);
+    }
+  };
+
   return (
     <div className="page-container person-details">
       <div className="page-header">
@@ -258,6 +348,87 @@ export default function PersonDetails() {
       </div>
 
       <div className="person-details-content">
+        {/* Allocation Insights & Quick Actions */}
+        <div className="detail-section insights-section">
+          <div className="section-header">
+            <h2>
+              <TrendingUp size={20} />
+              Workload Insights & Actions
+            </h2>
+          </div>
+          
+          <div className="section-content">
+            <div className="insights-grid">
+              <div className="insight-card">
+                <div className="insight-header">
+                  <div className="insight-value">
+                    {allocationInsights.totalAllocation.toFixed(0)}%
+                  </div>
+                  <div className="insight-label">Total Allocation</div>
+                </div>
+                <div className="insight-comparison">
+                  vs {allocationInsights.availability}% available
+                </div>
+              </div>
+              
+              <div className="insight-card">
+                <div className="insight-header">
+                  <div className={`insight-value text-${allocationInsights.statusColor}`}>
+                    {allocationInsights.utilizationPercentage.toFixed(0)}%
+                  </div>
+                  <div className="insight-label">Utilization</div>
+                </div>
+                <div className={`insight-status badge badge-${allocationInsights.statusColor}`}>
+                  {allocationInsights.status.replace('_', ' ').toUpperCase()}
+                </div>
+              </div>
+              
+              <div className="insight-card">
+                <div className="insight-header">
+                  <div className="insight-value">
+                    {allocationInsights.currentProjects}
+                  </div>
+                  <div className="insight-label">Active Projects</div>
+                </div>
+                <div className="insight-comparison">
+                  {allocationInsights.skillsCount} skill{allocationInsights.skillsCount !== 1 ? 's' : ''}
+                </div>
+              </div>
+              
+              {allocationInsights.hasUpcomingTimeOff && (
+                <div className="insight-card alert-card">
+                  <div className="insight-header">
+                    <AlertCircle size={16} className="text-warning" />
+                    <div className="insight-label">Upcoming Time Off</div>
+                  </div>
+                  <div className="insight-comparison text-warning">
+                    Plan coverage needed
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="quick-actions">
+              <h4>Recommended Actions</h4>
+              <div className="actions-grid">
+                {allocationInsights.actions.map((action, index) => {
+                  const IconComponent = action.icon;
+                  return (
+                    <button
+                      key={index}
+                      className={`btn btn-${action.variant} action-btn`}
+                      onClick={() => handleActionClick(action.action)}
+                    >
+                      <IconComponent size={16} />
+                      {action.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Basic Information Section */}
         <div className="detail-section">
           <div className="section-header" onClick={() => toggleSection('basic')}>

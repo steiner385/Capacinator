@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Save, X, Info, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api-client';
 import './PersonDetails.css'; // Reuse existing styles
 
@@ -20,6 +20,7 @@ interface AssignmentFormData {
 export function AssignmentNew() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   
   const [formData, setFormData] = useState<AssignmentFormData>({
     project_id: '',
@@ -32,12 +33,39 @@ export function AssignmentNew() {
     billable: true,
     notes: ''
   });
+  
+  // Extract context from URL parameters
+  const actionContext = useMemo(() => {
+    const person = searchParams.get('person');
+    const role = searchParams.get('role');
+    const project = searchParams.get('project');
+    const action = searchParams.get('action');
+    const from = searchParams.get('from');
+    const status = searchParams.get('status');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const allocation = searchParams.get('allocation');
+    
+    return {
+      person,
+      role,
+      project,
+      action,
+      from,
+      status,
+      startDate,
+      endDate,
+      allocation: allocation ? parseInt(allocation) : null,
+      hasContext: !!(person || role || project || action)
+    };
+  }, [searchParams]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [availabilityWarning, setAvailabilityWarning] = useState<string>('');
-
-  // Fetch projects for dropdown
+  const [contextMessage, setContextMessage] = useState<string>('');
+  
+  // Fetch data for dropdowns - must be before useEffects that depend on this data
   const { data: projects } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
@@ -46,7 +74,6 @@ export function AssignmentNew() {
     }
   });
 
-  // Fetch people for dropdown
   const { data: people } = useQuery({
     queryKey: ['people'],
     queryFn: async () => {
@@ -55,7 +82,6 @@ export function AssignmentNew() {
     }
   });
 
-  // Fetch roles for dropdown
   const { data: roles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
@@ -64,7 +90,6 @@ export function AssignmentNew() {
     }
   });
 
-  // Fetch phases for dropdown
   const { data: phases } = useQuery({
     queryKey: ['phases'],
     queryFn: async () => {
@@ -72,6 +97,77 @@ export function AssignmentNew() {
       return response.data;
     }
   });
+  
+  // Pre-fill form based on URL parameters
+  useEffect(() => {
+    if (!actionContext.hasContext) return;
+    
+    const updateFormData = (updates: Partial<AssignmentFormData>) => {
+      setFormData(prev => ({ ...prev, ...updates }));
+    };
+    
+    // Set context message for user awareness
+    let message = '';
+    if (actionContext.action === 'assign' && actionContext.person) {
+      message = `Assigning work to ${actionContext.person}`;
+      if (actionContext.status === 'AVAILABLE') {
+        message += ' (currently available)';
+      }
+    } else if (actionContext.action === 'reduce' && actionContext.person) {
+      message = `Reducing workload for ${actionContext.person} (currently over-allocated)`;
+      updateFormData({ allocation_percentage: 50 }); // Suggest lower allocation
+    } else if (actionContext.role && actionContext.action === 'assign') {
+      message = `Assigning ${actionContext.role} role to project`;
+    }
+    
+    setContextMessage(message);
+    
+    // Pre-fill dates if provided
+    if (actionContext.startDate) {
+      updateFormData({ start_date: actionContext.startDate });
+    }
+    if (actionContext.endDate) {
+      updateFormData({ end_date: actionContext.endDate });
+    }
+    
+    // Set default allocation based on action context
+    if (actionContext.allocation) {
+      updateFormData({ allocation_percentage: actionContext.allocation });
+    } else if (actionContext.action === 'reduce') {
+      updateFormData({ allocation_percentage: 25 }); // Conservative allocation for over-allocated people
+    }
+    
+  }, [actionContext]);
+  
+  // Auto-select person if provided in context
+  useEffect(() => {
+    if (actionContext.person && people) {
+      const person = people.find((p: any) => 
+        p.name.toLowerCase() === actionContext.person!.toLowerCase() ||
+        p.id === actionContext.person
+      );
+      if (person && !formData.person_id) {
+        setFormData(prev => ({ 
+          ...prev, 
+          person_id: person.id,
+          role_id: person.primary_person_role_id || '' // Auto-select primary role
+        }));
+      }
+    }
+  }, [actionContext.person, people, formData.person_id]);
+  
+  // Auto-select role if provided in context
+  useEffect(() => {
+    if (actionContext.role && roles) {
+      const role = roles.find((r: any) => 
+        r.name.toLowerCase() === actionContext.role!.toLowerCase() ||
+        r.id === actionContext.role
+      );
+      if (role) {
+        setFormData(prev => ({ ...prev, role_id: role.id }));
+      }
+    }
+  }, [actionContext.role, roles]);
 
   // Fetch selected person details for role filtering
   const { data: selectedPerson } = useQuery({
@@ -250,6 +346,9 @@ export function AssignmentNew() {
             <ArrowLeft size={20} />
           </button>
           <h1>New Assignment</h1>
+          {actionContext.from && (
+            <span className="badge badge-info">From {actionContext.from}</span>
+          )}
         </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleCancel}>
@@ -268,6 +367,21 @@ export function AssignmentNew() {
       </div>
 
       <div className="person-details-content">
+        {/* Context Message */}
+        {contextMessage && (
+          <div className="detail-section context-banner">
+            <div className="context-alert">
+              <Info size={20} />
+              <div className="context-content">
+                <strong>Assignment Context:</strong> {contextMessage}
+                {actionContext.from && (
+                  <div className="context-source">Initiated from {actionContext.from}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           {/* Assignment Information Section */}
           <div className="detail-section">

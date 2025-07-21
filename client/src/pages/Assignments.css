@@ -2,6 +2,21 @@
   padding: 2rem;
 }
 
+/* Context Message for Assignment Filtering */
+.context-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.2);
+}
+
 .project-info {
   display: flex;
   flex-direction: column;

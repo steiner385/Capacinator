@@ -285,6 +285,12 @@ export default function Assignments() {
         <div>
           <h1>Assignments</h1>
           <p className="text-muted">Manage project resource assignments</p>
+          {contextMessage && (
+            <div className="context-message">
+              <AlertTriangle size={16} />
+              {contextMessage}
+            </div>
+          )}
         </div>
         <div className="header-actions">
           <button

@@ -1,23 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { Scenarios } from '@client/pages/Scenarios';
 
 // Mock the API client
-vi.mock('@client/lib/api-client', () => ({
+jest.mock('@client/lib/api-client', () => ({
   api: {
     scenarios: {
-      list: vi.fn(),
-      create: vi.fn(),
-      compare: vi.fn(),
+      list: jest.fn(),
+      create: jest.fn(),
+      compare: jest.fn(),
     },
   },
   apiClient: {
     scenarios: {
-      list: vi.fn(),
-      create: vi.fn(),
-      compare: vi.fn(),
+      list: jest.fn(),
+      create: jest.fn(),
+      compare: jest.fn(),
     },
   },
 }));

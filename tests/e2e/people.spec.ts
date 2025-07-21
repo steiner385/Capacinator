@@ -57,6 +57,117 @@ test.describe('People Page Functionality', () => {
       await expect(deleteButton).toBeVisible();
     }
   });
+  
+  test('should display team insights summary', async ({ page }) => {
+    // Wait for data to load
+    await page.waitForTimeout(2000);
+    
+    // Check for team insights section
+    const teamInsights = page.locator('.team-insights');
+    if (await teamInsights.count() > 0) {
+      await expect(teamInsights).toBeVisible();
+      
+      // Should show insight summary with counts
+      const insightItems = page.locator('.insight-item');
+      await expect(insightItems).toHaveCount(3); // over-allocated, available, total
+      
+      // Check for specific insight text patterns
+      await expect(page.locator('.insight-item')).toContainText(/\d+ over-allocated/);
+      await expect(page.locator('.insight-item')).toContainText(/\d+ available/);
+      await expect(page.locator('.insight-item')).toContainText(/\d+ total people/);
+    }
+  });
+  
+  test('should display workload status indicators', async ({ page }) => {
+    // Wait for data to load
+    await page.waitForTimeout(2000);
+    
+    const tableRows = page.locator('table tbody tr');
+    const rowCount = await tableRows.count();
+    
+    if (rowCount > 0) {
+      // Check for workload status column
+      const workloadColumns = page.locator('.workload-status');
+      if (await workloadColumns.count() > 0) {
+        await expect(workloadColumns.first()).toBeVisible();
+        
+        // Check for status indicators
+        const statusIndicators = page.locator('.status-indicator');
+        if (await statusIndicators.count() > 0) {
+          await expect(statusIndicators.first()).toBeVisible();
+          
+          // Check for utilization percentages
+          const percentageText = await statusIndicators.first().textContent();
+          expect(percentageText).toMatch(/\d+%/);
+        }
+        
+        // Check for status labels
+        const statusLabels = page.locator('.status-label');
+        if (await statusLabels.count() > 0) {
+          await expect(statusLabels.first()).toBeVisible();
+        }
+      }
+    }
+  });
+  
+  test('should display and handle quick action buttons', async ({ page }) => {
+    // Wait for data to load
+    await page.waitForTimeout(2000);
+    
+    const tableRows = page.locator('table tbody tr');
+    const rowCount = await tableRows.count();
+    
+    if (rowCount > 0) {
+      // Check for quick action buttons
+      const quickActionButtons = page.locator('.quick-action-btn');
+      if (await quickActionButtons.count() > 0) {
+        const firstActionButton = quickActionButtons.first();
+        await expect(firstActionButton).toBeVisible();
+        
+        // Get button text to determine action type
+        const buttonText = await firstActionButton.textContent();
+        expect(buttonText).toMatch(/(Assign|Reduce|Monitor|View)/i);
+        
+        // Test button click navigation
+        await firstActionButton.click();
+        await page.waitForTimeout(1000);
+        
+        // Should navigate to appropriate page based on action
+        const currentUrl = page.url();
+        if (buttonText?.includes('Assign')) {
+          expect(currentUrl).toMatch(/\/assignments/);
+        } else if (buttonText?.includes('Reduce')) {
+          expect(currentUrl).toMatch(/\/assignments/);
+          expect(currentUrl).toContain('action=reduce');
+        } else if (buttonText?.includes('Monitor')) {
+          expect(currentUrl).toMatch(/\/reports/);
+          expect(currentUrl).toContain('type=utilization');
+        }
+      }
+    }
+  });
+  
+  test('should apply correct status colors for workload indicators', async ({ page }) => {
+    // Wait for data to load
+    await page.waitForTimeout(2000);
+    
+    // Check for different status color classes
+    const statusIndicators = page.locator('.status-indicator');
+    if (await statusIndicators.count() > 0) {
+      // Look for different status types
+      const dangerStatus = page.locator('.status-danger');
+      const warningStatus = page.locator('.status-warning');
+      const successStatus = page.locator('.status-success');
+      const infoStatus = page.locator('.status-info');
+      
+      // At least one status type should exist
+      const totalColoredStatuses = await dangerStatus.count() + 
+                                   await warningStatus.count() + 
+                                   await successStatus.count() + 
+                                   await infoStatus.count();
+      expect(totalColoredStatuses).toBeGreaterThan(0);
+    }
+  });
 
   test('should navigate to person details via name click', async ({ page }) => {
     await page.waitForTimeout(2000);
@@ -97,6 +208,35 @@ test.describe('People Page Functionality', () => {
     }
   });
 
+  test('should handle contextual quick actions with proper parameters', async ({ page }) => {
+    // Wait for data to load
+    await page.waitForTimeout(2000);
+    
+    const quickActionButtons = page.locator('.quick-action-btn');
+    if (await quickActionButtons.count() > 0) {
+      const firstButton = quickActionButtons.first();
+      const buttonText = await firstButton.textContent();
+      
+      // Click the action button
+      await firstButton.click();
+      await page.waitForTimeout(1000);
+      
+      const currentUrl = page.url();
+      
+      // Verify proper query parameters are passed
+      if (buttonText?.includes('Assign')) {
+        expect(currentUrl).toContain('person=');
+        expect(currentUrl).toMatch(/assignments/);
+      } else if (buttonText?.includes('Reduce')) {
+        expect(currentUrl).toContain('action=reduce');
+        expect(currentUrl).toContain('person=');
+      } else if (buttonText?.includes('Monitor')) {
+        expect(currentUrl).toContain('type=utilization');
+        expect(currentUrl).toContain('person=');
+      }
+    }
+  });
+  
   test('should handle Edit button click', async ({ page }) => {
     await page.waitForTimeout(2000);
     

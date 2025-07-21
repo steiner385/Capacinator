@@ -41,9 +41,11 @@ test.describe('Person Details Page', () => {
     
     // Check all sections are present
     const sections = [
+      'Workload Insights & Actions',
       'Basic Information',
       'Roles & Skills',
       'Current Assignments',
+      'Allocation vs Availability',
       'Availability & Time Off',
       'History'
     ];
@@ -94,6 +96,149 @@ test.describe('Person Details Page', () => {
     // Edit button should be visible
     const editButton = page.locator('button:has-text("Edit")');
     await expect(editButton).toBeVisible();
+  });
+  
+  test('displays workload insights with proper calculations', async ({ page }) => {
+    // Navigate to person details
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForDataTable();
+    
+    const firstRow = page.locator('.table tbody tr').first();
+    await firstRow.click();
+    
+    await page.waitForURL(/\/people\/[^/]+$/);
+    await page.waitForSelector('.person-details');
+    
+    // Check for workload insights section
+    const insightsSection = page.locator('.insights-section');
+    if (await insightsSection.count() > 0) {
+      await expect(insightsSection).toBeVisible();
+      
+      // Check for insight cards
+      const insightCards = page.locator('.insight-card');
+      await expect(insightCards.first()).toBeVisible();
+      
+      // Verify insight values are displayed
+      const insightValues = page.locator('.insight-value');
+      await expect(insightValues.first()).toBeVisible();
+      
+      // Check for allocation status
+      const statusBadge = page.locator('.insight-status');
+      if (await statusBadge.count() > 0) {
+        await expect(statusBadge.first()).toBeVisible();
+        const statusText = await statusBadge.first().textContent();
+        expect(statusText).toMatch(/(OVER_ALLOCATED|FULLY_ALLOCATED|UNDER_ALLOCATED|AVAILABLE)/);
+      }
+    }
+  });
+  
+  test('displays and handles action buttons based on allocation status', async ({ page }) => {
+    // Navigate to person details
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForDataTable();
+    
+    const firstRow = page.locator('.table tbody tr').first();
+    await firstRow.click();
+    
+    await page.waitForURL(/\/people\/[^/]+$/);
+    await page.waitForSelector('.person-details');
+    
+    // Check for action buttons in insights section
+    const actionButtons = page.locator('.action-btn');
+    if (await actionButtons.count() > 0) {
+      await expect(actionButtons.first()).toBeVisible();
+      
+      // Test button click navigation
+      const firstButton = actionButtons.first();
+      const buttonText = await firstButton.textContent();
+      
+      await firstButton.click();
+      await page.waitForTimeout(1000);
+      
+      // Verify navigation based on button type
+      const currentUrl = page.url();
+      if (buttonText?.includes('Assign')) {
+        expect(currentUrl).toMatch(/\/assignments/);
+      } else if (buttonText?.includes('Reduce')) {
+        expect(currentUrl).toContain('action=reduce');
+      } else if (buttonText?.includes('Monitor')) {
+        expect(currentUrl).toMatch(/\/reports/);
+        expect(currentUrl).toContain('type=utilization');
+      } else if (buttonText?.includes('Find')) {
+        expect(currentUrl).toMatch(/\/(people|projects)/);
+      }
+    }
+  });
+  
+  test('shows proper context for upcoming time off', async ({ page }) => {
+    // Navigate to person details
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForDataTable();
+    
+    const firstRow = page.locator('.table tbody tr').first();
+    await firstRow.click();
+    
+    await page.waitForURL(/\/people\/[^/]+$/);
+    await page.waitForSelector('.person-details');
+    
+    // Check for time off alert in insights
+    const timeOffAlert = page.locator('.alert-card');
+    if (await timeOffAlert.count() > 0) {
+      await expect(timeOffAlert).toBeVisible();
+      await expect(timeOffAlert).toContainText('Upcoming Time Off');
+      await expect(timeOffAlert).toContainText('Plan coverage needed');
+    }
+  });
+  
+  test('displays correct utilization calculations', async ({ page }) => {
+    // Navigate to person details
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForDataTable();
+    
+    const firstRow = page.locator('.table tbody tr').first();
+    await firstRow.click();
+    
+    await page.waitForURL(/\/people\/[^/]+$/);
+    await page.waitForSelector('.person-details');
+    
+    // Check for utilization percentage display
+    const utilizationCard = page.locator('.insight-card').nth(1); // Second card is utilization
+    if (await utilizationCard.count() > 1) {
+      await expect(utilizationCard).toBeVisible();
+      
+      const utilizationValue = utilizationCard.locator('.insight-value');
+      const utilizationText = await utilizationValue.textContent();
+      expect(utilizationText).toMatch(/\d+%/);
+    }
+    
+    // Check for availability comparison
+    const comparisonText = page.locator('.insight-comparison');
+    if (await comparisonText.count() > 0) {
+      const availabilityText = await comparisonText.first().textContent();
+      expect(availabilityText).toMatch(/vs \d+% available/);
+    }
+  });
+  
+  test('handles allocation chart integration', async ({ page }) => {
+    // Navigate to person details
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForDataTable();
+    
+    const firstRow = page.locator('.table tbody tr').first();
+    await firstRow.click();
+    
+    await page.waitForURL(/\/people\/[^/]+$/);
+    await page.waitForSelector('.person-details');
+    
+    // Check for allocation chart section
+    const allocationSection = page.locator('h2:has-text("Allocation vs Availability")');
+    await expect(allocationSection).toBeVisible();
+    
+    // Check if chart component is rendered
+    const chartContainer = page.locator('.chart-container');
+    if (await chartContainer.count() > 0) {
+      await expect(chartContainer.first()).toBeVisible();
+    }
   });
 
   test('edit button is hidden for viewers', async ({ page }) => {
