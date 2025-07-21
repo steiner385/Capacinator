@@ -98,6 +98,8 @@ export const api = {
   availability: {
     list: (params?: any) => apiClient.get('/availability', { params }),
     create: (data: any) => apiClient.post('/availability', data),
+    update: (id: string, data: any) => apiClient.put(`/availability/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/availability/${id}`),
     bulkCreate: (data: any) => apiClient.post('/availability/bulk', data),
     approve: (id: string, data: any) => apiClient.post(`/availability/${id}/approve`, data),
     getCalendar: (params?: any) => apiClient.get('/availability/calendar', { params }),

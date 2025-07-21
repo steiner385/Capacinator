@@ -43,8 +43,8 @@ export function PersonAllocationChart({ personId, personName }: PersonAllocation
       }
     });
 
-    // Convert to array and sort
-    const sortedDates = Array.from(dates).sort();
+    // Convert to array and sort chronologically
+    const sortedDates = Array.from(dates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
     
     return sortedDates.map(date => {
       const currentDate = new Date(date);

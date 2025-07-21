@@ -7,6 +7,8 @@ const controller = new AvailabilityController();
 // Availability override CRUD
 router.get('/', (req, res) => controller.getAll(req, res));
 router.post('/', (req, res) => controller.create(req, res));
+router.put('/:id', (req, res) => controller.update(req, res));
+router.delete('/:id', (req, res) => controller.delete(req, res));
 
 // Bulk operations
 router.post('/bulk', (req, res) => controller.bulkCreate(req, res));

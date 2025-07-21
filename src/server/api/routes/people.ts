@@ -14,6 +14,7 @@ router.get('/utilization', (req, res) => controller.getUtilization(req, res));
 
 // People CRUD operations
 router.get('/', (req, res) => controller.getAll(req, res));
+router.get('/:id/utilization-timeline', (req, res) => controller.getPersonUtilizationTimeline(req, res));
 router.get('/:id', (req, res) => controller.getById(req, res));
 router.post('/', (req, res) => controller.create(req, res));
 router.put('/:id', (req, res) => controller.update(req, res));

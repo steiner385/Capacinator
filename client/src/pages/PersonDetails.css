@@ -356,3 +356,40 @@
     flex-wrap: wrap;
   }
 }
+
+/* Inline Editing Styles */
+.inline-editable {
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s;
+  padding: 0.5rem;
+  border-radius: 4px;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inline-editable:hover {
+  background-color: var(--bg-hover);
+}
+
+.inline-editable .edit-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: var(--text-secondary);
+}
+
+.inline-editable:hover .edit-icon {
+  opacity: 1;
+}
+
+.inline-edit-container {
+  position: relative;
+}
+
+.inline-edit-container input,
+.inline-edit-container select {
+  width: 100%;
+  margin: 0;
+}

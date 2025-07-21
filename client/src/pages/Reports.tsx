@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { 
   BarChart3, PieChart, TrendingUp, Users, Calendar, 
-  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, ClipboardList, ChevronDown,
+  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, UserMinus, ClipboardList, ChevronDown,
   Briefcase, User, Plus
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -66,7 +66,7 @@ export default function Reports() {
         // Calculate capacity by role from person utilization data
         const roleUtilization = new Map();
         
-        data.personUtilization?.forEach((person: any) => {
+        data.utilizationData?.forEach((person: any) => {
           const roleName = person.primary_role_name || 'Unknown';
           const capacity = person.available_hours || 0;
           const utilized = person.total_allocated_hours || 0;
@@ -132,9 +132,9 @@ export default function Reports() {
       const response = await api.reporting.getUtilization(filters);
       const data = response.data;
       
-      if (data && data.personUtilization) {
+      if (data && data.utilizationData) {
         // Transform person utilization data for charts
-        const peopleUtilization = data.personUtilization.map((person: any) => ({
+        const peopleUtilization = data.utilizationData.map((person: any) => ({
           id: person.person_id,
           name: person.person_name,
           role: person.primary_role_name,
@@ -410,7 +410,7 @@ export default function Reports() {
           </div>
           <div className="summary-card">
             <h3># People with Capacity</h3>
-            <div className="metric">{capacityReport.personUtilization?.length || 0}</div>
+            <div className="metric">{capacityReport.utilizationData?.length || 0}</div>
             <Link to={`/people?from=capacity-report&action=view-capacity&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
               <Users size={14} /> View People
             </Link>
@@ -429,7 +429,7 @@ export default function Reports() {
           <div className="chart-container">
             <h3>Capacity by Person</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={capacityReport.personUtilization?.slice(0, 10) || []}>
+              <BarChart data={capacityReport.utilizationData?.slice(0, 10) || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="person_name" />
                 <YAxis />
@@ -480,7 +480,7 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {(capacityReport.personUtilization || []).map((person: any) => (
+                {(capacityReport.utilizationData || []).map((person: any) => (
                   <tr key={person.person_id} className={
                     person.allocation_status === 'AVAILABLE' ? 'row-success' :
                     person.allocation_status === 'FULLY_ALLOCATED' ? 'row-warning' :
@@ -645,9 +645,9 @@ export default function Reports() {
           </div>
 
           <div className="chart-container">
-            <h3>Utilization by Role</h3>
+            <h3>Utilization by Person</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={utilizationReport.byRole || []}>
+              <BarChart data={utilizationReport.peopleUtilization || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -726,55 +726,55 @@ export default function Reports() {
           </div>
 
           <div className="chart-container">
-            <h3>Actionable Roles</h3>
+            <h3>Actionable People</h3>
             <div className="actionable-list">
               <div className="list-section">
-                <h4>Overcommitted Roles</h4>
-                {(utilizationReport.byRole || [])
-                  .filter((role: any) => role.avgUtilization > 100)
-                  .map((role: any) => (
-                  <div key={role.id || role.name} className="actionable-item danger">
+                <h4>Overutilized People</h4>
+                {(utilizationReport.peopleUtilization || [])
+                  .filter((person: any) => person.utilization > 100)
+                  .map((person: any) => (
+                  <div key={person.id} className="actionable-item danger">
                     <div className="item-info">
-                      <strong>{role.name}</strong>
-                      <span className="item-detail">{role.avgUtilization}% average utilization</span>
+                      <strong>{person.name}</strong>
+                      <span className="item-detail">{person.utilization}% utilization ({person.role})</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/people?role=${encodeURIComponent(role.name)}`} className="btn btn-sm btn-outline">
-                        <Users size={14} /> View People
+                      <Link to={`/people?personId=${person.id}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> View Person
                       </Link>
-                      <Link to="/people" className="btn btn-sm btn-danger">
-                        <UserPlus size={14} /> Hire More
+                      <Link to={`/assignments/new?personId=${person.id}&action=reduce`} className="btn btn-sm btn-danger">
+                        <UserMinus size={14} /> Reduce Load
                       </Link>
                     </div>
                   </div>
                 ))}
-                {(utilizationReport.byRole || []).filter((role: any) => role.avgUtilization > 100).length === 0 && (
-                  <p className="no-items">No overcommitted roles</p>
+                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization > 100).length === 0 && (
+                  <p className="no-items">No overutilized people</p>
                 )}
               </div>
 
               <div className="list-section">
-                <h4>Underutilized Roles</h4>
-                {(utilizationReport.byRole || [])
-                  .filter((role: any) => role.avgUtilization < 70)
-                  .map((role: any) => (
-                  <div key={role.id || role.name} className="actionable-item warning">
+                <h4>Underutilized People</h4>
+                {(utilizationReport.peopleUtilization || [])
+                  .filter((person: any) => person.utilization < 70)
+                  .map((person: any) => (
+                  <div key={person.id} className="actionable-item warning">
                     <div className="item-info">
-                      <strong>{role.name}</strong>
-                      <span className="item-detail">{role.avgUtilization}% average utilization</span>
+                      <strong>{person.name}</strong>
+                      <span className="item-detail">{person.utilization}% utilization ({person.role})</span>
                     </div>
                     <div className="item-actions">
-                      <Link to={`/people?role=${encodeURIComponent(role.name)}`} className="btn btn-sm btn-outline">
-                        <Users size={14} /> View People
+                      <Link to={`/people?personId=${person.id}`} className="btn btn-sm btn-outline">
+                        <Users size={14} /> View Person
                       </Link>
-                      <Link to="/projects" className="btn btn-sm btn-primary">
-                        <Briefcase size={14} /> Find Projects
+                      <Link to={`/assignments/new?personId=${person.id}&action=assign`} className="btn btn-sm btn-primary">
+                        <UserPlus size={14} /> Assign Work
                       </Link>
                     </div>
                   </div>
                 ))}
-                {(utilizationReport.byRole || []).filter((role: any) => role.avgUtilization < 70).length === 0 && (
-                  <p className="no-items">No underutilized roles</p>
+                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization < 70).length === 0 && (
+                  <p className="no-items">No underutilized people</p>
                 )}
               </div>
             </div>

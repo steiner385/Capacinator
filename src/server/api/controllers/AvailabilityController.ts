@@ -239,6 +239,79 @@ export class AvailabilityController extends BaseController {
     }
   }
 
+  async update(req: Request, res: Response) {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const result = await this.executeQuery(async () => {
+      const override = await this.db('person_availability_overrides')
+        .where('id', id)
+        .first();
+
+      if (!override) {
+        this.handleNotFound(res, 'Availability override');
+        return null;
+      }
+
+      // Check for conflicts if dates are being changed
+      if (updateData.start_date || updateData.end_date) {
+        const conflicts = await this.checkAvailabilityConflicts(
+          updateData.person_id || override.person_id,
+          updateData.start_date || override.start_date,
+          updateData.end_date || override.end_date,
+          id // Exclude current override from conflict check
+        );
+
+        if (conflicts.length > 0) {
+          return res.status(400).json({
+            error: 'Availability override conflicts with existing overrides',
+            conflicts,
+            message: 'Please resolve conflicts before updating override'
+          });
+        }
+      }
+
+      const [updated] = await this.db('person_availability_overrides')
+        .where('id', id)
+        .update({
+          ...updateData,
+          updated_at: new Date()
+        })
+        .returning('*');
+
+      return updated;
+    }, res, 'Failed to update availability override');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async delete(req: Request, res: Response) {
+    const { id } = req.params;
+
+    const result = await this.executeQuery(async () => {
+      const override = await this.db('person_availability_overrides')
+        .where('id', id)
+        .first();
+
+      if (!override) {
+        this.handleNotFound(res, 'Availability override');
+        return null;
+      }
+
+      await this.db('person_availability_overrides')
+        .where('id', id)
+        .delete();
+
+      return { message: 'Availability override deleted successfully', deleted: override };
+    }, res, 'Failed to delete availability override');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
   async getCalendar(req: Request, res: Response) {
     const { start_date, end_date, team_id, location_id } = req.query;
 

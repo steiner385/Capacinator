@@ -489,16 +489,102 @@ export class ReportingController extends BaseController {
 
   async getUtilizationReport(req: Request, res: Response) {
     console.log('📊 Utilization report endpoint called');
+    
+    const { startDate, endDate } = req.query;
+    console.log('📊 Date filters:', { startDate, endDate });
 
     const result = await this.executeQuery(async () => {
-      console.log('📊 Getting utilization data from person_utilization_view...');
+      console.log('📊 Calculating date-aware utilization data...');
       
-      // Get all people utilization data
-      const utilizationData = await this.db('person_utilization_view')
-        .select('*')
-        .orderBy('total_allocation_percentage', 'desc');
+      // Get people with project assignments filtered by date range
+      let utilizationQuery = this.db('people')
+        .leftJoin('project_assignments', 'people.id', 'project_assignments.person_id')
+        .leftJoin('person_roles', 'people.primary_person_role_id', 'person_roles.id')
+        .leftJoin('roles', 'person_roles.role_id', 'roles.id')
+        .leftJoin('locations', 'people.location_id', 'locations.id')
+        .leftJoin('projects', 'project_assignments.project_id', 'projects.id')
+        .where('people.is_active', true);
+
+      // Apply date filtering to project assignments
+      if (startDate && endDate) {
+        utilizationQuery = utilizationQuery.where(function() {
+          this.where(function() {
+            // Include assignments that overlap with the date range
+            this.where('project_assignments.start_date', '<=', endDate)
+                .andWhere('project_assignments.end_date', '>=', startDate);
+          }).orWhereNull('project_assignments.id'); // Include people with no assignments
+        });
+      }
+
+      const rawData = await utilizationQuery.select(
+        'people.id as person_id',
+        'people.name as person_name', 
+        'people.email as person_email',
+        'people.worker_type',
+        'people.default_availability_percentage',
+        'people.default_hours_per_day',
+        'roles.id as primary_role_id',
+        'roles.name as primary_role_name',
+        'person_roles.proficiency_level as primary_role_proficiency',
+        'locations.name as location_name',
+        'project_assignments.allocation_percentage',
+        'project_assignments.start_date as assignment_start',
+        'project_assignments.end_date as assignment_end',
+        'projects.name as project_name',
+        'projects.id as project_id'
+      );
+
+      // Group by person and calculate utilization
+      const peopleMap = new Map();
       
-      console.log(`📊 Found ${utilizationData.length} utilization records`);
+      rawData.forEach(row => {
+        if (!peopleMap.has(row.person_id)) {
+          peopleMap.set(row.person_id, {
+            person_id: row.person_id,
+            person_name: row.person_name,
+            person_email: row.person_email,
+            worker_type: row.worker_type,
+            default_availability_percentage: row.default_availability_percentage,
+            default_hours_per_day: row.default_hours_per_day,
+            primary_role_id: row.primary_role_id,
+            primary_role_name: row.primary_role_name,
+            primary_role_proficiency: row.primary_role_proficiency,
+            location_name: row.location_name,
+            total_allocation_percentage: 0,
+            project_count: 0,
+            project_names: []
+          });
+        }
+        
+        const person = peopleMap.get(row.person_id);
+        
+        // Only add allocation if there's an actual assignment in the date range
+        if (row.allocation_percentage && row.project_id) {
+          person.total_allocation_percentage += row.allocation_percentage;
+          person.project_count++;
+          if (!person.project_names.includes(row.project_name)) {
+            person.project_names.push(row.project_name);
+          }
+        }
+      });
+
+      // Convert to array and add calculated fields
+      const utilizationData = Array.from(peopleMap.values()).map(person => {
+        const totalAllocHours = person.total_allocation_percentage * person.default_hours_per_day / 100.0;
+        
+        return {
+          ...person,
+          total_allocated_hours: totalAllocHours,
+          available_hours: person.default_hours_per_day,
+          allocation_status: person.total_allocation_percentage > 100 ? 'OVER_ALLOCATED' :
+                           person.total_allocation_percentage >= 90 ? 'FULLY_ALLOCATED' :
+                           person.total_allocation_percentage >= 50 ? 'PARTIALLY_ALLOCATED' :
+                           person.total_allocation_percentage > 0 ? 'UNDER_ALLOCATED' : 'AVAILABLE',
+          project_names: person.project_names.join(',')
+        };
+      }).sort((a, b) => b.total_allocation_percentage - a.total_allocation_percentage);
+      
+      console.log(`📊 Found ${utilizationData.length} people with date-filtered utilization`);
       
       // Get people by utilization status
       const overutilized = utilizationData.filter(p => p.allocation_status === 'OVER_ALLOCATED');

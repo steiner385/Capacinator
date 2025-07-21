@@ -44,7 +44,7 @@ export class PeopleController extends BaseController {
           page,
           limit,
           total: total?.count || 0,
-          totalPages: Math.ceil((total?.count || 0) / limit)
+          totalPages: Math.ceil((Number(total?.count) || 0) / limit)
         }
       };
     }, res, 'Failed to fetch people');
@@ -246,6 +246,97 @@ export class PeopleController extends BaseController {
       const availability = await this.db('person_availability_view').select('*');
       return availability;
     }, res, 'Failed to fetch person availability data');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async getPersonUtilizationTimeline(req: Request, res: Response) {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const result = await this.executeQuery(async () => {
+      // Get person details
+      const person = await this.db('people')
+        .where('id', id)
+        .select('name', 'default_availability_percentage', 'default_hours_per_day')
+        .first();
+
+      if (!person) {
+        throw new Error('Person not found');
+      }
+
+      // Get project assignments for this person with date filtering
+      let assignmentsQuery = this.db('project_assignments')
+        .join('projects', 'project_assignments.project_id', 'projects.id')
+        .where('project_assignments.person_id', id)
+        .select(
+          'project_assignments.allocation_percentage',
+          'project_assignments.start_date',
+          'project_assignments.end_date',
+          'projects.name as project_name'
+        );
+
+      if (startDate) {
+        assignmentsQuery = assignmentsQuery.where('project_assignments.end_date', '>=', startDate);
+      }
+      if (endDate) {
+        assignmentsQuery = assignmentsQuery.where('project_assignments.start_date', '<=', endDate);
+      }
+
+      const assignments = await assignmentsQuery.orderBy('project_assignments.start_date');
+
+      // Create timeline data by month
+      const timelineStart = new Date(startDate as string || '2023-01-01');
+      const timelineEnd = new Date(endDate as string || '2026-12-31');
+      const timeline: Array<{
+        month: string;
+        availability: number;
+        utilization: number;
+        over_allocated: boolean;
+      }> = [];
+
+      // Generate monthly data points
+      let currentDate = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
+      
+      while (currentDate <= timelineEnd) {
+        const monthStart = new Date(currentDate);
+        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        
+        // Calculate utilization for this month
+        let monthUtilization = 0;
+        
+        assignments.forEach(assignment => {
+          const assignStart = new Date(assignment.start_date);
+          const assignEnd = new Date(assignment.end_date);
+          
+          // Check if assignment overlaps with this month
+          if (assignStart <= monthEnd && assignEnd >= monthStart) {
+            monthUtilization += assignment.allocation_percentage;
+          }
+        });
+
+        timeline.push({
+          month: currentDate.toISOString().substring(0, 7), // YYYY-MM format
+          availability: person.default_availability_percentage,
+          utilization: monthUtilization,
+          over_allocated: monthUtilization > person.default_availability_percentage
+        });
+
+        // Move to next month
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      return {
+        personName: person.name,
+        defaultAvailability: person.default_availability_percentage,
+        timeline: timeline.filter(item => item.utilization > 0 || 
+          (timeline.some(t => t.utilization > 0) && 
+           new Date(item.month) >= new Date(assignments[0]?.start_date || timelineStart) &&
+           new Date(item.month) <= new Date(assignments[assignments.length - 1]?.end_date || timelineEnd)))
+      };
+    }, res, 'Failed to fetch person utilization timeline');
 
     if (result) {
       res.json(result);
