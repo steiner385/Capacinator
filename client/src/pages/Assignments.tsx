@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { DataTable, Column } from '../components/ui/DataTable';
@@ -15,6 +15,8 @@ import './Assignments.css';
 export default function Assignments() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const [contextMessage, setContextMessage] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     project_id: '',
@@ -26,6 +28,35 @@ export default function Assignments() {
   const addAssignmentModal = useModal();
   const editAssignmentModal = useModal();
   const [editingAssignment, setEditingAssignment] = useState<ProjectAssignment | null>(null);
+
+  // Handle contextual messages from URL parameters
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const from = searchParams.get('from');
+    const personName = searchParams.get('personName');
+    const roleName = searchParams.get('roleName');
+    const status = searchParams.get('status');
+
+    if (action && from) {
+      let message = '';
+      
+      if (action === 'assign' && personName) {
+        message = `Assign work to ${personName} (${status || 'underutilized'})`;
+      } else if (action === 'reduce-load' && personName) {
+        message = `Reduce workload for ${personName} (${status || 'overutilized'})`;
+      } else if (action === 'hire' && roleName) {
+        message = `Consider hiring for ${roleName} role`;
+      } else if (action === 'add-resources') {
+        message = 'Add resources to address capacity gaps';
+      }
+      
+      if (message) {
+        setContextMessage(message);
+        // Auto-clear the message after 5 seconds
+        setTimeout(() => setContextMessage(null), 5000);
+      }
+    }
+  }, [searchParams]);
 
   // Fetch assignments
   const { data: assignments, isLoading: assignmentsLoading, error: assignmentsError } = useQuery({

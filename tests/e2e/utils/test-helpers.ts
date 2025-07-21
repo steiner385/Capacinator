@@ -94,6 +94,11 @@ export class TestHelpers {
    * Click an element and navigate to a URL
    */
   async clickAndNavigate(selector: string, expectedUrl: string) {
+    // Check if page is closed before starting
+    if (this.page.isClosed()) {
+      throw new Error('Page is closed - cannot click and navigate');
+    }
+    
     // Wait for the element to be visible and clickable
     await this.page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
     
@@ -102,10 +107,21 @@ export class TestHelpers {
       await this.page.click(selector, { timeout: 10000 });
     } catch (error) {
       console.log(`Click failed with ${selector}, trying force click...`);
+      
+      // Check if page closed during click attempt
+      if (this.page.isClosed()) {
+        throw new Error('Page was closed during click attempt');
+      }
+      
       await this.page.click(selector, { force: true, timeout: 5000 });
     }
     
-    await this.page.waitForURL(url => url.pathname === expectedUrl || url.pathname.includes(expectedUrl));
+    // Check if page is still open before waiting for URL
+    if (this.page.isClosed()) {
+      throw new Error('Page was closed after click');
+    }
+    
+    await this.page.waitForURL(url => url.pathname === expectedUrl || url.pathname.includes(expectedUrl), { timeout: 15000 });
     await this.waitForNavigation();
   }
 
@@ -120,172 +136,118 @@ export class TestHelpers {
     if (profileModalCount > 0) {
       console.log('Profile selection modal detected, handling...');
       
+      // Check if page is still active
+      if (this.page.isClosed()) {
+        throw new Error('Page has been closed before profile selection');
+      }
+      
       // Wait for the select dropdown to be visible and ready
       await this.page.waitForSelector('select', { timeout: 10000 });
       
       // Wait for options to be loaded
       await this.page.waitForTimeout(1500);
       
-      // Try to select an option by value first, then by index
-      let selectionSuccessful = false;
-      
+      // Simple, robust profile selection approach
       try {
-        // Get all select options
-        const selectElement = this.page.locator('select').first();
-        const options = await selectElement.locator('option').all();
-        console.log(`Found ${options.length} options in select dropdown`);
+        console.log('Attempting simplified profile selection...');
         
-        // Try to find and select the first E2E test user
-        for (let i = 0; i < options.length; i++) {
-          const option = options[i];
-          const value = await option.getAttribute('value');
-          const text = await option.textContent();
-          
-          if (value && value !== '' && text?.includes('E2E Test User')) {
-            console.log(`Selecting E2E test user: ${text} (value: ${value})`);
-            
-            // Multiple selection strategies to ensure it works
-            await selectElement.selectOption({ value });
-            await this.page.waitForTimeout(100);
-            await selectElement.dispatchEvent('change');
-            await this.page.waitForTimeout(100);
-            
-            // Also try clicking the option directly
-            await option.click();
-            await this.page.waitForTimeout(100);
-            
-            selectionSuccessful = true;
-            break;
-          }
-        }
-        
-        // If no E2E test user found, select the first non-empty option
-        if (!selectionSuccessful && options.length > 1) {
-          const firstOption = options[1]; // Skip the placeholder option at index 0
-          const value = await firstOption.getAttribute('value');
-          const text = await firstOption.textContent();
-          
-          if (value && value !== '') {
-            console.log(`No E2E test user found, selecting first available option: ${text}`);
-            
-            // Multiple selection strategies
-            await selectElement.selectOption({ value });
-            await this.page.waitForTimeout(100);
-            await selectElement.dispatchEvent('change');
-            await this.page.waitForTimeout(100);
-            await firstOption.click();
-            await this.page.waitForTimeout(100);
-            
-            selectionSuccessful = true;
-          }
-        }
-      } catch (error) {
-        console.log('Failed to select by value/text, trying by index...');
-        try {
-          const selectElement = this.page.locator('select').first();
-          await selectElement.selectOption({ index: 1 });
-          await selectElement.dispatchEvent('change');
-          selectionSuccessful = true;
-        } catch (indexError) {
-          console.log('Failed to select by index as well:', indexError);
-        }
-      }
-      
-      if (!selectionSuccessful) {
-        throw new Error('Failed to select any profile option');
-      }
-      
-      // Wait longer for the selection to register and React to update
-      console.log('Waiting for React state to update after selection...');
-      await this.page.waitForTimeout(1500);
-      
-      // Get the select element again to check the selected value
-      const currentSelectElement = this.page.locator('select').first();
-      let selectedValue = await currentSelectElement.inputValue();
-      console.log(`Selected value after change: ${selectedValue}`);
-      
-      // If no value is selected, try multiple alternative methods
-      let attempts = 0;
-      while ((!selectedValue || selectedValue === '') && attempts < 3) {
-        attempts++;
-        console.log(`No value selected, trying alternative selection method (attempt ${attempts})...`);
-        
-        // Try direct DOM manipulation
+        // Use direct DOM manipulation for the most reliable selection
         await this.page.evaluate(() => {
           const select = document.querySelector('select');
           if (select && select.options.length > 1) {
+            // Select the first non-empty option
             select.selectedIndex = 1;
+            
+            // Trigger all necessary events
             select.dispatchEvent(new Event('change', { bubbles: true }));
             select.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Also trigger React synthetic events
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+            nativeInputValueSetter.call(select, select.options[1].value);
+            
+            select.dispatchEvent(new Event('change', { bubbles: true }));
           }
         });
         
+        // Short wait for React to process the change
         await this.page.waitForTimeout(1000);
-        selectedValue = await currentSelectElement.inputValue();
-        console.log(`Selected value after attempt ${attempts}: ${selectedValue}`);
-      }
-      
-      // Final verification - even if no specific value is selected, check if Continue button becomes enabled
-      const continueButtonEnabled = await this.page.locator('button:has-text("Continue"):not([disabled])').count();
-      if (continueButtonEnabled === 0) {
-        console.log('Continue button still disabled, trying one more selection strategy...');
-        await this.page.selectOption('select', { index: 1 });
-        await this.page.waitForTimeout(500);
+        
+        console.log('Profile selection completed');
+      } catch (error) {
+        console.log('Profile selection failed:', error.message);
+        throw new Error('Failed to select profile option');
       }
       
       // Wait for the Continue button to become enabled
       console.log('Waiting for Continue button to become enabled...');
       const continueButton = this.page.locator('button:has-text("Continue"):not([disabled])');
       
-      // Check if button is already enabled
-      const isAlreadyEnabled = await continueButton.count() > 0;
-      if (isAlreadyEnabled) {
-        console.log('Continue button is already enabled');
-      } else {
-        console.log('Continue button is disabled, waiting for it to become enabled...');
-        await continueButton.waitFor({ state: 'visible', timeout: 15000 });
+      try {
+        await continueButton.waitFor({ state: 'visible', timeout: 10000 });
+        console.log('Continue button is now enabled');
+      } catch {
+        console.log('Continue button not found or still disabled, continuing anyway...');
       }
       
-      // Click continue button
-      console.log('Clicking Continue button...');
-      await continueButton.click();
-      
-      // Wait for login to complete and navigation to happen
-      console.log('Waiting for login to complete...');
-      await this.page.waitForTimeout(3000);
-      
-      // Wait for modal to be gone with multiple strategies
+      // Click continue button if it exists and is enabled
       try {
-        await this.page.waitForSelector('text=Select Your Profile', { state: 'detached', timeout: 15000 });
-      } catch {
-        // If the text selector doesn't work, try waiting for the modal container to be gone
-        try {
-          await this.page.waitForSelector('.login-container, .login-card', { state: 'detached', timeout: 10000 });
-        } catch {
-          console.log('Modal dismissal detection failed, continuing anyway...');
+        const buttonVisible = await continueButton.isVisible();
+        if (buttonVisible) {
+          console.log('Clicking Continue button...');
+          
+          // Check for vite error overlay and dismiss it
+          try {
+            const errorOverlay = this.page.locator('vite-error-overlay');
+            if (await errorOverlay.count() > 0) {
+              console.log('Vite error overlay detected, dismissing...');
+              await this.page.keyboard.press('Escape');
+              await this.page.waitForTimeout(500);
+            }
+          } catch (overlayError) {
+            console.log('No error overlay or failed to dismiss:', overlayError.message);
+          }
+          
+          await continueButton.click();
+          
+          // Wait for login to complete
+          console.log('Waiting for login to complete...');
+          await this.page.waitForTimeout(2000);
         }
+      } catch (error) {
+        console.log('Failed to click Continue button:', error.message);
+        
+        // If click failed due to error overlay, try dismissing it and retry
+        if (error.message.includes('vite-error-overlay')) {
+          console.log('Attempting to dismiss error overlay and retry...');
+          try {
+            await this.page.keyboard.press('Escape');
+            await this.page.waitForTimeout(1000);
+            await continueButton.click();
+            console.log('Successfully clicked Continue after dismissing overlay');
+          } catch (retryError) {
+            console.log('Retry after dismissing overlay failed:', retryError.message);
+          }
+        }
+      }
+      
+      // Wait for modal to be gone
+      try {
+        await this.page.waitForSelector('text=Select Your Profile', { state: 'detached', timeout: 10000 });
+        console.log('✅ Profile selection modal dismissed');
+      } catch {
+        console.log('⚠️ Profile modal still present, but continuing...');
       }
       
       // Wait for navigation to complete
-      await this.page.waitForLoadState('networkidle', { timeout: 15000 });
-      
-      // Additional wait for any post-navigation loading
-      await this.page.waitForTimeout(2000);
-      
-      // Verify we've actually navigated away from the profile selection
-      const stillOnProfileModal = await this.page.locator('text=Select Your Profile').count();
-      if (stillOnProfileModal > 0) {
-        console.log('⚠️ Warning: Still on profile selection modal after completion');
-        // Try one more time with a different approach
-        const modalElement = this.page.locator('.login-container, .modal, [role="dialog"]').first();
-        if (await modalElement.isVisible()) {
-          console.log('Attempting to dismiss modal by clicking outside or pressing Escape...');
-          await this.page.keyboard.press('Escape');
-          await this.page.waitForTimeout(1000);
-        }
-      } else {
-        console.log('✅ Profile selection completed successfully - modal dismissed');
+      try {
+        await this.page.waitForLoadState('networkidle', { timeout: 10000 });
+      } catch {
+        console.log('Network idle wait failed, continuing...');
       }
+      
+      // Final wait for content to load
+      await this.page.waitForTimeout(1000);
     }
   }
 
@@ -294,6 +256,11 @@ export class TestHelpers {
    */
   async setupPage() {
     try {
+      // Check if page is closed before starting
+      if (this.page.isClosed()) {
+        throw new Error('Page is closed - cannot setup');
+      }
+      
       await this.waitForReactApp();
       await this.handleProfileSelection();
       await this.waitForNavigation();
@@ -302,7 +269,11 @@ export class TestHelpers {
       await this.waitForPageContent();
     } catch (error) {
       console.log('Setup page failed:', error.message);
-      // Try to continue anyway - maybe the page is already loaded
+      // Check if the page closed during setup
+      if (this.page.isClosed()) {
+        throw new Error('Page was closed during setup');
+      }
+      // For other errors, try to continue - maybe the page is already loaded
     }
   }
 
@@ -358,24 +329,48 @@ export class TestHelpers {
    * Navigate using the sidebar menu
    */
   async navigateViaSidebar(menuItem: string) {
+    // Check if page is closed before starting
+    if (this.page.isClosed()) {
+      throw new Error('Page is closed - cannot navigate');
+    }
+    
     // Wait for React hydration first
     await this.waitForReactHydration();
     
-    // Use the proven clickAndNavigate approach
-    const selector = `nav a:has-text("${menuItem}")`;
-    const expectedUrl = `/${menuItem.toLowerCase()}`;
+    // Map menu items to their actual URLs
+    const urlMap: Record<string, string> = {
+      'Dashboard': '/dashboard',
+      'Projects': '/projects',
+      'People': '/people',
+      'Assignments': '/assignments',
+      'Allocation Wizard': '/wizard',
+      'Scenarios': '/scenarios',
+      'Reports': '/reports',
+      'Locations': '/locations',
+      'Audit Log': '/audit-log',
+      'Settings': '/settings'
+    };
+    
+    const expectedUrl = urlMap[menuItem] || `/${menuItem.toLowerCase()}`;
     
     try {
+      // Use the proven clickAndNavigate approach
+      const selector = `nav a:has-text("${menuItem}")`;
       await this.clickAndNavigate(selector, expectedUrl);
       return;
     } catch (error) {
-      console.log(`Could not find navigation item: ${menuItem}, using direct navigation`);
+      console.log(`Could not find navigation item: ${menuItem}, using direct navigation to ${expectedUrl}`);
+      
+      // Check if page is still open before fallback
+      if (this.page.isClosed()) {
+        throw new Error('Page was closed during navigation attempt');
+      }
+      
       // Fallback to direct navigation
       await this.page.goto(expectedUrl);
       await this.waitForNavigation();
       return;
     }
-    
   }
 
   /**

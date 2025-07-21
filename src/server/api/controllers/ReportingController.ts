@@ -345,39 +345,121 @@ export class ReportingController extends BaseController {
     const result = await this.executeQuery(async () => {
       console.log('📊 Getting demand data from project_demands_view...');
       
-      // Get demand data from the corrected view
+      // Get demand data from the corrected view with proper date filtering
       let demandQuery = this.db('project_demands_view')
         .select('*');
       
-      if (startDate) {
-        demandQuery = demandQuery.where('start_date', '>=', startDate);
-      }
-      if (endDate) {
-        demandQuery = demandQuery.where('end_date', '<=', endDate);
+      // Fix date filtering to include projects that overlap with the date range
+      if (startDate && endDate) {
+        demandQuery = demandQuery.where(function() {
+          this.where('start_date', '<=', endDate)
+              .andWhere('end_date', '>=', startDate);
+        });
+      } else if (startDate) {
+        demandQuery = demandQuery.where('end_date', '>=', startDate);
+      } else if (endDate) {
+        demandQuery = demandQuery.where('start_date', '<=', endDate);
       }
       
       const demandData = await demandQuery;
       console.log(`📊 Found ${demandData.length} demand records`);
       
-      // Aggregate by project
-      const projectDemands = await this.db('project_demands_view')
+      // Aggregate by project using the improved view with hour calculations
+      let projectQuery = this.db('project_demands_view')
         .select('project_id', 'project_name')
-        .sum('total_demand_percentage as total_demand')
+        .sum('estimated_hours as total_hours')
         .groupBy('project_id', 'project_name')
-        .orderBy('total_demand', 'desc');
+        .orderBy('total_hours', 'desc');
       
-      // Aggregate by role
-      const roleDemands = await this.db('project_demands_view')
+      if (startDate && endDate) {
+        projectQuery = projectQuery.where(function() {
+          this.where('start_date', '<=', endDate)
+              .andWhere('end_date', '>=', startDate);
+        });
+      } else if (startDate) {
+        projectQuery = projectQuery.where('end_date', '>=', startDate);
+      } else if (endDate) {
+        projectQuery = projectQuery.where('start_date', '<=', endDate);
+      }
+      
+      const projectDemands = await projectQuery;
+      
+      // Format for frontend
+      const byProject = projectDemands.map((project: any) => ({
+        id: project.project_id,
+        name: project.project_name,
+        demand: project.total_hours || 0
+      }));
+      
+      // Aggregate by role using the improved view
+      let roleQuery = this.db('project_demands_view')
         .select('role_id', 'role_name')
-        .sum('total_demand_percentage as total_demand')
+        .sum('estimated_hours as total_hours')
         .groupBy('role_id', 'role_name')
-        .orderBy('total_demand', 'desc');
+        .orderBy('total_hours', 'desc');
+        
+      if (startDate && endDate) {
+        roleQuery = roleQuery.where(function() {
+          this.where('start_date', '<=', endDate)
+              .andWhere('end_date', '>=', startDate);
+        });
+      } else if (startDate) {
+        roleQuery = roleQuery.where('end_date', '>=', startDate);
+      } else if (endDate) {
+        roleQuery = roleQuery.where('start_date', '<=', endDate);
+      }
       
-      // Get summary metrics
-      const totalDemand = await this.db('project_demands_view')
-        .sum('total_demand_percentage as total')
-        .first();
+      const roleDemands = await roleQuery;
       
+      // Format for frontend
+      const by_role = roleDemands.map((role: any) => ({
+        role_name: role.role_name,
+        total_hours: role.total_hours || 0
+      }));
+      
+      // Get project type aggregation using the improved view
+      let projectTypeQuery = this.db('project_demands_view')
+        .select('project_type_id', 'project_type_name')
+        .sum('estimated_hours as total_hours')
+        .groupBy('project_type_id', 'project_type_name')
+        .orderBy('total_hours', 'desc');
+        
+      if (startDate && endDate) {
+        projectTypeQuery = projectTypeQuery.where(function() {
+          this.where('start_date', '<=', endDate)
+              .andWhere('end_date', '>=', startDate);
+        });
+      } else if (startDate) {
+        projectTypeQuery = projectTypeQuery.where('end_date', '>=', startDate);
+      } else if (endDate) {
+        projectTypeQuery = projectTypeQuery.where('start_date', '<=', endDate);
+      }
+      
+      const projectTypeDemands = await projectTypeQuery;
+      
+      const by_project_type = projectTypeDemands.map((type: any) => ({
+        project_type_name: type.project_type_name,
+        total_hours: type.total_hours || 0
+      }));
+      
+      // Generate timeline data (monthly breakdown) using the improved view
+      const timelineQuery = this.db('project_demands_view')
+        .select(this.db.raw("strftime('%Y-%m', start_date) as month"))
+        .sum('estimated_hours as total_hours')
+        .groupBy(this.db.raw("strftime('%Y-%m', start_date)"))
+        .orderBy('month');
+        
+      const timelineData = await timelineQuery;
+      
+      const timeline = timelineData.map((month: any) => ({
+        month: month.month,
+        total_hours: month.total_hours || 0
+      }));
+      
+      // Calculate total hours across all projects
+      const totalHours = byProject.reduce((sum: number, project: any) => sum + project.demand, 0);
+      
+      // Count distinct projects and roles
       const projectsWithDemand = await this.db('project_demands_view')
         .countDistinct('project_id as count')
         .first();
@@ -388,12 +470,14 @@ export class ReportingController extends BaseController {
       
       return {
         demandData,
-        projectDemands,
-        roleDemands,
+        byProject,
+        by_role,
+        by_project_type,
+        timeline,
         summary: {
-          totalDemand: totalDemand?.total || 0,
-          projectsWithDemand: projectsWithDemand?.count || 0,
-          rolesWithDemand: rolesWithDemand?.count || 0
+          total_hours: totalHours,
+          total_projects: projectsWithDemand?.count || 0,
+          roles_with_demand: rolesWithDemand?.count || 0
         }
       };
     }, res, 'Failed to fetch demand report');

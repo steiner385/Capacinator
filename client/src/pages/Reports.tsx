@@ -42,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Reports() {
-  const [activeReport, setActiveReport] = useState<'capacity' | 'utilization' | 'demand' | 'gaps'>('capacity');
+  const [activeReport, setActiveReport] = useState<'capacity' | 'utilization' | 'demand' | 'gaps'>('demand');
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: '2023-08-01', // Set to match actual data range
     endDate: '2023-12-31'
@@ -864,8 +864,8 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {(demandReport.byProject || []).slice(0, 5).map((project: any) => (
-                  <tr key={project.id}>
+                {(demandReport.byProject || []).slice(0, 5).map((project: any, index: number) => (
+                  <tr key={project.id || project.name || index}>
                     <td>{project.name}</td>
                     <td>{project.demand} hrs</td>
                     <td>
@@ -890,8 +890,8 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {(demandReport.by_role || []).slice(0, 5).map((role: any) => (
-                  <tr key={role.role_id}>
+                {(demandReport.by_role || []).slice(0, 5).map((role: any, index: number) => (
+                  <tr key={role.role_id || role.role_name || index}>
                     <td>{role.role_name}</td>
                     <td>{role.total_hours} hrs</td>
                     <td>

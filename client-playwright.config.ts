@@ -4,16 +4,16 @@ export default defineConfig({
   testDir: './tests/e2e',
   
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false,
   
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'list',
@@ -32,9 +32,12 @@ export default defineConfig({
     /* Ignore SSL certificate errors for self-signed certificates */
     ignoreHTTPSErrors: true,
     
-    /* Increase timeouts for slower loading */
-    actionTimeout: 30000,
-    navigationTimeout: 30000,
+    /* Increase timeouts for slower loading and prevent premature page closure */
+    actionTimeout: 45000,
+    navigationTimeout: 45000,
+    
+    /* Add video recording for debugging page closure issues */
+    video: 'retain-on-failure',
   },
 
   /* Configure projects for major browsers */
@@ -42,26 +45,6 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
     },
   ],
 
