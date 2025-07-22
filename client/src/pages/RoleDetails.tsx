@@ -17,8 +17,6 @@ export default function RoleDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Role>>({});
   const [localTemplates, setLocalTemplates] = useState<ResourceTemplate[]>([]);
 
   // Fetch role details
@@ -69,35 +67,93 @@ export default function RoleDetails() {
     }
   }, [resourceTemplates]);
 
-  // Update role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: async (data: Partial<Role>) => {
+  // Individual field update mutations
+  const updateRoleFieldMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: any }) => {
       if (!id) throw new Error('Role ID is required');
-      return api.roles.update(id, data);
+      return api.roles.update(id, { [field]: value });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role', id] });
-      setIsEditing(false);
-      setEditForm({});
     }
   });
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditForm({
-      name: role?.name || '',
-      description: role?.description || '',
-      external_id: role?.external_id || ''
-    });
+  // Handle individual field updates
+  const handleFieldUpdate = (field: string, value: any) => {
+    updateRoleFieldMutation.mutate({ field, value });
   };
 
-  const handleSave = () => {
-    updateRoleMutation.mutate(editForm);
-  };
+  // Inline editing component
+  const InlineEdit = ({ 
+    field, 
+    value, 
+    type = 'text', 
+    placeholder = ''
+  }: {
+    field: string;
+    value: any;
+    type?: 'text' | 'textarea';
+    placeholder?: string;
+  }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(value);
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditForm({});
+    const handleSave = () => {
+      if (editValue !== value) {
+        handleFieldUpdate(field, editValue);
+      }
+      setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+      setEditValue(value);
+      setIsEditing(false);
+    };
+
+    if (isEditing) {
+      return (
+        <div className="inline-edit-container">
+          {type === 'textarea' ? (
+            <textarea
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-input"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              placeholder={placeholder}
+              rows={3}
+              autoFocus
+            />
+          ) : (
+            <input
+              type={type}
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-input"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              placeholder={placeholder}
+              autoFocus
+            />
+          )}
+        </div>
+      );
+    }
+
+    const displayValue = value || placeholder || 'Not specified';
+
+    return (
+      <div className="info-value inline-editable" onClick={() => setIsEditing(true)} style={{ cursor: 'pointer' }}>
+        <span>{displayValue}</span>
+        <Edit2 size={14} className="edit-icon" style={{ marginLeft: '8px', opacity: 0.5 }} />
+      </div>
+    );
   };
 
   // Create resource template matrix for display
@@ -174,32 +230,22 @@ export default function RoleDetails() {
             Back to Roles
           </button>
           <div>
-            <h1>{role.name}</h1>
-            {role.description && <p className="text-muted">{role.description}</p>}
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <InlineEdit 
+                field="name" 
+                value={role.name} 
+                placeholder="Enter role name"
+              />
+            </h1>
+            <div style={{ marginTop: '8px' }}>
+              <InlineEdit 
+                field="description" 
+                value={role.description} 
+                type="textarea"
+                placeholder="Enter role description"
+              />
+            </div>
           </div>
-        </div>
-        <div className="header-actions">
-          {isEditing ? (
-            <>
-              <button className="btn btn-secondary" onClick={handleCancel}>
-                <X size={16} />
-                Cancel
-              </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={handleSave}
-                disabled={updateRoleMutation.isPending}
-              >
-                <Save size={16} />
-                Save Changes
-              </button>
-            </>
-          ) : (
-            <button className="btn btn-primary" onClick={handleEdit}>
-              <Edit2 size={16} />
-              Edit Role
-            </button>
-          )}
         </div>
       </div>
 
@@ -207,47 +253,16 @@ export default function RoleDetails() {
         {/* Role Information Section */}
         <section className="role-info-section">
           <h2>Role Information</h2>
-          {isEditing ? (
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Role Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={editForm.name || ''}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  placeholder="Role name"
-                />
-              </div>
-              <div className="form-group">
-                <label>External ID</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={editForm.external_id || ''}
-                  onChange={(e) => setEditForm({ ...editForm, external_id: e.target.value })}
-                  placeholder="External system ID (optional)"
-                />
-              </div>
-              <div className="form-group span-2">
-                <label>Description</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={editForm.description || ''}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  placeholder="Role description"
-                />
-              </div>
+          <div className="info-grid">
+            <div className="info-item">
+              <label>External ID</label>
+              <InlineEdit
+                field="external_id"
+                value={role.external_id}
+                placeholder="Enter external ID"
+              />
             </div>
-          ) : (
-            <div className="info-grid">
-              <div className="info-item">
-                <label>External ID</label>
-                <span>{role.external_id || '-'}</span>
-              </div>
-            </div>
-          )}
+          </div>
         </section>
 
         {/* Resource Templates Section */}

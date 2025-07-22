@@ -18,8 +18,6 @@ export default function ProjectTypeDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<ProjectType>>({});
   const [localTemplates, setLocalTemplates] = useState<ResourceTemplate[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
   const [childForm, setChildForm] = useState({ name: '', description: '', color_code: '#6b7280' });
@@ -121,16 +119,14 @@ export default function ProjectTypeDetails() {
     }
   }, [resourceTemplates]);
 
-  // Update project type mutation
-  const updateProjectTypeMutation = useMutation({
-    mutationFn: async (data: Partial<ProjectType>) => {
+  // Individual field update mutations
+  const updateProjectTypeFieldMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: any }) => {
       if (!id) throw new Error('Project Type ID is required');
-      return api.projectTypes.update(id, data);
+      return api.projectTypes.update(id, { [field]: value });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projectType', id] });
-      setIsEditing(false);
-      setEditForm({});
     }
   });
 
@@ -159,22 +155,103 @@ export default function ProjectTypeDetails() {
     }
   });
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditForm({
-      name: projectType?.name || '',
-      description: projectType?.description || '',
-      color_code: projectType?.color_code || ''
-    });
+  // Handle individual field updates
+  const handleFieldUpdate = (field: string, value: any) => {
+    updateProjectTypeFieldMutation.mutate({ field, value });
   };
 
-  const handleSave = () => {
-    updateProjectTypeMutation.mutate(editForm);
-  };
+  // Inline editing component
+  const InlineEdit = ({ 
+    field, 
+    value, 
+    type = 'text', 
+    placeholder = ''
+  }: {
+    field: string;
+    value: any;
+    type?: 'text' | 'textarea' | 'color';
+    placeholder?: string;
+  }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(value);
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditForm({});
+    const handleSave = () => {
+      if (editValue !== value) {
+        handleFieldUpdate(field, editValue);
+      }
+      setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+      setEditValue(value);
+      setIsEditing(false);
+    };
+
+    if (isEditing) {
+      return (
+        <div className="inline-edit-container">
+          {type === 'textarea' ? (
+            <textarea
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-input"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              placeholder={placeholder}
+              rows={3}
+              autoFocus
+            />
+          ) : type === 'color' ? (
+            <input
+              type="color"
+              value={editValue || '#6b7280'}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-input"
+              onBlur={handleSave}
+              autoFocus
+            />
+          ) : (
+            <input
+              type={type}
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-input"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              placeholder={placeholder}
+              autoFocus
+            />
+          )}
+        </div>
+      );
+    }
+
+    const displayValue = value || placeholder || 'Not specified';
+
+    return (
+      <div className="info-value inline-editable" onClick={() => setIsEditing(true)} style={{ cursor: 'pointer' }}>
+        {type === 'color' && value && (
+          <div 
+            style={{ 
+              width: '20px', 
+              height: '20px', 
+              backgroundColor: value, 
+              borderRadius: '4px',
+              marginRight: '8px',
+              border: '1px solid #ddd'
+            }} 
+          />
+        )}
+        <span>{displayValue}</span>
+        <Edit2 size={14} className="edit-icon" style={{ marginLeft: '8px', opacity: 0.5 }} />
+      </div>
+    );
   };
 
   const handleAddChild = () => {
@@ -254,32 +331,22 @@ export default function ProjectTypeDetails() {
             Back to Project Types
           </button>
           <div>
-            <h1>{projectType.name}</h1>
-            {projectType.description && <p className="text-muted">{projectType.description}</p>}
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <InlineEdit 
+                field="name" 
+                value={projectType.name} 
+                placeholder="Enter project type name"
+              />
+            </h1>
+            <div style={{ marginTop: '8px' }}>
+              <InlineEdit 
+                field="description" 
+                value={projectType.description} 
+                type="textarea"
+                placeholder="Enter project type description"
+              />
+            </div>
           </div>
-        </div>
-        <div className="header-actions">
-          {isEditing ? (
-            <>
-              <button className="btn btn-secondary" onClick={handleCancel}>
-                <X size={16} />
-                Cancel
-              </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={handleSave}
-                disabled={updateProjectTypeMutation.isPending}
-              >
-                <Save size={16} />
-                Save Changes
-              </button>
-            </>
-          ) : (
-            <button className="btn btn-primary" onClick={handleEdit}>
-              <Edit2 size={16} />
-              Edit Project Type
-            </button>
-          )}
         </div>
       </div>
 
@@ -287,57 +354,17 @@ export default function ProjectTypeDetails() {
         {/* Project Type Information Section */}
         <section className="role-info-section">
           <h2>Project Type Information</h2>
-          {isEditing ? (
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Project Type Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={editForm.name || ''}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  placeholder="Project type name"
-                />
-              </div>
-              <div className="form-group">
-                <label>Color Code</label>
-                <input
-                  type="color"
-                  className="form-input"
-                  value={editForm.color_code || '#6b7280'}
-                  onChange={(e) => setEditForm({ ...editForm, color_code: e.target.value })}
-                />
-              </div>
-              <div className="form-group span-2">
-                <label>Description</label>
-                <textarea
-                  className="form-input"
-                  rows={3}
-                  value={editForm.description || ''}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  placeholder="Project type description"
-                />
-              </div>
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Color</label>
+              <InlineEdit
+                field="color_code"
+                value={projectType.color_code}
+                type="color"
+                placeholder="#6b7280"
+              />
             </div>
-          ) : (
-            <div className="info-grid">
-              <div className="info-item">
-                <label>Color</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div 
-                    style={{ 
-                      width: '20px', 
-                      height: '20px', 
-                      backgroundColor: projectType.color_code || '#6b7280',
-                      borderRadius: '4px',
-                      border: '1px solid #e5e7eb'
-                    }}
-                  />
-                  <span>{projectType.color_code || '#6b7280'}</span>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </section>
 
         {/* Project Phases Section (only for parent types) */}
@@ -579,15 +606,15 @@ export default function ProjectTypeDetails() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: '200px' }}>Role</th>
-                    {phases?.map(phase => (
+                    {Array.isArray(phases) ? phases.map(phase => (
                       <th key={phase.id} style={{ minWidth: '120px', textAlign: 'center' }}>
                         {phase.name}
                       </th>
-                    ))}
+                    )) : null}
                   </tr>
                 </thead>
                 <tbody>
-                  {roles?.map(role => (
+                  {Array.isArray(roles) ? roles.map(role => (
                     <tr key={role.id}>
                       <td style={{ verticalAlign: 'top', padding: '12px' }}>
                         <div>
@@ -599,7 +626,7 @@ export default function ProjectTypeDetails() {
                           </div>
                         </div>
                       </td>
-                      {phases?.map(phase => {
+                      {Array.isArray(phases) ? phases.map(phase => {
                         const template = localTemplates.find(
                           t => String(t.role_id) === String(role.id) && 
                                String(t.phase_id) === String(phase.id)
@@ -651,9 +678,9 @@ export default function ProjectTypeDetails() {
                             </div>
                           </td>
                         );
-                      })}
+                      }) : null}
                     </tr>
-                  ))}
+                  )) : null}
                 </tbody>
               </table>
             </div>

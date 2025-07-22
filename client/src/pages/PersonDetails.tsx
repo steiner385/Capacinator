@@ -679,10 +679,10 @@ export default function PersonDetails() {
                     field="location_id"
                     value={person.location_id}
                     type="select"
-                    options={locations?.map((location: any) => ({
+                    options={Array.isArray(locations) ? locations.map((location: any) => ({
                       value: location.id,
                       label: location.name
-                    })) || []}
+                    })) : []}
                     placeholder="Select location"
                     icon={MapPin}
                   />
@@ -694,10 +694,10 @@ export default function PersonDetails() {
                     field="primary_person_role_id"
                     value={person.roles.find((role: any) => role.is_primary)?.role_id}
                     type="select"
-                    options={roles?.map((role: any) => ({
+                    options={Array.isArray(roles) ? roles.map((role: any) => ({
                       value: role.id,
                       label: role.name
-                    })) || []}
+                    })) : []}
                     placeholder="Select primary role"
                     icon={Shield}
                   />
@@ -709,10 +709,10 @@ export default function PersonDetails() {
                     field="supervisor_id"
                     value={person.supervisor_id}
                     type="select"
-                    options={allPeople?.filter((p: any) => p.id !== id).map((supervisor: any) => ({
+                    options={Array.isArray(allPeople) ? allPeople.filter((p: any) => p.id !== id).map((supervisor: any) => ({
                       value: supervisor.id,
                       label: supervisor.name
-                    })) || []}
+                    })) : []}
                     placeholder="No supervisor"
                     icon={Users}
                   />

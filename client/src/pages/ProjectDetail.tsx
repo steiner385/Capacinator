@@ -70,8 +70,6 @@ export function ProjectDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState<Partial<ProjectDetail> | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     phases: true,
@@ -99,7 +97,7 @@ export function ProjectDetail() {
     queryKey: ['project-types'],
     queryFn: async () => {
       const response = await api.projectTypes.list();
-      return response.data;
+      return response.data.data || response.data;
     }
   });
 
@@ -112,16 +110,14 @@ export function ProjectDetail() {
     }
   });
 
-  // Update project mutation
-  const updateProjectMutation = useMutation({
-    mutationFn: async (data: Partial<ProjectDetail>) => {
-      const response = await api.projects.update(id!, data);
+  // Individual field update mutations
+  const updateProjectFieldMutation = useMutation({
+    mutationFn: async ({ field, value }: { field: string; value: any }) => {
+      const response = await api.projects.update(id!, { [field]: value });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
-      setIsEditing(false);
-      setEditedProject(null);
     }
   });
 
@@ -135,20 +131,133 @@ export function ProjectDetail() {
     }
   });
 
-  const handleEdit = () => {
-    setEditedProject(project || null);
-    setIsEditing(true);
+  // Handle individual field updates
+  const handleFieldUpdate = (field: string, value: any) => {
+    updateProjectFieldMutation.mutate({ field, value });
   };
 
-  const handleSave = () => {
-    if (editedProject) {
-      updateProjectMutation.mutate(editedProject);
+  // Inline editing component
+  const InlineEdit = ({ 
+    field, 
+    value, 
+    type = 'text', 
+    options = [], 
+    placeholder = '',
+    icon = null
+  }: {
+    field: string;
+    value: any;
+    type?: 'text' | 'email' | 'tel' | 'number' | 'select' | 'checkbox' | 'textarea';
+    options?: Array<{ value: any; label: string }>;
+    placeholder?: string;
+    icon?: any;
+  }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(value);
+
+    const handleSave = () => {
+      if (editValue !== value) {
+        if (type === 'number') {
+          handleFieldUpdate(field, parseInt(editValue));
+        } else if (type === 'checkbox') {
+          handleFieldUpdate(field, editValue ? 1 : 0);
+        } else {
+          handleFieldUpdate(field, editValue);
+        }
+      }
+      setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+      setEditValue(value);
+      setIsEditing(false);
+    };
+
+    if (isEditing) {
+      return (
+        <div className="inline-edit-container">
+          {type === 'select' ? (
+            <select
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-select"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              autoFocus
+            >
+              <option value="">{placeholder || 'Select...'}</option>
+              {options.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : type === 'checkbox' ? (
+            <input
+              type="checkbox"
+              checked={editValue}
+              onChange={(e) => setEditValue(e.target.checked)}
+              className="form-checkbox"
+              onBlur={handleSave}
+              autoFocus
+            />
+          ) : type === 'textarea' ? (
+            <textarea
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-textarea"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              placeholder={placeholder}
+              rows={3}
+              autoFocus
+            />
+          ) : (
+            <input
+              type={type}
+              value={editValue || ''}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="form-input"
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') handleCancel();
+              }}
+              placeholder={placeholder}
+              autoFocus
+            />
+          )}
+        </div>
+      );
     }
-  };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedProject(null);
+    // For display, show the label if it's a select, otherwise show the value
+    let displayValue;
+    if (type === 'select') {
+      displayValue = options.find(opt => opt.value === value)?.label || placeholder || 'Not specified';
+    } else if (type === 'checkbox') {
+      displayValue = (
+        <span className={`badge ${value ? 'badge-success' : 'badge-gray'}`}>
+          {value ? 'Yes' : 'No'}
+        </span>
+      );
+    } else {
+      displayValue = value || placeholder || 'Not specified';
+    }
+
+    return (
+      <div className="info-value inline-editable" onClick={() => canEdit && setIsEditing(true)}>
+        {icon && React.createElement(icon, { size: 16 })}
+        <span>{displayValue}</span>
+        {canEdit && <Edit2 size={14} className="edit-icon" />}
+      </div>
+    );
   };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -181,8 +290,6 @@ export function ProjectDetail() {
   if (isLoading) return <div className="loading">Loading project details...</div>;
   if (error || !project) return <div className="error">Failed to load project details</div>;
 
-  const displayProject = isEditing ? editedProject! : project;
-
   return (
     <div className="page-container person-details">
       <div className="page-header">
@@ -205,27 +312,6 @@ export function ProjectDetail() {
             {getPriorityLabel(project.priority)}
           </span>
         </div>
-        <div className="header-actions">
-          {!isEditing ? (
-            canEdit && (
-              <button className="btn btn-primary" onClick={handleEdit}>
-                <Edit2 size={20} />
-                Edit
-              </button>
-            )
-          ) : (
-            <>
-              <button className="btn btn-secondary" onClick={handleCancel}>
-                <X size={20} />
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={handleSave}>
-                <Save size={20} />
-                Save
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       <div className="person-details-content">
@@ -244,63 +330,47 @@ export function ProjectDetail() {
               <div className="info-grid">
                 <div className="info-item">
                   <label>Project Type</label>
-                  {isEditing ? (
-                    <select
-                      value={editedProject?.project_type_id || ''}
-                      onChange={(e) => setEditedProject({ ...editedProject!, project_type_id: e.target.value })}
-                      className="form-select"
-                    >
-                      <option value="">Select project type</option>
-                      {projectTypes?.map((type: any) => (
-                        <option key={type.id} value={type.id}>{type.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="info-value">{project.project_type_name || 'Not specified'}</div>
-                  )}
+                  <InlineEdit
+                    field="project_type_id"
+                    value={project.project_type_id}
+                    type="select"
+                    options={Array.isArray(projectTypes) ? projectTypes.map((type: any) => ({
+                      value: type.id,
+                      label: type.name
+                    })) : []}
+                    placeholder="Select project type"
+                  />
                 </div>
 
                 <div className="info-item">
                   <label>Location</label>
-                  {isEditing ? (
-                    <select
-                      value={editedProject?.location_id || ''}
-                      onChange={(e) => setEditedProject({ ...editedProject!, location_id: e.target.value })}
-                      className="form-select"
-                    >
-                      <option value="">Select location</option>
-                      {locations?.map((loc: any) => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="info-value">
-                      <MapPin size={16} />
-                      {project.location_name || 'Not specified'}
-                    </div>
-                  )}
+                  <InlineEdit
+                    field="location_id"
+                    value={project.location_id}
+                    type="select"
+                    options={Array.isArray(locations) ? locations.map((loc: any) => ({
+                      value: loc.id,
+                      label: loc.name
+                    })) : []}
+                    placeholder="Select location"
+                    icon={MapPin}
+                  />
                 </div>
 
                 <div className="info-item">
                   <label>Priority</label>
-                  {isEditing ? (
-                    <select
-                      value={editedProject?.priority || ''}
-                      onChange={(e) => setEditedProject({ ...editedProject!, priority: parseInt(e.target.value) })}
-                      className="form-select"
-                    >
-                      <option value={1}>Critical</option>
-                      <option value={2}>High</option>
-                      <option value={3}>Medium</option>
-                      <option value={4}>Low</option>
-                    </select>
-                  ) : (
-                    <div className="info-value">
-                      <span className={`badge badge-${getPriorityColor(project.priority)}`}>
-                        {getPriorityLabel(project.priority)}
-                      </span>
-                    </div>
-                  )}
+                  <InlineEdit
+                    field="priority"
+                    value={project.priority}
+                    type="select"
+                    options={[
+                      { value: 1, label: 'Critical' },
+                      { value: 2, label: 'High' },
+                      { value: 3, label: 'Medium' },
+                      { value: 4, label: 'Low' }
+                    ]}
+                    placeholder="Select priority"
+                  />
                 </div>
 
                 <div className="info-item">
@@ -310,62 +380,40 @@ export function ProjectDetail() {
 
                 <div className="info-item">
                   <label>External ID</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedProject?.external_id || ''}
-                      onChange={(e) => setEditedProject({ ...editedProject!, external_id: e.target.value })}
-                      className="form-input"
-                    />
-                  ) : (
-                    <div className="info-value">{project.external_id || 'Not specified'}</div>
-                  )}
+                  <InlineEdit
+                    field="external_id"
+                    value={project.external_id}
+                    placeholder="Enter external ID"
+                  />
                 </div>
 
                 <div className="info-item">
                   <label>Include in Demand</label>
-                  {isEditing ? (
-                    <input
-                      type="checkbox"
-                      checked={editedProject?.include_in_demand === 1}
-                      onChange={(e) => setEditedProject({ ...editedProject!, include_in_demand: e.target.checked ? 1 : 0 })}
-                      className="form-checkbox"
-                    />
-                  ) : (
-                    <div className="info-value">
-                      <span className={`badge ${project.include_in_demand ? 'badge-success' : 'badge-gray'}`}>
-                        {project.include_in_demand ? 'Yes' : 'No'}
-                      </span>
-                    </div>
-                  )}
+                  <InlineEdit
+                    field="include_in_demand"
+                    value={project.include_in_demand === 1}
+                    type="checkbox"
+                  />
                 </div>
 
                 <div className="info-item info-item-full">
                   <label>Description</label>
-                  {isEditing ? (
-                    <textarea
-                      value={editedProject?.description || ''}
-                      onChange={(e) => setEditedProject({ ...editedProject!, description: e.target.value })}
-                      className="form-textarea"
-                      rows={3}
-                    />
-                  ) : (
-                    <div className="info-value">{project.description || 'No description provided'}</div>
-                  )}
+                  <InlineEdit
+                    field="description"
+                    value={project.description}
+                    type="textarea"
+                    placeholder="Enter project description"
+                  />
                 </div>
 
                 <div className="info-item info-item-full">
                   <label>Data Restrictions</label>
-                  {isEditing ? (
-                    <textarea
-                      value={editedProject?.data_restrictions || ''}
-                      onChange={(e) => setEditedProject({ ...editedProject!, data_restrictions: e.target.value })}
-                      className="form-textarea"
-                      rows={2}
-                    />
-                  ) : (
-                    <div className="info-value">{project.data_restrictions || 'No restrictions specified'}</div>
-                  )}
+                  <InlineEdit
+                    field="data_restrictions"
+                    value={project.data_restrictions}
+                    type="textarea"
+                    placeholder="Enter data restrictions"
+                  />
                 </div>
               </div>
             </div>
@@ -429,7 +477,7 @@ export function ProjectDetail() {
                         <Link to={`/people/${assignment.person_id}`} className="assignment-person">
                           {assignment.person_name}
                         </Link>
-                        {isEditing && canEdit && (
+                        {canEdit && (
                           <button
                             className="btn btn-icon btn-danger"
                             onClick={() => deleteAssignmentMutation.mutate(assignment.id)}

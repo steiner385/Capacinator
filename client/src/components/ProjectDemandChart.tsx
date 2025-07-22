@@ -92,7 +92,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       return timeline;
     };
 
-    // 1. DEMAND DATA - allocation percentages by role
+    // 1. DEMAND DATA - convert allocation percentages to FTE
     const demandTimeline = createEmptyTimeline();
     apiResponse.demands.forEach((demand: any) => {
       const phaseStart = new Date(demand.start_date);
@@ -107,7 +107,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           if (!demandTimeline[dayKey][roleName]) {
             demandTimeline[dayKey][roleName] = 0;
           }
-          demandTimeline[dayKey][roleName] += allocation;
+          demandTimeline[dayKey][roleName] += allocation / 100; // Convert percentage to FTE
         }
         currentDay.setDate(currentDay.getDate() + 1);
       }
@@ -135,8 +135,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
               if (!capacityTimeline[dayKey][roleName]) {
                 capacityTimeline[dayKey][roleName] = 0;
               }
-              // Add this person's allocation percentage to the role's total capacity for this day
-              capacityTimeline[dayKey][roleName] += allocationPercentage;
+              // Add this person's allocation as FTE to the role's total capacity for this day
+              capacityTimeline[dayKey][roleName] += allocationPercentage / 100; // Convert percentage to FTE
             }
             currentDay.setDate(currentDay.getDate() + 1);
           }
@@ -147,7 +147,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       // This makes it clear that there is no capacity assigned to this project
       Object.keys(capacityTimeline).forEach(dateKey => {
         uniqueRoles.forEach(roleName => {
-          capacityTimeline[dateKey][roleName] = 0;
+          capacityTimeline[dateKey][roleName] = 0; // Already in FTE (0 people)
         });
       });
     }
@@ -166,7 +166,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         
         // Only show shortfalls (positive gaps) where demand exceeds capacity
         if (gap > 0) {
-          gapsTimeline[dateKey][roleName] = gap;
+          gapsTimeline[dateKey][roleName] = gap; // Already in FTE from calculation above
         }
         // For negative gaps (surplus capacity), we don't show them in this view
         // as it represents resource availability, not shortage
@@ -309,9 +309,9 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
 
     // Dynamic labels based on current view
     const summaryLabels = {
-      demand: { peak: 'Peak Daily Demand', avg: 'Average Daily Demand', title: 'Resource Demand Over Time' },
-      capacity: { peak: 'Peak Available Capacity', avg: 'Average Available Capacity', title: 'Available Resource Capacity by Role' },
-      gaps: { peak: 'Peak Resource Shortfall', avg: 'Average Resource Shortfall', title: 'Resource Capacity Gaps (Shortfalls)' }
+      demand: { peak: 'Peak Daily Demand (FTE)', avg: 'Average Daily Demand (FTE)', title: 'Resource Demand Over Time' },
+      capacity: { peak: 'Peak Available Capacity (FTE)', avg: 'Average Available Capacity (FTE)', title: 'Available Resource Capacity by Role' },
+      gaps: { peak: 'Peak Resource Shortfall (FTE)', avg: 'Average Resource Shortfall (FTE)', title: 'Resource Capacity Gaps (Shortfalls)' }
     };
 
     return { totalRoles, peakValue, avgValue, summaryLabels: summaryLabels[currentView] };
@@ -456,10 +456,10 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
               interval="preserveStartEnd"
             />
             <YAxis 
-              label={{ value: 'Allocation (%)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'FTE (People)', angle: -90, position: 'insideLeft' }}
             />
             <Tooltip 
-              formatter={(value: number, name: string) => [`${value?.toFixed(1)}%`, name]}
+              formatter={(value: number, name: string) => [`${value?.toFixed(1)} FTE`, name]}
               labelFormatter={(label) => `Date: ${formatDate(label as string)}`}
               contentStyle={{ 
                 backgroundColor: 'white', 
@@ -489,13 +489,13 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         <div className="summary-cards">
           <div className="summary-card">
             <div className="summary-value">
-              {peakValue.toFixed(1)}%
+              {peakValue.toFixed(1)} FTE
             </div>
             <div className="summary-label">{summaryLabels.peak}</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">
-              {avgValue.toFixed(1)}%
+              {avgValue.toFixed(1)} FTE
             </div>
             <div className="summary-label">{summaryLabels.avg}</div>
           </div>
