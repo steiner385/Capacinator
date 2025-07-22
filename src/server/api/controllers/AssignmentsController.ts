@@ -46,19 +46,19 @@ export class AssignmentsController extends BaseController {
       // Add date range filter using computed dates
       if (req.query.start_date) {
         query = query.where(function() {
-          this.where('project_assignments.computed_end_date', '>=', req.query.start_date)
+          this.where('project_assignments.computed_end_date', '>=', req.query.start_date as string)
             .orWhere(function() {
               this.whereNull('project_assignments.computed_end_date')
-                .andWhere('project_assignments.end_date', '>=', req.query.start_date);
+                .andWhere('project_assignments.end_date', '>=', req.query.start_date as string);
             });
         });
       }
       if (req.query.end_date) {
         query = query.where(function() {
-          this.where('project_assignments.computed_start_date', '<=', req.query.end_date)
+          this.where('project_assignments.computed_start_date', '<=', req.query.end_date as string)
             .orWhere(function() {
               this.whereNull('project_assignments.computed_start_date')
-                .andWhere('project_assignments.start_date', '<=', req.query.end_date);
+                .andWhere('project_assignments.start_date', '<=', req.query.end_date as string);
             });
         });
       }
@@ -92,8 +92,8 @@ export class AssignmentsController extends BaseController {
         pagination: {
           page,
           limit,
-          total: total?.count || 0,
-          totalPages: Math.ceil((total?.count || 0) / limit)
+          total: Number(total?.count) || 0,
+          totalPages: Math.ceil((Number(total?.count) || 0) / limit)
         }
       };
     }, res, 'Failed to fetch assignments');
@@ -460,8 +460,8 @@ export class AssignmentsController extends BaseController {
         // Get current allocations in the date range
         const allocations = await this.db('project_assignments')
           .where('person_id', person.id)
-          .where('start_date', '<=', end_date)
-          .where('end_date', '>=', start_date)
+          .where('start_date', '<=', end_date as string)
+          .where('end_date', '>=', start_date as string)
           .sum('allocation_percentage as total_allocation')
           .first();
 

@@ -46,7 +46,7 @@ export class ProjectTypeHierarchyController extends BaseController {
       res.status(500).json({ 
         success: false, 
         error: 'Failed to get hierarchy',
-        details: error.message 
+        details: (error as Error).message 
       });
     }
   };
@@ -286,7 +286,7 @@ export class ProjectTypeHierarchyController extends BaseController {
         name: pt.name,
         description: pt.description || '',
         color_code: pt.color_code || '#6b7280',
-        parent_id: null,
+        parent_id: undefined,
         is_parent: true,
         level: 0,
         sort_order: 0,

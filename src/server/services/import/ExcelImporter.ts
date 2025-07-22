@@ -400,21 +400,18 @@ export class ExcelImporter {
       await workbook.xlsx.readFile(filePath);
 
       // Import in dependency order
-      const peopleResult = await this.importPeople(
-        workbook.getWorksheet('Rosters') || workbook.getWorksheet('People')
-      );
+      const peopleWorksheet = workbook.getWorksheet('Rosters') || workbook.getWorksheet('People');
+      const peopleResult = peopleWorksheet ? await this.importPeople(peopleWorksheet) : { count: 0, errors: ['People worksheet not found'] };
       result.imported.people = peopleResult.count;
       result.errors.push(...peopleResult.errors);
 
-      const projectsResult = await this.importProjects(
-        workbook.getWorksheet('Projects')
-      );
+      const projectsWorksheet = workbook.getWorksheet('Projects');
+      const projectsResult = projectsWorksheet ? await this.importProjects(projectsWorksheet) : { count: 0, errors: ['Projects worksheet not found'] };
       result.imported.projects = projectsResult.count;
       result.errors.push(...projectsResult.errors);
 
-      const allocationsResult = await this.importStandardAllocations(
-        workbook.getWorksheet('Standard Allocations') || workbook.getWorksheet('Allocations')
-      );
+      const allocationsWorksheet = workbook.getWorksheet('Standard Allocations') || workbook.getWorksheet('Allocations');
+      const allocationsResult = allocationsWorksheet ? await this.importStandardAllocations(allocationsWorksheet) : { count: 0, errors: ['Allocations worksheet not found'] };
       result.imported.standardAllocations = allocationsResult.count;
       result.errors.push(...allocationsResult.errors);
 
@@ -438,10 +435,10 @@ export class ExcelImporter {
       await db.schema.dropTable('temp_supervisor_mapping').catch(() => {});
 
       // Count imported entities
-      result.imported.locations = await db('locations').count('* as count').first().then(r => r?.count || 0);
-      result.imported.projectTypes = await db('project_types').count('* as count').first().then(r => r?.count || 0);
-      result.imported.phases = await db('project_phases').count('* as count').first().then(r => r?.count || 0);
-      result.imported.roles = await db('roles').count('* as count').first().then(r => r?.count || 0);
+      result.imported.locations = await db('locations').count('* as count').first().then(r => Number(r?.count) || 0);
+      result.imported.projectTypes = await db('project_types').count('* as count').first().then(r => Number(r?.count) || 0);
+      result.imported.phases = await db('project_phases').count('* as count').first().then(r => Number(r?.count) || 0);
+      result.imported.roles = await db('roles').count('* as count').first().then(r => Number(r?.count) || 0);
 
       result.success = result.errors.length === 0;
 

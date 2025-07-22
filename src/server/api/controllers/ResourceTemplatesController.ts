@@ -39,7 +39,7 @@ export class ResourceTemplatesController extends BaseController {
         const countQuery = this.db('resource_templates').count('* as count');
         this.buildFilters(countQuery, filters);
         const totalResult = await countQuery.first();
-        total = totalResult?.count || 0;
+        total = Number(totalResult?.count) || 0;
       }
 
       if (req.query.page || req.query.limit) {
@@ -116,7 +116,7 @@ export class ResourceTemplatesController extends BaseController {
           total_allocations: allocations.length,
           total_percentage_by_phase: phases.map(phase => ({
             phase_name: phase.phase_name,
-            total_percentage: phase.allocations.reduce((sum, a) => sum + a.allocation_percentage, 0)
+            total_percentage: phase.allocations.reduce((sum: number, a: any) => sum + a.allocation_percentage, 0)
           }))
         }
       };
@@ -554,7 +554,7 @@ export class ResourceTemplatesController extends BaseController {
 
   // Helper method to get effective allocations (inherited + overridden)
   async getEffectiveAllocations(projectTypeId: string) {
-    const result = await this.executeQuery(async () => {
+    try {
       // Get all templates for this project type
       const templates = await this.db('resource_templates')
         .join('project_phases', 'resource_templates.phase_id', 'project_phases.id')
@@ -571,8 +571,9 @@ export class ResourceTemplatesController extends BaseController {
         .orderBy('project_phases.order_index', 'roles.name');
 
       return templates;
-    });
-
-    return result;
+    } catch (error) {
+      console.error('Error getting effective allocations:', error);
+      return [];
+    }
   }
 }

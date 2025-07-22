@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { BaseController } from './BaseController';
-import { AuditService } from '../../services/audit/AuditService';
+import { BaseController } from './BaseController.js';
+import { AuditService } from '../../services/audit/AuditService.js';
 
 export class AuditController extends BaseController {
   private auditService: AuditService;

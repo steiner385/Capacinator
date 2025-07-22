@@ -47,7 +47,7 @@ export class ProjectPhasesController extends BaseController {
         }
         
         const totalResult = await countQuery.first();
-        total = totalResult?.count || 0;
+        total = Number(totalResult?.count) || 0;
       }
 
       if (req.query.page || req.query.limit) {

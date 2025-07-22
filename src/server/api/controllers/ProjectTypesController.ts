@@ -40,8 +40,8 @@ export class ProjectTypesController extends BaseController {
         pagination: {
           page,
           limit,
-          total: total?.count || 0,
-          totalPages: Math.ceil((total?.count || 0) / limit)
+          total: Number(total?.count) || 0,
+          totalPages: Math.ceil((Number(total?.count) || 0) / limit)
         }
       };
     }, res, 'Failed to fetch project types');

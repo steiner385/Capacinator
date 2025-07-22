@@ -23,9 +23,13 @@ interface PhaseInfo {
   phase_order: number;
 }
 
+type ChartView = 'demand' | 'capacity' | 'gaps';
+
 export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChartProps) {
+  // ALL HOOKS MUST BE CALLED FIRST - before any conditional logic or early returns
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartDimensions, setChartDimensions] = useState<{ width: number; left: number; right: number } | null>(null);
+  const [currentView, setCurrentView] = useState<ChartView>('demand');
   
   const { data: apiResponse, isLoading, error } = useQuery({
     queryKey: ['project-demand', projectId],
@@ -35,10 +39,25 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     }
   });
 
-  // Process demand data for time-based stacked area chart
-  const { processedData, phases, dateRange } = React.useMemo(() => {
+  // Get project assignments for capacity calculation
+  const { data: assignmentsResponse, isLoading: assignmentsLoading } = useQuery({
+    queryKey: ['project-assignments', projectId],
+    queryFn: async () => {
+      const response = await api.assignments.list({ project_id: projectId });
+      return response.data;
+    }
+  });
+
+  // Process data for all three views: demand, capacity, and gaps
+  const { demandData, capacityData, gapsData, phases, dateRange } = React.useMemo(() => {
     if (!apiResponse || !apiResponse.phases || !Array.isArray(apiResponse.phases)) {
-      return { processedData: [], phases: [], dateRange: { start: new Date(), end: new Date() } };
+      return { 
+        demandData: [], 
+        capacityData: [], 
+        gapsData: [], 
+        phases: [], 
+        dateRange: { start: new Date(), end: new Date() } 
+      };
     }
 
     // Extract phase information for the roadmap overlay
@@ -56,65 +75,140 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
     
     // Create daily data points across the entire project timeline
-    const dailyData: { [dateKey: string]: ChartDataPoint } = {};
-    
-    // Generate all days in the project timeline
-    const currentDate = new Date(minDate);
-    const maxDatePlusOne = new Date(maxDate);
-    maxDatePlusOne.setDate(maxDatePlusOne.getDate() + 1);
-    
-    while (currentDate < maxDatePlusOne) {
-      const dateKey = currentDate.toISOString().split('T')[0];
-      dailyData[dateKey] = {
-        date: dateKey,
-        timestamp: currentDate.getTime()
-      };
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    const createEmptyTimeline = () => {
+      const timeline: { [dateKey: string]: ChartDataPoint } = {};
+      const currentDate = new Date(minDate);
+      const maxDatePlusOne = new Date(maxDate);
+      maxDatePlusOne.setDate(maxDatePlusOne.getDate() + 1);
+      
+      while (currentDate < maxDatePlusOne) {
+        const dateKey = currentDate.toISOString().split('T')[0];
+        timeline[dateKey] = {
+          date: dateKey,
+          timestamp: currentDate.getTime()
+        };
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return timeline;
+    };
 
-    // For each demand, distribute its allocation across the phase duration
+    // 1. DEMAND DATA - allocation percentages by role
+    const demandTimeline = createEmptyTimeline();
     apiResponse.demands.forEach((demand: any) => {
       const phaseStart = new Date(demand.start_date);
       const phaseEnd = new Date(demand.end_date);
       const roleName = demand.role_name;
       const allocation = demand.allocation_percentage || 0;
       
-      // Distribute allocation across each day in the phase
       const currentDay = new Date(phaseStart);
       while (currentDay <= phaseEnd) {
         const dayKey = currentDay.toISOString().split('T')[0];
-        if (dailyData[dayKey]) {
-          if (!dailyData[dayKey][roleName]) {
-            dailyData[dayKey][roleName] = 0;
+        if (demandTimeline[dayKey]) {
+          if (!demandTimeline[dayKey][roleName]) {
+            demandTimeline[dayKey][roleName] = 0;
           }
-          dailyData[dayKey][roleName] += allocation;
+          demandTimeline[dayKey][roleName] += allocation;
         }
         currentDay.setDate(currentDay.getDate() + 1);
       }
     });
 
-    // Convert to array and sort by date
-    const chartData = Object.values(dailyData).sort((a, b) => a.timestamp - b.timestamp);
+    // 2. CAPACITY DATA - calculate from project assignments
+    const capacityTimeline = createEmptyTimeline();
+    const uniqueRoles = [...new Set(apiResponse.demands.map((d: any) => d.role_name))];
+    
+    // Calculate capacity from people assigned to this specific project
+    if (assignmentsResponse?.data && assignmentsResponse.data.length > 0) {
+      assignmentsResponse.data.forEach((assignment: any) => {
+        const assignmentStart = new Date(assignment.computed_start_date || assignment.start_date);
+        const assignmentEnd = new Date(assignment.computed_end_date || assignment.end_date);
+        const roleName = assignment.role_name;
+        const allocationPercentage = assignment.allocation_percentage || 0;
+        
+        // Only include if role is relevant to demand data
+        if (roleName && uniqueRoles.includes(roleName)) {
+          // Apply allocation across assignment date range
+          const currentDay = new Date(assignmentStart);
+          while (currentDay <= assignmentEnd) {
+            const dayKey = currentDay.toISOString().split('T')[0];
+            if (capacityTimeline[dayKey]) {
+              if (!capacityTimeline[dayKey][roleName]) {
+                capacityTimeline[dayKey][roleName] = 0;
+              }
+              // Add this person's allocation percentage to the role's total capacity for this day
+              capacityTimeline[dayKey][roleName] += allocationPercentage;
+            }
+            currentDay.setDate(currentDay.getDate() + 1);
+          }
+        }
+      });
+    } else {
+      // No assignments found - show zero capacity for all roles
+      // This makes it clear that there is no capacity assigned to this project
+      Object.keys(capacityTimeline).forEach(dateKey => {
+        uniqueRoles.forEach(roleName => {
+          capacityTimeline[dateKey][roleName] = 0;
+        });
+      });
+    }
+
+    // 3. GAPS DATA - demand minus capacity (shortfalls)
+    const gapsTimeline = createEmptyTimeline();
+    Object.keys(gapsTimeline).forEach(dateKey => {
+      const demandDay = demandTimeline[dateKey];
+      const capacityDay = capacityTimeline[dateKey];
+      
+      // Calculate gaps for each role that has demand
+      uniqueRoles.forEach(roleName => {
+        const demand = demandDay[roleName] || 0;
+        const capacity = capacityDay[roleName] || 0;
+        const gap = demand - capacity;
+        
+        // Only show shortfalls (positive gaps) where demand exceeds capacity
+        if (gap > 0) {
+          gapsTimeline[dateKey][roleName] = gap;
+        }
+        // For negative gaps (surplus capacity), we don't show them in this view
+        // as it represents resource availability, not shortage
+      });
+    });
+
+    // Convert to arrays and sort by date
+    const demandData = Object.values(demandTimeline).sort((a, b) => a.timestamp - b.timestamp);
+    const capacityData = Object.values(capacityTimeline).sort((a, b) => a.timestamp - b.timestamp);
+    const gapsData = Object.values(gapsTimeline).sort((a, b) => a.timestamp - b.timestamp);
 
     return {
-      processedData: chartData,
+      demandData,
+      capacityData,
+      gapsData,
       phases,
       dateRange: { start: minDate, end: maxDate }
     };
-  }, [apiResponse]);
+  }, [apiResponse, assignmentsResponse, currentView]);
 
-  // Get unique roles for stacked areas - moved before early returns to fix hooks rule
+  // Get current dataset based on view selection
+  const currentData = React.useMemo(() => {
+    switch (currentView) {
+      case 'demand': return demandData;
+      case 'capacity': return capacityData;
+      case 'gaps': return gapsData;
+      default: return demandData;
+    }
+  }, [currentView, demandData, capacityData, gapsData]);
+
+  // Get unique roles for stacked areas
   const allRoles = React.useMemo(() => {
-    return [...new Set(processedData.flatMap(d => 
+    return [...new Set(demandData.flatMap(d => 
       Object.keys(d).filter(key => 
         !['date', 'timestamp'].includes(key)
       )
     ))];
-  }, [processedData]);
+  }, [demandData]); // Use demandData to get all roles consistently
 
   // Measure chart dimensions after render for precise alignment
   useEffect(() => {
-    if (!chartContainerRef.current || processedData.length === 0) return;
+    if (!chartContainerRef.current || currentData.length === 0) return;
     
     const measureChart = () => {
       const container = chartContainerRef.current;
@@ -184,31 +278,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       clearTimeout(timer);
       window.removeEventListener('resize', measureChart);
     };
-  }, [processedData]); // Re-measure when data changes
-
-  if (isLoading) {
-    return (
-      <div className="chart-container">
-        <div className="chart-loading">Loading demand data...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="chart-container">
-        <div className="chart-error">Failed to load demand data</div>
-      </div>
-    );
-  }
-
-  if (!processedData || processedData.length === 0) {
-    return (
-      <div className="chart-container">
-        <div className="chart-empty">No demand data available</div>
-      </div>
-    );
-  }
+  }, [currentData]); // Re-measure when data changes
   
   const roleColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0', '#ff8c00', '#9932cc'];
 
@@ -226,23 +296,83 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   };
 
 
-  // Calculate summary stats
-  const totalRoles = allRoles.length;
-  const peakDemand = Math.max(...processedData.map(d => 
-    allRoles.reduce((sum, role) => sum + (d[role] || 0), 0)
-  ));
-  const avgDemand = processedData.length > 0 ? 
-    processedData.reduce((sum, d) => 
-      sum + allRoles.reduce((roleSum, role) => roleSum + (d[role] || 0), 0), 0
-    ) / processedData.length : 0;
+  // Calculate summary stats based on current view
+  const { totalRoles, peakValue, avgValue, summaryLabels } = React.useMemo(() => {
+    const totalRoles = allRoles.length;
+    const peakValue = Math.max(...currentData.map(d => 
+      allRoles.reduce((sum, role) => sum + (d[role] || 0), 0)
+    ));
+    const avgValue = currentData.length > 0 ? 
+      currentData.reduce((sum, d) => 
+        sum + allRoles.reduce((roleSum, role) => roleSum + (d[role] || 0), 0), 0
+      ) / currentData.length : 0;
+
+    // Dynamic labels based on current view
+    const summaryLabels = {
+      demand: { peak: 'Peak Daily Demand', avg: 'Average Daily Demand', title: 'Resource Demand Over Time' },
+      capacity: { peak: 'Peak Available Capacity', avg: 'Average Available Capacity', title: 'Available Resource Capacity by Role' },
+      gaps: { peak: 'Peak Resource Shortfall', avg: 'Average Resource Shortfall', title: 'Resource Capacity Gaps (Shortfalls)' }
+    };
+
+    return { totalRoles, peakValue, avgValue, summaryLabels: summaryLabels[currentView] };
+  }, [currentData, allRoles, currentView]);
+
+  // Loading state
+  if (isLoading) {
+    return <div>Loading demand data...</div>;
+  }
+
+  // Error state
+  if (error) {
+    return <div>Error loading demand data: {error.message}</div>;
+  }
+
+  // No data state
+  if (!apiResponse) {
+    return <div>No demand data available for this project.</div>;
+  }
 
   return (
     <div className="chart-container">
       <div className="chart-header">
-        <h3>Resource Demand Over Time</h3>
-        <p className="chart-subtitle">
-          Showing role allocation stacked over project timeline for {projectName}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+          <div>
+            <h3>{summaryLabels.title}</h3>
+            <p className="chart-subtitle">
+              Showing {currentView} by role stacked over project timeline for {projectName}
+            </p>
+          </div>
+          
+          {/* View Toggle Buttons */}
+          <div className="view-toggle" style={{
+            display: 'flex',
+            gap: '4px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            padding: '2px',
+            backgroundColor: '#f8fafc'
+          }}>
+            {(['demand', 'capacity', 'gaps'] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setCurrentView(view)}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  backgroundColor: currentView === view ? '#3b82f6' : 'transparent',
+                  color: currentView === view ? 'white' : '#64748b',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {view.charAt(0).toUpperCase() + view.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Project Phase Timeline Chart - Separate chart above demand chart */}
@@ -253,7 +383,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           </h4>
           <ResponsiveContainer width="100%" height={80}>
             <BarChart
-              data={processedData}
+              data={currentData}
               margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
             >
               <XAxis 
@@ -307,7 +437,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       <div className="chart-content" ref={chartContainerRef}>
         <ResponsiveContainer width="100%" height={400}>
           <AreaChart 
-            data={processedData} 
+            data={currentData} 
             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
@@ -359,15 +489,15 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         <div className="summary-cards">
           <div className="summary-card">
             <div className="summary-value">
-              {peakDemand.toFixed(1)}%
+              {peakValue.toFixed(1)}%
             </div>
-            <div className="summary-label">Peak Daily Demand</div>
+            <div className="summary-label">{summaryLabels.peak}</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">
-              {avgDemand.toFixed(1)}%
+              {avgValue.toFixed(1)}%
             </div>
-            <div className="summary-label">Average Daily Demand</div>
+            <div className="summary-label">{summaryLabels.avg}</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">{totalRoles}</div>

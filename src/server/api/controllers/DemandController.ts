@@ -219,7 +219,7 @@ export class DemandController extends BaseController {
 
       // Calculate timeline summary (monthly) using processed demands with hours
       // We need to use the demand hours that were calculated earlier
-      const timelineSummary = this.calculateTimelineFromDemands(demands, start_date, end_date);
+      const timelineSummary = this.calculateTimelineFromDemands(demands, start_date as string, end_date as string);
 
       return {
         filters: { start_date, end_date, location_id, project_type_id },

@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import { AuditService } from './AuditService';
-import { getAuditConfig, isAuditEnabled } from '../../config/auditConfig';
+import { AuditService } from './AuditService.js';
+import { getAuditConfig, isAuditEnabled } from '../../config/auditConfig.js';
 
 let auditServiceInstance: AuditService | null = null;
 
@@ -30,5 +30,5 @@ export function getAuditService(): AuditService | null {
   return auditServiceInstance;
 }
 
-export { AuditService } from './AuditService';
-export { auditModelChanges, createAuditMiddleware } from '../../middleware/auditMiddleware';
+export { AuditService } from './AuditService.js';
+export { auditModelChanges, createAuditMiddleware } from '../../middleware/auditMiddleware.js';

@@ -319,7 +319,7 @@ export class ExcelImporterV2 {
 
         const { project: projectName, site: siteName } = parseProjectSite(projectSite);
         
-        if (!projectName) {
+        if (!projectName || !siteName) {
           errors.push(`Row ${rowNumber}: Invalid project/site format`);
           continue;
         }
@@ -340,7 +340,7 @@ export class ExcelImporterV2 {
               updated_at: new Date()
             });
           }
-          locations.set(siteName, locationId);
+          locations.set(siteName, locationId!);
         }
 
         // Find project type
@@ -356,7 +356,7 @@ export class ExcelImporterV2 {
           name: projectName,
           project_type_id: projectTypeRecord.id,
           location_id: locationId,
-          priority: parseInt(priority) || 3,
+          priority: parseInt(priority || '3') || 3,
           include_in_demand: includeInDemand === 'Y' ? 1 : 0,
           created_at: new Date(),
           updated_at: new Date()
@@ -745,47 +745,56 @@ export class ExcelImporterV2 {
       // Import in dependency order
       
       // 1. Project Types
-      const typesResult = await this.importProjectTypes(workbook.getWorksheet('Project Types'));
+      const typesWorksheet = workbook.getWorksheet('Project Types');
+      const typesResult = typesWorksheet ? await this.importProjectTypes(typesWorksheet) : { count: 0, errors: ['Project Types worksheet not found'] };
       result.imported.projectTypes = typesResult.count;
       result.errors.push(...typesResult.errors);
 
       // 2. Project Phases
-      const phasesResult = await this.importProjectPhases(workbook.getWorksheet('Project Phases'));
+      const phasesWorksheet = workbook.getWorksheet('Project Phases');
+      const phasesResult = phasesWorksheet ? await this.importProjectPhases(phasesWorksheet) : { count: 0, errors: ['Project Phases worksheet not found'] };
       result.imported.phases = phasesResult.count;
       result.errors.push(...phasesResult.errors);
 
       // 3. Roles
-      const rolesResult = await this.importRoles(workbook.getWorksheet('Roles'));
+      const rolesWorksheet = workbook.getWorksheet('Roles');
+      const rolesResult = rolesWorksheet ? await this.importRoles(rolesWorksheet) : { count: 0, errors: ['Roles worksheet not found'] };
       result.imported.roles = rolesResult.count;
       result.errors.push(...rolesResult.errors);
 
       // 4. Roster (People)
-      const rosterResult = await this.importRoster(workbook.getWorksheet('Roster'));
+      const rosterWorksheet = workbook.getWorksheet('Roster');
+      const rosterResult = rosterWorksheet ? await this.importRoster(rosterWorksheet) : { count: 0, errors: ['Roster worksheet not found'] };
       result.imported.people = rosterResult.count;
       result.errors.push(...rosterResult.errors);
 
       // 5. Projects
-      const projectsResult = await this.importProjects(workbook.getWorksheet('Projects'));
+      const projectsWorksheet2 = workbook.getWorksheet('Projects');
+      const projectsResult = projectsWorksheet2 ? await this.importProjects(projectsWorksheet2) : { count: 0, errors: ['Projects worksheet not found'] };
       result.imported.projects = projectsResult.count;
       result.errors.push(...projectsResult.errors);
 
       // 6. Project Roadmap (Phase Timelines)
-      const roadmapResult = await this.importProjectRoadmap(workbook.getWorksheet('Project Roadmap'));
+      const roadmapWorksheet = workbook.getWorksheet('Project Roadmap');
+      const roadmapResult = roadmapWorksheet ? await this.importProjectRoadmap(roadmapWorksheet) : { count: 0, errors: ['Project Roadmap worksheet not found'] };
       result.imported.phaseTimelines = roadmapResult.count;
       result.errors.push(...roadmapResult.errors);
 
       // 7. Standard Allocations
-      const allocationsResult = await this.importStandardAllocations(workbook.getWorksheet('Standard Allocations'));
+      const allocationsWorksheet2 = workbook.getWorksheet('Standard Allocations');
+      const allocationsResult = allocationsWorksheet2 ? await this.importStandardAllocations(allocationsWorksheet2) : { count: 0, errors: ['Standard Allocations worksheet not found'] };
       result.imported.standardAllocations = allocationsResult.count;
       result.errors.push(...allocationsResult.errors);
 
       // 8. Project Demand
-      const demandResult = await this.importProjectDemand(workbook.getWorksheet('Project Demand'));
+      const demandWorksheet = workbook.getWorksheet('Project Demand');
+      const demandResult = demandWorksheet ? await this.importProjectDemand(demandWorksheet) : { count: 0, errors: ['Project Demand worksheet not found'] };
       result.imported.demands = demandResult.count;
       result.errors.push(...demandResult.errors);
 
       // 9. Project Assignments
-      const assignmentsResult = await this.importProjectAssignments(workbook.getWorksheet('Project Assignments'));
+      const assignmentsWorksheet = workbook.getWorksheet('Project Assignments');
+      const assignmentsResult = assignmentsWorksheet ? await this.importProjectAssignments(assignmentsWorksheet) : { count: 0, errors: ['Project Assignments worksheet not found'] };
       result.imported.assignments = assignmentsResult.count;
       result.errors.push(...assignmentsResult.errors);
 
@@ -794,10 +803,10 @@ export class ExcelImporterV2 {
       result.warnings.push(...plannersResult.errors);
 
       // Count imported locations
-      result.imported.locations = await db('locations').count('* as count').first().then(r => parseInt(r?.count || '0'));
+      result.imported.locations = await db('locations').count('* as count').first().then(r => parseInt(String(r?.count || '0')));
       
       // Count availability overrides
-      result.imported.availabilityOverrides = await db('person_availability_overrides').count('* as count').first().then(r => parseInt(r?.count || '0'));
+      result.imported.availabilityOverrides = await db('person_availability_overrides').count('* as count').first().then(r => parseInt(String(r?.count || '0')));
 
       result.success = result.errors.length === 0;
 
