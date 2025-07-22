@@ -133,11 +133,18 @@ export default function Reports() {
       const data = response.data;
       
       if (data && data.utilizationData) {
-        // Transform person utilization data for charts
+        // Transform person utilization data for charts and table
         const peopleUtilization = data.utilizationData.map((person: any) => ({
           id: person.person_id,
           name: person.person_name,
+          email: person.person_email || person.email,
           role: person.primary_role_name,
+          location: person.location_name || person.primary_location,
+          availableHours: person.available_hours || person.default_hours_per_day || 8,
+          allocatedHours: person.total_allocated_hours || 0,
+          availabilityPercentage: person.default_availability_percentage || 100,
+          projectCount: person.project_count || 0,
+          projectNames: person.project_names,
           utilization: Math.round(person.total_allocation_percentage || 0)
         }));
         
@@ -146,6 +153,30 @@ export default function Reports() {
           (peopleUtilization.length || 1)
         );
         
+        // Aggregate utilization by role
+        const roleMap = new Map();
+        if (peopleUtilization && peopleUtilization.length > 0) {
+          peopleUtilization.forEach((person: any) => {
+            const roleName = person.role || 'No Role';
+            if (!roleMap.has(roleName)) {
+              roleMap.set(roleName, { totalUtilization: 0, count: 0, people: [] });
+            }
+            const roleData = roleMap.get(roleName);
+            roleData.totalUtilization += (person.utilization || 0);
+            roleData.count += 1;
+            roleData.people.push(person.name || 'Unknown');
+          });
+        }
+
+        let roleUtilization = Array.from(roleMap.entries()).map(([role, data]: [string, any]) => ({
+          role,
+          avgUtilization: Math.round(data.totalUtilization / data.count),
+          peopleCount: data.count,
+          totalUtilization: data.totalUtilization,
+          people: data.people
+        })).sort((a, b) => b.avgUtilization - a.avgUtilization);
+
+
         // Create utilization distribution chart instead of fake trend data
         const utilizationDistribution = [
           { range: '0-25%', count: peopleUtilization.filter((p: any) => p.utilization >= 0 && p.utilization < 25).length },
@@ -158,6 +189,7 @@ export default function Reports() {
         return {
           ...data,
           peopleUtilization,
+          roleUtilization,
           averageUtilization,
           utilizationDistribution,
           overAllocatedCount: peopleUtilization.filter((p: any) => p.utilization > 100).length,
@@ -636,7 +668,13 @@ export default function Reports() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={utilizationReport.peopleUtilization || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                <XAxis dataKey="name" />
+                <XAxis 
+                  dataKey="name" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80}
+                  interval={0}
+                />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="utilization" fill={CHART_COLORS[1]} />
@@ -645,139 +683,346 @@ export default function Reports() {
           </div>
 
           <div className="chart-container">
-            <h3>Utilization by Person</h3>
+            <h3>Utilization by Role</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={utilizationReport.peopleUtilization || []}>
+              <BarChart data={utilizationReport.roleUtilization || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                <XAxis dataKey="name" />
+                <XAxis 
+                  dataKey="role" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={80}
+                  interval={0}
+                />
                 <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="avgUtilization" fill={CHART_COLORS[2]} />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="custom-tooltip">
+                          <p className="tooltip-label">{`${label}`}</p>
+                          <p className="tooltip-value">
+                            {`Average Utilization: ${data.avgUtilization}%`}
+                          </p>
+                          <p className="tooltip-value">
+                            {`People Count: ${data.peopleCount}`}
+                          </p>
+                          <p className="tooltip-value">
+                            {`Total Utilization: ${data.totalUtilization}%`}
+                          </p>
+                          {data.people && (
+                            <p className="tooltip-detail">
+                              {`Team: ${data.people.slice(0, 3).join(', ')}${data.people.length > 3 ? ` +${data.people.length - 3} more` : ''}`}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="avgUtilization" fill={CHART_COLORS[0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="chart-container">
-            <h3>Utilization Trend</h3>
+            <h3>Utilization Distribution</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={utilizationReport.timeline || []}>
+              <BarChart data={utilizationReport.utilizationDistribution || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                <XAxis dataKey="period" />
+                <XAxis dataKey="range" />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="utilization" stroke={CHART_COLORS[1]} strokeWidth={2} />
-              </LineChart>
+                <Bar dataKey="count" fill={CHART_COLORS[2]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="chart-container">
-            <h3>Actionable People</h3>
-            <div className="actionable-list">
-              <div className="list-section">
-                <h4>Overutilized People</h4>
-                {(utilizationReport.peopleUtilization || [])
-                  .filter((person: any) => person.utilization > 100)
-                  .map((person: any) => (
-                  <div key={person.id} className="actionable-item danger">
-                    <div className="item-info">
-                      <strong>{person.name}</strong>
-                      <span className="item-detail">{person.utilization}% utilized</span>
-                    </div>
-                    <div className="item-actions">
-                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=reduce-load&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
-                        <User size={14} /> View Profile
-                      </Link>
-                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=reduce&from=utilization-report&utilization=${person.utilization}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
-                        <ClipboardList size={14} /> Reduce Load
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization > 100).length === 0 && (
-                  <p className="no-items">No overutilized people</p>
-                )}
-              </div>
-              
-              <div className="list-section">
-                <h4>Underutilized People</h4>
-                {(utilizationReport.peopleUtilization || [])
-                  .filter((person: any) => person.utilization < 70)
-                  .map((person: any) => (
-                  <div key={person.id} className="actionable-item warning">
-                    <div className="item-info">
-                      <strong>{person.name}</strong>
-                      <span className="item-detail">{person.utilization}% utilized</span>
-                    </div>
-                    <div className="item-actions">
-                      <Link to={`/people/${person.id}?from=utilization-report&utilization=${person.utilization}&action=add-work&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
-                        <User size={14} /> View Profile
-                      </Link>
-                      <Link to={`/assignments?person=${encodeURIComponent(person.name)}&action=assign&from=utilization-report&utilization=${person.utilization}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
-                        <Plus size={14} /> Add Projects
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization < 70).length === 0 && (
-                  <p className="no-items">No underutilized people</p>
-                )}
-              </div>
-            </div>
-          </div>
 
-          <div className="chart-container">
-            <h3>Actionable People</h3>
-            <div className="actionable-list">
-              <div className="list-section">
-                <h4>Overutilized People</h4>
-                {(utilizationReport.peopleUtilization || [])
-                  .filter((person: any) => person.utilization > 100)
-                  .map((person: any) => (
-                  <div key={person.id} className="actionable-item danger">
-                    <div className="item-info">
-                      <strong>{person.name}</strong>
-                      <span className="item-detail">{person.utilization}% utilization ({person.role})</span>
-                    </div>
-                    <div className="item-actions">
-                      <Link to={`/people?personId=${person.id}`} className="btn btn-sm btn-outline">
-                        <Users size={14} /> View Person
-                      </Link>
-                      <Link to={`/assignments/new?personId=${person.id}&action=reduce`} className="btn btn-sm btn-danger">
-                        <UserMinus size={14} /> Reduce Load
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization > 100).length === 0 && (
-                  <p className="no-items">No overutilized people</p>
-                )}
-              </div>
+        </div>
 
-              <div className="list-section">
-                <h4>Underutilized People</h4>
-                {(utilizationReport.peopleUtilization || [])
-                  .filter((person: any) => person.utilization < 70)
-                  .map((person: any) => (
-                  <div key={person.id} className="actionable-item warning">
-                    <div className="item-info">
-                      <strong>{person.name}</strong>
-                      <span className="item-detail">{person.utilization}% utilization ({person.role})</span>
-                    </div>
-                    <div className="item-actions">
-                      <Link to={`/people?personId=${person.id}`} className="btn btn-sm btn-outline">
-                        <Users size={14} /> View Person
-                      </Link>
-                      <Link to={`/assignments/new?personId=${person.id}&action=assign`} className="btn btn-sm btn-primary">
-                        <UserPlus size={14} /> Assign Work
-                      </Link>
-                    </div>
-                  </div>
+        {/* Enhanced Team Utilization Overview - Full Width */}
+        <div style={{ 
+          width: '100%', 
+          margin: '2rem 0 0 0',
+          background: 'var(--bg-secondary)', 
+          borderRadius: '12px', 
+          padding: '2rem',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--border-color)'
+        }}>
+          <h2 style={{ margin: '0 0 2rem 0', color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: '600' }}>
+            🎯 Team Utilization Overview
+          </h2>
+          
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              backgroundColor: 'var(--bg-primary)',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              border: '1px solid var(--border-color)'
+            }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                  <th style={{ 
+                    padding: '1rem 1.5rem', 
+                    textAlign: 'left', 
+                    fontWeight: '600', 
+                    color: 'var(--text-primary)',
+                    borderBottom: '2px solid var(--border-color)',
+                    fontSize: '0.875rem'
+                  }}>
+                    Team Member
+                  </th>
+                  <th style={{ 
+                    padding: '1rem 1.5rem', 
+                    textAlign: 'left', 
+                    fontWeight: '600', 
+                    color: 'var(--text-primary)',
+                    borderBottom: '2px solid var(--border-color)',
+                    fontSize: '0.875rem'
+                  }}>
+                    Role & Details
+                  </th>
+                  <th style={{ 
+                    padding: '1rem 1.5rem', 
+                    textAlign: 'left', 
+                    fontWeight: '600', 
+                    color: 'var(--text-primary)',
+                    borderBottom: '2px solid var(--border-color)',
+                    fontSize: '0.875rem'
+                  }}>
+                    Utilization & Projects
+                  </th>
+                  <th style={{ 
+                    padding: '1rem 1.5rem', 
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    fontWeight: '600', 
+                    color: 'var(--text-primary)',
+                    borderBottom: '2px solid var(--border-color)',
+                    fontSize: '0.875rem'
+                  }}>
+                    Status
+                  </th>
+                  <th style={{ 
+                    padding: '1rem 1.5rem', 
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    fontWeight: '600', 
+                    color: 'var(--text-primary)',
+                    borderBottom: '2px solid var(--border-color)',
+                    fontSize: '0.875rem'
+                  }}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(utilizationReport.peopleUtilization || []).map((person: any, index: number) => (
+                  <tr key={person.id || index} style={{
+                    borderBottom: '1px solid var(--border-color)',
+                    backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-hover)',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-bg-hover)';
+                    e.currentTarget.style.transform = 'scale(1.01)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-hover)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}>
+                    <td style={{ padding: '1.25rem 1.5rem', verticalAlign: 'top' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
+                          {person.name}
+                        </strong>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {person.email || 'No email available'}
+                        </span>
+                      </div>
+                    </td>
+                    
+                    <td style={{ padding: '1.25rem 1.5rem', verticalAlign: 'top' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-primary)' }}>
+                          {person.role || 'No Role'}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          📍 {person.location || 'No location'}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                          {person.availableHours}h/day • {person.availabilityPercentage}% available
+                        </span>
+                      </div>
+                    </td>
+                    
+                    <td style={{ padding: '1.25rem 1.5rem', verticalAlign: 'top' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{
+                            flex: 1,
+                            height: '8px',
+                            backgroundColor: 'var(--border-color)',
+                            borderRadius: '4px',
+                            overflow: 'hidden',
+                            position: 'relative'
+                          }}>
+                            <div style={{
+                              height: '100%',
+                              backgroundColor: 
+                                person.utilization > 100 ? '#ef4444' :
+                                person.utilization >= 80 ? '#22c55e' :
+                                person.utilization >= 50 ? '#f59e0b' : '#94a3b8',
+                              width: `${Math.min(person.utilization, 100)}%`,
+                              borderRadius: '4px',
+                              transition: 'width 0.3s ease'
+                            }} />
+                            {person.utilization > 100 && (
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                right: 0,
+                                height: '100%',
+                                width: '3px',
+                                backgroundColor: '#dc2626',
+                                animation: 'pulse 2s infinite'
+                              }} />
+                            )}
+                          </div>
+                          <span style={{ 
+                            fontSize: '1rem', 
+                            fontWeight: '600', 
+                            color: 
+                              person.utilization > 100 ? '#ef4444' :
+                              person.utilization >= 80 ? '#22c55e' :
+                              person.utilization >= 50 ? '#f59e0b' : '#94a3b8',
+                            minWidth: '50px',
+                            textAlign: 'right'
+                          }}>
+                            {person.utilization}%
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>
+                            📊 {person.allocatedHours}h allocated / {person.availableHours}h available
+                          </span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>
+                            🎯 {person.projectCount} project{person.projectCount !== 1 ? 's' : ''}
+                            {person.projectNames && (
+                              <span style={{ marginLeft: '0.5rem' }}>
+                                ({person.projectNames.split(',').slice(0, 2).join(', ')}
+                                {person.projectNames.split(',').length > 2 && ` +${person.projectNames.split(',').length - 2} more`})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'center', verticalAlign: 'middle' }}>
+                      <span style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        backgroundColor: 
+                          person.utilization > 100 ? '#fee2e2' :
+                          person.utilization >= 80 ? '#dcfce7' :
+                          person.utilization >= 50 ? '#fef3c7' : '#f1f5f9',
+                        color: 
+                          person.utilization > 100 ? '#dc2626' :
+                          person.utilization >= 80 ? '#16a34a' :
+                          person.utilization >= 50 ? '#d97706' : '#64748b'
+                      }}>
+                        {person.utilization > 100 ? 'Over-utilized' :
+                         person.utilization >= 80 ? 'Well-utilized' :
+                         person.utilization >= 50 ? 'Under-utilized' : 'Available'}
+                      </span>
+                    </td>
+                    
+                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'center', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        <Link 
+                          to={`/people/${person.id}?from=utilization-report`}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: 'var(--primary)',
+                            color: 'white',
+                            textDecoration: 'none',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '500',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--primary)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          👤 View Profile
+                        </Link>
+                        {person.utilization > 100 ? (
+                          <Link 
+                            to={`/assignments?person=${encodeURIComponent(person.name)}&action=reduce`}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#dc2626',
+                              color: 'white',
+                              textDecoration: 'none',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            🔻 Reduce Load
+                          </Link>
+                        ) : person.utilization < 70 ? (
+                          <Link 
+                            to={`/assignments?person=${encodeURIComponent(person.name)}&action=assign`}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#16a34a',
+                              color: 'white',
+                              textDecoration: 'none',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            ➕ Add Projects
+                          </Link>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-                {(utilizationReport.peopleUtilization || []).filter((person: any) => person.utilization < 70).length === 0 && (
-                  <p className="no-items">No underutilized people</p>
-                )}
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

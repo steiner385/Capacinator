@@ -166,34 +166,32 @@ export class ReportingController extends BaseController {
     const { startDate, endDate } = req.query;
 
     const result = await this.executeQuery(async () => {
-      // Get capacity gaps
+      // Get capacity gaps from existing view (non-date filtered for now)
       const capacityGaps = await this.db('capacity_gaps_view').select('*');
 
-      // Get person utilization
+      // Get person utilization from existing view (non-date filtered for now)  
       const personUtilization = await this.db('person_utilization_view').select('*');
 
       // Get project demands in date range
       let demandsQuery = this.db('project_demands_view')
-        .join('projects', 'project_demands_view.project_id', 'projects.id')
-        .join('roles', 'project_demands_view.role_id', 'roles.id')
-        .select(
-          'project_demands_view.*',
-          'projects.name as project_name',
-          'roles.name as role_name'
-        );
+        .select('*');
 
-      if (startDate) {
-        demandsQuery = demandsQuery.where('project_demands_view.end_date', '>=', startDate);
-      }
-      if (endDate) {
-        demandsQuery = demandsQuery.where('project_demands_view.start_date', '<=', endDate);
+      if (startDate && endDate) {
+        demandsQuery = demandsQuery.where(function() {
+          this.where('start_date', '<=', endDate)
+              .andWhere('end_date', '>=', startDate);
+        });
+      } else if (startDate) {
+        demandsQuery = demandsQuery.where('end_date', '>=', startDate);
+      } else if (endDate) {
+        demandsQuery = demandsQuery.where('start_date', '<=', endDate);
       }
 
-      const projectDemands = await demandsQuery.orderBy('project_demands_view.start_date');
+      const projectDemands = await demandsQuery.orderBy('start_date');
 
       // Calculate status for each gap based on demand vs capacity
       const capacityGapsWithStatus = capacityGaps.map(role => {
-        const demandVsCapacity = role.total_demand_fte - role.total_capacity_fte;
+        const demandVsCapacity = (role.total_demand_fte || 0) - (role.total_capacity_fte || 0);
         let status;
         if (demandVsCapacity > 0.5) {
           status = 'GAP';
@@ -217,7 +215,9 @@ export class ReportingController extends BaseController {
           totalGaps: capacityGapsWithStatus.filter(gap => gap.status === 'GAP').length,
           totalTight: capacityGapsWithStatus.filter(gap => gap.status === 'TIGHT').length,
           overAllocated: personUtilization.filter(person => person.allocation_status === 'OVER_ALLOCATED').length,
-          underAllocated: personUtilization.filter(person => person.allocation_status === 'UNDER_ALLOCATED').length
+          underAllocated: personUtilization.filter(person => person.allocation_status === 'UNDER_ALLOCATED').length,
+          availablePeople: personUtilization.filter(person => person.allocation_status === 'AVAILABLE').length,
+          totalPeople: personUtilization.length
         }
       };
     }, res, 'Failed to fetch capacity report');
@@ -367,7 +367,7 @@ export class ReportingController extends BaseController {
       // Aggregate by project using the improved view with hour calculations
       let projectQuery = this.db('project_demands_view')
         .select('project_id', 'project_name')
-        .sum('estimated_hours as total_hours')
+        .sum('demand_hours as total_hours')
         .groupBy('project_id', 'project_name')
         .orderBy('total_hours', 'desc');
       
@@ -394,7 +394,7 @@ export class ReportingController extends BaseController {
       // Aggregate by role using the improved view
       let roleQuery = this.db('project_demands_view')
         .select('role_id', 'role_name')
-        .sum('estimated_hours as total_hours')
+        .sum('demand_hours as total_hours')
         .groupBy('role_id', 'role_name')
         .orderBy('total_hours', 'desc');
         
@@ -420,7 +420,7 @@ export class ReportingController extends BaseController {
       // Get project type aggregation using the improved view
       let projectTypeQuery = this.db('project_demands_view')
         .select('project_type_id', 'project_type_name')
-        .sum('estimated_hours as total_hours')
+        .sum('demand_hours as total_hours')
         .groupBy('project_type_id', 'project_type_name')
         .orderBy('total_hours', 'desc');
         
@@ -445,7 +445,7 @@ export class ReportingController extends BaseController {
       // Generate timeline data (monthly breakdown) using the improved view
       const timelineQuery = this.db('project_demands_view')
         .select(this.db.raw("strftime('%Y-%m', start_date) as month"))
-        .sum('estimated_hours as total_hours')
+        .sum('demand_hours as total_hours')
         .groupBy(this.db.raw("strftime('%Y-%m', start_date)"))
         .orderBy('month');
         
