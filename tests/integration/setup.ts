@@ -41,10 +41,20 @@ beforeAll(async () => {
 });
 
 async function createTestTables() {
+  // Create locations table first
+  await testDb.schema.createTable('locations', table => {
+    table.string('id').primary();
+    table.string('name').notNullable();
+    table.text('description');
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
   // Create roles table first
   await testDb.schema.createTable('roles', table => {
     table.string('id').primary();
     table.string('name').notNullable();
+    table.text('description');
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
@@ -57,6 +67,10 @@ async function createTestTables() {
     table.string('supervisor_id');
     table.string('primary_person_role_id');
     table.string('location');
+    table.string('location_id').references('id').inTable('locations');
+    table.integer('default_availability_percentage').defaultTo(100);
+    table.integer('default_hours_per_day').defaultTo(8);
+    table.boolean('is_active').defaultTo(true);
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
@@ -67,6 +81,7 @@ async function createTestTables() {
     table.string('person_id').references('id').inTable('people').onDelete('CASCADE');
     table.string('role_id').references('id').inTable('roles').onDelete('CASCADE');
     table.integer('expertise_level').notNullable().defaultTo(1);
+    table.string('proficiency_level').defaultTo('Junior');
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
     table.unique(['person_id', 'role_id']);
@@ -83,6 +98,11 @@ async function createTestTables() {
     table.string('id').primary();
     table.string('name').notNullable();
     table.text('description'); // Add description field to match schema
+    table.integer('priority').defaultTo(2);
+    table.string('location_id').references('id').inTable('locations');
+    table.boolean('include_in_demand').defaultTo(true);
+    table.date('aspiration_start');
+    table.date('aspiration_finish');
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
@@ -94,8 +114,24 @@ async function createTestTables() {
     table.string('person_id').references('id').inTable('people').onDelete('CASCADE');
     table.string('role_id').references('id').inTable('roles').onDelete('CASCADE');
     table.integer('allocation_percentage');
+    table.string('assignment_date_mode').defaultTo('fixed');
     table.date('start_date');
     table.date('end_date');
+    table.boolean('billable').defaultTo(true);
+    table.text('notes');
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create person_availability_overrides table
+  await testDb.schema.createTable('person_availability_overrides', table => {
+    table.string('id').primary();
+    table.string('person_id').references('id').inTable('people').onDelete('CASCADE');
+    table.date('start_date');
+    table.date('end_date');
+    table.integer('availability_percentage');
+    table.string('override_type').defaultTo('available');
+    table.text('reason');
     table.timestamp('created_at').defaultTo(testDb.fn.now());
     table.timestamp('updated_at').defaultTo(testDb.fn.now());
   });
@@ -392,13 +428,15 @@ beforeEach(async () => {
     'scenario_projects',
     'scenarios',
     'project_assignments',
+    'person_availability_overrides',
     'notification_history',
     'notification_preferences',
     'email_templates',
     'person_roles',
     'people',
     'projects',
-    'roles'
+    'roles',
+    'locations'
   ];
   
   for (const table of tables) {

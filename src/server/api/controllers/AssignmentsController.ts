@@ -381,12 +381,15 @@ export class AssignmentsController extends BaseController {
       sum + assignment.allocation_percentage, allocation_percentage
     );
 
-    // Get person's current availability
-    const availability = await this.db('person_availability_view')
+    // Get person's current availability from overrides
+    const availabilityOverride = await this.db('person_availability_overrides')
       .where('person_id', person_id)
+      .where('start_date', '<=', start_date)
+      .where('end_date', '>=', end_date)
+      .orderBy('created_at', 'desc')
       .first();
 
-    const available_capacity = availability?.effective_availability_percentage || 100;
+    const available_capacity = availabilityOverride?.availability_percentage || person?.default_availability_percentage || 100;
 
     if (total_allocation > available_capacity) {
       return {
@@ -467,12 +470,18 @@ export class AssignmentsController extends BaseController {
 
         const currentAllocation = allocations?.total_allocation || 0;
 
-        // Get availability
-        const availability = await this.db('person_availability_view')
+        // Get person's availability from person table and overrides
+        const personData = await this.db('people')
+          .where('id', person.id)
+          .first();
+        
+        const availabilityOverride = await this.db('person_availability_overrides')
           .where('person_id', person.id)
+          .orderBy('created_at', 'desc')
           .first();
 
-        const availableCapacity = (availability?.effective_availability_percentage || 100) - currentAllocation;
+        const personCapacity = availabilityOverride?.availability_percentage || personData?.default_availability_percentage || 100;
+        const availableCapacity = personCapacity - currentAllocation;
 
         if (availableCapacity >= Number(required_allocation)) {
           suggestions.push({
@@ -481,7 +490,7 @@ export class AssignmentsController extends BaseController {
             proficiency_level: person.proficiency_level,
             current_allocation: currentAllocation,
             available_capacity: availableCapacity,
-            availability_status: availability?.availability_status,
+            availability_status: availabilityOverride?.override_type || 'available',
             score: this.calculateSuggestionScore(person, availableCapacity)
           });
         }

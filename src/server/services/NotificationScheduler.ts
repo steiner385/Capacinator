@@ -14,7 +14,6 @@ export class NotificationScheduler {
     this.weeklyEmailTask = cron.schedule('0 9 * * 1', async () => {
       await this.sendWeeklySummaryEmails();
     }, {
-      scheduled: false,
       timezone: 'America/New_York'
     });
 

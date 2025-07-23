@@ -1,8 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../../database/index.js';
+import { Knex } from 'knex';
 
 export abstract class BaseController {
-  protected db = db;
+  protected db: Knex;
+
+  constructor(database?: Knex) {
+    this.db = database || db;
+  }
 
   protected handleError(error: any, res: Response, message = 'Internal server error') {
     console.error('Controller error:', error);

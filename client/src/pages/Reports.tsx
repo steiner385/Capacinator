@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { 
   BarChart3, PieChart, TrendingUp, Users, Calendar, 
   Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, UserMinus, ClipboardList, ChevronDown,
-  Briefcase, User, Plus
+  Briefcase, User, Plus, X, Minus
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
@@ -48,6 +48,9 @@ export default function Reports() {
     endDate: '2023-12-31'
   });
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [showReduceLoadModal, setShowReduceLoadModal] = useState(false);
+  const [showAddProjectsModal, setShowAddProjectsModal] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<any>(null);
 
   // Fetch report data
   const { data: capacityReport, isLoading: capacityLoading, refetch: refetchCapacity } = useQuery({
@@ -287,6 +290,27 @@ export default function Reports() {
     enabled: activeReport === 'gaps'
   });
 
+  // Fetch person assignments for recommendations
+  const { data: personAssignments, refetch: refetchPersonAssignments } = useQuery({
+    queryKey: ['person-assignments', selectedPerson?.id],
+    queryFn: async () => {
+      if (!selectedPerson?.id) return null;
+      const response = await api.assignments.list({ person_id: selectedPerson.id });
+      return response.data?.data || [];
+    },
+    enabled: !!selectedPerson?.id && (showReduceLoadModal || showAddProjectsModal)
+  });
+
+  // Fetch available projects with gaps for recommendations
+  const { data: availableProjects, refetch: refetchAvailableProjects } = useQuery({
+    queryKey: ['available-projects', filters],
+    queryFn: async () => {
+      const response = await api.projects.list();
+      return response.data?.data || [];
+    },
+    enabled: showAddProjectsModal && !!selectedPerson?.id
+  });
+
   // Fetch filter options
   const { data: projectTypes } = useQuery({
     queryKey: ['projectTypes'],
@@ -429,6 +453,102 @@ export default function Reports() {
     '#ef4444', // danger (red)
     '#8b5cf6', // purple (violet)
   ];
+
+  // Recommendation logic functions
+  const getProjectRemovalRecommendations = (person: any) => {
+    if (!personAssignments) return [];
+    
+    // Sort by impact and removal ease
+    return personAssignments.map((assignment: any) => ({
+      ...assignment,
+      removalScore: calculateRemovalScore(assignment, person),
+      impactLevel: (assignment.allocation_percentage || 0) > 50 ? 'High' : (assignment.allocation_percentage || 0) > 25 ? 'Medium' : 'Low'
+    })).sort((a: any, b: any) => b.removalScore - a.removalScore);
+  };
+
+  const getProjectAdditionRecommendations = (person: any) => {
+    if (!availableProjects) return [];
+    
+    // Filter and score projects based on person's skills and availability
+    return availableProjects
+      .filter((project: any) => project.include_in_demand !== false) // Only include projects that are active/available
+      .map((project: any) => ({
+        ...project,
+        matchScore: calculateMatchScore(project, person),
+        estimatedHours: calculateEstimatedHours(project, person),
+        priority: project.priority === 1 ? 'High' : project.priority === 2 ? 'Medium' : 'Low'
+      }))
+      .sort((a: any, b: any) => b.matchScore - a.matchScore)
+      .slice(0, 5); // Top 5 recommendations
+  };
+
+  const calculateRemovalScore = (assignment: any, person: any) => {
+    // Higher score = better candidate for removal
+    let score = 0;
+    
+    // Less critical projects get higher removal scores
+    if (assignment.project_priority === 'Low') score += 30;
+    else if (assignment.project_priority === 'Medium') score += 10;
+    
+    // Lower allocation percentage = easier to remove
+    score += (50 - (assignment.allocation_percentage || 0));
+    
+    // Recent assignments are easier to remove
+    const assignmentAge = new Date().getTime() - new Date(assignment.start_date || Date.now()).getTime();
+    const ageInDays = assignmentAge / (1000 * 60 * 60 * 24);
+    if (ageInDays < 30) score += 15;
+    
+    return Math.max(0, score);
+  };
+
+  const calculateMatchScore = (project: any, person: any) => {
+    // Higher score = better match
+    let score = 20; // Base score for all projects
+    
+    // Priority-based scoring (priority 1 = highest)
+    if (project.priority === 1) score += 30;
+    else if (project.priority === 2) score += 20;
+    else if (project.priority === 3) score += 10;
+    
+    // Location match bonus (if available)
+    if (project.location_id === person.locationId || project.location_name === person.location) {
+      score += 15;
+    }
+    
+    // Person's current utilization affects matching
+    if (person.utilization < 50) score += 25; // Low utilization = better candidate
+    else if (person.utilization < 80) score += 15; // Medium utilization
+    else if (person.utilization < 100) score += 5; // High but not over-allocated
+    
+    // Project has aspiration dates (better structured)
+    if (project.aspiration_start && project.aspiration_finish) score += 10;
+    
+    // Include in demand flag
+    if (project.include_in_demand === true) score += 15;
+    
+    // Random factor for variety (between 0-10)
+    score += Math.floor(Math.random() * 10);
+    
+    return Math.max(0, score);
+  };
+
+  const calculateEstimatedHours = (project: any, person: any) => {
+    // Estimate hours needed based on person's available capacity and project priority
+    const availableCapacity = 100 - (person.utilization || 0); // Person's remaining capacity
+    const maxHoursPerWeek = (person.availableHours || 40) * (availableCapacity / 100);
+    
+    // Suggest allocation based on project priority and person's availability
+    let suggestedHours;
+    if (project.priority === 1) {
+      suggestedHours = Math.min(maxHoursPerWeek * 0.6, 30); // High priority: up to 60% of available time, max 30h
+    } else if (project.priority === 2) {
+      suggestedHours = Math.min(maxHoursPerWeek * 0.4, 20); // Medium priority: up to 40% of available time, max 20h
+    } else {
+      suggestedHours = Math.min(maxHoursPerWeek * 0.25, 15); // Low priority: up to 25% of available time, max 15h
+    }
+    
+    return Math.max(5, Math.round(suggestedHours)); // Minimum 5 hours per week
+  };
 
   const renderCapacityReport = () => {
     if (capacityLoading || !capacityReport) return <div className="loading">Loading capacity report...</div>;
@@ -979,13 +1099,17 @@ export default function Reports() {
                           👤 View Profile
                         </Link>
                         {person.utilization > 100 ? (
-                          <Link 
-                            to={`/assignments?person=${encodeURIComponent(person.name)}&action=reduce`}
+                          <button 
+                            onClick={() => {
+                              setSelectedPerson(person);
+                              setShowReduceLoadModal(true);
+                            }}
                             style={{
                               padding: '0.5rem 1rem',
                               backgroundColor: '#dc2626',
                               color: 'white',
-                              textDecoration: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
                               borderRadius: '6px',
                               fontSize: '0.75rem',
                               fontWeight: '500',
@@ -996,15 +1120,19 @@ export default function Reports() {
                             }}
                           >
                             🔻 Reduce Load
-                          </Link>
+                          </button>
                         ) : person.utilization < 70 ? (
-                          <Link 
-                            to={`/assignments?person=${encodeURIComponent(person.name)}&action=assign`}
+                          <button 
+                            onClick={() => {
+                              setSelectedPerson(person);
+                              setShowAddProjectsModal(true);
+                            }}
                             style={{
                               padding: '0.5rem 1rem',
                               backgroundColor: '#16a34a',
                               color: 'white',
-                              textDecoration: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
                               borderRadius: '6px',
                               fontSize: '0.75rem',
                               fontWeight: '500',
@@ -1015,7 +1143,7 @@ export default function Reports() {
                             }}
                           >
                             ➕ Add Projects
-                          </Link>
+                          </button>
                         ) : null}
                       </div>
                     </td>
@@ -1346,6 +1474,301 @@ export default function Reports() {
 
   const isLoading = capacityLoading || utilizationLoading || demandLoading || gapsLoading;
 
+  // Reduce Load Modal Component
+  const renderReduceLoadModal = () => {
+    if (!showReduceLoadModal || !selectedPerson) return null;
+    
+    const recommendations = getProjectRemovalRecommendations(selectedPerson);
+    
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}>
+        <div style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: '12px',
+          padding: '2rem',
+          maxWidth: '600px',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          position: 'relative',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-lg)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>
+              🔻 Reduce Load: {selectedPerson.name}
+            </h2>
+            <button
+              onClick={() => {setShowReduceLoadModal(false); setSelectedPerson(null);}}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.5rem',
+                color: 'var(--text-secondary)',
+                borderRadius: '6px'
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem 0' }}>
+              <strong>{selectedPerson.name}</strong> is currently at <strong>{selectedPerson.utilization}% utilization</strong>. 
+              Here are recommended projects to remove based on impact and removal ease:
+            </p>
+          </div>
+
+          {recommendations.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {recommendations.map((assignment: any, index: number) => (
+                <div key={assignment.id || index} style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '1rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
+                        {assignment.project_name || 'Project'}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                          📊 {Math.round((assignment.allocation_percentage || 0) * 40 / 100)}h/week • {assignment.impactLevel} Impact • 👤 {assignment.role_name || 'Role'}
+                        </span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                          {assignment.notes || 'No description available'}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: assignment.removalScore > 50 ? '#dcfce7' : assignment.removalScore > 30 ? '#fef3c7' : '#fee2e2',
+                        color: assignment.removalScore > 50 ? '#16a34a' : assignment.removalScore > 30 ? '#d97706' : '#dc2626'
+                      }}>
+                        {assignment.removalScore > 50 ? 'Easy to Remove' : assignment.removalScore > 30 ? 'Moderate' : 'Keep if Possible'}
+                      </span>
+                      <button
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                        onClick={async () => {
+                          if (confirm(`Are you sure you want to remove ${selectedPerson.name} from ${assignment.project_name}?`)) {
+                            try {
+                              await api.assignments.delete(assignment.id);
+                              // Refresh the assignments data
+                              await refetchPersonAssignments();
+                              // Close modal and refresh utilization data
+                              setShowReduceLoadModal(false);
+                              await refetchUtilization();
+                            } catch (error) {
+                              console.error('Error removing assignment:', error);
+                              alert('Failed to remove assignment. Please try again.');
+                            }
+                          }
+                        }}
+                      >
+                        <Minus size={14} style={{ marginRight: '0.25rem' }} />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '2rem' }}>
+              <p>No current assignments found for this person.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Add Projects Modal Component
+  const renderAddProjectsModal = () => {
+    if (!showAddProjectsModal || !selectedPerson) return null;
+    
+    const recommendations = getProjectAdditionRecommendations(selectedPerson);
+    
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+      }}>
+        <div style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: '12px',
+          padding: '2rem',
+          maxWidth: '600px',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          position: 'relative',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-lg)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>
+              ➕ Add Projects: {selectedPerson.name}
+            </h2>
+            <button
+              onClick={() => {setShowAddProjectsModal(false); setSelectedPerson(null);}}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.5rem',
+                color: 'var(--text-secondary)',
+                borderRadius: '6px'
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div style={{ marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--text-secondary)', margin: '0 0 1rem 0' }}>
+              <strong>{selectedPerson.name}</strong> is currently at <strong>{selectedPerson.utilization}% utilization</strong>. 
+              Here are recommended projects based on skills match and project needs:
+            </p>
+          </div>
+
+          {recommendations.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {recommendations.map((project: any, index: number) => (
+                <div key={project.id || index} style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '1rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
+                        {project.name || 'Project'}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                          📊 ~{project.estimatedHours}h/week • {project.priority} Priority • 👤 {selectedPerson.role || 'Current Role'}
+                        </span>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                          {project.description || 'No description available'}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: project.matchScore > 60 ? '#dcfce7' : project.matchScore > 40 ? '#fef3c7' : '#fee2e2',
+                        color: project.matchScore > 60 ? '#16a34a' : project.matchScore > 40 ? '#d97706' : '#dc2626'
+                      }}>
+                        {project.matchScore > 60 ? 'Great Match' : project.matchScore > 40 ? 'Good Match' : 'Fair Match'}
+                      </span>
+                      <button
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: '#16a34a',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                        onClick={async () => {
+                          if (confirm(`Are you sure you want to assign ${selectedPerson.name} to ${project.name}?`)) {
+                            try {
+                              // Get person's primary role - fallback to first available role if needed
+                              let roleId = null;
+                              if (selectedPerson.primaryRoleId) {
+                                roleId = selectedPerson.primaryRoleId;
+                              } else if (roles && roles.length > 0) {
+                                roleId = roles[0].id; // Use first available role as fallback
+                              } else {
+                                throw new Error('No roles available for assignment');
+                              }
+                              
+                              // Create assignment with fixed dates and estimated hours as allocation
+                              const startDate = project.aspiration_start || new Date().toISOString().split('T')[0];
+                              const endDate = project.aspiration_finish || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                              
+                              await api.assignments.create({
+                                project_id: project.id,
+                                person_id: selectedPerson.id,
+                                role_id: roleId,
+                                phase_id: null,
+                                assignment_date_mode: 'fixed', // Use fixed dates to avoid aspiration date issues
+                                start_date: startDate,
+                                end_date: endDate,
+                                allocation_percentage: Math.round(project.estimatedHours * 100 / 40), // Convert hours to percentage
+                                billable: 1,
+                                notes: `Assigned via utilization report recommendation (Match Score: ${project.matchScore})`
+                              });
+                              
+                              // Refresh all data
+                              await refetchPersonAssignments();
+                              await refetchAvailableProjects();
+                              // Close modal and refresh main report
+                              setShowAddProjectsModal(false);
+                              await refetchUtilization();
+                            } catch (error) {
+                              console.error('Error creating assignment:', error);
+                              alert('Failed to create assignment. Please try again.');
+                            }
+                          }
+                        }}
+                      >
+                        <Plus size={14} style={{ marginRight: '0.25rem' }} />
+                        Assign
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '2rem' }}>
+              <p>No suitable projects found for assignment.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -1509,6 +1932,10 @@ export default function Reports() {
         {activeReport === 'demand' && renderDemandReport()}
         {activeReport === 'gaps' && renderGapsReport()}
       </div>
+
+      {/* Modal Components */}
+      {renderReduceLoadModal()}
+      {renderAddProjectsModal()}
     </div>
   );
 }
