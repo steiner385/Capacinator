@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 async function waitForPageLoad(page: any) {
   await page.waitForLoadState('domcontentloaded');
@@ -10,29 +11,17 @@ async function waitForPageLoad(page: any) {
   await page.waitForTimeout(1000); // Give React time to render
 }
 
-async function handleProfileSelection(page: any) {
-  // Check if profile selection modal is present
-  const profileModal = page.locator('text=Select Your Profile');
-  const profileModalCount = await profileModal.count();
-  
-  if (profileModalCount > 0) {
-    console.log('Profile selection modal detected, handling...');
-    // Select the first profile option
-    await page.selectOption('select', { index: 1 }); // Select first actual option (index 0 is placeholder)
-    await page.click('button:has-text("Continue")');
-    await page.waitForTimeout(2000); // Wait for modal to disappear and page to load
-  }
-}
-
 test.describe('Navigation and Basic Page Loading', () => {
   
   test('should load dashboard page', async ({ page }) => {
+    const helpers = new TestHelpers(page);
+    
     await page.goto('/');
     await waitForPageLoad(page);
     await expect(page).toHaveTitle(/Capacinator/);
     
-    // Handle profile selection if needed
-    await handleProfileSelection(page);
+    // Handle profile selection using robust helper
+    await helpers.handleProfileSelection();
     
     // Wait for navigation to complete and dashboard to load
     await page.waitForURL('/dashboard');
@@ -40,11 +29,13 @@ test.describe('Navigation and Basic Page Loading', () => {
   });
 
   test('should navigate to all main pages', async ({ page }) => {
+    const helpers = new TestHelpers(page);
+    
     await page.goto('/dashboard');
     await waitForPageLoad(page);
     
-    // Handle profile selection if needed
-    await handleProfileSelection(page);
+    // Handle profile selection using robust helper
+    await helpers.handleProfileSelection();
     
     // Test navigation to People page
     await page.click('a[href="/people"]');

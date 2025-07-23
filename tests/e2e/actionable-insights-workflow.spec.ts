@@ -1,32 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 test.describe('Actionable Insights Workflow', () => {
+  let helpers: TestHelpers;
+  
   test.beforeEach(async ({ page }) => {
-    // Navigate to login page and perform login
+    helpers = new TestHelpers(page);
+    
+    // Navigate to main page
     await page.goto('/');
     
-    // Wait for and handle profile selection if present
-    try {
-      await page.waitForSelector('.profile-selection', { timeout: 5000 });
-      const profileSelect = page.locator('select[name="selectedProfile"]');
-      
-      if (await profileSelect.count() > 0) {
-        const options = await profileSelect.locator('option').all();
-        if (options.length > 1) {
-          // Select the first non-empty option
-          await profileSelect.selectOption({ index: 1 });
-          await page.dispatchEvent('select[name="selectedProfile"]', 'change');
-        }
-        
-        // Click continue button
-        const continueButton = page.locator('button:has-text("Continue")');
-        if (await continueButton.count() > 0) {
-          await continueButton.click();
-        }
-      }
-    } catch (error) {
-      // Profile selection not present, continue
-    }
+    // Handle profile selection using robust helper
+    await helpers.handleProfileSelection();
     
     // Wait for dashboard to load
     await page.waitForLoadState('networkidle');

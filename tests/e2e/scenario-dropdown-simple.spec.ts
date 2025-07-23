@@ -1,24 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 test.describe('Scenario Dropdown Comprehensive Tests', () => {
+  let helpers: TestHelpers;
+  
   test.beforeEach(async ({ page }) => {
+    helpers = new TestHelpers(page);
+    
     // Navigate to the main page
     await page.goto('/');
     
-    // Wait for the initial loading to complete and handle profile selection if present
-    await page.waitForTimeout(3000); // Give time for initial load
-    
-    // Check if there's a profile selection modal and handle it
-    const profileModal = page.locator('text=Select Your Profile');
-    if (await profileModal.isVisible()) {
-      // Wait for employees to load and select the first one
-      await page.waitForSelector('button', { timeout: 10000 });
-      const buttons = page.locator('button');
-      const buttonCount = await buttons.count();
-      if (buttonCount > 0) {
-        await buttons.first().click();
-      }
-    }
+    // Handle profile selection using robust helper
+    await helpers.handleProfileSelection();
     
     // Now wait for the main app to load and the scenario selector to appear
     await page.waitForSelector('.scenario-selector', { timeout: 20000 });

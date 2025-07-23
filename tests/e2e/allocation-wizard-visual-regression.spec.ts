@@ -1,21 +1,17 @@
 import { test, expect, Page } from '@playwright/test';
+import { TestHelpers } from './utils/test-helpers';
 
 test.describe('Allocation Wizard - Visual Regression and Accessibility Tests', () => {
+  let helpers: TestHelpers;
   
   test.beforeEach(async ({ page }) => {
+    helpers = new TestHelpers(page);
+    
     await page.goto('/wizard');
     await page.waitForSelector('.allocation-wizard', { timeout: 10000 });
     
-    // Handle profile selection
-    const profileModal = page.locator('text=Select Your Profile');
-    if (await profileModal.isVisible()) {
-      await page.waitForSelector('button', { timeout: 5000 });
-      const buttons = page.locator('button');
-      if (await buttons.count() > 0) {
-        await buttons.first().click();
-        await page.waitForTimeout(1000);
-      }
-    }
+    // Handle profile selection using robust helper
+    await helpers.handleProfileSelection();
   });
 
   test.describe('Visual Regression Tests', () => {
