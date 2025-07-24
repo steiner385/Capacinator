@@ -21,6 +21,7 @@ import scenariosRoutes from './scenarios.js';
 import settingsRoutes from './settings.js';
 import userPermissionsRoutes from './user-permissions.js';
 import notificationsRoutes from './notifications.js';
+import recommendationsRoutes from './recommendations.js';
 import { createAuditRoutes } from './audit.js';
 import { getAuditService } from '../../services/audit/index.js';
 
@@ -48,6 +49,7 @@ router.use('/demands', demandRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/user-permissions', userPermissionsRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/recommendations', recommendationsRoutes);
 
 // Test data cleanup routes (for e2e tests)
 router.use('/test-data', testDataRoutes);

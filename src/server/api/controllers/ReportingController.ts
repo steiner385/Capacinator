@@ -496,37 +496,41 @@ export class ReportingController extends BaseController {
     const result = await this.executeQuery(async () => {
       console.log('📊 Calculating date-aware utilization data...');
       
-      // Get people with project assignments filtered by date range
-      let utilizationQuery = this.db('people')
-        .leftJoin('project_assignments', 'people.id', 'project_assignments.person_id')
+      // First, get all active people to ensure we include everyone
+      const allActivePeople = await this.db('people')
         .leftJoin('person_roles', 'people.primary_person_role_id', 'person_roles.id')
         .leftJoin('roles', 'person_roles.role_id', 'roles.id')
         .leftJoin('locations', 'people.location_id', 'locations.id')
-        .leftJoin('projects', 'project_assignments.project_id', 'projects.id')
+        .where('people.is_active', true)
+        .select(
+          'people.id as person_id',
+          'people.name as person_name',
+          'people.email as person_email',
+          'people.worker_type',
+          'people.default_availability_percentage',
+          'people.default_hours_per_day',
+          'roles.id as primary_role_id',
+          'roles.name as primary_role_name',
+          'person_roles.proficiency_level as primary_role_proficiency',
+          'locations.name as location_name'
+        );
+
+      // Then get assignments that overlap with the date range
+      let assignmentsQuery = this.db('project_assignments')
+        .join('people', 'project_assignments.person_id', 'people.id')
+        .join('projects', 'project_assignments.project_id', 'projects.id')
         .where('people.is_active', true);
 
-      // Apply date filtering to project assignments
+      // Apply date filtering to assignments
       if (startDate && endDate) {
-        utilizationQuery = utilizationQuery.where(function() {
-          this.where(function() {
-            // Include assignments that overlap with the date range
-            this.where('project_assignments.start_date', '<=', endDate)
-                .andWhere('project_assignments.end_date', '>=', startDate);
-          }).orWhereNull('project_assignments.id'); // Include people with no assignments
+        assignmentsQuery = assignmentsQuery.where(function() {
+          this.where('project_assignments.start_date', '<=', endDate)
+              .andWhere('project_assignments.end_date', '>=', startDate);
         });
       }
 
-      const rawData = await utilizationQuery.select(
+      const assignmentsData = await assignmentsQuery.select(
         'people.id as person_id',
-        'people.name as person_name', 
-        'people.email as person_email',
-        'people.worker_type',
-        'people.default_availability_percentage',
-        'people.default_hours_per_day',
-        'roles.id as primary_role_id',
-        'roles.name as primary_role_name',
-        'person_roles.proficiency_level as primary_role_proficiency',
-        'locations.name as location_name',
         'project_assignments.allocation_percentage',
         'project_assignments.start_date as assignment_start',
         'project_assignments.end_date as assignment_end',
@@ -534,33 +538,71 @@ export class ReportingController extends BaseController {
         'projects.id as project_id'
       );
 
-      // Group by person and calculate utilization
+      // Create a map of all people first, ensuring everyone is included
       const peopleMap = new Map();
       
-      rawData.forEach(row => {
-        if (!peopleMap.has(row.person_id)) {
-          peopleMap.set(row.person_id, {
-            person_id: row.person_id,
-            person_name: row.person_name,
-            person_email: row.person_email,
-            worker_type: row.worker_type,
-            default_availability_percentage: row.default_availability_percentage,
-            default_hours_per_day: row.default_hours_per_day,
-            primary_role_id: row.primary_role_id,
-            primary_role_name: row.primary_role_name,
-            primary_role_proficiency: row.primary_role_proficiency,
-            location_name: row.location_name,
-            total_allocation_percentage: 0,
-            project_count: 0,
-            project_names: []
-          });
+      // Initialize all active people with zero utilization
+      allActivePeople.forEach(person => {
+        peopleMap.set(person.person_id, {
+          person_id: person.person_id,
+          person_name: person.person_name,
+          person_email: person.person_email,
+          worker_type: person.worker_type,
+          default_availability_percentage: person.default_availability_percentage,
+          default_hours_per_day: person.default_hours_per_day,
+          primary_role_id: person.primary_role_id,
+          primary_role_name: person.primary_role_name,
+          primary_role_proficiency: person.primary_role_proficiency,
+          location_name: person.location_name,
+          total_allocation_percentage: 0,
+          project_count: 0,
+          project_names: []
+        });
+      });
+
+      // Now add assignments data to people who have them
+      assignmentsData.forEach(row => {
+        const person = peopleMap.get(row.person_id);
+        if (!person) return; // Skip if person not found (shouldn't happen)
+        
+        let allocationToAdd = row.allocation_percentage;
+        
+        // If date filtering is active, calculate proportional allocation based on overlap
+        if (startDate && endDate) {
+          const filterStart = new Date(startDate);
+          const filterEnd = new Date(endDate);
+          const assignmentStart = new Date(row.assignment_start);
+          const assignmentEnd = new Date(row.assignment_end);
+          
+          // Calculate the overlap between assignment period and filter period
+          const overlapStart = new Date(Math.max(filterStart.getTime(), assignmentStart.getTime()));
+          const overlapEnd = new Date(Math.min(filterEnd.getTime(), assignmentEnd.getTime()));
+          
+          if (overlapStart <= overlapEnd) {
+            // Calculate overlap duration in days
+            const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            const assignmentDays = Math.ceil((assignmentEnd.getTime() - assignmentStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            
+            // Calculate proportional allocation based on overlap
+            const overlapRatio = overlapDays / assignmentDays;
+            allocationToAdd = row.allocation_percentage * overlapRatio;
+            
+            // Log for debugging during initial deployment
+            console.log(`Proportional allocation calculation:
+                Assignment: ${row.project_name} for ${person.person_name}
+                Assignment period: ${row.assignment_start} to ${row.assignment_end} (${assignmentDays} days)
+                Filter period: ${startDate} to ${endDate}
+                Overlap period: ${overlapStart.toISOString().split('T')[0]} to ${overlapEnd.toISOString().split('T')[0]} (${overlapDays} days)
+                Original allocation: ${row.allocation_percentage}%
+                Proportional allocation: ${allocationToAdd.toFixed(2)}%`);
+          } else {
+            // No overlap, don't add this assignment
+            allocationToAdd = 0;
+          }
         }
         
-        const person = peopleMap.get(row.person_id);
-        
-        // Only add allocation if there's an actual assignment in the date range
-        if (row.allocation_percentage && row.project_id) {
-          person.total_allocation_percentage += row.allocation_percentage;
+        if (allocationToAdd > 0) {
+          person.total_allocation_percentage += allocationToAdd;
           person.project_count++;
           if (!person.project_names.includes(row.project_name)) {
             person.project_names.push(row.project_name);
@@ -568,23 +610,53 @@ export class ReportingController extends BaseController {
         }
       });
 
-      // Convert to array and add calculated fields
+      // Calculate total utilization (across all assignments, not filtered by date)
+      const totalUtilizationData = await this.db.raw(`
+        SELECT 
+          people.id as person_id,
+          COALESCE(SUM(project_assignments.allocation_percentage), 0) as total_allocation_percentage
+        FROM people
+        LEFT JOIN project_assignments ON people.id = project_assignments.person_id
+        WHERE people.is_active = 1
+        GROUP BY people.id
+      `);
+
+      // Create a map for total utilization lookup
+      const totalUtilizationMap = new Map();
+      totalUtilizationData.forEach(row => {
+        totalUtilizationMap.set(row.person_id, row.total_allocation_percentage || 0);
+      });
+
+      // Convert to array and add calculated fields including both filtered and total utilization
       const utilizationData = Array.from(peopleMap.values()).map(person => {
-        const totalAllocHours = person.total_allocation_percentage * person.default_hours_per_day / 100.0;
+        const filteredAllocation = person.total_allocation_percentage;
+        const totalAllocation = totalUtilizationMap.get(person.person_id) || 0;
+        const totalAllocHours = filteredAllocation * person.default_hours_per_day / 100.0;
         
         return {
           ...person,
           total_allocated_hours: totalAllocHours,
           available_hours: person.default_hours_per_day,
-          allocation_status: person.total_allocation_percentage > 100 ? 'OVER_ALLOCATED' :
-                           person.total_allocation_percentage >= 90 ? 'FULLY_ALLOCATED' :
-                           person.total_allocation_percentage >= 50 ? 'PARTIALLY_ALLOCATED' :
-                           person.total_allocation_percentage > 0 ? 'UNDER_ALLOCATED' : 'AVAILABLE',
+          // Keep the filtered allocation as the main display value
+          total_allocation_percentage: filteredAllocation,
+          // Add total allocation across all assignments
+          total_allocation_percentage_all_assignments: totalAllocation,
+          // Determine status based on filtered allocation
+          allocation_status: filteredAllocation > 100 ? 'OVER_ALLOCATED' :
+                           filteredAllocation >= 90 ? 'FULLY_ALLOCATED' :
+                           filteredAllocation >= 50 ? 'PARTIALLY_ALLOCATED' :
+                           filteredAllocation > 0 ? 'UNDER_ALLOCATED' : 'AVAILABLE',
+          // Flag if there's a significant difference between filtered and total
+          has_external_conflicts: totalAllocation > filteredAllocation + 10, // 10% threshold
           project_names: person.project_names.join(',')
         };
       }).sort((a, b) => b.total_allocation_percentage - a.total_allocation_percentage);
       
+      console.log(`📊 All active people: ${allActivePeople.length}`);
+      console.log(`📊 Assignment data rows: ${assignmentsData.length}`);
+      console.log(`📊 People in map: ${peopleMap.size}`);
       console.log(`📊 Found ${utilizationData.length} people with date-filtered utilization`);
+      console.log('📊 People found:', utilizationData.map(p => `${p.person_name} (${p.total_allocation_percentage}%)`));
       
       // Get people by utilization status
       const overutilized = utilizationData.filter(p => p.allocation_status === 'OVER_ALLOCATED');
@@ -646,6 +718,7 @@ export class ReportingController extends BaseController {
           ...gap,
           gap_percentage: Math.round(gapPercentage * 100) / 100,
           demand_vs_capacity: Math.round(demandVsCapacity * 100) / 100,
+          gap_fte: Math.round(Math.max(0, demandVsCapacity) * 100) / 100,
           status
         };
       }).sort((a, b) => b.gap_percentage - a.gap_percentage);
@@ -682,6 +755,8 @@ export class ReportingController extends BaseController {
           totalGapHours: Math.round(totalGapHours * 100) / 100,
           projectsWithGaps: criticalProjectGaps.length,
           rolesWithGaps: criticalRoleGaps.length,
+          capacity_gaps: criticalRoleGaps.length,
+          project_gaps: criticalProjectGaps.length,
           unutilizedHours: Math.round(unutilizedHours * 100) / 100
         }
       };

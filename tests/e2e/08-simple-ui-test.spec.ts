@@ -79,7 +79,15 @@ test.describe('Simple UI Test', () => {
     try {
       const response = await responsePromise;
       expect(response.status()).toBe(200);
-      console.log(`Successful API call: ${response.url()}`);
+      
+      // Validate that API responses return parseable JSON
+      try {
+        const responseBody = await response.json();
+        expect(responseBody).toBeDefined();
+        console.log(`✅ Successful API call with valid JSON: ${response.url()}`);
+      } catch (jsonError) {
+        console.log(`⚠️ API call succeeded but returned non-JSON response: ${response.url()}`);
+      }
     } catch (error) {
       console.log('No successful API calls detected within timeout');
       // This is okay - the page might work without immediate API calls

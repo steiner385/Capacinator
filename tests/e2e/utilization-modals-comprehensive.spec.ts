@@ -271,9 +271,9 @@ test.describe('Utilization Report Modals', () => {
       page.on('dialog', dialog => dialog.accept()); // Auto-accept confirmation dialog
       await firstAssignment.locator('button:has-text("Remove")').click();
       
-      // Verify API call was made
+      // Verify API call was made successfully and validate response structure
       const response = await deleteResponse;
-      expect(response.status()).toBe(200);
+      const responseBody = await testHelpers.validateAssignmentDeletionResponse(response);
       
       // Wait for modal to close and data to refresh
       await expect(modal).not.toBeVisible({ timeout: 10000 });
@@ -451,9 +451,9 @@ test.describe('Utilization Report Modals', () => {
       page.on('dialog', dialog => dialog.accept()); // Auto-accept confirmation dialog
       await firstProject.locator('button:has-text("Assign")').click();
       
-      // Verify API call was made successfully
+      // Verify API call was made successfully and validate response structure
       const response = await createResponse;
-      expect(response.status()).toBe(201);
+      const responseBody = await testHelpers.validateAssignmentCreationResponse(response);
       
       // Wait for modal to close and data to refresh
       await expect(modal).not.toBeVisible({ timeout: 10000 });

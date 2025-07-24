@@ -312,6 +312,11 @@ export const api = {
     getNotificationStats: (userId?: string, params?: any) => apiClient.get(`/notifications/stats/${userId || ''}`, { params }),
   },
 
+  // Recommendations
+  recommendations: {
+    list: (params?: any) => apiClient.get('/recommendations', { params }),
+    execute: (recommendationId: string, actions: any) => apiClient.post(`/recommendations/${recommendationId}/execute`, { actions }),
+  },
 
   // Health check
   health: () => apiClient.get('/health'),

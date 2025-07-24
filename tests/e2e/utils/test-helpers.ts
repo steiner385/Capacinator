@@ -930,4 +930,331 @@ export class TestHelpers {
       console.log('No loading spinner found - continuing');
     }
   }
+
+  /**
+   * Validate API response JSON structure to catch serialization errors
+   * This helper ensures response bodies can be properly parsed and have expected structure
+   */
+  async validateApiResponse(response: any, expectedProperties: string[] = [], operationType: string = 'API operation') {
+    // Verify response status
+    expect(response.status()).toBeGreaterThanOrEqual(200);
+    expect(response.status()).toBeLessThan(300);
+    
+    // Validate JSON response body structure to catch serialization errors
+    let responseBody: any;
+    try {
+      responseBody = await response.json();
+    } catch (error) {
+      throw new Error(`Failed to parse JSON response for ${operationType}: ${error}`);
+    }
+    
+    expect(responseBody).toBeDefined();
+    
+    // Validate expected properties exist
+    for (const property of expectedProperties) {
+      expect(responseBody).toHaveProperty(property);
+    }
+    
+    console.log(`✅ ${operationType} response body validated successfully`);
+    return responseBody;
+  }
+
+  /**
+   * Validate assignment creation response
+   */
+  async validateAssignmentCreationResponse(response: any) {
+    return await this.validateApiResponse(response, [
+      'id', 'project_id', 'person_id', 'role_id', 
+      'allocation_percentage', 'start_date', 'end_date'
+    ], 'Assignment creation');
+  }
+
+  /**
+   * Validate assignment deletion response
+   */
+  async validateAssignmentDeletionResponse(response: any) {
+    return await this.validateApiResponse(response, ['message'], 'Assignment deletion');
+  }
+
+  /**
+   * Validates that a utilization modal (Add Projects or Reduce Load) opened correctly
+   */
+  async validateUtilizationModalOpened(modalType: 'add' | 'reduce', personName: string, utilization: number) {
+    const modalSelector = modalType === 'add' 
+      ? 'div:has(h2:has-text("➕ Add Projects:"))'
+      : 'div:has(h2:has-text("🔻 Reduce Load:"))';
+    
+    const modal = this.page.locator(modalSelector);
+    await expect(modal).toBeVisible({ timeout: 10000 });
+    
+    // Verify person information
+    await expect(modal).toContainText(personName);
+    await expect(modal).toContainText(`${utilization}% utilization`);
+    
+    // Verify close button
+    const closeButton = modal.locator('button:has(svg), button:has-text("×")');
+    await expect(closeButton).toBeVisible();
+    
+    // Wait for content to load
+    await this.page.waitForTimeout(2000);
+    
+    console.log(`✅ ${modalType === 'add' ? 'Add Projects' : 'Reduce Load'} modal validated for ${personName}`);
+    return modal;
+  }
+
+  /**
+   * Validates project recommendations in Add Projects modal
+   */
+  async validateProjectRecommendations(modal: any) {
+    // Check for either projects or no projects message
+    const projectCards = modal.locator('div:has(h4)').filter({ hasText: 'h/week' });
+    const noProjectsMessage = modal.locator('text="No suitable projects found"');
+    
+    const projectCount = await projectCards.count();
+    const hasNoProjectsMessage = await noProjectsMessage.isVisible();
+    
+    expect(projectCount > 0 || hasNoProjectsMessage).toBeTruthy();
+    
+    if (projectCount > 0) {
+      // Validate first project structure
+      const firstProject = projectCards.first();
+      
+      await expect(firstProject.locator('h4')).toBeVisible(); // Project name
+      await expect(firstProject).toContainText('h/week'); // Estimated hours
+      await expect(firstProject).toContainText('Priority'); // Priority level
+      await expect(firstProject).toContainText('👤'); // Role information
+      
+      const assignButton = firstProject.locator('button:has-text("Assign")');
+      await expect(assignButton).toBeVisible();
+      
+      const matchBadge = firstProject.locator('span:has-text("Match")');
+      await expect(matchBadge).toBeVisible();
+      
+      console.log(`✅ Validated ${projectCount} project recommendations`);
+      return { hasProjects: true, projectCount, firstProject };
+    } else {
+      console.log('✅ Validated no projects message displayed correctly');
+      return { hasProjects: false, projectCount: 0, firstProject: null };
+    }
+  }
+
+  /**
+   * Validates assignment list in Reduce Load modal
+   */
+  async validateAssignmentList(modal: any) {
+    // Check for either assignments or no assignments message
+    const assignmentCards = modal.locator('div:has(h4)').filter({ hasText: 'Remove' });
+    const noAssignmentsMessage = modal.locator('text="No current assignments found"');
+    
+    const assignmentCount = await assignmentCards.count();
+    const hasNoAssignmentsMessage = await noAssignmentsMessage.isVisible();
+    
+    expect(assignmentCount > 0 || hasNoAssignmentsMessage).toBeTruthy();
+    
+    if (assignmentCount > 0) {
+      // Validate first assignment structure
+      const firstAssignment = assignmentCards.first();
+      
+      await expect(firstAssignment.locator('h4')).toBeVisible(); // Project name
+      await expect(firstAssignment).toContainText('h/week'); // Hours
+      await expect(firstAssignment).toContainText('Impact'); // Impact level
+      await expect(firstAssignment).toContainText('👤'); // Role information
+      
+      const removeButton = firstAssignment.locator('button:has-text("Remove")');
+      await expect(removeButton).toBeVisible();
+      
+      const scoreBadge = firstAssignment.locator('span:has-text("Remove"), span:has-text("Moderate"), span:has-text("Keep")');
+      await expect(scoreBadge).toBeVisible();
+      
+      console.log(`✅ Validated ${assignmentCount} current assignments`);
+      return { hasAssignments: true, assignmentCount, firstAssignment };
+    } else {
+      console.log('✅ Validated no assignments message displayed correctly');
+      return { hasAssignments: false, assignmentCount: 0, firstAssignment: null };
+    }
+  }
+
+  /**
+   * Performs assignment creation through Add Projects modal with full validation
+   */
+  async performAssignmentCreation(projectElement: any, personName: string, expectedProjectName: string) {
+    // Monitor API calls
+    const createResponse = this.page.waitForResponse(response => 
+      response.url().includes('/api/assignments') && 
+      response.request().method() === 'POST'
+    );
+    
+    // Monitor console errors
+    const consoleErrors: string[] = [];
+    this.page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+    
+    // Handle confirmation dialog
+    this.page.on('dialog', dialog => {
+      expect(dialog.message()).toContain('Are you sure you want to assign');
+      expect(dialog.message()).toContain(personName);
+      expect(dialog.message()).toContain(expectedProjectName);
+      dialog.accept();
+    });
+    
+    // Click assign button
+    await projectElement.locator('button:has-text("Assign")').click();
+    
+    // Verify API call was successful
+    const response = await createResponse;
+    expect(response.status()).toBe(201);
+    
+    // Validate response structure
+    const responseBody = await this.validateAssignmentCreationResponse(response);
+    
+    // Verify no console errors
+    expect(consoleErrors.length).toBe(0);
+    
+    console.log('✅ Assignment creation completed successfully with validation');
+    return responseBody;
+  }
+
+  /**
+   * Performs assignment removal through Reduce Load modal with full validation
+   */
+  async performAssignmentRemoval(assignmentElement: any, personName: string, expectedProjectName: string) {
+    // Monitor API calls
+    const deleteResponse = this.page.waitForResponse(response => 
+      response.url().includes('/api/assignments') && 
+      response.request().method() === 'DELETE'
+    );
+    
+    // Monitor console errors
+    const consoleErrors: string[] = [];
+    this.page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+    
+    // Handle confirmation dialog
+    this.page.on('dialog', dialog => {
+      expect(dialog.message()).toContain('Are you sure you want to remove');
+      expect(dialog.message()).toContain(personName);
+      expect(dialog.message()).toContain(expectedProjectName);
+      dialog.accept();
+    });
+    
+    // Click remove button
+    await assignmentElement.locator('button:has-text("Remove")').click();
+    
+    // Verify API call was successful
+    const response = await deleteResponse;
+    expect(response.status()).toBe(200);
+    
+    // Validate response structure
+    const responseBody = await this.validateAssignmentDeletionResponse(response);
+    
+    // Verify no console errors
+    expect(consoleErrors.length).toBe(0);
+    
+    console.log('✅ Assignment removal completed successfully with validation');
+    return responseBody;
+  }
+
+  /**
+   * Validates utilization change after modal operations
+   */
+  async validateUtilizationChange(
+    personName: string, 
+    initialUtilization: number, 
+    expectedChange: 'increase' | 'decrease'
+  ) {
+    // Wait for data refresh
+    await this.page.waitForTimeout(3000);
+    
+    // Find the person in the updated table
+    const tableRows = this.page.locator('table:has(th:has-text("Team Member")) tbody tr');
+    const rowCount = await tableRows.count();
+    
+    for (let i = 0; i < rowCount; i++) {
+      const row = tableRows.nth(i);
+      const nameCell = row.locator('td').nth(0);
+      const utilizationCell = row.locator('td').nth(2);
+      
+      const currentName = await nameCell.textContent() || '';
+      if (currentName === personName) {
+        const currentUtilizationText = await utilizationCell.textContent() || '';
+        const currentUtilization = parseInt(currentUtilizationText.replace('%', '').trim());
+        
+        if (expectedChange === 'increase') {
+          expect(currentUtilization).toBeGreaterThan(initialUtilization);
+          console.log(`✅ Utilization increased from ${initialUtilization}% to ${currentUtilization}%`);
+        } else {
+          expect(currentUtilization).toBeLessThanOrEqual(initialUtilization);
+          console.log(`✅ Utilization decreased from ${initialUtilization}% to ${currentUtilization}%`);
+        }
+        
+        return currentUtilization;
+      }
+    }
+    
+    throw new Error(`Person ${personName} not found in updated utilization table`);
+  }
+
+  /**
+   * Finds a person suitable for testing add projects functionality
+   */
+  async findPersonForAddProjects() {
+    const tableRows = this.page.locator('table:has(th:has-text("Team Member")) tbody tr');
+    const rowCount = await tableRows.count();
+    
+    for (let i = 0; i < rowCount; i++) {
+      const row = tableRows.nth(i);
+      const nameCell = row.locator('td').nth(0);
+      const utilizationCell = row.locator('td').nth(2);
+      const actionsCell = row.locator('td').nth(4);
+      
+      const personName = await nameCell.textContent() || '';
+      const utilizationText = await utilizationCell.textContent() || '';
+      const utilization = parseInt(utilizationText.replace('%', '').trim());
+      
+      // Look for person with capacity and available add button
+      if (utilization < 90) {
+        const addButton = actionsCell.locator('button:has-text("➕"), button:has-text("Add")');
+        if (await addButton.count() > 0) {
+          return { row, personName, utilization, addButton };
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Finds a person suitable for testing reduce load functionality
+   */
+  async findPersonForReduceLoad() {
+    const tableRows = this.page.locator('table:has(th:has-text("Team Member")) tbody tr');
+    const rowCount = await tableRows.count();
+    
+    for (let i = 0; i < rowCount; i++) {
+      const row = tableRows.nth(i);
+      const nameCell = row.locator('td').nth(0);
+      const utilizationCell = row.locator('td').nth(2);
+      const actionsCell = row.locator('td').nth(4);
+      
+      const personName = await nameCell.textContent() || '';
+      const utilizationText = await utilizationCell.textContent() || '';
+      const utilization = parseInt(utilizationText.replace('%', '').trim());
+      
+      // Look for person with assignments and available reduce button
+      if (utilization > 20) {
+        const reduceButton = actionsCell.locator('button:has-text("🔻"), button:has-text("Reduce")');
+        if (await reduceButton.count() > 0) {
+          return { row, personName, utilization, reduceButton };
+        }
+      }
+    }
+    
+    return null;
+  }
 }
