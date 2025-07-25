@@ -31,13 +31,12 @@ export default defineConfig({
   },
   server: {
     port: parseInt(process.env.VITE_PORT || '3120'),
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, 'ssl/dev.capacinator.com.key')),
-      cert: fs.readFileSync(path.resolve(__dirname, 'ssl/dev.capacinator.com.crt')),
-    },
+    https: false, // We'll use nginx for HTTPS
     hmr: {
       overlay: true,
-      port: 3120,
+      clientPort: 443, // Tell HMR to use the nginx proxy
+      protocol: 'wss',
+      host: 'local.capacinator.com',
     },
     watch: {
       usePolling: true,
@@ -50,7 +49,6 @@ export default defineConfig({
     },
     cors: true,
     host: '0.0.0.0', // Allow external connections
-    allowedHosts: ['dev.capacinator.com', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: `http://localhost:${process.env.NODE_ENV === 'e2e' ? '3111' : '3110'}`,

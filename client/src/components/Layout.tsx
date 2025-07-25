@@ -13,7 +13,6 @@ import {
   Palette,
   History,
   GanttChart,
-  Wand2,
   MapPin,
 } from 'lucide-react';
 import { AppHeader } from './AppHeader';
@@ -28,7 +27,6 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'People', href: '/people', icon: Users },
   { name: 'Assignments', href: '/assignments', icon: ClipboardList },
-  { name: 'Allocation Wizard', href: '/wizard', icon: Wand2 },
   { name: 'Scenarios', href: '/scenarios', icon: GitBranch },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Locations', href: '/locations', icon: MapPin },

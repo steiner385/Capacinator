@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { UserProvider, useUser } from './contexts/UserContext';
-import { WizardProvider } from './contexts/WizardContext';
 import { ScenarioProvider } from './contexts/ScenarioContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Layout } from './components/Layout';
@@ -24,7 +23,6 @@ import PeopleUnified from './pages/PeopleUnified';
 import Assignments from './pages/Assignments';
 import { Scenarios } from './pages/Scenarios';
 import { AssignmentNew } from './pages/AssignmentNew';
-import { AllocationWizard } from './pages/AllocationWizard';
 import Availability from './pages/Availability';
 import { AuditLog } from './pages/AuditLog';
 import Reports from './pages/Reports';
@@ -69,7 +67,6 @@ const AppContent: React.FC = () => {
         <Route path="/project-types/:id" element={<ProjectTypeDetails />} />
         <Route path="/assignments" element={<Assignments />} />
         <Route path="/assignments/new" element={<AssignmentNew />} />
-        <Route path="/wizard" element={<AllocationWizard />} />
         <Route path="/scenarios" element={<Scenarios />} />
         <Route path="/availability" element={<Navigate to="/people" replace />} />
         <Route path="/audit-log" element={<AuditLog />} />
@@ -88,11 +85,9 @@ function App() {
       <ThemeProvider>
         <UserProvider>
           <ScenarioProvider>
-            <WizardProvider>
-              <Router>
-                <AppContent />
-              </Router>
-            </WizardProvider>
+            <Router>
+              <AppContent />
+            </Router>
           </ScenarioProvider>
         </UserProvider>
       </ThemeProvider>

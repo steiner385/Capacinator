@@ -515,7 +515,6 @@ export class TestHelpers {
       'Projects': '/projects',
       'People': '/people',
       'Assignments': '/assignments',
-      'Allocation Wizard': '/wizard',
       'Scenarios': '/scenarios',
       'Reports': '/reports',
       'Locations': '/locations',

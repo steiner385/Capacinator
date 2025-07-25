@@ -85,7 +85,6 @@ test.describe('Navigation and Basic UI', () => {
       'Projects', 
       'People',
       'Assignments',
-      'Allocation Wizard',
       'Scenarios',
       'Reports',
       'Locations',

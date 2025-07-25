@@ -560,52 +560,60 @@ export class ReportingController extends BaseController {
         });
       });
 
-      // Now add assignments data to people who have them
+      // Calculate time-weighted average allocation for each person
+      const periodStart = startDate ? new Date(startDate) : new Date();
+      const periodEnd = endDate ? new Date(endDate) : new Date();
+      const periodDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      // Track daily allocations for each person
+      const dailyAllocations = new Map(); // person_id -> array of daily allocations
+      
+      // Initialize daily allocation arrays
+      allActivePeople.forEach(person => {
+        dailyAllocations.set(person.person_id, new Array(periodDays).fill(0));
+      });
+      
+      // Process assignments to calculate daily allocations
       assignmentsData.forEach(row => {
         const person = peopleMap.get(row.person_id);
-        if (!person) return; // Skip if person not found (shouldn't happen)
+        if (!person) return;
         
-        let allocationToAdd = row.allocation_percentage;
+        const assignmentStart = new Date(row.assignment_start);
+        const assignmentEnd = new Date(row.assignment_end);
         
-        // If date filtering is active, calculate proportional allocation based on overlap
-        if (startDate && endDate) {
-          const filterStart = new Date(startDate);
-          const filterEnd = new Date(endDate);
-          const assignmentStart = new Date(row.assignment_start);
-          const assignmentEnd = new Date(row.assignment_end);
-          
-          // Calculate the overlap between assignment period and filter period
-          const overlapStart = new Date(Math.max(filterStart.getTime(), assignmentStart.getTime()));
-          const overlapEnd = new Date(Math.min(filterEnd.getTime(), assignmentEnd.getTime()));
-          
-          if (overlapStart <= overlapEnd) {
-            // Calculate overlap duration in days
-            const overlapDays = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-            const assignmentDays = Math.ceil((assignmentEnd.getTime() - assignmentStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-            
-            // Calculate proportional allocation based on overlap
-            const overlapRatio = overlapDays / assignmentDays;
-            allocationToAdd = row.allocation_percentage * overlapRatio;
-            
-            // Log for debugging during initial deployment
-            console.log(`Proportional allocation calculation:
-                Assignment: ${row.project_name} for ${person.person_name}
-                Assignment period: ${row.assignment_start} to ${row.assignment_end} (${assignmentDays} days)
-                Filter period: ${startDate} to ${endDate}
-                Overlap period: ${overlapStart.toISOString().split('T')[0]} to ${overlapEnd.toISOString().split('T')[0]} (${overlapDays} days)
-                Original allocation: ${row.allocation_percentage}%
-                Proportional allocation: ${allocationToAdd.toFixed(2)}%`);
-          } else {
-            // No overlap, don't add this assignment
-            allocationToAdd = 0;
-          }
-        }
+        // Calculate the overlap between assignment period and reporting period
+        const overlapStart = new Date(Math.max(periodStart.getTime(), assignmentStart.getTime()));
+        const overlapEnd = new Date(Math.min(periodEnd.getTime(), assignmentEnd.getTime()));
         
-        if (allocationToAdd > 0) {
-          person.total_allocation_percentage += allocationToAdd;
-          person.project_count++;
+        if (overlapStart <= overlapEnd) {
+          // Add this project to the person's project list
           if (!person.project_names.includes(row.project_name)) {
             person.project_names.push(row.project_name);
+            person.project_count++;
+          }
+          
+          // For each day in the overlap period, add this assignment's allocation
+          const dailyAllocs = dailyAllocations.get(row.person_id);
+          for (let date = new Date(overlapStart); date <= overlapEnd; date.setDate(date.getDate() + 1)) {
+            const dayIndex = Math.floor((date.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+            if (dayIndex >= 0 && dayIndex < periodDays) {
+              dailyAllocs[dayIndex] += row.allocation_percentage;
+            }
+          }
+        }
+      });
+      
+      // Calculate average allocation for each person
+      dailyAllocations.forEach((dailyAllocs, personId) => {
+        const person = peopleMap.get(personId);
+        if (person) {
+          // Calculate average allocation across the period
+          const totalAllocation = dailyAllocs.reduce((sum, daily) => sum + daily, 0);
+          person.total_allocation_percentage = totalAllocation / periodDays;
+          
+          // Log sample calculation for debugging
+          if (person.project_count > 0 && Math.random() < 0.1) { // Log 10% of calculations
+            console.log(`Average allocation for ${person.person_name}: ${person.total_allocation_percentage.toFixed(2)}% over ${periodDays} days`);
           }
         }
       });
