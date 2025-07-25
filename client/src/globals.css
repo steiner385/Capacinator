@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Light theme - matching existing color scheme */
+  :root {
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 221 39% 11%; /* #111827 */
+    
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 221 39% 11%; /* #111827 */
+    
+    --popover: 0 0% 100%; /* #ffffff */
+    --popover-foreground: 221 39% 11%; /* #111827 */
+    
+    --primary: 242 84% 61%; /* #4f46e5 */
+    --primary-foreground: 0 0% 100%; /* white */
+    
+    --secondary: 210 16% 93%; /* #f3f4f6 */
+    --secondary-foreground: 221 39% 11%; /* #111827 */
+    
+    --muted: 210 16% 93%; /* #f3f4f6 */
+    --muted-foreground: 215 16% 47%; /* #6b7280 */
+    
+    --accent: 210 16% 93%; /* #f3f4f6 */
+    --accent-foreground: 221 39% 11%; /* #111827 */
+    
+    --destructive: 0 72% 51%; /* #dc2626 */
+    --destructive-foreground: 0 0% 100%; /* white */
+    
+    --border: 214 32% 91%; /* #e5e7eb */
+    --input: 214 32% 91%; /* #e5e7eb */
+    --ring: 242 84% 61%; /* #4f46e5 */
+    
+    --radius: 0.5rem;
+  }
+  
+  /* Dark theme - matching existing color scheme */
+  .dark {
+    --background: 221 39% 11%; /* #111827 */
+    --foreground: 210 20% 98%; /* #f9fafb */
+    
+    --card: 217 33% 17%; /* #1f2937 */
+    --card-foreground: 210 20% 98%; /* #f9fafb */
+    
+    --popover: 217 33% 17%; /* #1f2937 */
+    --popover-foreground: 210 20% 98%; /* #f9fafb */
+    
+    --primary: 238 84% 67%; /* #6366f1 */
+    --primary-foreground: 0 0% 100%; /* white */
+    
+    --secondary: 215 25% 27%; /* #374151 */
+    --secondary-foreground: 210 20% 98%; /* #f9fafb */
+    
+    --muted: 215 25% 27%; /* #374151 */
+    --muted-foreground: 213 13% 64%; /* #9ca3af */
+    
+    --accent: 215 25% 27%; /* #374151 */
+    --accent-foreground: 210 20% 98%; /* #f9fafb */
+    
+    --destructive: 0 72% 51%; /* #ef4444 */
+    --destructive-foreground: 0 0% 100%; /* white */
+    
+    --border: 215 25% 27%; /* #374151 */
+    --input: 215 25% 27%; /* #374151 */
+    --ring: 238 84% 67%; /* #6366f1 */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar styles to match existing design */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+/* Animation classes for shadcn components */
+@layer utilities {
+  .animate-in {
+    animation: animateIn 0.2s ease-out;
+  }
+  
+  .animate-out {
+    animation: animateOut 0.2s ease-in forwards;
+  }
+  
+  .fade-in-0 {
+    opacity: 0;
+  }
+  
+  .fade-out-0 {
+    opacity: 0;
+  }
+  
+  .zoom-in-95 {
+    transform: scale(0.95);
+  }
+  
+  .zoom-out-95 {
+    transform: scale(0.95);
+  }
+  
+  .slide-in-from-top-2 {
+    transform: translateY(-0.5rem);
+  }
+  
+  .slide-in-from-bottom-2 {
+    transform: translateY(0.5rem);
+  }
+  
+  .slide-in-from-left-2 {
+    transform: translateX(-0.5rem);
+  }
+  
+  .slide-in-from-right-2 {
+    transform: translateX(0.5rem);
+  }
+  
+  .slide-out-to-top-2 {
+    transform: translateY(-0.5rem);
+  }
+  
+  .slide-out-to-bottom-2 {
+    transform: translateY(0.5rem);
+  }
+  
+  .slide-out-to-left-2 {
+    transform: translateX(-0.5rem);
+  }
+  
+  .slide-out-to-right-2 {
+    transform: translateX(0.5rem);
+  }
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes animateOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}

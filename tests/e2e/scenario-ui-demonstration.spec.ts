@@ -54,7 +54,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     // Step 2: Create a new branch scenario
     console.log('\n🌱 Step 2: Creating a new branch scenario...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await takeScreenshot(page, '02-new-scenario-modal.png', 'Step 2: New Scenario Creation Modal');
 
     // Fill in scenario details
@@ -90,7 +90,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     
     if (await branchButton.count() > 0) {
       await branchButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await takeScreenshot(page, '06-branch-scenario-modal.png', 'Step 6: Branch scenario creation modal');
 
       // Notice parent information is pre-filled
@@ -115,7 +115,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
       await page.waitForTimeout(3000);
       
       // Look for comparison interface/modal
-      const comparisonModal = page.locator('.modal-content, .comparison-container, [data-testid="comparison"]');
+      const comparisonModal = page.locator('[role="dialog"] > div, .comparison-container, [data-testid="comparison"]');
       if (await comparisonModal.count() > 0) {
         await takeScreenshot(page, '08-comparison-modal.png', 'Step 8: Scenario comparison modal opened');
         console.log('📊 Comparison modal opened successfully');
@@ -162,7 +162,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     const editButton = editableScenarioCard.locator('button:has-text("Edit"), .edit-button, [title*="Edit"]').first();
     if (await editButton.count() > 0) {
       await editButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await takeScreenshot(page, '09-edit-scenario-modal.png', 'Step 9: Edit scenario modal opened');
       
       // Modify the description
@@ -206,7 +206,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     
     if (await newAssignmentButton.count() > 0) {
       await newAssignmentButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await takeScreenshot(page, '10b-new-assignment-modal.png', 'Step 10b: New assignment creation modal');
 
       console.log('📝 Assignment creation form opened - demonstrating scenario data modification');
@@ -260,7 +260,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
         await page.waitForTimeout(2000);
         
         // Look for merge confirmation or merge interface
-        const mergeModal = page.locator('.modal-content, .merge-container, [data-testid="merge"]');
+        const mergeModal = page.locator('[role="dialog"] > div, .merge-container, [data-testid="merge"]');
         if (await mergeModal.count() > 0) {
           await takeScreenshot(page, '11b-merge-modal.png', 'Step 11b: Merge confirmation modal opened');
           
@@ -377,7 +377,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
           await page.waitForTimeout(1000);
           
           // Handle modal if it appears
-          const modal = page.locator('.modal-content');
+          const modal = page.locator('[role="dialog"] > div');
           if (await modal.count() > 0) {
             console.log(`     📱 ${action} modal opened successfully`);
             await page.press('Escape'); // Close modal
@@ -402,7 +402,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     // Create a working scenario for advanced operations
     console.log('\n🎯 Setting up scenario for advanced operations...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Advanced Operations Demo');
     await page.fill('textarea[id="scenario-description"]', 'Testing advanced scenario operations like comparison, modification, and merging');
     await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -420,7 +420,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     await page.waitForTimeout(3000);
     
     // Handle different comparison UI patterns
-    if (await page.locator('.modal-content').count() > 0) {
+    if (await page.locator('[role="dialog"] > div').count() > 0) {
       console.log('📊 Comparison modal interface detected');
       await takeScreenshot(page, 'comparison-modal-interface.png', 'Comparison modal interface');
       
@@ -460,7 +460,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     const editButton = advancedScenarioCard.locator('button:has-text("Edit"), [title*="Edit"], .edit-button').first();
     if (await editButton.count() > 0) {
       await editButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await takeScreenshot(page, 'edit-modal-opened.png', 'Edit scenario modal opened');
       
       // Test description modification
@@ -502,7 +502,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     
     if (await branchButton.count() > 0) {
       await branchButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await page.fill('input[id="scenario-name"]', 'Child for Merge Test');
       await page.fill('textarea[id="scenario-description"]', 'Child scenario created specifically to test merge functionality');
       await page.click('button:has-text("Create Scenario")');
@@ -545,7 +545,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
         await page.waitForTimeout(2000);
         
         // Handle merge interface
-        if (await page.locator('.modal-content').count() > 0) {
+        if (await page.locator('[role="dialog"] > div').count() > 0) {
           await takeScreenshot(page, 'merge-confirmation-modal.png', 'Merge confirmation modal');
           
           // Look for merge options
@@ -614,7 +614,7 @@ test.describe('Scenario Planning UI Demonstration', () => {
     // Test form validation
     console.log('\n📝 Testing form validation...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     
     // Try to submit empty form - should be prevented by disabled button
     console.log('🚫 Testing empty form submission prevention...');

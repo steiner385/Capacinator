@@ -92,9 +92,9 @@ async function attemptAssignmentCreation(page: any, assignmentData: any) {
     }
 
     // Close modal if it's still open (indicates failure)
-    const modal = page.locator('.modal, .dialog, .modal-content');
+    const modal = page.locator('.modal, .dialog, [role="dialog"] > div');
     if (await modal.count() > 0) {
-      const closeButton = page.locator('button:has-text("Cancel"), button:has-text("Close"), .modal-close, [aria-label="Close"]');
+      const closeButton = page.locator('button:has-text("Cancel"), button:has-text("Close"), [role="dialog"] button[aria-label="Close"], [aria-label="Close"]');
       if (await closeButton.count() > 0) {
         await closeButton.first().click();
         await page.waitForTimeout(500);

@@ -1,5 +1,13 @@
 import React from 'react';
-import Modal from './Modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './dialog';
+import { Button } from './button';
+import { cn } from '@/lib/utils';
 
 interface FormModalProps {
   isOpen: boolean;
@@ -14,6 +22,13 @@ interface FormModalProps {
   showActions?: boolean;
   className?: string;
 }
+
+const sizeClasses = {
+  sm: 'sm:max-w-md',
+  md: 'sm:max-w-lg',
+  lg: 'sm:max-w-2xl',
+  xl: 'sm:max-w-4xl',
+};
 
 export const FormModal: React.FC<FormModalProps> = ({
   isOpen,
@@ -36,38 +51,36 @@ export const FormModal: React.FC<FormModalProps> = ({
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={title} 
-      size={size}
-      className={className}
-    >
-      <form onSubmit={handleSubmit} className="modal-form">
-        <div className="modal-form-content">
-          {children}
-        </div>
-        {showActions && (
-          <div className="modal-actions">
-            <button 
-              type="button" 
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              {cancelText}
-            </button>
-            <button 
-              type="submit" 
-              className="btn btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Saving...' : submitText}
-            </button>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className={cn(sizeClasses[size], className)}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="py-4">
+            {children}
           </div>
-        )}
-      </form>
-    </Modal>
+          {showActions && (
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={onClose}
+                disabled={isLoading}
+              >
+                {cancelText}
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : submitText}
+              </Button>
+            </DialogFooter>
+          )}
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

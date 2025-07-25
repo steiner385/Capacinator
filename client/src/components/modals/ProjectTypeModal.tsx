@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import FormModal from '../ui/FormModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Spinner } from '../ui/spinner';
+import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ProjectTypeFormData {
   name: string;
@@ -127,78 +142,100 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
 
   const isLoading = createProjectTypeMutation.isPending || updateProjectTypeMutation.isPending;
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Project Type' : 'Create Project Type'}
-      onSubmit={handleSubmit}
-      isLoading={isLoading}
-      size="md"
-      submitText={isEditing ? 'Update Project Type' : 'Create Project Type'}
-    >
-      <div className="form-grid">
-        <div className="form-group full-width">
-          <label htmlFor="name">Name *</label>
-          <input
-            type="text"
-            id="name"
-            className={`form-input ${errors.name ? 'error' : ''}`}
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="Enter project type name"
-            maxLength={100}
-          />
-          {errors.name && <span className="error-message">{errors.name}</span>}
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Project Type' : 'Create Project Type'}</DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? 'Update the project type details below.' 
+              : 'Fill in the information to create a new project type.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="form-group full-width">
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            className="form-textarea"
-            value={formData.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            placeholder="Enter project type description (optional)"
-            rows={3}
-          />
-        </div>
+        {hasErrors && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please fix the errors below before submitting.
+            </AlertDescription>
+          </Alert>
+        )}
 
-        <div className="form-group full-width">
-          <label htmlFor="color_code">Color</label>
-          <div className="color-picker-container">
-            <input
-              type="color"
-              id="color_code"
-              className="form-color-input"
-              value={formData.color_code}
-              onChange={(e) => handleChange('color_code', e.target.value)}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Enter project type name"
+              maxLength={100}
+              className={errors.name ? 'border-destructive' : ''}
             />
-            <div className="color-preview-container">
-              <div className="color-swatches">
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              placeholder="Enter project type description (optional)"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="color_code">Color</Label>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Input
+                  type="color"
+                  id="color_code"
+                  value={formData.color_code}
+                  onChange={(e) => handleChange('color_code', e.target.value)}
+                  className="h-10 w-20 cursor-pointer"
+                />
+                <span className="text-sm text-muted-foreground">{formData.color_code}</span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
                 {DEFAULT_COLORS.map((color) => (
                   <button
                     key={color}
                     type="button"
-                    className={`color-swatch ${formData.color_code === color ? 'active' : ''}`}
+                    className={cn(
+                      "h-8 w-8 rounded-md border-2 transition-all",
+                      formData.color_code === color 
+                        ? "border-primary scale-110" 
+                        : "border-transparent hover:scale-105"
+                    )}
                     style={{ backgroundColor: color }}
                     onClick={() => handleChange('color_code', color)}
                     title={`Select ${color}`}
                   />
                 ))}
               </div>
-              <div className="color-preview">
-                <div 
-                  className="color-preview-box"
-                  style={{ backgroundColor: formData.color_code }}
-                />
-                <span className="color-code-text">{formData.color_code}</span>
-              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </FormModal>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Spinner className="mr-2" size="sm" />}
+              {isEditing ? 'Update Project Type' : 'Create Project Type'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -308,7 +308,7 @@ test.describe('Scenario View Modes', () => {
       await page.getByRole('button', { name: 'New Scenario' }).click();
       await expect(page.getByText('Create New Scenario')).toBeVisible();
       
-      await page.locator('.modal-close').click();
+      await page.locator('[role="dialog"] button[aria-label="Close"]').click();
       await expect(page.getByText('Create New Scenario')).not.toBeVisible();
     });
   });

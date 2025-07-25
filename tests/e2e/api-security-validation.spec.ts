@@ -375,7 +375,7 @@ test.describe('API Security and Input Validation', () => {
             }
 
             // Close modal if still open
-            const closeButton = page.locator('button:has-text("Cancel"), button:has-text("Close"), .modal-close');
+            const closeButton = page.locator('button:has-text("Cancel"), button:has-text("Close"), [role="dialog"] button[aria-label="Close"]');
             if (await closeButton.count() > 0) {
               await closeButton.click();
               await page.waitForTimeout(500);

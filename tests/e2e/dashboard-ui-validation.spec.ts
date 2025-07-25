@@ -190,7 +190,7 @@ test.describe('Dashboard UI Current Projects Validation', () => {
     await page.goto('/dashboard');
 
     // Should show loading state initially
-    const loadingSpinner = page.locator('.loading-spinner, .loading');
+    const loadingSpinner = page.locator('svg[class*="animate-spin"], .loading');
     const hasLoading = await loadingSpinner.count() > 0;
     
     if (hasLoading) {
@@ -222,7 +222,7 @@ test.describe('Dashboard UI Current Projects Validation', () => {
     await page.waitForLoadState('networkidle');
 
     // Should show error message
-    const errorMessage = page.locator('.error-message, .alert-error');
+    const errorMessage = page.locator('.text-destructive, .alert-error');
     const hasError = await errorMessage.count() > 0;
 
     if (hasError) {

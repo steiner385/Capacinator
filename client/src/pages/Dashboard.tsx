@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { DashboardSummary } from '../types';
-import { Card } from '../components/ui/Card';
+import { Card } from '../components/ui/CustomCard';
 import { StatCard } from '../components/ui/StatCard';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';

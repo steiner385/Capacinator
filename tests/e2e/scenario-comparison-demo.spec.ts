@@ -38,7 +38,7 @@ test.describe('Scenario Comparison and Merge: Full Workflow Demo', () => {
     // Step 1: Create base scenario for comparison
     console.log('\n📝 Step 1: Creating base scenario for comparison...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Comparison Demo Base');
     await page.fill('textarea[id="scenario-description"]', 'Base scenario for demonstrating detailed comparison features');
     await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -49,7 +49,7 @@ test.describe('Scenario Comparison and Merge: Full Workflow Demo', () => {
     // Step 2: Create comparison scenario
     console.log('\n📝 Step 2: Creating comparison scenario...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Comparison Demo Target');
     await page.fill('textarea[id="scenario-description"]', 'Target scenario for comparison demonstration');
     await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -173,7 +173,7 @@ test.describe('Scenario Comparison and Merge: Full Workflow Demo', () => {
     // Step 1: Create parent scenario for merge testing
     console.log('\n📝 Step 1: Creating parent scenario...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Merge Demo Parent');
     await page.fill('textarea[id="scenario-description"]', 'Parent scenario for merge demonstration');
     await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -188,7 +188,7 @@ test.describe('Scenario Comparison and Merge: Full Workflow Demo', () => {
     
     const branchButton = parentCard.locator('button:has-text("Branch")').first();
     await branchButton.click();
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Merge Demo Child');
     await page.fill('textarea[id="scenario-description"]', 'Child scenario that will demonstrate merge workflow');
     await page.click('button:has-text("Create Scenario")');

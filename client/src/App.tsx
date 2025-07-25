@@ -29,6 +29,8 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Import from './pages/Import';
 import { Locations } from './pages/Locations';
+import { Toaster } from './components/ui/toaster';
+import './globals.css';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -91,6 +93,7 @@ function App() {
           </ScenarioProvider>
         </UserProvider>
       </ThemeProvider>
+      <Toaster />
       {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   );

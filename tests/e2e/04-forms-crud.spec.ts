@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { TestHelpers } from './utils/test-helpers';
+import { SHADCN_SELECTORS, waitForDialog, closeDialog } from './utils/shadcn-helpers';
 
 test.describe('Form Validation and CRUD Operations', () => {
   let helpers: TestHelpers;
@@ -18,8 +19,9 @@ test.describe('Form Validation and CRUD Operations', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      // Should open form dialog or navigate to form page
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      // Should open form dialog
+      await waitForDialog(page);
+      const formDialog = page.locator(SHADCN_SELECTORS.dialog);
       await expect(formDialog).toBeVisible();
       
       // Test required field validation
@@ -27,7 +29,7 @@ test.describe('Form Validation and CRUD Operations', () => {
       await submitButton.click();
       
       // Should show validation errors
-      const errorMessages = page.locator('.error, .invalid, .field-error');
+      const errorMessages = page.locator(SHADCN_SELECTORS.errorMessage);
       await expect(errorMessages.first()).toBeVisible();
       
       // Fill out form with valid data
@@ -44,6 +46,7 @@ test.describe('Form Validation and CRUD Operations', () => {
       await submitButton.click();
       
       // Should close form and return to table
+      await page.waitForSelector(SHADCN_SELECTORS.dialog, { state: 'hidden' });
       await helpers.waitForDataTable();
       
       // New project should appear in table
@@ -62,7 +65,8 @@ test.describe('Form Validation and CRUD Operations', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      await waitForDialog(page);
+      const formDialog = page.locator(SHADCN_SELECTORS.dialog);
       await expect(formDialog).toBeVisible();
       
       // Test email validation
@@ -71,7 +75,7 @@ test.describe('Form Validation and CRUD Operations', () => {
       await submitButton.click();
       
       // Should show email validation error
-      const emailError = page.locator('.error:has-text("email"), .invalid:has-text("email"), .field-error');
+      const emailError = page.locator(`${SHADCN_SELECTORS.errorMessage}:has-text("email")`);
       if (await emailError.isVisible()) {
         await expect(emailError).toBeVisible();
       }
@@ -86,6 +90,7 @@ test.describe('Form Validation and CRUD Operations', () => {
       });
       
       await submitButton.click();
+      await page.waitForSelector(SHADCN_SELECTORS.dialog, { state: 'hidden' });
       await helpers.waitForDataTable();
       
       // Verify person was added
@@ -106,15 +111,16 @@ test.describe('Form Validation and CRUD Operations', () => {
     if (await assignButton.isVisible()) {
       await assignButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      await waitForDialog(page);
+      const formDialog = page.locator(SHADCN_SELECTORS.dialog);
       await expect(formDialog).toBeVisible();
       
       // Should have person selection dropdown
-      const personSelect = page.locator('select[name*="person"], select[name*="user"]');
+      const personSelect = page.locator('select[name*="person"], select[name*="user"], button[role="combobox"]').first();
       await expect(personSelect).toBeVisible();
       
       // Should have project selection dropdown
-      const projectSelect = page.locator('select[name*="project"]');
+      const projectSelect = page.locator('select[name*="project"], button[role="combobox"]').nth(1);
       await expect(projectSelect).toBeVisible();
       
       // Test allocation percentage validation
@@ -126,7 +132,7 @@ test.describe('Form Validation and CRUD Operations', () => {
         await submitButton.click();
         
         // Should show validation error
-        const allocationError = page.locator('.error, .invalid, .field-error');
+        const allocationError = page.locator(SHADCN_SELECTORS.errorMessage);
         if (await allocationError.isVisible()) {
           await expect(allocationError).toBeVisible();
         }
@@ -150,7 +156,8 @@ test.describe('Form Validation and CRUD Operations', () => {
       if (await editButton.isVisible()) {
         await editButton.click();
         
-        const formDialog = page.locator('.modal, .dialog, .form-container, .edit-form');
+        await waitForDialog(page);
+        const formDialog = page.locator(SHADCN_SELECTORS.dialog);
         await expect(formDialog).toBeVisible();
         
         // Form should be pre-populated
@@ -167,6 +174,7 @@ test.describe('Form Validation and CRUD Operations', () => {
           await saveButton.click();
           
           // Should return to table
+          await page.waitForSelector(SHADCN_SELECTORS.dialog, { state: 'hidden' });
           await helpers.waitForDataTable();
           
           // Should show updated value
@@ -190,7 +198,8 @@ test.describe('Form Validation and CRUD Operations', () => {
         await deleteButton.click();
         
         // Should show confirmation dialog
-        const confirmDialog = page.locator('.confirm-dialog, .modal:has-text("Delete"), .alert');
+        await waitForDialog(page);
+        const confirmDialog = page.locator(SHADCN_SELECTORS.dialog);
         await expect(confirmDialog).toBeVisible();
         
         // Should have confirm and cancel buttons
@@ -204,12 +213,14 @@ test.describe('Form Validation and CRUD Operations', () => {
         await cancelButton.click();
         
         // Dialog should close, row should still exist
+        await page.waitForSelector(SHADCN_SELECTORS.dialog, { state: 'hidden' });
         await helpers.waitForDataTable();
         const cancelledRowCount = await helpers.getTableRowCount();
         expect(cancelledRowCount).toBe(initialRowCount);
         
         // Now test actual deletion
         await deleteButton.click();
+        await waitForDialog(page);
         await confirmButton.click();
         
         // Should show success message
@@ -232,7 +243,8 @@ test.describe('Form Validation and CRUD Operations', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      await waitForDialog(page);
+      const formDialog = page.locator(SHADCN_SELECTORS.dialog);
       await expect(formDialog).toBeVisible();
       
       // Test various validation scenarios
@@ -249,7 +261,7 @@ test.describe('Form Validation and CRUD Operations', () => {
           await input.blur(); // Trigger validation
           
           // Look for validation error
-          const errorField = page.locator(`.error, .invalid, .field-error`);
+          const errorField = page.locator(SHADCN_SELECTORS.errorMessage);
           if (await errorField.isVisible()) {
             const errorText = await errorField.textContent();
             expect(errorText?.toLowerCase()).toContain(testCase.errorText.toLowerCase());
@@ -268,7 +280,8 @@ test.describe('Form Validation and CRUD Operations', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      await waitForDialog(page);
+      const formDialog = page.locator(SHADCN_SELECTORS.dialog);
       await expect(formDialog).toBeVisible();
       
       // Test date validation - end date before start date
@@ -283,7 +296,7 @@ test.describe('Form Validation and CRUD Operations', () => {
         await submitButton.click();
         
         // Should show date validation error
-        const dateError = page.locator('.error:has-text("date"), .invalid:has-text("date"), .field-error');
+        const dateError = page.locator(`${SHADCN_SELECTORS.errorMessage}:has-text("date")`);
         if (await dateError.isVisible()) {
           await expect(dateError).toBeVisible();
         }
@@ -300,33 +313,44 @@ test.describe('Form Validation and CRUD Operations', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      await waitForDialog(page);
+      const formDialog = page.locator(SHADCN_SELECTORS.dialog);
       await expect(formDialog).toBeVisible();
       
-      // Test location dropdown
-      const locationSelect = page.locator('select[name*="location"]');
+      // Test location dropdown - could be select or shadcn combobox
+      const locationSelect = page.locator('select[name*="location"], button[role="combobox"]').first();
       if (await locationSelect.isVisible()) {
-        // Should have at least one option
-        const options = await locationSelect.locator('option').count();
-        expect(options).toBeGreaterThan(1); // Including default/empty option
+        const tagName = await locationSelect.evaluate(el => el.tagName.toLowerCase());
         
-        // Select first non-empty option
-        await locationSelect.selectOption({ index: 1 });
-        
-        const selectedValue = await locationSelect.inputValue();
-        expect(selectedValue).toBeTruthy();
+        if (tagName === 'select') {
+          // Standard select
+          const options = await locationSelect.locator('option').count();
+          expect(options).toBeGreaterThan(1);
+          await locationSelect.selectOption({ index: 1 });
+        } else {
+          // Shadcn combobox
+          await locationSelect.click();
+          await page.waitForSelector(SHADCN_SELECTORS.selectContent);
+          const firstOption = page.locator(SHADCN_SELECTORS.selectItem).first();
+          await firstOption.click();
+        }
       }
       
       // Test project type dropdown
-      const projectTypeSelect = page.locator('select[name*="project_type"], select[name*="type"]');
+      const projectTypeSelect = page.locator('select[name*="project_type"], select[name*="type"], button[role="combobox"]').nth(1);
       if (await projectTypeSelect.isVisible()) {
-        const options = await projectTypeSelect.locator('option').count();
-        expect(options).toBeGreaterThan(1);
+        const tagName = await projectTypeSelect.evaluate(el => el.tagName.toLowerCase());
         
-        await projectTypeSelect.selectOption({ index: 1 });
-        
-        const selectedValue = await projectTypeSelect.inputValue();
-        expect(selectedValue).toBeTruthy();
+        if (tagName === 'select') {
+          const options = await projectTypeSelect.locator('option').count();
+          expect(options).toBeGreaterThan(1);
+          await projectTypeSelect.selectOption({ index: 1 });
+        } else {
+          await projectTypeSelect.click();
+          await page.waitForSelector(SHADCN_SELECTORS.selectContent);
+          const firstOption = page.locator(SHADCN_SELECTORS.selectItem).first();
+          await firstOption.click();
+        }
       }
     }
   });

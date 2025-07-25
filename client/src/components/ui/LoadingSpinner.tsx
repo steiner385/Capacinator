@@ -1,11 +1,11 @@
-import './LoadingSpinner.css';
+import { Spinner } from './spinner';
 
 export function LoadingSpinner() {
   return (
-    <div className="loading-spinner-container">
-      <div className="loading-spinner">
-        <div className="spinner"></div>
-        <p>Loading...</p>
+    <div className="flex h-full min-h-[200px] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Spinner size="lg" className="text-primary" />
+        <p className="text-sm text-muted-foreground">Loading...</p>
       </div>
     </div>
   );

@@ -14,16 +14,16 @@ async function checkPageLoad(page: any, url: string, expectedTitle: string) {
   }, { timeout: 15000 });
   
   // Look for common elements that indicate the page is rendering
-  await page.waitForSelector('div, .loading-spinner-container, .error-message, h1, h2, h3, nav, main, [role="main"]', { timeout: 15000 });
+  await page.waitForSelector('div, svg[class*="animate-spin"]-container, .text-destructive, h1, h2, h3, nav, main, [role="main"]', { timeout: 15000 });
   
   // If we have a loading spinner, wait for it to be replaced by content
-  const loadingSpinner = page.locator('.loading-spinner-container');
+  const loadingSpinner = page.locator('svg[class*="animate-spin"]-container');
   const loadingCount = await loadingSpinner.count();
   if (loadingCount > 0) {
     console.log(`${expectedTitle} page is loading...`);
     // Wait for loading to complete
     await page.waitForFunction(() => {
-      const spinner = document.querySelector('.loading-spinner-container');
+      const spinner = document.querySelector('svg[class*="animate-spin"]-container');
       return !spinner || spinner.style.display === 'none' || !spinner.offsetParent;
     }, { timeout: 30000 });
     
@@ -32,7 +32,7 @@ async function checkPageLoad(page: any, url: string, expectedTitle: string) {
   }
   
   // Check if we got an error
-  const errorMessage = page.locator('.error-message');
+  const errorMessage = page.locator('.text-destructive');
   const errorCount = await errorMessage.count();
   
   if (errorCount > 0) {

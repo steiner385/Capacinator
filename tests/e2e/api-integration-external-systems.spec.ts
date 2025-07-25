@@ -53,7 +53,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
         await page.waitForTimeout(3000);
         
         // Check for success or error message
-        const messages = page.locator('.save-message, .error-message, .success-message');
+        const messages = page.locator('.save-message, .text-destructive, .success-message');
         if (await messages.count() > 0) {
           console.log('✅ Email service integration responds correctly');
         }
@@ -101,7 +101,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
           await page.waitForTimeout(2000);
           
           // Verify file processing response
-          const messages = page.locator('.import-message, .error-message, .success-message');
+          const messages = page.locator('.import-message, .text-destructive, .success-message');
           if (await messages.count() > 0) {
             console.log('✅ Excel processing service validates file format');
           }
@@ -491,7 +491,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
           await page.waitForTimeout(2000);
           
           // Check for error message
-          const errorMessage = page.locator('.error-message, .import-error');
+          const errorMessage = page.locator('.text-destructive, .import-error');
           if (await errorMessage.count() > 0) {
             console.log('✅ File upload error handling working');
           }
@@ -517,7 +517,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
         await page.waitForTimeout(2000);
         
         // Check for error handling
-        const errorMessage = page.locator('.error-message, .save-message');
+        const errorMessage = page.locator('.text-destructive, .save-message');
         if (await errorMessage.count() > 0) {
           console.log('✅ Email service error handling working');
         }

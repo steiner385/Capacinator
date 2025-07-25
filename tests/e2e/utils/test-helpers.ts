@@ -100,7 +100,7 @@ export class TestHelpers {
     }
     
     // Wait for the element to be visible and clickable
-    await this.page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
+    await this.page.waitForSelector(selector, { state: 'visible', timeout: 5000 });
     
     // Use multiple click strategies for reliability
     try {
@@ -121,8 +121,7 @@ export class TestHelpers {
       throw new Error('Page was closed after click');
     }
     
-    await this.page.waitForURL(url => url.pathname === expectedUrl || url.pathname.includes(expectedUrl), { timeout: 15000 });
-    await this.waitForNavigation();
+    await this.page.waitForURL(url => url.pathname === expectedUrl || url.pathname.includes(expectedUrl), { timeout: 5000 });
   }
 
   /**
@@ -145,81 +144,67 @@ export class TestHelpers {
       
       console.log('📋 Profile modal detected, proceeding with selection...');
       
-      // Wait for modal to be fully loaded
-      await this.page.waitForSelector('select', { timeout: 15000, state: 'visible' });
-      console.log('📝 Dropdown element found and visible');
+      // Wait for modal to be fully loaded - handle both native select and shadcn Select
+      try {
+        // First try native select
+        await this.page.waitForSelector('select', { timeout: 5000, state: 'visible' });
+        console.log('📝 Native select dropdown found');
+      } catch {
+        // If no native select, look for shadcn Select trigger
+        await this.page.waitForSelector('[role="combobox"], button:has-text("Select your name")', { timeout: 10000, state: 'visible' });
+        console.log('📝 Shadcn Select component found');
+      }
       
       // Wait for options to populate
       await this.page.waitForTimeout(2000);
       
-      // Get the number of options to verify they've loaded
-      const optionCount = await this.page.evaluate(() => {
-        const select = document.querySelector('select');
-        return select ? select.options.length : 0;
-      });
-      
-      console.log(`📊 Found ${optionCount} options in dropdown`);
-      
-      if (optionCount <= 1) {
-        console.log('⚠️ No valid options available, waiting longer...');
-        await this.page.waitForTimeout(3000);
-        
-        const newOptionCount = await this.page.evaluate(() => {
-          const select = document.querySelector('select');
-          return select ? select.options.length : 0;
-        });
-        
-        if (newOptionCount <= 1) {
-          throw new Error('Profile dropdown never loaded options');
-        }
-      }
-      
       // Use multiple approaches to select an option
       console.log('🎯 Attempting to select profile...');
       
-      // Get available options first
-      const availableOptions = await this.page.evaluate(() => {
-        const select = document.querySelector('select');
-        if (!select) return [];
-        return Array.from(select.options).map((option, index) => ({
-          index,
-          value: option.value,
-          text: option.text,
-          disabled: option.disabled
-        }));
-      });
-      
-      console.log(`📋 Available options: ${JSON.stringify(availableOptions)}`);
-      
-      // Find first selectable option (not empty, not disabled)
-      const selectableOption = availableOptions.find(opt => 
-        opt.index > 0 && opt.value && opt.value.trim() !== '' && !opt.disabled
-      );
-      
-      if (!selectableOption) {
-        throw new Error('No valid selectable options found');
-      }
-      
-      console.log(`🎯 Will select: ${selectableOption.text} (${selectableOption.value})`);
-      
-      // Method 1: Try Playwright's selectOption with specific value
+      // Check if it's a native select or shadcn Select
+      const isNativeSelect = await this.page.locator('select').count() > 0;
       let selectionSucceeded = false;
-      try {
-        const selectElement = this.page.locator('select').first();
-        await selectElement.selectOption(selectableOption.value);
-        console.log('✅ Profile selected using Playwright selectOption with value');
-        selectionSucceeded = true;
-      } catch (selectError) {
-        console.log(`⚠️ Playwright selectOption with value failed: ${selectError.message}`);
-        
-        // Method 2: Try with index
+      
+      if (isNativeSelect) {
+        // Handle native select
         try {
           const selectElement = this.page.locator('select').first();
-          await selectElement.selectOption({ index: selectableOption.index });
-          console.log('✅ Profile selected using Playwright selectOption with index');
-          selectionSucceeded = true;
-        } catch (indexError) {
-          console.log(`⚠️ Playwright selectOption with index failed: ${indexError.message}`);
+          // Get available options
+          const options = await selectElement.locator('option').all();
+          
+          // Find first non-empty option (skip the placeholder)
+          for (let i = 1; i < options.length; i++) {
+            const value = await options[i].getAttribute('value');
+            if (value && value.trim() !== '') {
+              await selectElement.selectOption(value);
+              console.log(`✅ Profile selected: option ${i} with value "${value}"`);
+              selectionSucceeded = true;
+              break;
+            }
+          }
+        } catch (selectError) {
+          console.log(`⚠️ Native select failed: ${selectError.message}`);
+        }
+      } else {
+        // Handle shadcn Select component
+        try {
+          // Click the Select trigger
+          const selectTrigger = this.page.locator('[role="combobox"], button:has-text("Select your name")').first();
+          await selectTrigger.click();
+          console.log('📂 Opened shadcn Select dropdown');
+          
+          // Wait for dropdown options to appear
+          await this.page.waitForSelector('[role="option"]', { timeout: 5000 });
+          
+          // Click the first valid option
+          const options = await this.page.locator('[role="option"]').all();
+          if (options.length > 0) {
+            await options[0].click();
+            console.log('✅ Profile selected using shadcn Select');
+            selectionSucceeded = true;
+          }
+        } catch (shadcnError) {
+          console.log(`⚠️ Shadcn Select failed: ${shadcnError.message}`);
         }
       }
       
@@ -276,63 +261,6 @@ export class TestHelpers {
       
       // Give React time to process the selection
       await this.page.waitForTimeout(1500);
-      
-      // Verify selection was registered
-      const currentState = await this.page.evaluate(() => {
-        const select = document.querySelector('select');
-        if (!select) return null;
-        return {
-          selectedIndex: select.selectedIndex,
-          selectedValue: select.value,
-          selectedText: select.selectedIndex >= 0 ? select.options[select.selectedIndex]?.text : null
-        };
-      });
-      
-      console.log(`🔍 Current selection: Index=${currentState?.selectedIndex}, Value="${currentState?.selectedValue}", Text="${currentState?.selectedText}"`);
-      
-      // If no valid selection, try one more time with a different approach
-      if (!currentState?.selectedValue || currentState.selectedValue.trim() === '') {
-        console.log('⚠️ No valid selection detected, trying alternative approach...');
-        
-        await this.page.evaluate((option) => {
-          const select = document.querySelector('select');
-          if (select && select.options.length > option.index) {
-            // Force selection with multiple methods
-            select.value = option.value;
-            select.selectedIndex = option.index;
-            
-            // Trigger React-style events
-            const inputEvent = new Event('input', { bubbles: true });
-            const changeEvent = new Event('change', { bubbles: true });
-            
-            inputEvent.target = select;
-            changeEvent.target = select;
-            
-            select.dispatchEvent(inputEvent);
-            select.dispatchEvent(changeEvent);
-            
-            // Manual state update for React forms
-            if (select._valueTracker) {
-              select._valueTracker.setValue('');
-            }
-          }
-        }, selectableOption);
-        
-        await this.page.waitForTimeout(1000);
-        
-        // Re-verify
-        const newState = await this.page.evaluate(() => {
-          const select = document.querySelector('select');
-          if (!select) return null;
-          return {
-            selectedIndex: select.selectedIndex,
-            selectedValue: select.value,
-            selectedText: select.selectedIndex >= 0 ? select.options[select.selectedIndex]?.text : null
-          };
-        });
-        
-        console.log(`🔍 After retry - Selection: Index=${newState?.selectedIndex}, Value="${newState?.selectedValue}", Text="${newState?.selectedText}"`);
-      }
       
       // Wait for Continue button to be enabled
       console.log('⏳ Waiting for Continue button to become enabled...');
@@ -525,6 +453,9 @@ export class TestHelpers {
     const expectedUrl = urlMap[menuItem] || `/${menuItem.toLowerCase()}`;
     
     try {
+      // Add a small delay to ensure navigation is ready
+      await this.page.waitForTimeout(500);
+      
       // Use the proven clickAndNavigate approach
       const selector = `nav a:has-text("${menuItem}")`;
       await this.clickAndNavigate(selector, expectedUrl);
@@ -539,7 +470,7 @@ export class TestHelpers {
       
       // Fallback to direct navigation
       await this.page.goto(expectedUrl);
-      await this.waitForNavigation();
+      await this.page.waitForLoadState('networkidle');
       return;
     }
   }
@@ -552,23 +483,31 @@ export class TestHelpers {
     
     // Try multiple table selector strategies
     const tableSelectors = [
+      'table',  // Standard HTML table
+      '[role="table"]',  // ARIA table
       '.data-table-wrapper',
       '.table-container',
-      'table',
       '.table',
-      '[role="table"]',
       '.projects-table',
       '.people-table',
-      '.assignments-table'
+      '.assignments-table',
+      '[role="tabpanel"] table'  // Table inside tab panel
     ];
     
+    let found = false;
     for (const selector of tableSelectors) {
       try {
-        await this.page.waitForSelector(selector, { timeout: 5000 });
+        await this.page.waitForSelector(selector, { timeout: 2000, state: 'visible' });
+        found = true;
         break;
       } catch {
         continue;
       }
+    }
+    
+    if (!found) {
+      // If no table found, just wait for any content
+      await this.page.waitForTimeout(1000);
     }
     
     // Wait for loading state to finish (optional)

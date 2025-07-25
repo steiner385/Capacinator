@@ -22,7 +22,7 @@ test.describe('Error Handling and Edge Cases', () => {
     await helpers.navigateViaSidebar('Projects');
     
     // Should show error state, not crash
-    const errorMessage = page.locator('.error-message, .connection-error, .api-error, .error');
+    const errorMessage = page.locator('.text-destructive, .connection-error, .api-error, .error');
     if (await errorMessage.isVisible()) {
       await expect(errorMessage).toBeVisible();
       
@@ -152,7 +152,7 @@ test.describe('Error Handling and Edge Cases', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Fill form and submit
@@ -281,7 +281,7 @@ test.describe('Error Handling and Edge Cases', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Test special characters and Unicode
@@ -358,7 +358,7 @@ test.describe('Error Handling and Edge Cases', () => {
       if (await editButton.isVisible()) {
         await editButton.click();
         
-        const formDialog = page.locator('.modal, .dialog, .form-container');
+        const formDialog = page.locator('[role="dialog"]');
         await expect(formDialog).toBeVisible();
         
         // Modify and save
@@ -432,7 +432,7 @@ test.describe('Error Handling and Edge Cases', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Test edge cases
@@ -451,7 +451,7 @@ test.describe('Error Handling and Edge Cases', () => {
           await input.blur();
           
           // Should show appropriate validation error
-          const errorMessage = page.locator('.error, .invalid, .field-error');
+          const errorMessage = page.locator('[role="alert"][class*="destructive"], .text-destructive');
           if (await errorMessage.isVisible()) {
             const errorText = await errorMessage.textContent();
             expect(errorText?.trim()).toBeTruthy();

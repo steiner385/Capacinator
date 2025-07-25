@@ -28,54 +28,23 @@ test.describe('Navigation and Basic UI', () => {
   });
 
   test('should navigate between pages using sidebar', async ({ page }) => {
-    // Ensure we're in a stable state first
-    await helpers.waitForNavigation();
+    // Wait a moment for initial page load
+    await page.waitForTimeout(1000);
     
     // Navigate to Projects
-    try {
-      await helpers.navigateViaSidebar('Projects');
-      if (!page.isClosed()) {
-        await expect(page).toHaveURL(/.*\/projects/, { timeout: 10000 });
-        await helpers.verifyPageTitle('Projects');
-      }
-    } catch (error) {
-      if (page.isClosed()) {
-        throw new Error('Page was closed during Projects navigation');
-      }
-      throw error;
-    }
+    await helpers.navigateViaSidebar('Projects');
+    await expect(page).toHaveURL(/.*\/projects/);
+    await helpers.verifyPageTitle('Projects');
     
     // Navigate to People
-    try {
-      if (!page.isClosed()) {
-        await helpers.navigateViaSidebar('People');
-        if (!page.isClosed()) {
-          await expect(page).toHaveURL(/.*\/people/, { timeout: 10000 });
-          await helpers.verifyPageTitle('People');
-        }
-      }
-    } catch (error) {
-      if (page.isClosed()) {
-        throw new Error('Page was closed during People navigation');
-      }
-      throw error;
-    }
+    await helpers.navigateViaSidebar('People');
+    await expect(page).toHaveURL(/.*\/people/);
+    await helpers.verifyPageTitle('People');
     
     // Navigate back to Dashboard
-    try {
-      if (!page.isClosed()) {
-        await helpers.navigateViaSidebar('Dashboard');
-        if (!page.isClosed()) {
-          await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
-          await helpers.verifyPageTitle('Dashboard');
-        }
-      }
-    } catch (error) {
-      if (page.isClosed()) {
-        throw new Error('Page was closed during Dashboard navigation');
-      }
-      throw error;
-    }
+    await helpers.navigateViaSidebar('Dashboard');
+    await expect(page).toHaveURL(/.*\/dashboard/);
+    await helpers.verifyPageTitle('Dashboard');
   });
 
   test('should display sidebar navigation correctly', async ({ page }) => {

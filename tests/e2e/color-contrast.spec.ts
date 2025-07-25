@@ -150,11 +150,11 @@ test.describe('Color Contrast Validation', () => {
 
   test('buttons have sufficient contrast in all states', async ({ page }) => {
     // Primary button
-    const primaryResult = await checkElementContrast(page, '.btn-primary');
+    const primaryResult = await checkElementContrast(page, 'button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])');
     expect(primaryResult.passes).toBeTruthy();
     
     // Secondary button
-    const secondaryResult = await checkElementContrast(page, '.btn-secondary');
+    const secondaryResult = await checkElementContrast(page, 'button[class*="outline"], button[class*="secondary"]');
     expect(secondaryResult.passes).toBeTruthy();
     
     // Danger button
@@ -307,14 +307,14 @@ test.describe('Color Contrast Validation', () => {
   test('modal content has sufficient contrast', async ({ page }) => {
     await page.goto('/people');
     await page.click('button:has-text("Add Person")');
-    await page.waitForSelector('.modal-content');
+    await page.waitForSelector('[role="dialog"] > div');
     
     // Check modal header
-    const headerResult = await checkElementContrast(page, '.modal-content h2');
+    const headerResult = await checkElementContrast(page, '[role="dialog"] > div h2');
     expect(headerResult.passes).toBeTruthy();
     
     // Check modal body text
-    const bodyResult = await checkElementContrast(page, '.modal-content .form-label');
+    const bodyResult = await checkElementContrast(page, '[role="dialog"] > div .form-label');
     expect(bodyResult.passes).toBeTruthy();
   });
 
@@ -358,7 +358,7 @@ test.describe('Interactive State Contrast', () => {
   test('button hover states maintain contrast', async ({ page }) => {
     await page.goto('/');
     
-    const buttons = ['.btn-primary', '.btn-secondary', '.btn-outline'];
+    const buttons = ['button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])', 'button[class*="outline"], button[class*="secondary"]', '.btn-outline'];
     
     for (const selector of buttons) {
       await page.waitForSelector(selector);

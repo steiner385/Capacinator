@@ -54,7 +54,7 @@ test.describe('Debug Reports Loading', () => {
       console.log(`After Capacity click: ${tables2} tables`);
       
       // Check for any error messages
-      const errors = await page.locator('.error, .error-message').count();
+      const errors = await page.locator('.error, .text-destructive').count();
       console.log(`Found ${errors} error messages`);
       
       // Try to wait for at least one piece of content

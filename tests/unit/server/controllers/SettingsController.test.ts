@@ -19,7 +19,7 @@ const mockDb = {
 const createMockQuery = () => {
   const query = {
     where: jest.fn().mockReturnThis(),
-    first: jest.fn().mockReturnThis(),
+    first: jest.fn() as jest.Mock,
     insert: jest.fn().mockReturnThis(),
     onConflict: jest.fn().mockReturnThis(),
     merge: jest.fn().mockReturnThis(),
@@ -48,9 +48,9 @@ describe('SettingsController', () => {
     };
 
     mockRes = {
-      json: jest.fn(),
+      json: jest.fn().mockReturnThis(),
       status: jest.fn().mockReturnThis()
-    };
+    } as any;
   });
 
   describe('getSystemSettings', () => {

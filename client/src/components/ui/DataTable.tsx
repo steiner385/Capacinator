@@ -1,6 +1,16 @@
 import { useState, useMemo } from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import './DataTable.css';
+import { ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table';
+import { Button } from './button';
+import { Spinner } from './spinner';
+import { cn } from '@/lib/utils';
 
 export interface Column<T> {
   key: keyof T | string;
@@ -94,109 +104,123 @@ export function DataTable<T extends Record<string, any>>({
 
   const renderSortIcon = (column: string) => {
     if (sortColumn !== column) {
-      return <ChevronsUpDown size={14} />;
+      return <ChevronsUpDown className="ml-2 h-4 w-4" />;
     }
     return sortDirection === 'asc' 
-      ? <ChevronUp size={14} />
-      : <ChevronDown size={14} />;
+      ? <ChevronUp className="ml-2 h-4 w-4" />
+      : <ChevronDown className="ml-2 h-4 w-4" />;
   };
 
   if (loading) {
     return (
-      <div className="table-loading">
-        <div className="spinner"></div>
-        <p>Loading data...</p>
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Spinner size="lg" className="text-primary" />
+          <p className="text-sm text-muted-foreground">Loading data...</p>
+        </div>
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="table-empty">
-        <p>{emptyMessage}</p>
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="data-table-wrapper">
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
               {columns.map((column) => (
-                <th
+                <TableHead
                   key={column.key as string}
                   style={{ width: column.width }}
-                  className={column.sortable ? 'sortable' : ''}
+                  className={cn(
+                    column.sortable && "cursor-pointer select-none hover:bg-muted/50"
+                  )}
                   onClick={() => column.sortable && handleSort(column.key as string)}
                 >
-                  <div className="th-content">
+                  <div className="flex items-center">
                     <span>{column.header}</span>
                     {column.sortable && renderSortIcon(column.key as string)}
                   </div>
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {paginatedData.map((row, index) => (
-              <tr
+              <TableRow
                 key={index}
                 onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'clickable' : ''}
+                className={cn(
+                  onRowClick && "cursor-pointer hover:bg-muted/50"
+                )}
               >
                 {columns.map((column) => (
-                  <td key={column.key as string}>
+                  <TableCell key={column.key as string}>
                     {column.render
                       ? column.render(getValue(row, column.key as string), row)
                       : getValue(row, column.key as string)}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {totalPages > 1 && (
-        <div className="table-pagination">
-          <div className="pagination-info">
+        <div className="flex items-center justify-between px-2">
+          <div className="text-sm text-muted-foreground">
             Showing {((currentPage - 1) * itemsPerPage) + 1} to{' '}
             {Math.min(currentPage * itemsPerPage, data.length)} of {data.length} entries
           </div>
-          <div className="pagination-controls">
-            <button
-              className="pagination-btn"
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
             >
-              First
-            </button>
-            <button
-              className="pagination-btn"
+              <ChevronsLeft className="h-4 w-4" />
+              <span className="ml-1">First</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
             >
-              Previous
-            </button>
-            <span className="pagination-numbers">
+              <ChevronLeft className="h-4 w-4" />
+              <span className="ml-1">Previous</span>
+            </Button>
+            <span className="text-sm">
               Page {currentPage} of {totalPages}
             </span>
-            <button
-              className="pagination-btn"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
             >
-              Next
-            </button>
-            <button
-              className="pagination-btn"
+              <span className="mr-1">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
             >
-              Last
-            </button>
+              <span className="mr-1">Last</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}

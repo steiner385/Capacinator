@@ -87,7 +87,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     await page.goto('/projects');
 
     // Primary button
-    const primaryBtn = page.locator('.btn-primary').first();
+    const primaryBtn = page.locator('button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])').first();
     await expect(primaryBtn).toHaveCSS('background-color', lightTheme.primary);
     
     await primaryBtn.hover();
@@ -95,7 +95,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     await expect(primaryBtn).toHaveCSS('background-color', lightTheme.primaryHover);
 
     // Secondary button
-    const secondaryBtn = page.locator('.btn-secondary').first();
+    const secondaryBtn = page.locator('button[class*="outline"], button[class*="secondary"]').first();
     if (await secondaryBtn.count() > 0) {
       await expect(secondaryBtn).toHaveCSS('background-color', lightTheme.bgTertiary);
     }
@@ -173,9 +173,9 @@ test.describe('Theme Consistency - Light Mode', () => {
     const deleteBtn = page.locator('.btn-icon.btn-danger').first();
     if (await deleteBtn.count() > 0) {
       await deleteBtn.click();
-      await page.waitForSelector('.modal-content');
+      await page.waitForSelector('[role="dialog"] > div');
       
-      const modal = page.locator('.modal-content');
+      const modal = page.locator('[role="dialog"] > div');
       await expect(modal).toHaveCSS('background-color', lightTheme.bgSecondary);
     }
   });

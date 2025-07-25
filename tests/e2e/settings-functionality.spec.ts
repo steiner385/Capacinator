@@ -89,7 +89,7 @@ test.describe('Settings Functionality', () => {
       await page.click('button:has-text("Save Settings")');
 
       // Should show validation error
-      await expect(page.locator('.error-message, .save-message')).toContainText('must be between', { timeout: 5000 });
+      await expect(page.locator('.text-destructive, .save-message')).toContainText('must be between', { timeout: 5000 });
     });
   });
 
@@ -208,7 +208,7 @@ test.describe('Settings Functionality', () => {
       await page.click('button:has-text("Send Test Email")');
 
       // Should show some message (success or error)
-      await expect(page.locator('.success-message, .error-message, .save-message')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.success-message, .text-destructive, .save-message')).toBeVisible({ timeout: 5000 });
     });
 
     test('should display notification templates', async ({ page }) => {

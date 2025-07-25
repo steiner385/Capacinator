@@ -43,7 +43,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
       console.log('⚠️ Need at least 2 scenarios for comparison. Creating additional scenario...');
       
       await page.click('button:has-text("New Scenario")');
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await page.fill('input[id="scenario-name"]', 'Comparison Test Scenario');
       await page.fill('textarea[id="scenario-description"]', 'Created specifically for comparison testing');
       await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -69,7 +69,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
     console.log('\n🔍 Step 2: Analyzing comparison interface...');
     
     // Option 1: Modal-based comparison
-    if (await page.locator('.modal-content').count() > 0) {
+    if (await page.locator('[role="dialog"] > div').count() > 0) {
       console.log('📋 Modal-based comparison interface detected');
       await takeScreenshot(page, 'comparison-03-modal-interface.png', 'Comparison modal opened');
       
@@ -197,7 +197,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
       
       // Create parent scenario
       await page.click('button:has-text("New Scenario")');
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await page.fill('input[id="scenario-name"]', 'Merge Parent Test');
       await page.fill('textarea[id="scenario-description"]', 'Parent scenario for merge testing');
       await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -211,7 +211,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
       
       const branchButton = parentCard.locator('button:has-text("Branch")').first();
       await branchButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await page.fill('input[id="scenario-name"]', 'Merge Child Test');
       await page.fill('textarea[id="scenario-description"]', 'Child scenario that will be merged back to parent');
       await page.click('button:has-text("Create Scenario")');
@@ -258,7 +258,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
       console.log('\n🔍 Step 3: Analyzing merge interface...');
 
       // Option 1: Merge modal with options
-      if (await page.locator('.modal-content').count() > 0) {
+      if (await page.locator('[role="dialog"] > div').count() > 0) {
         console.log('📋 Merge modal interface detected');
         await takeScreenshot(page, 'merge-05-merge-modal.png', 'Merge modal opened');
 
@@ -396,7 +396,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
     // Create a working scenario
     console.log('\n📝 Step 1: Creating scenario for data modification testing...');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Data Modification Test');
     await page.fill('textarea[id="scenario-description"]', 'Testing data changes within scenario context');
     await page.selectOption('select[id="scenario-type"]', 'branch');
@@ -421,7 +421,7 @@ test.describe('Detailed Scenario Comparison and Merge Workflows', () => {
     
     if (await newAssignmentButton.count() > 0) {
       await newAssignmentButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       await takeScreenshot(page, 'data-03-assignment-modal.png', 'Assignment creation modal in scenario context');
 
       // Fill out assignment form to show scenario data modification

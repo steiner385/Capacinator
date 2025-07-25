@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
 import { Person } from '../types';
 import { useUser } from '../contexts/UserContext';
-import './Login.css';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Label } from './ui/label';
 
 interface LoginProps {
   onClose?: () => void;
@@ -40,70 +43,74 @@ export const Login: React.FC<LoginProps> = ({ onClose }) => {
 
   if (isLoading) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-header">
-            <h2>Select Your Profile</h2>
-            <p>Choose your profile to personalize your experience</p>
-          </div>
-          <div className="login-loading">Loading employees...</div>
-        </div>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Select Your Profile</CardTitle>
+            <CardDescription>Choose your profile to personalize your experience</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Loading employees...</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-header">
-            <h2>Error</h2>
-            <p>Failed to load employee list. Please try again.</p>
-          </div>
-        </div>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Error</CardTitle>
+            <CardDescription>Failed to load employee list. Please try again.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h2>Select Your Profile</h2>
-          <p>Choose your profile to personalize your experience</p>
-        </div>
-        
-        <div className="login-form">
-          <div className="form-group">
-            <label htmlFor="person-select">Who are you?</label>
-            <select
-              id="person-select"
-              value={selectedPersonId}
-              onChange={(e) => handlePersonSelect(e.target.value)}
-              className="person-dropdown"
-            >
-              <option value="">Select your name...</option>
-              {people?.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name} {person.primary_role_name && `(${person.primary_role_name})`}
-                </option>
-              ))}
-            </select>
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Select Your Profile</CardTitle>
+          <CardDescription>Choose your profile to personalize your experience</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="person-select">Who are you?</Label>
+              <Select value={selectedPersonId} onValueChange={handlePersonSelect}>
+                <SelectTrigger id="person-select">
+                  <SelectValue placeholder="Select your name..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {people?.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name} {person.primary_role_name && `(${person.primary_role_name})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-
-          <button
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <Button
             onClick={handleLogin}
             disabled={!selectedPersonId}
-            className="login-button"
+            className="w-full"
           >
             Continue
-          </button>
-        </div>
-
-        <div className="login-footer">
-          <p>Your selection will be saved for future visits</p>
-        </div>
-      </div>
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            Your selection will be saved for future visits
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 };

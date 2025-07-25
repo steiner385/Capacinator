@@ -131,7 +131,7 @@ test.describe('Scenario Planning Page', () => {
       const hasScenarioFields = await page.locator('input[name*="scenario"], input[name*="name"], label:has-text("Name")').count() > 0;
       if (hasScenarioFields) {
         // Close the modal to avoid affecting other tests
-        const closeButton = page.locator('button:has-text("Cancel"), button:has-text("Close"), .modal-close');
+        const closeButton = page.locator('button:has-text("Cancel"), button:has-text("Close"), [role="dialog"] button[aria-label="Close"]');
         if (await closeButton.count() > 0) {
           await closeButton.first().click();
         } else {

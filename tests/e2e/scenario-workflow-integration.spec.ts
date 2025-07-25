@@ -265,7 +265,7 @@ test.describe('Scenario Workflow Integration Tests', () => {
       await page.keyboard.press('Enter');
       
       // Should switch to next view
-      await expect(page.locator('.view-mode-toggle .btn-primary')).toBeVisible();
+      await expect(page.locator('.view-mode-toggle button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])')).toBeVisible();
     });
 
     test('should support keyboard navigation in scenario cards', async ({ page }) => {

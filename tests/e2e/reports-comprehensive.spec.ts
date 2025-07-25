@@ -736,7 +736,7 @@ test.describe('Reports Comprehensive Testing', () => {
       await page.waitForLoadState('networkidle');
       
       // Should show error state or fallback content
-      const errorMessage = page.locator('.error, .error-message, .loading-error');
+      const errorMessage = page.locator('.error, .text-destructive, .loading-error');
       const emptyState = page.locator('.empty-state, .no-data');
       
       const hasErrorHandling = await errorMessage.isVisible() || await emptyState.isVisible();

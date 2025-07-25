@@ -1,0 +1,17 @@
+{
+  "shadcn-ui": {
+    "command": "npx",
+    "args": ["-y", "@jpisnice/shadcn-ui-mcp-server"],
+    "type": "stdio",
+    "metadata": {
+      "description": "Provides access to shadcn/ui v4 components, demos, and installation guides",
+      "capabilities": [
+        "Get component source code",
+        "Access component demos",
+        "View installation instructions",
+        "List available components",
+        "Retrieve complete block implementations"
+      ]
+    }
+  }
+}

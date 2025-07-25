@@ -2,7 +2,22 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 import { api } from '../../lib/api-client';
-import FormModal from '../ui/FormModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
+import { Spinner } from '../ui/spinner';
 
 interface AssignmentFormData {
   project_id: string;
@@ -229,211 +244,233 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
 
   const isLoading = createAssignmentMutation.isPending || updateAssignmentMutation.isPending;
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Assignment' : 'Create New Assignment'}
-      onSubmit={handleSubmit}
-      isLoading={isLoading}
-      size="lg"
-      submitText={isEditing ? 'Update Assignment' : 'Create Assignment'}
-    >
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="project_id">Project *</label>
-          <select
-            id="project_id"
-            className={`form-select ${errors.project_id ? 'error' : ''}`}
-            value={formData.project_id}
-            onChange={(e) => handleChange('project_id', e.target.value)}
-          >
-            <option value="">Select project</option>
-            {projects?.map((project: any) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          {errors.project_id && <span className="error-message">{errors.project_id}</span>}
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? 'Update the assignment details below.' 
+              : 'Fill in the information to create a new assignment.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="form-group">
-          <label htmlFor="person_id">Person *</label>
-          <select
-            id="person_id"
-            className={`form-select ${errors.person_id ? 'error' : ''}`}
-            value={formData.person_id}
-            onChange={(e) => handleChange('person_id', e.target.value)}
-          >
-            <option value="">Select person</option>
-            {people?.map((person: any) => (
-              <option key={person.id} value={person.id}>
-                {person.name} - {person.primary_role_name || 'No Role'}
-              </option>
-            ))}
-          </select>
-          {errors.person_id && <span className="error-message">{errors.person_id}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="role_id">Role *</label>
-          <select
-            id="role_id"
-            className={`form-select ${errors.role_id ? 'error' : ''}`}
-            value={formData.role_id}
-            onChange={(e) => handleChange('role_id', e.target.value)}
-          >
-            <option value="">Select role</option>
-            {filteredRoles?.map((role: any) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-          {errors.role_id && <span className="error-message">{errors.role_id}</span>}
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="assignment_date_mode">Date Mode *</label>
-          <select
-            id="assignment_date_mode"
-            className="form-select"
-            value={formData.assignment_date_mode}
-            onChange={(e) => handleChange('assignment_date_mode', e.target.value as 'fixed' | 'phase' | 'project')}
-          >
-            <option value="fixed">Fixed Dates</option>
-            <option value="phase">Based on Project Phase</option>
-            <option value="project">Based on Entire Project</option>
-          </select>
-          <small className="form-help">
-            Fixed: Use specific dates | Phase: Follow selected phase timeline | Project: Follow project aspiration dates
-          </small>
-        </div>
-
-        {formData.assignment_date_mode === 'phase' && (
-          <div className="form-group">
-            <label htmlFor="phase_id">Phase *</label>
-            <select
-              id="phase_id"
-              className={`form-select ${errors.phase_id ? 'error' : ''}`}
-              value={formData.phase_id}
-              onChange={(e) => handleChange('phase_id', e.target.value)}
-            >
-              <option value="">Select phase</option>
-              {availablePhases?.map((phase: any) => (
-                <option key={phase.id} value={phase.id}>
-                  {phase.name} ({phase.start_date} - {phase.end_date})
-                </option>
-              ))}
-            </select>
-            {errors.phase_id && <span className="error-message">{errors.phase_id}</span>}
-          </div>
+        {hasErrors && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Please fix the errors below before submitting.
+            </AlertDescription>
+          </Alert>
         )}
 
-        {formData.assignment_date_mode === 'fixed' && (
-          <>
-            <div className="form-group">
-              <label htmlFor="start_date">Start Date *</label>
-              <input
-                type="date"
-                id="start_date"
-                className={`form-input ${errors.start_date ? 'error' : ''}`}
-                value={formData.start_date}
-                onChange={(e) => handleChange('start_date', e.target.value)}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="project_id">Project *</Label>
+              <Select value={formData.project_id} onValueChange={(value) => handleChange('project_id', value)}>
+                <SelectTrigger className={errors.project_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects?.map((project: any) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.project_id && <p className="text-sm text-destructive">{errors.project_id}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="person_id">Person *</Label>
+              <Select value={formData.person_id} onValueChange={(value) => handleChange('person_id', value)}>
+                <SelectTrigger className={errors.person_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select person" />
+                </SelectTrigger>
+                <SelectContent>
+                  {people?.map((person: any) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name} - {person.primary_role_name || 'No Role'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.person_id && <p className="text-sm text-destructive">{errors.person_id}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role_id">Role *</Label>
+              <Select value={formData.role_id} onValueChange={(value) => handleChange('role_id', value)}>
+                <SelectTrigger className={errors.role_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredRoles?.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.role_id && <p className="text-sm text-destructive">{errors.role_id}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assignment_date_mode">Date Mode *</Label>
+              <Select 
+                value={formData.assignment_date_mode} 
+                onValueChange={(value) => handleChange('assignment_date_mode', value as 'fixed' | 'phase' | 'project')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">Fixed Dates</SelectItem>
+                  <SelectItem value="phase">Based on Project Phase</SelectItem>
+                  <SelectItem value="project">Based on Entire Project</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Fixed: Use specific dates | Phase: Follow selected phase timeline | Project: Follow project aspiration dates
+              </p>
+            </div>
+
+            {formData.assignment_date_mode === 'phase' && (
+              <div className="space-y-2">
+                <Label htmlFor="phase_id">Phase *</Label>
+                <Select value={formData.phase_id} onValueChange={(value) => handleChange('phase_id', value)}>
+                  <SelectTrigger className={errors.phase_id ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select phase" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePhases?.map((phase: any) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        {phase.name} ({phase.start_date} - {phase.end_date})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.phase_id && <p className="text-sm text-destructive">{errors.phase_id}</p>}
+              </div>
+            )}
+
+            {formData.assignment_date_mode === 'fixed' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="start_date">Start Date *</Label>
+                  <Input
+                    type="date"
+                    id="start_date"
+                    value={formData.start_date}
+                    onChange={(e) => handleChange('start_date', e.target.value)}
+                    className={errors.start_date ? 'border-destructive' : ''}
+                  />
+                  {errors.start_date && <p className="text-sm text-destructive">{errors.start_date}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="end_date">End Date *</Label>
+                  <Input
+                    type="date"
+                    id="end_date"
+                    value={formData.end_date}
+                    onChange={(e) => handleChange('end_date', e.target.value)}
+                    className={errors.end_date ? 'border-destructive' : ''}
+                  />
+                  {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="allocation_percentage">Allocation Percentage *</Label>
+              <Input
+                type="number"
+                id="allocation_percentage"
+                value={formData.allocation_percentage}
+                onChange={(e) => handleChange('allocation_percentage', Number(e.target.value))}
+                min="1"
+                max="100"
+                placeholder="100"
+                className={errors.allocation_percentage ? 'border-destructive' : ''}
               />
-              {errors.start_date && <span className="error-message">{errors.start_date}</span>}
+              {errors.allocation_percentage && <p className="text-sm text-destructive">{errors.allocation_percentage}</p>}
             </div>
 
-            <div className="form-group">
-              <label htmlFor="end_date">End Date *</label>
-              <input
-                type="date"
-                id="end_date"
-                className={`form-input ${errors.end_date ? 'error' : ''}`}
-                value={formData.end_date}
-                onChange={(e) => handleChange('end_date', e.target.value)}
+            <div className="flex items-center space-x-2 mt-8">
+              <Checkbox
+                id="billable"
+                checked={formData.billable}
+                onCheckedChange={(checked) => handleChange('billable', checked)}
               />
-              {errors.end_date && <span className="error-message">{errors.end_date}</span>}
-            </div>
-          </>
-        )}
-
-        {formData.assignment_date_mode !== 'fixed' && (
-          <div className="form-group full-width">
-            <div className="alert alert-info">
-              <strong>Automatic Dates:</strong> 
-              {formData.assignment_date_mode === 'phase' 
-                ? ' Assignment dates will be calculated from the selected project phase timeline.'
-                : ' Assignment dates will be calculated from the project aspiration dates.'
-              }
+              <Label htmlFor="billable" className="cursor-pointer">
+                Billable
+              </Label>
             </div>
           </div>
-        )}
 
-        <div className="form-group">
-          <label htmlFor="allocation_percentage">Allocation Percentage *</label>
-          <input
-            type="number"
-            id="allocation_percentage"
-            className={`form-input ${errors.allocation_percentage ? 'error' : ''}`}
-            value={formData.allocation_percentage}
-            onChange={(e) => handleChange('allocation_percentage', Number(e.target.value))}
-            min="1"
-            max="100"
-            placeholder="100"
-          />
-          {errors.allocation_percentage && <span className="error-message">{errors.allocation_percentage}</span>}
-        </div>
+          {formData.assignment_date_mode !== 'fixed' && (
+            <Alert>
+              <AlertDescription>
+                <strong>Automatic Dates:</strong> 
+                {formData.assignment_date_mode === 'phase' 
+                  ? ' Assignment dates will be calculated from the selected project phase timeline.'
+                  : ' Assignment dates will be calculated from the project aspiration dates.'
+                }
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <div className="form-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.billable}
-              onChange={(e) => handleChange('billable', e.target.checked)}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              placeholder="Additional notes about this assignment"
+              rows={3}
             />
-            <span className="checkbox-text">Billable</span>
-          </label>
-        </div>
-
-        <div className="form-group full-width">
-          <label htmlFor="notes">Notes</label>
-          <textarea
-            id="notes"
-            className="form-textarea"
-            value={formData.notes}
-            onChange={(e) => handleChange('notes', e.target.value)}
-            placeholder="Additional notes about this assignment"
-            rows={3}
-          />
-        </div>
-      </div>
-
-      {/* Conflicts and warnings */}
-      {conflicts.length > 0 && (
-        <div className="form-group full-width">
-          <div className="alert alert-warning">
-            <AlertTriangle size={16} />
-            <strong>Conflicts detected:</strong>
-            <ul>
-              {conflicts.map((conflict, index) => (
-                <li key={index}>{conflict.message}</li>
-              ))}
-            </ul>
           </div>
-        </div>
-      )}
 
-      {availabilityWarning && (
-        <div className="form-group full-width">
-          <div className="alert alert-info">
-            <AlertTriangle size={16} />
-            {availabilityWarning}
-          </div>
-        </div>
-      )}
-    </FormModal>
+          {/* Conflicts and warnings */}
+          {conflicts.length > 0 && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Conflicts detected:</strong>
+                <ul className="mt-2 list-disc list-inside">
+                  {conflicts.map((conflict, index) => (
+                    <li key={index}>{conflict.message}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {availabilityWarning && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{availabilityWarning}</AlertDescription>
+            </Alert>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Spinner className="mr-2" size="sm" />}
+              {isEditing ? 'Update Assignment' : 'Create Assignment'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

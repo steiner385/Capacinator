@@ -648,7 +648,7 @@ test.describe('Advanced Reporting Features Tests', () => {
         await startDate.fill('2024-12-31');
         
         // Check for validation message
-        const validationMessage = page.locator('text=/invalid|error|must be after/i, .error-message, .validation-error');
+        const validationMessage = page.locator('text=/invalid|error|must be after/i, .text-destructive, .validation-error');
         
         if (await validationMessage.count() > 0) {
           console.log('✅ Dynamic parameter validation working');

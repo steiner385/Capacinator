@@ -17,6 +17,11 @@ export default defineConfig({
       }
     })
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './client/src'),
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -31,7 +31,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Fill form with overlapping dates to existing assignment
@@ -82,7 +82,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Fill form with high allocation that would cause over-allocation
@@ -124,7 +124,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Create conflicting assignment
@@ -179,7 +179,7 @@ test.describe('Assignment Conflict Detection', () => {
       if (await editButton.isVisible()) {
         await editButton.click();
         
-        const formDialog = page.locator('.modal, .dialog, .form-container');
+        const formDialog = page.locator('[role="dialog"]');
         await expect(formDialog).toBeVisible();
         
         // Modify allocation to create conflict
@@ -266,7 +266,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Try to assign someone during their unavailable period
@@ -303,7 +303,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       
-      const formDialog = page.locator('.modal, .dialog, .form-container');
+      const formDialog = page.locator('[role="dialog"]');
       await expect(formDialog).toBeVisible();
       
       // Try to assign someone to a role they don't typically fill

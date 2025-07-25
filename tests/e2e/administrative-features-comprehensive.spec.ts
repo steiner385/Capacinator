@@ -276,7 +276,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
           await page.keyboard.press('Tab');
           
           // Look for validation message
-          const validationMsg = page.locator('text=/must be between|invalid|maximum/i, .error-message');
+          const validationMsg = page.locator('text=/must be between|invalid|maximum/i, .text-destructive');
           if (await validationMsg.count() > 0) {
             console.log('✅ Work hours validation working');
           }
@@ -875,7 +875,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
             await page.waitForTimeout(1000);
             
             // Check for error message
-            const errorMsg = page.locator('text=/error|invalid|must be positive/i, .error-message');
+            const errorMsg = page.locator('text=/error|invalid|must be positive/i, .text-destructive');
             if (await errorMsg.count() > 0) {
               console.log('✅ Administrative form validation error handling working');
             }

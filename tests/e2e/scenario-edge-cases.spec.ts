@@ -29,7 +29,7 @@ test.describe('Scenario Planning - Complex Edge Cases & Corner Cases', () => {
 
   async function createScenario(page: any, name: string, description: string, type = 'branch') {
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', name);
     await page.fill('textarea[id="scenario-description"]', description);
     await page.selectOption('select[id="scenario-type"]', type);
@@ -57,7 +57,7 @@ test.describe('Scenario Planning - Complex Edge Cases & Corner Cases', () => {
     
     const branchButton = level1Card.locator('button:has-text("Branch")').first();
     await branchButton.click();
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Level 2 Child');
     await page.fill('textarea[id="scenario-description"]', 'Second level child scenario');
     await page.click('button:has-text("Create Scenario")');
@@ -72,7 +72,7 @@ test.describe('Scenario Planning - Complex Edge Cases & Corner Cases', () => {
     
     const branchButton2 = level2Card.locator('button:has-text("Branch")').first();
     await branchButton2.click();
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Level 3 Grandchild');
     await page.fill('textarea[id="scenario-description"]', 'Third level grandchild scenario');
     await page.click('button:has-text("Create Scenario")');
@@ -127,7 +127,7 @@ test.describe('Scenario Planning - Complex Edge Cases & Corner Cases', () => {
     await baseCard.hover();
     const branchButton = baseCard.locator('button:has-text("Branch")').first();
     await branchButton.click();
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     await page.fill('input[id="scenario-name"]', 'Concurrent Test Child');
     await page.fill('textarea[id="scenario-description"]', 'Child for concurrent operation testing');
     await page.click('button:has-text("Create Scenario")');
@@ -192,7 +192,7 @@ test.describe('Scenario Planning - Complex Edge Cases & Corner Cases', () => {
     if (await newAssignmentButton.count() > 0) {
       console.log('Creating assignment that could cause conflicts...');
       await newAssignmentButton.click();
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       
       // Fill form with data that could cause over-allocation conflicts
       const projectSelect = page.locator('select[name="project_id"], #project-select').first();
@@ -440,7 +440,7 @@ test.describe('Scenario Planning - Complex Edge Cases & Corner Cases', () => {
         await page.waitForTimeout(1000);
         
         // Check modal opened
-        const modal = page.locator('.modal-content').first();
+        const modal = page.locator('[role="dialog"] > div').first();
         if (await modal.count() > 0) {
           await takeScreenshot(page, `edge-20-modal-cycle-${i + 1}.png`, `Modal cycle ${i + 1}`);
           

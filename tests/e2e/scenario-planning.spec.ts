@@ -28,7 +28,7 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
   // Helper function to create a scenario via UI
   async function createScenarioViaUI(page: any, name: string, description?: string) {
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
     
     await page.fill('input[id="scenario-name"]', name);
     if (description) {
@@ -112,7 +112,7 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
           await page.waitForTimeout(500);
           
           // Cancel modal if it appears
-          const modal = page.locator('.modal-content');
+          const modal = page.locator('[role="dialog"] > div');
           if (await modal.count() > 0) {
             await page.press('Escape');
             await page.waitForTimeout(300);
@@ -154,7 +154,7 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
         console.log('🌿 Testing branch creation workflow');
         
         await branchButton.click();
-        await page.waitForSelector('.modal-content', { timeout: 5000 });
+        await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
         
         // Verify modal shows parent information
         const parentInfo = await page.locator(':has-text("Workflow Parent")').count();
@@ -238,14 +238,14 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
         } else if (test === 'modal_validation') {
           // Test form validation prevents bad data
           await page.click('button:has-text("New Scenario")');
-          await page.waitForSelector('.modal-content', { timeout: 5000 });
+          await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
           
           // Try to submit empty form
           await page.click('button:has-text("Create Scenario")');
           await page.waitForTimeout(1000);
           
           // Modal should remain open
-          const modalStillOpen = await page.locator('.modal-content').isVisible();
+          const modalStillOpen = await page.locator('[role="dialog"] > div').isVisible();
           expect(modalStillOpen).toBe(true);
           await page.press('Escape');
           
@@ -263,7 +263,7 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
           // Test error recovery
           try {
             await page.click('button:has-text("New Scenario")');
-            await page.waitForSelector('.modal-content', { timeout: 5000 });
+            await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
             await page.fill('input[id="scenario-name"]', 'Error Recovery Test');
             await page.click('button:has-text("Create Scenario")');
             await page.waitForTimeout(1000);
@@ -311,7 +311,7 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
           await page.waitForTimeout(500);
           
           // Cancel any modals that appear
-          const modal = page.locator('.modal-content');
+          const modal = page.locator('[role="dialog"] > div');
           if (await modal.count() > 0) {
             await page.press('Escape');
           }
@@ -334,7 +334,7 @@ test.describe('Scenario Planning E2E Tests (UI-Focused)', () => {
       
       if (await branchButton.count() > 0) {
         await branchButton.click();
-        await page.waitForSelector('.modal-content', { timeout: 5000 });
+        await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
         await page.fill('input[id="scenario-name"]', 'Lifecycle Branch');
         await page.click('button:has-text("Create Scenario")');
         await page.waitForTimeout(2000);

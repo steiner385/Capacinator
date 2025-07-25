@@ -59,7 +59,7 @@ test.describe('Email Notifications Functionality', () => {
       await page.click('button:has-text("Send Test Email")');
       
       // Should show validation message
-      await expect(page.locator('.error-message, .save-message')).toContainText('email address', { timeout: 3000 });
+      await expect(page.locator('.text-destructive, .save-message')).toContainText('email address', { timeout: 3000 });
     });
 
     test('should attempt to send test email with valid address', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('Email Notifications Functionality', () => {
       await page.click('button:has-text("Send Test Email")');
       
       // Should show some response (success or error depending on SMTP config)
-      await expect(page.locator('.success-message, .error-message, .save-message')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.success-message, .text-destructive, .save-message')).toBeVisible({ timeout: 5000 });
     });
 
     test('should disable send button when email service not configured', async ({ page }) => {

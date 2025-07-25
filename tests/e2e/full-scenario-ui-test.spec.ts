@@ -69,7 +69,7 @@ test.describe('Complete Scenario UI Test', () => {
           await page.screenshot({ path: 'test-results/create-scenario-modal.png', fullPage: true });
           
           // Fill out the form if modal appeared
-          const modalVisible = await page.locator('.modal-content, input[id="scenario-name"]').count() > 0;
+          const modalVisible = await page.locator('[role="dialog"] > div, input[id="scenario-name"]').count() > 0;
           if (modalVisible) {
             console.log('📝 Filling out scenario creation form');
             

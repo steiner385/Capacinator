@@ -1,7 +1,23 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import FormModal from '../ui/FormModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
+import { Spinner } from '../ui/spinner';
+import { AlertCircle } from 'lucide-react';
 
 interface ProjectFormData {
   name: string;
@@ -208,165 +224,183 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   const isLoading = createProjectMutation.isPending || updateProjectMutation.isPending;
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Project' : 'Create New Project'}
-      onSubmit={handleSubmit}
-      isLoading={isLoading}
-      size="lg"
-      submitText={isEditing ? 'Update Project' : 'Create Project'}
-    >
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="name">Project Name *</label>
-          <input
-            type="text"
-            id="name"
-            className={`form-input ${errors.name ? 'error' : ''}`}
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="Enter project name"
-          />
-          {errors.name && <span className="error-message">{errors.name}</span>}
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Project' : 'Create New Project'}</DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? 'Update the project details below.' 
+              : 'Fill in the information to create a new project.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="form-group">
-          <label htmlFor="project_type_id">Project Type *</label>
-          <select
-            id="project_type_id"
-            className={`form-select ${errors.project_type_id ? 'error' : ''}`}
-            value={formData.project_type_id}
-            onChange={(e) => handleChange('project_type_id', e.target.value)}
-          >
-            <option value="">Select project type</option>
-            {filteredProjectTypes?.map((type: any) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-              </option>
-            ))}
-          </select>
-          {errors.project_type_id && <span className="error-message">{errors.project_type_id}</span>}
-        </div>
+        {hasErrors && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please fix the errors below before submitting.
+            </AlertDescription>
+          </Alert>
+        )}
 
-        <div className="form-group">
-          <label htmlFor="location_id">Location *</label>
-          <select
-            id="location_id"
-            className={`form-select ${errors.location_id ? 'error' : ''}`}
-            value={formData.location_id}
-            onChange={(e) => handleChange('location_id', e.target.value)}
-          >
-            <option value="">Select location</option>
-            {locations?.map((location: any) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
-          {errors.location_id && <span className="error-message">{errors.location_id}</span>}
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Project Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Enter project name"
+                className={errors.name ? 'border-destructive' : ''}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="owner_id">Project Owner *</label>
-          <select
-            id="owner_id"
-            className={`form-select ${errors.owner_id ? 'error' : ''}`}
-            value={formData.owner_id}
-            onChange={(e) => handleChange('owner_id', e.target.value)}
-          >
-            <option value="">Select project owner</option>
-            {filteredOwners?.map((person: any) => (
-              <option key={person.id} value={person.id}>
-                {person.name} ({person.title || 'No Title'})
-              </option>
-            ))}
-          </select>
-          {errors.owner_id && <span className="error-message">{errors.owner_id}</span>}
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="project_type_id">Project Type *</Label>
+              <Select value={formData.project_type_id} onValueChange={(value) => handleChange('project_type_id', value)}>
+                <SelectTrigger className={errors.project_type_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select project type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredProjectTypes?.map((type: any) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.project_type_id && <p className="text-sm text-destructive">{errors.project_type_id}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="priority">Priority</label>
-          <select
-            id="priority"
-            className="form-select"
-            value={formData.priority}
-            onChange={(e) => handleChange('priority', Number(e.target.value))}
-          >
-            <option value={1}>1 - Highest</option>
-            <option value={2}>2 - High</option>
-            <option value={3}>3 - Medium</option>
-            <option value={4}>4 - Low</option>
-            <option value={5}>5 - Lowest</option>
-          </select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="location_id">Location *</Label>
+              <Select value={formData.location_id} onValueChange={(value) => handleChange('location_id', value)}>
+                <SelectTrigger className={errors.location_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations?.map((location: any) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.location_id && <p className="text-sm text-destructive">{errors.location_id}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="external_id">External ID</label>
-          <input
-            type="text"
-            id="external_id"
-            className="form-input"
-            value={formData.external_id}
-            onChange={(e) => handleChange('external_id', e.target.value)}
-            placeholder="External system ID"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="owner_id">Project Owner *</Label>
+              <Select value={formData.owner_id} onValueChange={(value) => handleChange('owner_id', value)}>
+                <SelectTrigger className={errors.owner_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select project owner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredOwners?.map((person: any) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name} ({person.title || 'No Title'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.owner_id && <p className="text-sm text-destructive">{errors.owner_id}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="current_phase_id">Current Phase</label>
-          <select
-            id="current_phase_id"
-            className="form-select"
-            value={formData.current_phase_id}
-            onChange={(e) => handleChange('current_phase_id', e.target.value)}
-          >
-            <option value="">Select current phase</option>
-            {phases?.data?.map((phase: any) => (
-              <option key={phase.id} value={phase.id}>
-                {phase.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select value={formData.priority.toString()} onValueChange={(value) => handleChange('priority', Number(value))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 - Highest</SelectItem>
+                  <SelectItem value="2">2 - High</SelectItem>
+                  <SelectItem value="3">3 - Medium</SelectItem>
+                  <SelectItem value="4">4 - Low</SelectItem>
+                  <SelectItem value="5">5 - Lowest</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="form-group full-width">
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            className="form-textarea"
-            value={formData.description}
-            onChange={(e) => handleChange('description', e.target.value)}
-            placeholder="Enter project description"
-            rows={3}
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="external_id">External ID</Label>
+              <Input
+                id="external_id"
+                value={formData.external_id}
+                onChange={(e) => handleChange('external_id', e.target.value)}
+                placeholder="External system ID"
+              />
+            </div>
 
-        <div className="form-group full-width">
-          <label htmlFor="data_restrictions">Data Restrictions</label>
-          <textarea
-            id="data_restrictions"
-            className="form-textarea"
-            value={formData.data_restrictions}
-            onChange={(e) => handleChange('data_restrictions', e.target.value)}
-            placeholder="Enter any data restrictions or security requirements"
-            rows={2}
-          />
-        </div>
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="current_phase_id">Current Phase</Label>
+              <Select value={formData.current_phase_id} onValueChange={(value) => handleChange('current_phase_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select current phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {phases?.data?.map((phase: any) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      {phase.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        <div className="form-group full-width">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.include_in_demand}
-              onChange={(e) => handleChange('include_in_demand', e.target.checked)}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              placeholder="Enter project description"
+              rows={3}
             />
-            <span className="checkbox-text">Include in demand planning</span>
-          </label>
-        </div>
-      </div>
-    </FormModal>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="data_restrictions">Data Restrictions</Label>
+            <Textarea
+              id="data_restrictions"
+              value={formData.data_restrictions}
+              onChange={(e) => handleChange('data_restrictions', e.target.value)}
+              placeholder="Enter any data restrictions or security requirements"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="include_in_demand"
+              checked={formData.include_in_demand}
+              onCheckedChange={(checked) => handleChange('include_in_demand', checked)}
+            />
+            <Label htmlFor="include_in_demand" className="cursor-pointer">
+              Include in demand planning
+            </Label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Spinner className="mr-2" size="sm" />}
+              {isEditing ? 'Update Project' : 'Create Project'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

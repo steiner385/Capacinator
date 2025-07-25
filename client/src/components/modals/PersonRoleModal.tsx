@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+import { Input } from '../ui/input';
+import { Spinner } from '../ui/spinner';
 
 interface PersonRoleModalProps {
   isOpen: boolean;
@@ -112,120 +125,111 @@ export default function PersonRoleModal({
     }));
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>{editingRole ? 'Edit Role' : 'Add Role'}</h2>
-          <button 
-            className="btn btn-icon"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            <X size={20} />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{editingRole ? 'Edit Role' : 'Add Role'}</DialogTitle>
+          <DialogDescription>
+            {editingRole 
+              ? 'Update the role details for this person.' 
+              : 'Add a new role for this person.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="modal-body">
-          <div className="form-group">
-            <label htmlFor="role_id">Role *</label>
-            <select
-              id="role_id"
-              value={formData.role_id}
-              onChange={(e) => handleInputChange('role_id', e.target.value)}
-              className="form-select"
-              required
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="role_id">Role *</Label>
+            <Select 
+              value={formData.role_id} 
+              onValueChange={(value) => handleInputChange('role_id', value)}
               disabled={isSubmitting || rolesLoading}
             >
-              <option value="">Select a role...</option>
-              {roles?.map((role: any) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role..." />
+              </SelectTrigger>
+              <SelectContent>
+                {roles?.map((role: any) => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="proficiency_level">Proficiency Level *</label>
-            <select
-              id="proficiency_level"
-              value={formData.proficiency_level}
-              onChange={(e) => handleInputChange('proficiency_level', e.target.value)}
-              className="form-select"
-              required
+          <div className="space-y-2">
+            <Label htmlFor="proficiency_level">Proficiency Level *</Label>
+            <Select 
+              value={formData.proficiency_level} 
+              onValueChange={(value) => handleInputChange('proficiency_level', value)}
               disabled={isSubmitting}
             >
-              {PROFICIENCY_LEVELS.map(level => (
-                <option key={level.value} value={level.value}>
-                  {level.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROFICIENCY_LEVELS.map(level => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_primary"
                 checked={formData.is_primary}
-                onChange={(e) => handleInputChange('is_primary', e.target.checked)}
+                onCheckedChange={(checked) => handleInputChange('is_primary', checked)}
                 disabled={isSubmitting}
               />
-              <span className="checkbox-text">Set as Primary Role</span>
-            </label>
-            <div className="form-help">
-              If checked, this role will become the person's primary role.
+              <Label htmlFor="is_primary" className="cursor-pointer">
+                Set as Primary Role
+              </Label>
             </div>
+            <p className="text-sm text-muted-foreground">
+              If checked, this role will become the person's primary role.
+            </p>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="start_date">Start Date</label>
-              <input
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Start Date</Label>
+              <Input
                 type="date"
                 id="start_date"
                 value={formData.start_date}
                 onChange={(e) => handleInputChange('start_date', e.target.value)}
-                className="form-input"
                 disabled={isSubmitting}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="end_date">End Date</label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="end_date">End Date</Label>
+              <Input
                 type="date"
                 id="end_date"
                 value={formData.end_date}
                 onChange={(e) => handleInputChange('end_date', e.target.value)}
-                className="form-input"
                 disabled={isSubmitting}
               />
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting || !formData.role_id}
-            >
-              {isSubmitting ? 'Saving...' : (editingRole ? 'Update Role' : 'Add Role')}
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !formData.role_id}>
+              {isSubmitting && <Spinner className="mr-2" size="sm" />}
+              {editingRole ? 'Update Role' : 'Add Role'}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

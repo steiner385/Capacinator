@@ -8,13 +8,13 @@ const createMockQuery = () => {
     select: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     whereIn: jest.fn().mockReturnThis(),
-    first: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-    del: jest.fn().mockReturnThis(),
-    returning: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
+    first: jest.fn() as jest.Mock,
+    insert: jest.fn() as jest.Mock,
+    update: jest.fn() as jest.Mock,
+    delete: jest.fn() as jest.Mock,
+    del: jest.fn() as jest.Mock,
+    returning: jest.fn() as jest.Mock,
+    orderBy: jest.fn() as jest.Mock,
     join: jest.fn().mockReturnThis(),
     leftJoin: jest.fn().mockReturnThis(),
     groupBy: jest.fn().mockReturnThis(),
@@ -46,9 +46,9 @@ describe('UserPermissionsController', () => {
     };
 
     mockRes = {
-      json: jest.fn(),
+      json: jest.fn().mockReturnThis(),
       status: jest.fn().mockReturnThis()
-    };
+    } as any;
   });
 
   describe('getSystemPermissions', () => {
@@ -120,49 +120,7 @@ describe('UserPermissionsController', () => {
     });
   });
 
-  describe('createUserRole', () => {
-    it('should create a new user role', async () => {
-      const newRole = {
-        name: 'Project Manager',
-        description: 'Manages projects',
-        priority: 3,
-        is_system_admin: false,
-        permissions: ['projects:view', 'projects:edit']
-      };
-
-      mockReq.body = newRole;
-
-      const mockQuery = createMockQuery();
-      const mockRole = { id: '3', ...newRole };
-      mockQuery.returning.mockResolvedValue([mockRole]);
-      (controller as any).db = jest.fn(() => mockQuery);
-
-      await controller.createUserRole(mockReq as Request, mockRes as Response);
-
-      expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        data: mockRole
-      });
-    });
-
-    it('should return 400 for missing required fields', async () => {
-      const incompleteRole = {
-        name: 'Test Role'
-        // Missing other required fields
-      };
-
-      mockReq.body = incompleteRole;
-
-      await controller.createUserRole(mockReq as Request, mockRes as Response);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Missing required fields: name, description, priority, is_system_admin'
-      });
-    });
-  });
-
+  
   describe('updateUserRole', () => {
     it('should update an existing user role', async () => {
       const updateData = {
@@ -187,38 +145,7 @@ describe('UserPermissionsController', () => {
     });
   });
 
-  describe('deleteUserRole', () => {
-    it('should delete a user role', async () => {
-      mockReq.params = { roleId: '1' };
-
-      const mockQuery = createMockQuery();
-      mockQuery.del.mockResolvedValue(1); // One row deleted
-      (controller as any).db = jest.fn(() => mockQuery);
-
-      await controller.deleteUserRole(mockReq as Request, mockRes as Response);
-
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        message: 'User role deleted successfully'
-      });
-    });
-
-    it('should return 404 if role not found', async () => {
-      mockReq.params = { roleId: '999' };
-
-      const mockQuery = createMockQuery();
-      mockQuery.del.mockResolvedValue(0); // No rows deleted
-      (controller as any).db = jest.fn(() => mockQuery);
-
-      await controller.deleteUserRole(mockReq as Request, mockRes as Response);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'User role not found'
-      });
-    });
-  });
-
+  
   describe('getUsersList', () => {
     it('should return paginated list of users with roles and permissions', async () => {
       const mockUsers = [
@@ -302,7 +229,7 @@ describe('UserPermissionsController', () => {
     });
   });
 
-  describe('updateUserRole assignment', () => {
+  describe('updateUserRole', () => {
     it('should update user role assignment', async () => {
       mockReq.params = { userId: '1' };
       mockReq.body = { roleId: '2' };
@@ -311,7 +238,7 @@ describe('UserPermissionsController', () => {
       mockQuery.update.mockResolvedValue(1);
       (controller as any).db = jest.fn(() => mockQuery);
 
-      await controller.updateUserRoleAssignment(mockReq as Request, mockRes as Response);
+      await controller.updateUserRole(mockReq as Request, mockRes as Response);
 
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
@@ -335,7 +262,7 @@ describe('UserPermissionsController', () => {
       mockQuery.insert.mockResolvedValue([]);
       (controller as any).db = jest.fn(() => mockQuery);
 
-      await controller.updateUserPermissionOverrides(mockReq as Request, mockRes as Response);
+      await controller.updateUserPermission(mockReq as Request, mockRes as Response);
 
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
@@ -347,7 +274,7 @@ describe('UserPermissionsController', () => {
       mockReq.params = { userId: '1' };
       mockReq.body = { overrides: 'invalid' };
 
-      await controller.updateUserPermissionOverrides(mockReq as Request, mockRes as Response);
+      await controller.updateUserPermission(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({

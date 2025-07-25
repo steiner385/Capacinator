@@ -1,7 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import FormModal from '../ui/FormModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Alert, AlertDescription } from '../ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { Spinner } from '../ui/spinner';
 
 interface PersonFormData {
   name: string;
@@ -218,212 +232,230 @@ export const PersonModal: React.FC<PersonModalProps> = ({
 
   const isLoading = createPersonMutation.isPending || updatePersonMutation.isPending;
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Person' : 'Add New Person'}
-      onSubmit={handleSubmit}
-      isLoading={isLoading}
-      size="lg"
-      submitText={isEditing ? 'Update Person' : 'Create Person'}
-    >
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="name">Name *</label>
-          <input
-            type="text"
-            id="name"
-            className={`form-input ${errors.name ? 'error' : ''}`}
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="Enter full name"
-          />
-          {errors.name && <span className="error-message">{errors.name}</span>}
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Person' : 'Add New Person'}</DialogTitle>
+          <DialogDescription>
+            {isEditing 
+              ? 'Update the person\'s information below.' 
+              : 'Fill in the information to create a new person.'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="form-group">
-          <label htmlFor="email">Email *</label>
-          <input
-            type="email"
-            id="email"
-            className={`form-input ${errors.email ? 'error' : ''}`}
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            placeholder="Enter email address"
-          />
-          {errors.email && <span className="error-message">{errors.email}</span>}
-        </div>
+        {hasErrors && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please fix the errors below before submitting.
+            </AlertDescription>
+          </Alert>
+        )}
 
-        <div className="form-group">
-          <label htmlFor="phone">Phone</label>
-          <input
-            type="tel"
-            id="phone"
-            className="form-input"
-            value={formData.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            placeholder="Enter phone number"
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Enter full name"
+                className={errors.name ? 'border-destructive' : ''}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="title">Title</label>
-          <input
-            type="text"
-            id="title"
-            className="form-input"
-            value={formData.title}
-            onChange={(e) => handleChange('title', e.target.value)}
-            placeholder="Enter job title"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                type="email"
+                id="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                placeholder="Enter email address"
+                className={errors.email ? 'border-destructive' : ''}
+              />
+              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="department">Department</label>
-          <input
-            type="text"
-            id="department"
-            className="form-input"
-            value={formData.department}
-            onChange={(e) => handleChange('department', e.target.value)}
-            placeholder="Enter department"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                type="tel"
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="Enter phone number"
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="location_id">Location</label>
-          <select
-            id="location_id"
-            className="form-select"
-            value={formData.location_id}
-            onChange={(e) => handleChange('location_id', e.target.value)}
-          >
-            <option value="">Select location</option>
-            {locations?.map((location: any) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleChange('title', e.target.value)}
+                placeholder="Enter job title"
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="primary_person_role_id">Primary Role *</label>
-          <select
-            id="primary_person_role_id"
-            className={`form-select ${errors.primary_person_role_id ? 'error' : ''}`}
-            value={formData.primary_person_role_id}
-            onChange={(e) => handleChange('primary_person_role_id', e.target.value)}
-          >
-            <option value="">Select primary role</option>
-            {filteredRoles?.map((role: any) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-          {errors.primary_person_role_id && <span className="error-message">{errors.primary_person_role_id}</span>}
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                value={formData.department}
+                onChange={(e) => handleChange('department', e.target.value)}
+                placeholder="Enter department"
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="supervisor_id">Supervisor</label>
-          <select
-            id="supervisor_id"
-            className="form-select"
-            value={formData.supervisor_id}
-            onChange={(e) => handleChange('supervisor_id', e.target.value)}
-          >
-            <option value="">Select supervisor</option>
-            {filteredSupervisors?.map((person: any) => (
-              <option key={person.id} value={person.id}>
-                {person.name} ({person.title || 'No Title'})
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="location_id">Location</Label>
+              <Select value={formData.location_id} onValueChange={(value) => handleChange('location_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {locations?.map((location: any) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="worker_type">Worker Type</label>
-          <select
-            id="worker_type"
-            className="form-select"
-            value={formData.worker_type}
-            onChange={(e) => handleChange('worker_type', e.target.value)}
-          >
-            <option value="FTE">Full-time Employee</option>
-            <option value="contractor">Contractor</option>
-            <option value="intern">Intern</option>
-            <option value="consultant">Consultant</option>
-          </select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="primary_person_role_id">Primary Role *</Label>
+              <Select 
+                value={formData.primary_person_role_id} 
+                onValueChange={(value) => handleChange('primary_person_role_id', value)}
+              >
+                <SelectTrigger className={errors.primary_person_role_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select primary role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredRoles?.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.primary_person_role_id && <p className="text-sm text-destructive">{errors.primary_person_role_id}</p>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="default_availability_percentage">Default Availability (%)</label>
-          <input
-            type="number"
-            id="default_availability_percentage"
-            className="form-input"
-            value={formData.default_availability_percentage}
-            onChange={(e) => handleChange('default_availability_percentage', Number(e.target.value))}
-            min="0"
-            max="100"
-            placeholder="100"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="supervisor_id">Supervisor</Label>
+              <Select value={formData.supervisor_id} onValueChange={(value) => handleChange('supervisor_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supervisor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {filteredSupervisors?.map((person: any) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name} ({person.title || 'No Title'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="default_hours_per_day">Default Hours per Day</label>
-          <input
-            type="number"
-            id="default_hours_per_day"
-            className="form-input"
-            value={formData.default_hours_per_day}
-            onChange={(e) => handleChange('default_hours_per_day', Number(e.target.value))}
-            min="1"
-            max="24"
-            step="0.5"
-            placeholder="8"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="worker_type">Worker Type</Label>
+              <Select value={formData.worker_type} onValueChange={(value) => handleChange('worker_type', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FTE">Full-time Employee</SelectItem>
+                  <SelectItem value="contractor">Contractor</SelectItem>
+                  <SelectItem value="intern">Intern</SelectItem>
+                  <SelectItem value="consultant">Consultant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="start_date">Start Date</label>
-          <input
-            type="date"
-            id="start_date"
-            className="form-input"
-            value={formData.start_date}
-            onChange={(e) => handleChange('start_date', e.target.value)}
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="default_availability_percentage">Default Availability (%)</Label>
+              <Input
+                type="number"
+                id="default_availability_percentage"
+                value={formData.default_availability_percentage}
+                onChange={(e) => handleChange('default_availability_percentage', Number(e.target.value))}
+                min="0"
+                max="100"
+                placeholder="100"
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="end_date">End Date</label>
-          <input
-            type="date"
-            id="end_date"
-            className="form-input"
-            value={formData.end_date}
-            onChange={(e) => handleChange('end_date', e.target.value)}
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="default_hours_per_day">Default Hours per Day</Label>
+              <Input
+                type="number"
+                id="default_hours_per_day"
+                value={formData.default_hours_per_day}
+                onChange={(e) => handleChange('default_hours_per_day', Number(e.target.value))}
+                min="1"
+                max="24"
+                step="0.5"
+                placeholder="8"
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="status">Status</label>
-          <select
-            id="status"
-            className="form-select"
-            value={formData.status}
-            onChange={(e) => handleChange('status', e.target.value)}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
-      </div>
-    </FormModal>
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Start Date</Label>
+              <Input
+                type="date"
+                id="start_date"
+                value={formData.start_date}
+                onChange={(e) => handleChange('start_date', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end_date">End Date</Label>
+              <Input
+                type="date"
+                id="end_date"
+                value={formData.end_date}
+                onChange={(e) => handleChange('end_date', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value) => handleChange('status', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Spinner className="mr-2" size="sm" />}
+              {isEditing ? 'Update Person' : 'Create Person'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

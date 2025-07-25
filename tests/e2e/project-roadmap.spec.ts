@@ -298,9 +298,9 @@ test.describe('Project Roadmap', () => {
         await phaseBars.first().click();
         
         // Verify modal opens
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await expect(page.locator('[data-radix-dialog-overlay]')).toBeVisible();
         await expect(page.locator('.modal-container')).toBeVisible();
-        await expect(page.locator('.modal-header h3')).toContainText('Edit Phase Dates');
+        await expect(page.locator('[role="dialog"] > div > div:first-child h3')).toContainText('Edit Phase Dates');
         
         // Verify form fields
         await expect(page.locator('input[type="date"]').first()).toBeVisible(); // Start date
@@ -320,13 +320,13 @@ test.describe('Project Roadmap', () => {
       if (await phaseBars.count() > 0) {
         // Open modal
         await phaseBars.first().click();
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await expect(page.locator('[data-radix-dialog-overlay]')).toBeVisible();
         
         // Click cancel
         await page.locator('button:has-text("Cancel")').click();
         
         // Modal should be gone
-        await expect(page.locator('.modal-overlay')).not.toBeVisible();
+        await expect(page.locator('[data-radix-dialog-overlay]')).not.toBeVisible();
         
         console.log('✅ Modal closes when cancelled');
       }
@@ -338,13 +338,13 @@ test.describe('Project Roadmap', () => {
       if (await phaseBars.count() > 0) {
         // Open modal
         await phaseBars.first().click();
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await expect(page.locator('[data-radix-dialog-overlay]')).toBeVisible();
         
         // Click X button
-        await page.locator('.modal-header button').click();
+        await page.locator('[role="dialog"] > div > div:first-child button').click();
         
         // Modal should be gone
-        await expect(page.locator('.modal-overlay')).not.toBeVisible();
+        await expect(page.locator('[data-radix-dialog-overlay]')).not.toBeVisible();
         
         console.log('✅ Modal closes when X is clicked');
       }
@@ -356,7 +356,7 @@ test.describe('Project Roadmap', () => {
       if (await phaseBars.count() > 0) {
         // Open modal
         await phaseBars.first().click();
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await expect(page.locator('[data-radix-dialog-overlay]')).toBeVisible();
         
         // Get date inputs
         const startDateInput = page.locator('input[type="date"]').first();
@@ -444,7 +444,7 @@ test.describe('Project Roadmap', () => {
       await page.goto('/roadmap');
       
       // Check if loading spinner appears (may be very brief)
-      const loadingSpinner = page.locator('.loading-spinner, .loading-container');
+      const loadingSpinner = page.locator('svg[class*="animate-spin"], .loading-container');
       
       // Either loading shows briefly, or content loads fast enough that we skip it
       // Both are acceptable behaviors

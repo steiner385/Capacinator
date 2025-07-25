@@ -34,7 +34,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
     // Test 1: Create test scenario via UI
     console.log('Creating test scenario via UI');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content, input[id="scenario-name"]', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div, input[id="scenario-name"]', { timeout: 5000 });
 
     // Fill scenario form
     await page.fill('input[id="scenario-name"]', 'UI Corruption Test');
@@ -81,7 +81,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
     // Test 4: Verify database integrity by checking if we can still create scenarios
     console.log('🔍 Testing database integrity via UI');
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
 
     // Fill another scenario to test integrity
     await page.fill('input[id="scenario-name"]', 'Integrity Check Scenario');
@@ -115,7 +115,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
     const concurrentCreations = pages.map(async (page, index) => {
       try {
         await page.click('button:has-text("New Scenario")');
-        await page.waitForSelector('.modal-content', { timeout: 5000 });
+        await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
         
         await page.fill('input[id="scenario-name"]', 'Concurrent UI Test ' + (index + 1));
         await page.fill('textarea[id="scenario-description"]', 'Testing concurrent UI operations ' + (index + 1));
@@ -162,7 +162,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
       console.log('Creating scenario ' + i + '/3');
       
       await page.click('button:has-text("New Scenario")');
-      await page.waitForSelector('.modal-content', { timeout: 5000 });
+      await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
       
       await page.fill('input[id="scenario-name"]', 'Rapid Creation Test ' + i);
       await page.fill('textarea[id="scenario-description"]', 'Testing rapid UI operations ' + i);
@@ -191,7 +191,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
 
     // Test creating scenario with invalid data
     await page.click('button:has-text("New Scenario")');
-    await page.waitForSelector('.modal-content', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] > div', { timeout: 5000 });
 
     // Try to submit with empty name (should show validation)
     const submitButton = page.locator('button:has-text("Create Scenario")');
@@ -206,7 +206,7 @@ test.describe('Database Corruption Prevention UI Tests', () => {
     }
 
     // UI should still be functional
-    const modalStillVisible = await page.locator('.modal-content').isVisible();
+    const modalStillVisible = await page.locator('[role="dialog"] > div').isVisible();
     expect(modalStillVisible).toBe(true);
     console.log('✅ UI validation working - modal stays open for invalid input');
 

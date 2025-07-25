@@ -219,7 +219,7 @@ test.describe('Scenario Visual Regression Tests', () => {
       await page.getByRole('button', { name: 'New Scenario' }).click();
       await page.waitForTimeout(300);
       
-      const modal = page.locator('.modal-content');
+      const modal = page.locator('[role="dialog"] > div');
       await expect(modal).toHaveScreenshot('create-scenario-modal.png');
     });
 
@@ -239,7 +239,7 @@ test.describe('Scenario Visual Regression Tests', () => {
       await page.getByRole('button', { name: 'New Scenario' }).click();
       await page.waitForTimeout(300);
       
-      const modalFooter = page.locator('.modal-footer');
+      const modalFooter = page.locator('[role="dialog"] > div > div:last-child');
       await expect(modalFooter).toHaveScreenshot('modal-buttons.png');
     });
   });
