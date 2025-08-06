@@ -1,23 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-async function loginAsUser(page: any) {
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  
-  // Click the combobox to open it
-  const loginSelect = page.locator('#person-select');
-  await loginSelect.waitFor({ state: 'visible' });
-  await loginSelect.click();
-  
-  // Wait for dropdown to open and select the first option
-  await page.locator('[role="option"]').first().click();
-  
-  const loginButton = page.getByRole('button', { name: 'Continue' });
-  await loginButton.click();
-  
-  // Wait for navigation to dashboard or any authenticated page
-  await page.waitForURL((url) => url.pathname !== '/', { waitUntil: 'domcontentloaded', timeout: 10000 });
-}
+import { test, expect } from './helpers/base-test';
 
 async function navigateToProjectDetail(page: any) {
   await page.goto('/projects');
@@ -28,11 +9,8 @@ async function navigateToProjectDetail(page: any) {
 }
 
 test.describe('Phase Duplication - Simplified Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsUser(page);
-  });
-
-  test('basic phase duplication workflow', async ({ page }) => {
+  test('basic phase duplication workflow', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     await navigateToProjectDetail(page);
     
     // 1. Check Add Phase button is enabled (no selection needed anymore)
@@ -67,7 +45,8 @@ test.describe('Phase Duplication - Simplified Tests', () => {
     await expect(page.locator('.modal-overlay')).not.toBeVisible();
   });
 
-  test('create duplicate phase at beginning', async ({ page }) => {
+  test('create duplicate phase at beginning', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     await navigateToProjectDetail(page);
     
     // Open Add Phase modal
@@ -95,7 +74,8 @@ test.describe('Phase Duplication - Simplified Tests', () => {
     await expect(page.getByText('Test Phase Beginning')).toBeVisible({ timeout: 10000 });
   });
 
-  test('handle custom dates', async ({ page }) => {
+  test('handle custom dates', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     await navigateToProjectDetail(page);
     
     // Open Add Phase modal
@@ -122,7 +102,8 @@ test.describe('Phase Duplication - Simplified Tests', () => {
     await page.getByRole('button', { name: 'Cancel' }).click();
   });
 
-  test('overlap adjustment checkbox toggle', async ({ page }) => {
+  test('overlap adjustment checkbox toggle', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     await navigateToProjectDetail(page);
     
     // Open Add Phase modal
