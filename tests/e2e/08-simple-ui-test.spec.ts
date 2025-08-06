@@ -10,8 +10,8 @@ test.describe('Simple UI Test', () => {
   });
 
   test('should load and display basic UI elements', async ({ page }) => {
-    // Should load the page
-    await helpers.waitForNavigation();
+    // Handle profile selection and setup
+    await helpers.setupPage();
     
     // Should have a title/heading
     await expect(page.locator('h1').first()).toBeVisible();
@@ -24,7 +24,7 @@ test.describe('Simple UI Test', () => {
   });
 
   test('should be able to navigate to different pages', async ({ page }) => {
-    await helpers.waitForNavigation();
+    await helpers.setupPage();
     
     // Try to find and click Projects link
     const projectsLink = page.locator('a').filter({ hasText: 'Projects' }).first();

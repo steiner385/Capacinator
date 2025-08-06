@@ -14,7 +14,7 @@ test.describe('Data Tables Functionality', () => {
     await helpers.waitForDataTable();
     
     // Table should be visible
-    await expect(page.locator('.data-table-wrapper')).toBeVisible();
+    await expect(page.locator('table')).toBeVisible();
     
     // Should have table headers
     const headers = ['Project Name', 'Project Type', 'Location', 'Start Date', 'End Date', 'Current Phase', 'Actions'];
@@ -69,7 +69,7 @@ test.describe('Data Tables Functionality', () => {
     await helpers.waitForDataTable();
     
     // Table should be visible
-    await expect(page.locator('.data-table-wrapper')).toBeVisible();
+    await expect(page.locator('table')).toBeVisible();
     
     // Should have appropriate headers
     const headers = ['NAME', 'PRIMARY ROLE', 'TYPE', 'LOCATION', 'AVAILABILITY', 'HOURS/DAY', 'ACTIONS'];
@@ -92,7 +92,7 @@ test.describe('Data Tables Functionality', () => {
     await helpers.waitForDataTable();
     
     // Table should be visible
-    await expect(page.locator('.data-table-wrapper')).toBeVisible();
+    await expect(page.locator('table')).toBeVisible();
     
     // Should have people-specific headers (since roles are integrated into people)
     const headers = ['NAME', 'PRIMARY ROLE', 'TYPE', 'LOCATION', 'AVAILABILITY', 'HOURS/DAY', 'ACTIONS'];
@@ -106,17 +106,29 @@ test.describe('Data Tables Functionality', () => {
   });
 
   test('should display and interact with Assignments table', async ({ page }) => {
-    await helpers.navigateTo('/assignments');
-    await helpers.setupPage();
-    await helpers.waitForDataTable();
+    // Navigate and handle profile selection manually to avoid timeout
+    await page.goto('/assignments');
+    await page.waitForLoadState('networkidle');
     
-    // Page should load with either data table or no data message
+    // Handle profile selection if needed
+    const profileModalExists = await page.locator('text=Select Your Profile').count() > 0;
+    if (profileModalExists) {
+      const selectTrigger = page.locator('[role="combobox"], button:has-text("Select your name")').first();
+      await selectTrigger.click();
+      await page.waitForSelector('[role="option"]', { timeout: 5000 });
+      await page.locator('[role="option"]').first().click();
+      await page.waitForTimeout(1000);
+      await page.locator('button:has-text("Continue")').click({ force: true });
+      await page.waitForTimeout(2000);
+    }
+    
+    // Page should load with assignments heading
     const pageTitle = page.locator('h1:has-text("Assignments")');
-    await expect(pageTitle).toBeVisible();
+    await expect(pageTitle).toBeVisible({ timeout: 10000 });
     
     // Check if there's data or no data message
     const noDataMessage = page.locator('text=No data available');
-    const dataTableWrapper = page.locator('.data-table-wrapper');
+    const dataTable = page.locator('table');
     
     if (await noDataMessage.isVisible()) {
       // If no data, verify page structure still exists
@@ -124,7 +136,7 @@ test.describe('Data Tables Functionality', () => {
       console.log('No assignments data available - test passed with empty state');
     } else {
       // If data exists, verify table headers
-      await expect(dataTableWrapper).toBeVisible();
+      await expect(dataTable).toBeVisible();
       const headers = ['Project', 'Person', 'Role', 'Allocation', 'Start Date', 'End Date', 'Duration', 'Actions'];
       for (const header of headers) {
         await expect(page.locator(`th:has-text("${header}")`)).toBeVisible();

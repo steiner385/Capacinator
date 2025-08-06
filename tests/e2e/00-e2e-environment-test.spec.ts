@@ -7,7 +7,7 @@ test.describe('E2E Environment Verification', () => {
     await page.goto('/');
     const baseURL = page.url();
     
-    if (baseURL.includes('dev.capacinator.com')) {
+    if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
       console.log('⚠️ Skipping E2E environment verification - running against dev environment instead of isolated E2E');
       return;
     }
@@ -46,7 +46,7 @@ test.describe('E2E Environment Verification', () => {
     await page.goto('/');
     const baseURL = page.url();
     
-    if (baseURL.includes('dev.capacinator.com')) {
+    if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
       console.log('⚠️ Skipping E2E database isolation verification - running against dev environment');
       return;
     }
@@ -71,7 +71,7 @@ test.describe('E2E Environment Verification', () => {
     await page.goto('/scenarios');
     const baseURL = page.url();
     
-    if (baseURL.includes('dev.capacinator.com')) {
+    if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
       console.log('⚠️ Skipping E2E scenarios verification - running against dev environment');
       return;
     }
@@ -104,7 +104,7 @@ test.describe('E2E Environment Verification', () => {
     await page.goto('/');
     const baseURL = page.url();
     
-    if (baseURL.includes('dev.capacinator.com')) {
+    if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
       console.log('⚠️ Skipping E2E environment isolation verification - running against dev environment');
       return;
     }

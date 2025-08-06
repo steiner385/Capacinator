@@ -485,6 +485,7 @@ export class TestHelpers {
     const tableSelectors = [
       'table',  // Standard HTML table
       '[role="table"]',  // ARIA table
+      '.rounded-md.border table',  // Table within the rounded border
       '.data-table-wrapper',
       '.table-container',
       '.table',
@@ -575,7 +576,7 @@ export class TestHelpers {
    * Get table row count
    */
   async getTableRowCount(): Promise<number> {
-    const rows = await this.page.locator('.table tbody tr').count();
+    const rows = await this.page.locator('table tbody tr, .table tbody tr').count();
     return rows;
   }
 
@@ -583,7 +584,7 @@ export class TestHelpers {
    * Click table row by index
    */
   async clickTableRow(index: number) {
-    await this.page.click(`.table tbody tr:nth-child(${index + 1})`);
+    await this.page.click(`table tbody tr:nth-child(${index + 1}), .table tbody tr:nth-child(${index + 1})`);
   }
 
   /**
@@ -817,22 +818,40 @@ export class TestHelpers {
       '.chart-container',                   // Charts
       'table, .table',                      // Tables
       '.actionable-item',                   // Actionable items
-      '.full-width-tables'                  // Full width tables
+      '.full-width-tables',                 // Full width tables
+      'text=No data available',             // No data message
+      'h1',                                 // Any main heading
+      '.new-assignment-btn, button:has-text("New Assignment")'  // Assignment page specific
     ];
     
-    for (const selector of contentSelectors) {
+    // Create a race condition between finding content and timeout
+    const contentPromises = contentSelectors.map(async (selector) => {
       try {
-        await this.page.waitForSelector(selector, { timeout: 3000 });
-        console.log(`✅ Found content: ${selector}`);
-        return; // Found content, can proceed
+        await this.page.waitForSelector(selector, { timeout: 8000 });
+        return selector;
       } catch {
-        continue; // Try next selector
+        return null;
+      }
+    });
+    
+    // Add a timeout promise as well
+    const timeoutPromise = new Promise<string>((resolve) => {
+      setTimeout(() => resolve('timeout'), 10000);
+    });
+    
+    const result = await Promise.race([...contentPromises, timeoutPromise]);
+    
+    if (result && result !== 'timeout') {
+      console.log(`✅ Found content: ${result}`);
+    } else {
+      // If no specific content found or timeout, check if page is still valid
+      if (!this.page.isClosed()) {
+        console.log('⚠️ No specific content found within timeout, but page is still open');
+        // Just continue - the page might be valid but empty or slow loading
+      } else {
+        throw new Error('Page closed while waiting for content');
       }
     }
-    
-    // If no specific content found, wait a bit more and continue
-    console.log('⚠️ No specific content found, waiting additional time...');
-    await this.page.waitForTimeout(2000);
   }
 
   /**
