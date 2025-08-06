@@ -85,8 +85,8 @@ test.describe('Phase Duplication - Simplified Tests', () => {
     // Fill custom name
     await page.locator('input[name="custom_name"]').fill('Test Phase Beginning');
     
-    // Submit
-    await page.getByRole('button', { name: /create phase/i }).click();
+    // Submit - button text is "Duplicate Phase" when in duplicate mode
+    await page.getByRole('button', { name: /duplicate phase/i }).click();
     
     // Wait for modal to close
     await page.waitForSelector('.modal-overlay', { state: 'hidden', timeout: 10000 });
@@ -134,8 +134,9 @@ test.describe('Phase Duplication - Simplified Tests', () => {
     // Select a source phase
     await page.locator('select[name="source_phase"]').selectOption({ index: 1 });
     
-    // Find checkbox
-    const checkbox = page.locator('input[name="adjust_overlaps"]');
+    // Find checkbox by its label text
+    const checkboxLabel = page.locator('label:has-text("Automatically adjust overlapping phases")');
+    const checkbox = checkboxLabel.locator('input[type="checkbox"]');
     
     // Should be checked by default
     await expect(checkbox).toBeChecked();

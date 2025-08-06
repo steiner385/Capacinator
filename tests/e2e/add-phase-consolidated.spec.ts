@@ -64,7 +64,7 @@ test.describe('Consolidated Add Phase Functionality', () => {
     await page.locator('input[name="start_date"]').fill('2024-12-15');
     await page.locator('input[name="end_date"]').fill('2024-12-30');
     
-    // Submit the form
+    // Submit the form - button text is "Create Phase" for custom phase mode
     await page.getByRole('button', { name: /create phase/i }).click();
     
     // Wait for modal to close
@@ -113,11 +113,12 @@ test.describe('Consolidated Add Phase Functionality', () => {
     await nameInput.fill('Standard Phase Duplicate');
     
     // Verify overlap adjustment checkbox is checked
-    const overlapCheckbox = page.locator('input[name="adjust_overlaps"]');
+    const checkboxLabel = page.locator('label:has-text("Automatically adjust overlapping phases")');
+    const overlapCheckbox = checkboxLabel.locator('input[type="checkbox"]');
     await expect(overlapCheckbox).toBeChecked();
     
-    // Submit the form
-    await page.getByRole('button', { name: /create phase/i }).click();
+    // Submit the form - button text is "Duplicate Phase" for duplicate mode
+    await page.getByRole('button', { name: /duplicate phase/i }).click();
     
     // Wait for modal to close
     await expect(page.locator('.modal-overlay')).not.toBeVisible({ timeout: 10000 });
@@ -165,12 +166,13 @@ test.describe('Consolidated Add Phase Functionality', () => {
     await page.locator('input[name="custom_name"]').fill('Duplicated Custom Phase');
     
     // Uncheck overlap adjustment
-    const overlapCheckbox = page.locator('input[name="adjust_overlaps"]');
-    await overlapCheckbox.uncheck();
-    await expect(overlapCheckbox).not.toBeChecked();
+    const checkboxLabel2 = page.locator('label:has-text("Automatically adjust overlapping phases")');
+    const overlapCheckbox2 = checkboxLabel2.locator('input[type="checkbox"]');
+    await overlapCheckbox2.uncheck();
+    await expect(overlapCheckbox2).not.toBeChecked();
     
-    // Submit
-    await page.getByRole('button', { name: /create phase/i }).click();
+    // Submit - button text is "Duplicate Phase" for duplicate mode
+    await page.getByRole('button', { name: /duplicate phase/i }).click();
     
     // Wait for modal to close
     await expect(page.locator('.modal-overlay')).not.toBeVisible({ timeout: 10000 });
