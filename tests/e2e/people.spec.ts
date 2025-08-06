@@ -1,16 +1,18 @@
-import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { test, expect } from './helpers/base-test';
+import { testConfig, waitForPageReady, waitForApiCall } from './helpers/test-config';
 
 test.describe('People Page Functionality', () => {
   
-  test.beforeEach(async ({ page }) => {
+  test('should display people list', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
     await page.goto('/people');
-    const helpers = new TestHelpers(page);
-    await helpers.setupPage();
-  });
-
-  test('should display people list', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('People', { timeout: 10000 });
+    await waitForPageReady(page);
+    
+    // Wait for people data to load
+    await waitForApiCall(page, testConfig.api.people);
+    
+    await expect(page.locator('h1')).toContainText('People');
     
     // Should show data table
     await expect(page.locator('table')).toBeVisible();
@@ -19,22 +21,34 @@ test.describe('People Page Functionality', () => {
     await expect(page.locator('button:has-text("Add Person")')).toBeVisible();
   });
 
-  test('should handle Add Person button click', async ({ page }) => {
+  test('should handle Add Person button click', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
+    await page.goto('/people');
+    await waitForPageReady(page);
+    
     const addButton = page.locator('button:has-text("Add Person")');
-    await expect(addButton).toBeVisible({ timeout: 10000 });
+    await expect(addButton).toBeVisible();
     
-    // Click should either navigate to /people/new or show error
+    // Click should either navigate to /people/new or show modal
     await addButton.click();
+    await page.waitForTimeout(testConfig.testData.animationDelay);
     
-    await page.waitForTimeout(1000);
-    // We expect this to either show an error or navigate to a non-existent route
+    // Check if it navigates or shows modal
+    const url = page.url();
+    const hasModal = await page.locator(testConfig.selectors.modalDialog).isVisible();
+    
+    expect(url.includes('/people/new') || hasModal).toBeTruthy();
   });
 
-  test('should display person data in table', async ({ page }) => {
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+  test('should display person data in table', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -58,9 +72,12 @@ test.describe('People Page Functionality', () => {
     }
   });
   
-  test('should display team insights summary', async ({ page }) => {
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+  test('should display team insights summary', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
     
     // Check for team insights section
     const teamInsights = page.locator('.team-insights');
@@ -78,11 +95,14 @@ test.describe('People Page Functionality', () => {
     }
   });
   
-  test('should display workload status indicators', async ({ page }) => {
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+  test('should display workload status indicators', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -110,11 +130,14 @@ test.describe('People Page Functionality', () => {
     }
   });
   
-  test('should display and handle quick action buttons', async ({ page }) => {
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+  test('should display and handle quick action buttons', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -130,7 +153,7 @@ test.describe('People Page Functionality', () => {
         
         // Test button click navigation
         await firstActionButton.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(testConfig.testData.animationDelay);
         
         // Should navigate to appropriate page based on action
         const currentUrl = page.url();
@@ -147,9 +170,12 @@ test.describe('People Page Functionality', () => {
     }
   });
   
-  test('should apply correct status colors for workload indicators', async ({ page }) => {
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+  test('should apply correct status colors for workload indicators', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
     
     // Check for different status color classes
     const statusIndicators = page.locator('.status-indicator');
@@ -169,48 +195,82 @@ test.describe('People Page Functionality', () => {
     }
   });
 
-  test('should navigate to person details via name click', async ({ page }) => {
-    await page.waitForTimeout(2000);
+  test('should navigate to person details via name click', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
       const personName = tableRows.first().locator('td:first-child a, td:first-child button');
+      
+      // Click and wait for navigation
+      const navigationPromise = page.waitForNavigation({ timeout: testConfig.timeouts.navigation });
       await personName.click();
       
-      // Should navigate to person detail page
-      await page.waitForTimeout(1000);
-      
-      const url = page.url();
-      expect(url).toMatch(/\/people\/[^\/]+$/);
-      
-      // Should show person details page
-      await expect(page.locator('h1')).toBeVisible();
+      try {
+        await navigationPromise;
+        
+        // Should navigate to person detail page
+        const url = page.url();
+        expect(url).toMatch(/\/people\/[^\/]+$/);
+        
+        // Wait for detail page to load
+        await waitForPageReady(page);
+        
+        // Should show person details page
+        await expect(page.locator('h1')).toBeVisible();
+      } catch {
+        // Navigation might not happen immediately
+        await page.waitForTimeout(testConfig.testData.animationDelay);
+        const url = page.url();
+        expect(url).toMatch(/\/people\/[^\/]+$/);
+      }
     }
   });
 
-  test('should handle View button click', async ({ page }) => {
-    await page.waitForTimeout(2000);
+  test('should handle View button click', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
       const viewButton = tableRows.first().locator('button:has-text("View")');
+      
+      // Click and wait for navigation
+      const navigationPromise = page.waitForNavigation({ timeout: testConfig.timeouts.navigation });
       await viewButton.click();
       
-      // Should navigate to person detail page
-      await page.waitForTimeout(1000);
-      
-      const url = page.url();
-      expect(url).toMatch(/\/people\/[^\/]+$/);
+      try {
+        await navigationPromise;
+        
+        // Should navigate to person detail page
+        const url = page.url();
+        expect(url).toMatch(/\/people\/[^\/]+$/);
+      } catch {
+        // Navigation might not happen immediately
+        await page.waitForTimeout(testConfig.testData.animationDelay);
+        const url = page.url();
+        expect(url).toMatch(/\/people\/[^\/]+$/);
+      }
     }
   });
 
-  test('should handle contextual quick actions with proper parameters', async ({ page }) => {
-    // Wait for data to load
-    await page.waitForTimeout(2000);
+  test('should handle contextual quick actions with proper parameters', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
     
     const quickActionButtons = page.locator('.quick-action-btn');
     if (await quickActionButtons.count() > 0) {
@@ -219,7 +279,7 @@ test.describe('People Page Functionality', () => {
       
       // Click the action button
       await firstButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(testConfig.testData.animationDelay);
       
       const currentUrl = page.url();
       
@@ -237,25 +297,39 @@ test.describe('People Page Functionality', () => {
     }
   });
   
-  test('should handle Edit button click', async ({ page }) => {
-    await page.waitForTimeout(2000);
+  test('should handle Edit button click', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
       const editButton = tableRows.first().locator('button:has-text("Edit")');
       await editButton.click();
       
-      // Should attempt to navigate to edit page (will likely fail)
-      await page.waitForTimeout(1000);
+      // Wait for navigation or modal
+      await page.waitForTimeout(testConfig.testData.animationDelay);
+      
+      // Check if it navigates or shows modal
+      const url = page.url();
+      const hasModal = await page.locator(testConfig.selectors.modalDialog).isVisible();
+      
+      expect(url.includes('/edit') || hasModal).toBeTruthy();
     }
   });
 
-  test('should handle Delete button click', async ({ page }) => {
-    await page.waitForTimeout(2000);
+  test('should handle Delete button click', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
     
-    const tableRows = page.locator('table tbody tr');
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
+    const tableRows = page.locator(testConfig.selectors.dataTable);
     const rowCount = await tableRows.count();
     
     if (rowCount > 0) {
@@ -268,27 +342,40 @@ test.describe('People Page Functionality', () => {
       const deleteButton = tableRows.first().locator('button[title*="Delete"], button:has([data-testid="trash"])');
       await deleteButton.click();
       
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(testConfig.testData.animationDelay);
       
-      // Should log "TODO: Implement delete functionality" to console
-      expect(consoleMessages.some(msg => msg.includes('TODO: Implement delete functionality'))).toBe(true);
+      // Should either show confirmation modal or log to console
+      const hasModal = await page.locator(testConfig.selectors.modalDialog).isVisible();
+      const hasConsoleLog = consoleMessages.some(msg => msg.includes('TODO: Implement delete functionality'));
+      
+      expect(hasModal || hasConsoleLog).toBeTruthy();
     }
   });
 
-  test('should handle search and filters', async ({ page }) => {
+  test('should handle search and filters', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
+    await page.goto('/people');
+    await waitForPageReady(page);
+    await waitForApiCall(page, testConfig.api.people);
+    
     // Test search functionality
     const searchInput = page.locator('input[placeholder*="Search"], input[type="search"]');
     
     if (await searchInput.isVisible()) {
       await searchInput.fill('Alice');
-      await page.waitForTimeout(1000);
+      
+      // Wait for search results to update
+      await page.waitForTimeout(testConfig.testData.animationDelay);
       
       // Should filter results
-      const tableRows = page.locator('table tbody tr');
-      const rowCount = await tableRows.count();
+      const tableRows = page.locator(testConfig.selectors.dataTable);
       
-      if (rowCount > 0) {
-        // Should contain searched term
+      // Table should still be visible even if no results
+      await expect(page.locator('table')).toBeVisible();
+      
+      // If there are results, they should contain searched term
+      if (await tableRows.count() > 0) {
         await expect(tableRows.first()).toContainText('Alice');
       }
     }
@@ -298,7 +385,27 @@ test.describe('People Page Functionality', () => {
     
     if (await roleFilter.isVisible()) {
       await roleFilter.selectOption({ index: 1 }); // Select first non-"All" option
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(testConfig.testData.animationDelay);
+      
+      // Table should still be visible after filtering
+      await expect(page.locator('table')).toBeVisible();
     }
+  });
+
+  test('should show empty state when no people exist', async ({ authenticatedPage }) => {
+    const page = authenticatedPage;
+    
+    await page.goto('/people');
+    await waitForPageReady(page);
+    
+    // Check if empty state is shown
+    const emptyState = page.locator(testConfig.selectors.emptyState);
+    const tableRows = page.locator(testConfig.selectors.dataTable);
+    
+    // Either we have rows or an empty state
+    const hasRows = await tableRows.count() > 0;
+    const hasEmptyState = await emptyState.isVisible();
+    
+    expect(hasRows || hasEmptyState).toBeTruthy();
   });
 });

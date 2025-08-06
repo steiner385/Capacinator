@@ -67,6 +67,10 @@ export class AuthHelper {
         await this.page.waitForLoadState('networkidle', { timeout: 10000 });
         console.log('✅ Network activity settled');
         
+        // Wait for dashboard redirect
+        await this.page.waitForURL('**/dashboard', { timeout: 10000 });
+        console.log('✅ Redirected to dashboard');
+        
         this.profileSelected = true;
         console.log('🎉 Profile selection process completed');
       }
@@ -85,10 +89,12 @@ export class AuthHelper {
       await this.page.goto('/', { waitUntil: 'domcontentloaded' });
       
       // Check if we're already on a logged-in page (no profile modal)
-      const isOnProfilePage = this.page.url().includes('profile') || 
-                              this.page.url() === 'http://localhost:3120/';
+      const currentUrl = this.page.url();
+      const isOnProfilePage = currentUrl.includes('profile') || 
+                              currentUrl.endsWith('/') ||
+                              currentUrl.endsWith('/dashboard');
       
-      if (isOnProfilePage) {
+      if (isOnProfilePage && !currentUrl.endsWith('/dashboard')) {
         await this.handleProfileSelection();
       } else {
         // We might already be logged in, just verify
