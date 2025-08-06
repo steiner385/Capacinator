@@ -22,6 +22,11 @@ import { Scenario } from '../types';
 import { useUser } from '../contexts/UserContext';
 import './Scenarios.css';
 
+// Tree node type for hierarchical display
+interface ScenarioTreeNode extends Scenario {
+  children: ScenarioTreeNode[];
+}
+
 interface ScenarioCardProps {
   scenario: Scenario;
   onEdit: (scenario: Scenario) => void;
@@ -495,7 +500,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
                 This action cannot be undone. This will permanently delete the scenario
                 <strong> "{scenario.name}"</strong> and all its associated data.
               </p>
-              {scenario.children_count > 0 && (
+              {scenario.children_count && scenario.children_count > 0 && (
                 <p className="child-warning">
                   <strong>Warning:</strong> This scenario has {scenario.children_count} child scenarios
                   that will also be affected.
@@ -956,7 +961,7 @@ export const Scenarios: React.FC = () => {
     return {
       types: [...new Set(scenarios.map(s => s.scenario_type))],
       statuses: [...new Set(scenarios.map(s => s.status))],
-      creators: [...new Set(scenarios.map(s => s.created_by_name).filter(Boolean))]
+      creators: [...new Set(scenarios.map(s => s.created_by_name).filter((name): name is string => Boolean(name)))]
     };
   }, [scenarios]);
 
@@ -1084,8 +1089,10 @@ export const Scenarios: React.FC = () => {
 
     // Build hierarchical tree structure
     const buildScenarioTree = () => {
-      const scenarioMap = new Map(displayedScenarios.map(s => [s.id, { ...s, children: [] }]));
-      const roots: any[] = [];
+      const scenarioMap = new Map<string, ScenarioTreeNode>(
+        displayedScenarios.map(s => [s.id, { ...s, children: [] as ScenarioTreeNode[] }])
+      );
+      const roots: ScenarioTreeNode[] = [];
 
       displayedScenarios.forEach(scenario => {
         const scenarioNode = scenarioMap.get(scenario.id)!;

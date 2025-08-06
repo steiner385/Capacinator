@@ -20,6 +20,9 @@ export interface Project extends BaseEntity {
   current_phase_id?: string; // References project_phases.id, manually set to track progress
   start_date?: string;
   end_date?: string;
+  status?: string; // Project status (e.g., 'active', 'planned', etc.)
+  aspiration_start?: string; // Target start date for the project
+  aspiration_finish?: string; // Target end date for the project
   // Relations
   project_type?: ProjectType;
   location?: Location;
@@ -348,6 +351,7 @@ export interface Scenario extends BaseEntity {
   created_by_name?: string;
   parent_scenario_name?: string;
   child_scenarios?: Scenario[];
+  children_count?: number;
 }
 
 export interface ScenarioProjectAssignment extends BaseEntity {

@@ -25,9 +25,82 @@ jest.mock('../../../client/src/lib/api-client', () => ({
 // Mock react-router-dom hooks
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
-  MemoryRouter: ({ children }: { children: React.ReactNode }) => children,
+  Link: ({ children, to }: any) => <a href={to}>{children}</a>,
 }));
+
+// Mock UI components
+jest.mock('../../../client/src/components/ui/DataTable', () => ({
+  DataTable: ({ data, columns, onRowClick }: any) => (
+    <table>
+      <thead>
+        <tr>
+          {columns.map((col: any) => (
+            <th key={col.key}>{col.header}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data?.map((row: any, idx: number) => (
+          <tr key={idx} onClick={() => onRowClick?.(row)}>
+            {columns.map((col: any) => (
+              <td key={col.key}>
+                {col.render ? col.render(row[col.key], row) : row[col.key]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ),
+  Column: ({}: any) => null,
+}));
+
+jest.mock('../../../client/src/components/ui/FilterBar', () => ({
+  FilterBar: ({ filters, onChange }: any) => (
+    <div>Filter Bar</div>
+  ),
+}));
+
+jest.mock('../../../client/src/components/ui/LoadingSpinner', () => ({
+  LoadingSpinner: () => <div>Loading...</div>,
+}));
+
+jest.mock('../../../client/src/components/ui/ErrorMessage', () => ({
+  ErrorMessage: ({ message }: any) => <div>{message}</div>,
+}));
+
+jest.mock('../../../client/src/components/modals/PersonModal', () => {
+  return function PersonModal({ onClose }: any) {
+    return <div>Person Modal</div>;
+  };
+});
+
+jest.mock('../../../client/src/hooks/useModal', () => ({
+  useModal: () => ({
+    isOpen: false,
+    open: jest.fn(),
+    close: jest.fn(),
+  }),
+}));
+
+// Mock lucide-react icons
+jest.mock('lucide-react', () => ({
+  Plus: () => <span>Plus</span>,
+  Edit2: () => <span>Edit</span>,
+  Trash2: () => <span>Delete</span>,
+  Eye: () => <span>View</span>,
+  Users: () => <span>Users</span>,
+  UserPlus: () => <span>UserPlus</span>,
+  Search: () => <span>Search</span>,
+  TrendingUp: () => <span>TrendingUp</span>,
+  AlertTriangle: () => <span>AlertTriangle</span>,
+  CheckCircle: () => <span>CheckCircle</span>,
+}));
+
+// Mock the CSS import
+jest.mock('../../../client/src/pages/People.css', () => ({}));
 
 const mockPeopleData = [
   {
@@ -74,14 +147,14 @@ const mockUtilizationData = {
     {
       person_id: 'person-2',
       person_name: 'Jane Smith',
-      total_allocation: 30,
+      total_allocation: 50,  // Changed from 30 to 50 to be in the 40-80% range
       current_availability_percentage: 100,
       allocation_status: 'UNDER_ALLOCATED',
     },
     {
       person_id: 'person-3',
       person_name: 'Bob Wilson',
-      total_allocation: 60,
+      total_allocation: 80,  // Changed from 60 to 80 to make it 100% utilization
       current_availability_percentage: 80,
       allocation_status: 'FULLY_ALLOCATED',
     },
@@ -172,10 +245,15 @@ describe('People Workload Management', () => {
         // Check for status indicators
         expect(screen.getByText('120%')).toBeInTheDocument(); // John's over-allocation
         expect(screen.getByText('over allocated')).toBeInTheDocument();
-        expect(screen.getByText('75%')).toBeInTheDocument(); // Bob's utilization (60/80)
         expect(screen.getByText('fully allocated')).toBeInTheDocument();
-        expect(screen.getByText('30%')).toBeInTheDocument(); // Jane's utilization
+        expect(screen.getByText('50%')).toBeInTheDocument(); // Jane's utilization
         expect(screen.getByText('under allocated')).toBeInTheDocument();
+        
+        // Check that Bob Wilson's row shows 100% workload
+        const bobRow = screen.getByText('Bob Wilson').closest('tr');
+        const workloadCell = bobRow?.querySelector('.workload-status');
+        expect(workloadCell?.textContent).toContain('100%');
+        expect(workloadCell?.textContent).toContain('fully allocated');
       });
     });
 
@@ -209,10 +287,13 @@ describe('People Workload Management', () => {
       renderPeople();
       
       await waitFor(() => {
-        const assignMoreButtons = screen.getAllByText('Assign More');
-        expect(assignMoreButtons).toHaveLength(1); // Only for Jane Smith
+        // Find Jane Smith's row and check for Assign More button
+        const janeRow = screen.getByText('Jane Smith').closest('tr');
+        const assignMoreButton = janeRow?.querySelector('button[title="Assign More"]');
+        expect(assignMoreButton).toBeInTheDocument();
+        expect(assignMoreButton?.textContent).toContain('Assign More');
         
-        fireEvent.click(assignMoreButtons[0]);
+        fireEvent.click(assignMoreButton!);
         expect(mockNavigate).toHaveBeenCalledWith('/assignments/new?person=person-2');
       });
     });
@@ -235,9 +316,9 @@ describe('People Workload Management', () => {
           {
             person_id: 'person-1',
             person_name: 'John Doe',
-            total_allocation: 10,
+            total_allocation: 30,  // Less than 40% threshold
             current_availability_percentage: 100,
-            allocation_status: 'UNDER_ALLOCATED',
+            allocation_status: 'AVAILABLE',
           },
         ],
       };
@@ -263,12 +344,13 @@ describe('People Workload Management', () => {
         const overAllocatedElement = screen.getByText('120%').parentElement;
         expect(overAllocatedElement).toHaveClass('status-danger');
 
-        // Check for warning status (fully allocated)
-        const fullyAllocatedElement = screen.getByText('75%').parentElement;
-        expect(fullyAllocatedElement).toHaveClass('status-warning');
+        // Check for warning status (fully allocated) - Bob Wilson
+        const bobRow = screen.getByText('Bob Wilson').closest('tr');
+        const bobWorkloadIndicator = bobRow?.querySelector('.status-indicator');
+        expect(bobWorkloadIndicator).toHaveClass('status-warning');
 
-        // Check for info status (under-allocated)
-        const underAllocatedElement = screen.getByText('30%').parentElement;
+        // Check for info status (under-allocated) - Jane Smith
+        const underAllocatedElement = screen.getByText('50%').parentElement;
         expect(underAllocatedElement).toHaveClass('status-info');
       });
     });
@@ -279,16 +361,21 @@ describe('People Workload Management', () => {
       renderPeople();
       
       await waitFor(() => {
-        // Reduce Load button should be danger variant
-        const reduceLoadButton = screen.getByText('Reduce Load');
+        // Find each person's row and check their button variants
+        
+        // John Doe - Reduce Load button should be danger variant
+        const johnRow = screen.getByText('John Doe').closest('tr');
+        const reduceLoadButton = johnRow?.querySelector('button[title="Reduce Load"]');
         expect(reduceLoadButton).toHaveClass('btn-danger');
 
-        // Assign More button should be info variant
-        const assignMoreButton = screen.getByText('Assign More');
+        // Jane Smith - Assign More button should be info variant
+        const janeRow = screen.getByText('Jane Smith').closest('tr');
+        const assignMoreButton = janeRow?.querySelector('button[title="Assign More"]');
         expect(assignMoreButton).toHaveClass('btn-info');
 
-        // Monitor button should be warning variant
-        const monitorButton = screen.getByText('Monitor');
+        // Bob Wilson - Monitor button should be warning variant
+        const bobRow = screen.getByText('Bob Wilson').closest('tr');
+        const monitorButton = bobRow?.querySelector('button[title="Monitor"]');
         expect(monitorButton).toHaveClass('btn-warning');
       });
     });

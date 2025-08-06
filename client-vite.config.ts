@@ -22,12 +22,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './client/src'),
     },
   },
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: './tests/unit/client/setup/setup.ts',
-    include: ['tests/unit/client/**/*.{test,spec}.{js,ts,jsx,tsx}'],
-  },
   build: {
     outDir: 'dist-client',
     rollupOptions: {
@@ -73,11 +67,5 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
-  },
-  resolve: {
-    alias: {
-      '@': '/client/src',
-      '@client': '/client/src'
-    }
   },
 })

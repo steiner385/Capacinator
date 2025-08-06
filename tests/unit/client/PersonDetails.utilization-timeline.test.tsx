@@ -105,7 +105,7 @@ const renderPersonDetails = (personId = 'test-person-id') => {
       queries: { 
         retry: false,
         staleTime: 0,
-        cacheTime: 0,
+        gcTime: 0,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false
