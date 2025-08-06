@@ -107,6 +107,10 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       queryClient.invalidateQueries({ queryKey: ['demands'] });
       setShowAddPhase(false);
       setAddPhaseMode('existing');
+    },
+    onError: (error: any) => {
+      console.error('Error creating custom phase:', error);
+      alert(`Error creating custom phase: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -126,6 +130,10 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       setPlacementAfterPhaseId('');
       setAdjustOverlapping(true);
       setAddPhaseMode('existing');
+    },
+    onError: (error: any) => {
+      console.error('Error duplicating phase:', error);
+      alert(`Error duplicating phase: ${error.message || 'Unknown error'}`);
     }
   });
 
@@ -177,7 +185,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       description: formData.get('description') as string,
       start_date: formData.get('start_date') as string,
       end_date: formData.get('end_date') as string,
-      order_index: parseInt(formData.get('order_index') as string) || 99,
+      order_index: 99, // Default order index for custom phases
     });
   };
 

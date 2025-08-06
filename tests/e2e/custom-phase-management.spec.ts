@@ -34,8 +34,11 @@ test.describe('Custom Phase Management', () => {
     await page.waitForSelector('h1:has-text("Custom Phase Test Project")');
     await page.click('text=Project Phases & Timeline');
     
-    // Click "Create Custom Phase" button
-    await page.click('button:has-text("Create Custom Phase")');
+    // Click "Add Phase" button (consolidated UI)
+    await page.click('button:has-text("Add Phase")');
+    
+    // Select "Blank Custom Phase" option
+    await page.locator('.selection-card').filter({ hasText: 'Blank Custom Phase' }).click();
     
     // Fill out custom phase form
     await page.fill('input[name="phase_name"]', 'Client Review Iteration');
@@ -44,11 +47,11 @@ test.describe('Custom Phase Management', () => {
     await page.fill('input[name="start_date"]', '2024-06-01');
     await page.fill('input[name="end_date"]', '2024-06-15');
     
-    // Submit form
+    // Submit form - button text is "Create Phase" for custom phase mode
     await page.click('button[type="submit"]:has-text("Create Phase")');
     
     // Wait for modal to close and phase to appear in table
-    await page.waitForSelector('button:has-text("Create Custom Phase")', { state: 'visible' });
+    await page.waitForSelector('button:has-text("Add Phase")', { state: 'visible' });
     await expect(page.locator('table tbody tr:has-text("Client Review Iteration")')).toBeVisible();
     
     // Verify phase details in table
@@ -92,26 +95,27 @@ test.describe('Custom Phase Management', () => {
     await expect(page.locator('table tbody tr:has-text("Planning")')).toBeVisible();
     await expect(page.locator('table tbody tr:has-text("Development")')).toBeVisible();
     
-    // Click "Duplicate Phase" button
-    await page.click('button:has-text("Duplicate Phase")');
+    // Click "Add Phase" button (consolidated UI)
+    await page.click('button:has-text("Add Phase")');
+    
+    // Select "Duplicate Existing Phase" option
+    await page.locator('.selection-card').filter({ hasText: 'Duplicate Existing Phase' }).click();
     
     // Select source phase to duplicate
-    await page.selectOption('select[value=""][required]', { label: 'Development' });
-    await page.waitForTimeout(500); // Wait for source phase selection to register
+    await page.selectOption('select[name="source_phase"]', { label: 'Development' });
     
-    // Select target phase (available phase not yet in project)
-    await page.selectOption('select[name="target_phase_id"]', { label: 'System Integration Testing' });
+    // Select placement - "After" another phase
+    await page.locator('.selection-card-inline').filter({ hasText: 'After' }).click();
+    await page.selectOption('select[name="after_phase_id"]', { label: 'Planning' });
     
     // Fill out duplication details
     await page.fill('input[name="custom_name"]', 'Development Round 2');
-    await page.fill('input[name="start_date"]', '2024-05-01');
-    await page.fill('input[name="end_date"]', '2024-06-30');
     
-    // Submit duplication
+    // Submit duplication - button text is "Duplicate Phase" for duplicate mode
     await page.click('button[type="submit"]:has-text("Duplicate Phase")');
     
     // Wait for modal to close and new phase to appear
-    await page.waitForSelector('button:has-text("Duplicate Phase")', { state: 'visible' });
+    await page.waitForSelector('button:has-text("Add Phase")', { state: 'visible' });
     await expect(page.locator('table tbody tr:has-text("System Integration Testing")')).toBeVisible();
     
     // Verify the duplicated phase has correct dates
