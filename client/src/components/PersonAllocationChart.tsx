@@ -21,6 +21,8 @@ interface AllocationData {
 }
 
 export function PersonAllocationChart({ personId, personName, startDate, endDate }: PersonAllocationChartProps) {
+  const [brushStart, setBrushStart] = React.useState<number>(0);
+  const [brushEnd, setBrushEnd] = React.useState<number>(0);
   const { data: timelineData, isLoading, error } = useQuery({
     queryKey: ['person-timeline', personId],
     queryFn: async () => {
@@ -191,11 +193,17 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     });
   }, [timelineData, utilizationData, startDate, endDate]);
 
-  // Validate data structure and apply zoom filtering - MOVED BEFORE CONDITIONAL RETURNS
+  // Get unique projects from processed data first
+  const allProjects = React.useMemo(() => {
+    if (!processedData || processedData.length === 0) return [];
+    return [...new Set(processedData.flatMap(d => Object.keys(d.projectBreakdown || {})))];
+  }, [processedData]);
+
+  // Validate data structure and ensure all required fields for Brush - MOVED BEFORE CONDITIONAL RETURNS
   const validData = React.useMemo(() => {
     if (!processedData || processedData.length === 0) return [];
     
-    return processedData.filter(d => {
+    const filtered = processedData.filter(d => {
       const isValid = d && 
                      d.date && 
                      typeof d.totalAllocation === 'number' &&
@@ -204,12 +212,38 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
                      !isNaN(d.availability);
       return isValid;
     });
-  }, [processedData]);
 
-  // Get unique projects for legend
-  const allProjects = React.useMemo(() => {
-    return [...new Set(validData.flatMap(d => Object.keys(d.projectBreakdown)))];
-  }, [validData]);
+    // Ensure all project data keys have valid numbers for stacked areas
+    return filtered.map(d => {
+      const cleanedData = { ...d };
+      
+      // Ensure all project allocation values are valid numbers
+      allProjects.forEach(project => {
+        const key = `project_${project}`;
+        if (typeof cleanedData[key] !== 'number' || isNaN(cleanedData[key])) {
+          cleanedData[key] = 0;
+        }
+      });
+      
+      return cleanedData;
+    });
+  }, [processedData, allProjects]);
+
+  // Initialize brush range when data loads
+  React.useEffect(() => {
+    if (validData.length > 0 && brushEnd === 0) {
+      setBrushStart(Math.max(0, Math.floor(validData.length * 0.2)));
+      setBrushEnd(validData.length - 1);
+    }
+  }, [validData, brushEnd]);
+
+  // Create filtered data based on brush selection
+  const displayData = React.useMemo(() => {
+    if (validData.length === 0 || brushStart === brushEnd) return validData;
+    const start = Math.max(0, Math.min(brushStart, brushEnd));
+    const end = Math.min(validData.length - 1, Math.max(brushStart, brushEnd));
+    return validData.slice(start, end + 1);
+  }, [validData, brushStart, brushEnd]);
 
   if (isLoading) {
     return (
@@ -269,7 +303,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
       <div className="chart-content">
         <ResponsiveContainer width="100%" height={450}>
           <AreaChart 
-            data={validData} 
+            data={displayData} 
             margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
@@ -282,7 +316,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
               tick={{ fontSize: 12 }}
               tickFormatter={(value, index) => {
                 // Find the data point by value instead of index for more reliability
-                const dataPoint = validData.find(d => d.date === value) || validData[0];
+                const dataPoint = displayData.find(d => d.date === value) || displayData[0];
                 if (!dataPoint) return value;
                 
                 const granularity = dataPoint.granularity;
@@ -342,7 +376,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
                 const data = payload[0]?.payload;
                 if (!data) return null;
                 
-                const dataPoint = validData.find(d => d.date === label);
+                const dataPoint = displayData.find(d => d.date === label);
                 const granularity = dataPoint?.granularity || 'monthly';
                 
                 let formattedPeriod = '';
@@ -457,51 +491,67 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
               />
             ))}
 
-            {/* Brush for dynamic zoom/pan control */}
-            <Brush 
-              dataKey="date"
-              height={50}
-              stroke="#8884d8"
-              fill="#f0f0f0"
-              tickFormatter={(value) => {
-                const dataPoint = validData.find(d => d.date === value) || validData[0];
-                if (!dataPoint) return value;
-                
-                const granularity = dataPoint.granularity;
-                
-                if (granularity === 'weekly' || granularity === 'daily') {
-                  const date = new Date(value);
-                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                } else if (granularity === 'monthly') {
-                  const date = new Date(value + '-01');
-                  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                } else { // quarterly
-                  const date = new Date(value + '-01');
-                  return 'Q' + Math.ceil(date.getMonth() / 3 + 1) + ' ' + date.getFullYear().toString().slice(-2);
-                }
-              }}
-            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Custom brush control using mini chart */}
+      {validData.length > 2 && (
+        <div style={{ marginTop: '20px', padding: '0 20px' }}>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+            Drag handles to zoom into specific time periods
+          </div>
+          <ResponsiveContainer width="100%" height={80}>
+            <AreaChart 
+              data={validData}
+              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+            >
+              <XAxis 
+                dataKey="date"
+                tick={false}
+                axisLine={false}
+              />
+              <YAxis hide />
+              <Area
+                type="monotone"
+                dataKey="totalAllocation"
+                stroke="#8884d8"
+                fill="#8884d8"
+                fillOpacity={0.3}
+              />
+              <Brush
+                dataKey="date"
+                height={30}
+                startIndex={brushStart}
+                endIndex={brushEnd}
+                onChange={({ startIndex, endIndex }) => {
+                  if (typeof startIndex === 'number') setBrushStart(startIndex);
+                  if (typeof endIndex === 'number') setBrushEnd(endIndex);
+                }}
+                tickFormatter={() => ''} // Hide ticks to keep it clean
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       
       <div className="chart-summary">
         <div className="summary-cards">
           <div className="summary-card">
             <div className="summary-value">
-              {Math.max(...validData.map(d => d.totalAllocation)).toFixed(1)}%
+              {displayData.length > 0 ? Math.max(...displayData.map(d => d.totalAllocation || 0)).toFixed(1) : '0.0'}%
             </div>
             <div className="summary-label">Peak Allocation</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">
-              {(validData.reduce((sum, d) => sum + d.totalAllocation, 0) / validData.length).toFixed(1)}%
+              {displayData.length > 0 ? (displayData.reduce((sum, d) => sum + (d.totalAllocation || 0), 0) / displayData.length).toFixed(1) : '0.0'}%
             </div>
             <div className="summary-label">Average Allocation</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">
-              {Math.max(...validData.map(d => d.utilization)).toFixed(1)}%
+              {displayData.length > 0 ? Math.max(...displayData.map(d => d.utilization || 0)).toFixed(1) : '0.0'}%
             </div>
             <div className="summary-label">Peak Utilization</div>
           </div>
