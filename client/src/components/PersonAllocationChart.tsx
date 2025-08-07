@@ -21,7 +21,6 @@ interface AllocationData {
 }
 
 export function PersonAllocationChart({ personId, personName, startDate, endDate }: PersonAllocationChartProps) {
-  const [zoomLevel, setZoomLevel] = React.useState<'full' | 'half' | 'quarter'>('full');
   const { data: timelineData, isLoading, error } = useQuery({
     queryKey: ['person-timeline', personId],
     queryFn: async () => {
@@ -207,30 +206,10 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     });
   }, [processedData]);
 
-  // Apply zoom filtering
-  const zoomedData = React.useMemo(() => {
-    if (zoomLevel === 'full') return validData;
-    
-    const totalMonths = validData.length;
-    if (totalMonths === 0) return validData;
-    
-    if (zoomLevel === 'half') {
-      // Show last 50% of data (minimum 4 data points)
-      const startIndex = Math.max(0, totalMonths - Math.max(4, Math.floor(totalMonths / 2)));
-      return validData.slice(startIndex);
-    } else if (zoomLevel === 'quarter') {
-      // Show last 25% of data (minimum 2 data points)  
-      const startIndex = Math.max(0, totalMonths - Math.max(2, Math.floor(totalMonths / 4)));
-      return validData.slice(startIndex);
-    }
-    
-    return validData;
-  }, [validData, zoomLevel]);
-
   // Get unique projects for legend
   const allProjects = React.useMemo(() => {
-    return [...new Set(zoomedData.flatMap(d => Object.keys(d.projectBreakdown)))];
-  }, [zoomedData]);
+    return [...new Set(validData.flatMap(d => Object.keys(d.projectBreakdown)))];
+  }, [validData]);
 
   if (isLoading) {
     return (
@@ -286,56 +265,12 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
         </p>
       </div>
       
-      <div className="chart-controls" style={{ marginBottom: '10px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        <button 
-          onClick={() => setZoomLevel('full')}
-          style={{
-            padding: '4px 8px',
-            fontSize: '12px',
-            backgroundColor: zoomLevel === 'full' ? 'var(--primary)' : 'var(--bg-secondary)',
-            color: zoomLevel === 'full' ? 'white' : 'var(--text-primary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Full View
-        </button>
-        <button 
-          onClick={() => setZoomLevel('half')}
-          style={{
-            padding: '4px 8px',
-            fontSize: '12px',
-            backgroundColor: zoomLevel === 'half' ? 'var(--primary)' : 'var(--bg-secondary)',
-            color: zoomLevel === 'half' ? 'white' : 'var(--text-primary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Last 4 Months
-        </button>
-        <button 
-          onClick={() => setZoomLevel('quarter')}
-          style={{
-            padding: '4px 8px',
-            fontSize: '12px',
-            backgroundColor: zoomLevel === 'quarter' ? 'var(--primary)' : 'var(--bg-secondary)',
-            color: zoomLevel === 'quarter' ? 'white' : 'var(--text-primary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Last 2 Months
-        </button>
-      </div>
       
       <div className="chart-content">
         <ResponsiveContainer width="100%" height={450}>
           <AreaChart 
-            data={zoomedData} 
-            margin={{ top: 5, right: 30, left: 20, bottom: 20 }}
+            data={validData} 
+            margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
@@ -347,7 +282,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
               tick={{ fontSize: 12 }}
               tickFormatter={(value, index) => {
                 // Find the data point by value instead of index for more reliability
-                const dataPoint = zoomedData.find(d => d.date === value) || zoomedData[0];
+                const dataPoint = validData.find(d => d.date === value) || validData[0];
                 if (!dataPoint) return value;
                 
                 const granularity = dataPoint.granularity;
@@ -407,7 +342,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
                 const data = payload[0]?.payload;
                 if (!data) return null;
                 
-                const dataPoint = zoomedData.find(d => d.date === label);
+                const dataPoint = validData.find(d => d.date === label);
                 const granularity = dataPoint?.granularity || 'monthly';
                 
                 let formattedPeriod = '';
@@ -521,6 +456,31 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
                 name={project}
               />
             ))}
+
+            {/* Brush for dynamic zoom/pan control */}
+            <Brush 
+              dataKey="date"
+              height={50}
+              stroke="#8884d8"
+              fill="#f0f0f0"
+              tickFormatter={(value) => {
+                const dataPoint = validData.find(d => d.date === value) || validData[0];
+                if (!dataPoint) return value;
+                
+                const granularity = dataPoint.granularity;
+                
+                if (granularity === 'weekly' || granularity === 'daily') {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                } else if (granularity === 'monthly') {
+                  const date = new Date(value + '-01');
+                  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                } else { // quarterly
+                  const date = new Date(value + '-01');
+                  return 'Q' + Math.ceil(date.getMonth() / 3 + 1) + ' ' + date.getFullYear().toString().slice(-2);
+                }
+              }}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -529,19 +489,19 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
         <div className="summary-cards">
           <div className="summary-card">
             <div className="summary-value">
-              {Math.max(...zoomedData.map(d => d.totalAllocation)).toFixed(1)}%
+              {Math.max(...validData.map(d => d.totalAllocation)).toFixed(1)}%
             </div>
             <div className="summary-label">Peak Allocation</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">
-              {(zoomedData.reduce((sum, d) => sum + d.totalAllocation, 0) / zoomedData.length).toFixed(1)}%
+              {(validData.reduce((sum, d) => sum + d.totalAllocation, 0) / validData.length).toFixed(1)}%
             </div>
             <div className="summary-label">Average Allocation</div>
           </div>
           <div className="summary-card">
             <div className="summary-value">
-              {Math.max(...zoomedData.map(d => d.utilization)).toFixed(1)}%
+              {Math.max(...validData.map(d => d.utilization)).toFixed(1)}%
             </div>
             <div className="summary-label">Peak Utilization</div>
           </div>
