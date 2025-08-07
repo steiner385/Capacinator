@@ -147,11 +147,18 @@ export default function PersonDetails() {
     }
   });
 
+  // Standardized time range for all charts on this page
+  const currentDate = new Date();
+  const startDate = new Date(currentDate.getFullYear() - 1, 0, 1); // Start of previous year
+  const endDate = new Date(currentDate.getFullYear() + 1, 11, 31); // End of next year
+  const standardStartDate = startDate.toISOString().split('T')[0];
+  const standardEndDate = endDate.toISOString().split('T')[0];
+
   // Utilization timeline query
   const { data: utilizationTimeline } = useQuery({
-    queryKey: ['person-utilization-timeline', id],
+    queryKey: ['person-utilization-timeline', id, standardStartDate, standardEndDate],
     queryFn: async () => {
-      const response = await fetch(`/api/people/${id}/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31`);
+      const response = await fetch(`/api/people/${id}/utilization-timeline?startDate=${standardStartDate}&endDate=${standardEndDate}`);
       if (!response.ok) {
         throw new Error('Failed to fetch utilization timeline');
       }
@@ -1131,66 +1138,13 @@ export default function PersonDetails() {
           
           {expandedSections.allocation && (
             <div className="section-content">
-              <PersonAllocationChart personId={person.id} personName={person.name} />
+              <PersonAllocationChart 
+                personId={person.id} 
+                personName={person.name}
+                startDate={standardStartDate}
+                endDate={standardEndDate}
+              />
               
-              {/* Utilization Timeline Chart */}
-              <div className="chart-container" style={{ marginTop: '2rem' }}>
-                <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <TrendingUp size={18} />
-                  Utilization Timeline
-                </h3>
-                {utilizationTimeline && utilizationTimeline.timeline ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={utilizationTimeline.timeline}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                      <XAxis 
-                        dataKey="month" 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => {
-                          const date = new Date(value + '-01');
-                          return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                        }}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => `${value}%`}
-                      />
-                      <Tooltip 
-                        formatter={(value, name) => [`${value}%`, name === 'utilization' ? 'Utilization' : 'Availability']}
-                        labelFormatter={(label) => {
-                          const date = new Date(label + '-01');
-                          return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                        }}
-                      />
-                      <ReferenceLine 
-                        y={utilizationTimeline.defaultAvailability} 
-                        stroke="var(--success-color)" 
-                        strokeDasharray="8 8"
-                        label={{ value: "Available Capacity", position: "top" }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="utilization" 
-                        stroke="var(--primary-color)" 
-                        strokeWidth={3}
-                        dot={{ fill: 'var(--primary-color)', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, stroke: 'var(--primary-color)', strokeWidth: 2 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="chart-loading" style={{ 
-                    height: '300px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    color: 'var(--text-muted)',
-                    fontSize: '14px'
-                  }}>
-                    {utilizationTimeline === undefined ? 'Loading timeline data...' : 'No utilization data available'}
-                  </div>
-                )}
-              </div>
             </div>
           )}
         </div>
