@@ -79,10 +79,10 @@ export default function Reports() {
         // Calculate capacity by role from person utilization data
         const roleUtilization = new Map();
         
-        data.utilizationData?.forEach((person: any) => {
-          const roleName = person.primary_role_name || 'Unknown';
-          const capacity = person.available_hours || 0;
-          const utilized = person.total_allocated_hours || 0;
+        data.personUtilization?.forEach((person: any) => {
+          const roleName = person.role_name || 'Unknown';
+          const capacity = person.default_hours_per_day || 8;
+          const utilized = (person.utilization_percentage || 0) * capacity / 100;
           
           if (!roleUtilization.has(roleName)) {
             roleUtilization.set(roleName, { capacity: 0, utilized: 0 });
@@ -220,12 +220,7 @@ export default function Reports() {
   const { data: demandReport, isLoading: demandLoading, refetch: refetchDemand } = useQuery({
     queryKey: ['report-demand', filters],
     queryFn: async () => {
-      const response = await api.reporting.getDemand({
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        projectTypeId: filters.projectTypeId,
-        location_id: filters.locationId
-      });
+      const response = await api.reporting.getDemand(filters);
       const data = response.data;
       
       if (data) {
@@ -654,7 +649,7 @@ export default function Reports() {
           </div>
           <div className="summary-card">
             <h3># People with Capacity</h3>
-            <div className="metric">{capacityReport.utilizationData?.length || 0}</div>
+            <div className="metric">{capacityReport.personUtilization?.length || 0}</div>
             <Link to={`/people?from=capacity-report&action=view-capacity&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="card-action-link">
               <Users size={14} /> View People
             </Link>
@@ -669,16 +664,34 @@ export default function Reports() {
           </div>
         </div>
 
+        {(!capacityReport.personUtilization || capacityReport.personUtilization.length === 0) && (
+          <div className="info-banner" style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '1rem',
+            margin: '1rem 0',
+            textAlign: 'center'
+          }}>
+            <AlertTriangle size={20} style={{ marginRight: '0.5rem' }} />
+            <strong>No Capacity Data Found</strong>
+            <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
+              No people or capacity information is available for the selected date range. 
+              <Link to="/people" style={{ marginLeft: '0.5rem' }}>Add people</Link> to see capacity data.
+            </p>
+          </div>
+        )}
+
         <div className="charts-grid">
           <div className="chart-container">
             <h3>Capacity by Person</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={capacityReport.utilizationData?.slice(0, 10) || []}>
+              <BarChart data={capacityReport.personUtilization?.slice(0, 10) || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="person_name" />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="available_hours" fill={CHART_COLORS[0]} />
+                <Bar dataKey="default_hours_per_day" fill={CHART_COLORS[0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -874,6 +887,24 @@ export default function Reports() {
           </div>
         </div>
 
+        {(utilizationReport.averageUtilization || 0) === 0 && (
+          <div className="info-banner" style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '1rem',
+            margin: '1rem 0',
+            textAlign: 'center'
+          }}>
+            <AlertTriangle size={20} style={{ marginRight: '0.5rem' }} />
+            <strong>No Project Assignments Found</strong>
+            <p style={{ margin: '0.5rem 0 0 0', color: 'var(--text-secondary)' }}>
+              Utilization is 0% because no people have been assigned to projects yet. 
+              <Link to="/assignments" style={{ marginLeft: '0.5rem' }}>Create assignments</Link> to see utilization data.
+            </p>
+          </div>
+        )}
+
         <div className="charts-grid">
           <div className="chart-container">
             <h3>Utilization by Person</h3>
@@ -884,8 +915,9 @@ export default function Reports() {
                   dataKey="name" 
                   angle={-45} 
                   textAnchor="end" 
-                  height={80}
-                  interval={0}
+                  height={100}
+                  interval="preserveStartEnd"
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
@@ -903,8 +935,9 @@ export default function Reports() {
                   dataKey="role" 
                   angle={-45} 
                   textAnchor="end" 
-                  height={80}
-                  interval={0}
+                  height={100}
+                  interval="preserveStartEnd"
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis />
                 <Tooltip 
@@ -1533,8 +1566,9 @@ export default function Reports() {
                   dataKey="project_name" 
                   angle={-45} 
                   textAnchor="end" 
-                  height={80}
-                  interval={0}
+                  height={120}
+                  interval="preserveStartEnd"
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
@@ -1552,8 +1586,9 @@ export default function Reports() {
                   dataKey="roleName" 
                   angle={-45} 
                   textAnchor="end" 
-                  height={80}
-                  interval={0}
+                  height={100}
+                  interval="preserveStartEnd"
+                  tick={{ fontSize: 11 }}
                 />
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
