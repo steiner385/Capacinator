@@ -206,11 +206,100 @@ export class ReportingController extends BaseController {
       // Calculate timeline data for capacity over time
       const timeline = await this.calculateCapacityTimeline(startDate as string, endDate as string);
 
+      // Calculate byRole using actual assignment data like the utilization report does
+      console.log('📊 Calculating role utilization using actual assignment data...');
+      
+      // Get actual assignment data for the date range
+      let assignmentsQuery = this.db('project_assignments')
+        .join('people', 'project_assignments.person_id', 'people.id')
+        .join('person_roles', 'people.primary_person_role_id', 'person_roles.id')
+        .join('roles', 'person_roles.role_id', 'roles.id')
+        .where('people.is_active', true);
+
+      // Apply date filtering to assignments if provided
+      if (startDate && endDate) {
+        assignmentsQuery = assignmentsQuery.where(function() {
+          this.where('project_assignments.start_date', '<=', endDate)
+              .andWhere('project_assignments.end_date', '>=', startDate);
+        });
+      }
+
+      const assignmentsData = await assignmentsQuery.select(
+        'people.id as person_id',
+        'people.name as person_name',
+        'people.default_availability_percentage',
+        'people.default_hours_per_day',
+        'roles.name as role_name',
+        'project_assignments.allocation_percentage',
+        'project_assignments.start_date',
+        'project_assignments.end_date'
+      );
+
+      // Also get all active people to include those without assignments
+      const allActivePeople = await this.db('people')
+        .join('person_roles', 'people.primary_person_role_id', 'person_roles.id')
+        .join('roles', 'person_roles.role_id', 'roles.id')
+        .where('people.is_active', true)
+        .select(
+          'people.id as person_id',
+          'people.name as person_name',
+          'people.default_availability_percentage',
+          'people.default_hours_per_day',
+          'roles.name as role_name'
+        );
+
+      // Calculate utilization by person
+      const personUtilizationMap = new Map();
+      
+      // Initialize all people with zero utilization
+      allActivePeople.forEach(person => {
+        personUtilizationMap.set(person.person_id, {
+          ...person,
+          total_allocation_percentage: 0
+        });
+      });
+
+      // Calculate actual utilization from assignments
+      assignmentsData.forEach(assignment => {
+        const person = personUtilizationMap.get(assignment.person_id);
+        if (person) {
+          person.total_allocation_percentage += assignment.allocation_percentage || 0;
+        }
+      });
+
+      // Now aggregate by role
+      const roleMap = new Map();
+      
+      Array.from(personUtilizationMap.values()).forEach((person: any) => {
+        const roleName = person.role_name || 'Unknown Role';
+        const monthlyCapacity = Math.round((person.default_availability_percentage / 100) * (person.default_hours_per_day || 8) * 20);
+        // Use actual calculated utilization instead of the low DB view value
+        const monthlyUtilized = Math.round((person.total_allocation_percentage / 100) * (person.default_hours_per_day || 8) * 20);
+        
+        if (!roleMap.has(roleName)) {
+          roleMap.set(roleName, {
+            role: roleName,
+            capacity: 0,
+            utilized: 0,
+            people_count: 0
+          });
+        }
+        
+        const current = roleMap.get(roleName);
+        current.capacity += monthlyCapacity;
+        current.utilized += monthlyUtilized;
+        current.people_count += 1;
+      });
+      
+      const byRole = Array.from(roleMap.values()).filter(item => item.capacity > 0);
+      console.log('📊 Calculated byRole utilization:', byRole.map(r => `${r.role}: ${r.utilized}/${r.capacity} hrs`));
+
       return {
         capacityGaps: capacityGapsWithStatus,
         personUtilization,
         projectDemands,
         timeline,
+        byRole, // Add the correctly calculated role-based data
         summary: {
           totalGaps: capacityGapsWithStatus.filter(gap => gap.status === 'GAP').length,
           totalTight: capacityGapsWithStatus.filter(gap => gap.status === 'TIGHT').length,

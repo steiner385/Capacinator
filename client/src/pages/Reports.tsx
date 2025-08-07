@@ -76,30 +76,8 @@ export default function Reports() {
       
       // Transform the API data to match chart requirements
       if (data) {
-        // Calculate capacity by role from person utilization data
-        const roleUtilization = new Map();
-        
-        data.personUtilization?.forEach((person: any) => {
-          const roleName = person.role_name || 'Unknown';
-          const capacity = person.default_hours_per_day || 8;
-          const utilized = (person.utilization_percentage || 0) * capacity / 100;
-          
-          if (!roleUtilization.has(roleName)) {
-            roleUtilization.set(roleName, { capacity: 0, utilized: 0 });
-          }
-          
-          const current = roleUtilization.get(roleName);
-          roleUtilization.set(roleName, {
-            capacity: current.capacity + capacity,
-            utilized: current.utilized + utilized
-          });
-        });
-        
-        const byRole = Array.from(roleUtilization.entries()).map(([role, data]) => ({
-          role,
-          capacity: Math.round(data.capacity * 20), // Convert daily hours to monthly (20 working days)
-          utilized: Math.round(data.utilized * 20)
-        })).filter(item => item.capacity > 0);
+        // Use the correctly calculated byRole data from the API instead of frontend calculation
+        const byRole = data.byRole || [];
         
         // Calculate totals
         const totalCapacity = byRole.reduce((sum: number, r: any) => sum + r.capacity, 0);
@@ -1617,112 +1595,123 @@ export default function Reports() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
 
-          <div className="chart-container">
+        {/* Full-width actionable sections */}
+        <div className="actionable-sections">
+          <div className="actionable-table-container">
             <h3>Actionable Projects</h3>
-            <div className="actionable-list">
-              <div className="list-section">
+            <div className="actionable-table">
+              <div className="table-section">
                 <h4>Projects with Critical Gaps</h4>
-                {(gapsReport.projectHealth || [])
-                  .filter((project: any) => project.allocation_health === 'UNDER_ALLOCATED')
-                  .map((project: any) => (
-                  <div key={project.project_id} className="actionable-item danger">
-                    <div className="item-info">
-                      <strong>{project.project_name}</strong>
-                      <span className="item-detail">{Math.round(project.total_allocation_percentage)}% allocated</span>
+                <div className="actionable-items-grid">
+                  {(gapsReport.projectHealth || [])
+                    .filter((project: any) => project.allocation_health === 'UNDER_ALLOCATED')
+                    .map((project: any) => (
+                    <div key={project.project_id} className="actionable-item danger">
+                      <div className="item-info">
+                        <strong>{project.project_name}</strong>
+                        <span className="item-detail">{Math.round(project.total_allocation_percentage)}% allocated</span>
+                      </div>
+                      <div className="item-actions">
+                        <Link to={`/projects/${project.project_id}?from=gaps-report&gap=${100-project.total_allocation_percentage}&action=address-gap&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
+                          <Briefcase size={14} /> View Project
+                        </Link>
+                        <Link to={`/assignments?project=${encodeURIComponent(project.project_name)}&action=add-resources&from=gaps-report&gap=${100-project.total_allocation_percentage}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
+                          <ClipboardList size={14} /> Add Resources
+                        </Link>
+                      </div>
                     </div>
-                    <div className="item-actions">
-                      <Link to={`/projects/${project.project_id}?from=gaps-report&gap=${100-project.total_allocation_percentage}&action=address-gap&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
-                        <Briefcase size={14} /> View Project
-                      </Link>
-                      <Link to={`/assignments?project=${encodeURIComponent(project.project_name)}&action=add-resources&from=gaps-report&gap=${100-project.total_allocation_percentage}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
-                        <ClipboardList size={14} /> Add Resources
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(gapsReport.projectHealth || []).filter((project: any) => project.allocation_health === 'UNDER_ALLOCATED').length === 0 && (
-                  <p className="no-items">No projects with critical gaps</p>
-                )}
+                  ))}
+                  {(gapsReport.projectHealth || []).filter((project: any) => project.allocation_health === 'UNDER_ALLOCATED').length === 0 && (
+                    <div className="no-items">No projects with critical gaps</div>
+                  )}
+                </div>
               </div>
 
-              <div className="list-section">
+              <div className="table-section">
                 <h4>Well-Staffed Projects</h4>
-                {(gapsReport.gapsByProject || [])
-                  .filter((project: any) => project.gap <= 0)
-                  .slice(0, 5)
-                  .map((project: any) => (
-                  <div key={project.id} className="actionable-item success">
-                    <div className="item-info">
-                      <strong>{project.projectName}</strong>
-                      <span className="item-detail">Adequately staffed</span>
+                <div className="actionable-items-grid">
+                  {(gapsReport.gapsByProject || [])
+                    .filter((project: any) => project.gap <= 0)
+                    .slice(0, 5)
+                    .map((project: any) => (
+                    <div key={project.id} className="actionable-item success">
+                      <div className="item-info">
+                        <strong>{project.projectName}</strong>
+                        <span className="item-detail">Adequately staffed</span>
+                      </div>
+                      <div className="item-actions">
+                        <Link to={`/projects/${project.id}?from=gaps-report&status=well-staffed&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
+                          <Briefcase size={14} /> View Project
+                        </Link>
+                      </div>
                     </div>
-                    <div className="item-actions">
-                      <Link to={`/projects/${project.id}?from=gaps-report&status=well-staffed&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
-                        <Briefcase size={14} /> View Project
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(gapsReport.gapsByProject || []).filter((project: any) => project.gap <= 0).length === 0 && (
-                  <p className="no-items">No well-staffed projects</p>
-                )}
+                  ))}
+                  {(gapsReport.gapsByProject || []).filter((project: any) => project.gap <= 0).length === 0 && (
+                    <div className="no-items">No well-staffed projects</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="chart-container">
+          <div className="actionable-table-container">
             <h3>Actionable Roles</h3>
-            <div className="actionable-list">
-              <div className="list-section">
+            <div className="actionable-table">
+              <div className="table-section">
                 <h4>Roles with Critical Shortages</h4>
-                {(gapsReport.gapsByRole || [])
-                  .filter((role: any) => role.gap > 0)
-                  .map((role: any) => (
-                  <div key={role.roleId} className="actionable-item danger">
-                    <div className="item-info">
-                      <strong>{role.roleName}</strong>
-                      <span className="item-detail">{role.gap} hours short</span>
+                <div className="actionable-items-grid">
+                  {(gapsReport.gapsByRole || [])
+                    .filter((role: any) => role.gap > 0)
+                    .map((role: any) => (
+                    <div key={role.roleId} className="actionable-item danger">
+                      <div className="item-info">
+                        <strong>{role.roleName}</strong>
+                        <span className="item-detail">{role.gap} hours short</span>
+                      </div>
+                      <div className="item-actions">
+                        <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&gap=${role.gap}&action=address-shortage&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
+                          <Users size={14} /> View People
+                        </Link>
+                        <Link to={`/people?role=${encodeURIComponent(role.roleName)}&action=hire&from=gaps-report&gap=${role.gap}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
+                          <UserPlus size={14} /> Hire More
+                        </Link>
+                      </div>
                     </div>
-                    <div className="item-actions">
-                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&gap=${role.gap}&action=address-shortage&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
-                        <Users size={14} /> View People
-                      </Link>
-                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&action=hire&from=gaps-report&gap=${role.gap}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-danger">
-                        <UserPlus size={14} /> Hire More
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(gapsReport.gapsByRole || []).filter((role: any) => role.gap > 0).length === 0 && (
-                  <p className="no-items">No roles with critical shortages</p>
-                )}
+                  ))}
+                  {(gapsReport.gapsByRole || []).filter((role: any) => role.gap > 0).length === 0 && (
+                    <div className="no-items">No roles with critical shortages</div>
+                  )}
+                </div>
               </div>
 
-              <div className="list-section">
+              <div className="table-section">
                 <h4>Roles with Adequate Capacity</h4>
-                {(gapsReport.gapsByRole || [])
-                  .filter((role: any) => role.gap <= 0)
-                  .slice(0, 5)
-                  .map((role: any) => (
-                  <div key={role.roleId} className="actionable-item success">
-                    <div className="item-info">
-                      <strong>{role.roleName}</strong>
-                      <span className="item-detail">Sufficient capacity</span>
+                <div className="actionable-items-grid">
+                  {(gapsReport.gapsByRole || [])
+                    .filter((role: any) => role.gap <= 0)
+                    .slice(0, 5)
+                    .map((role: any) => (
+                    <div key={role.roleId} className="actionable-item success">
+                      <div className="item-info">
+                        <strong>{role.roleName}</strong>
+                        <span className="item-detail">Sufficient capacity</span>
+                      </div>
+                      <div className="item-actions">
+                        <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&status=adequate-capacity&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
+                          <Users size={14} /> View People
+                        </Link>
+                        <Link to={`/assignments?role=${encodeURIComponent(role.roleName)}&action=assign&from=gaps-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
+                          <Plus size={14} /> Assign More Work
+                        </Link>
+                      </div>
                     </div>
-                    <div className="item-actions">
-                      <Link to={`/people?role=${encodeURIComponent(role.roleName)}&from=gaps-report&status=adequate-capacity&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-outline">
-                        <Users size={14} /> View People
-                      </Link>
-                      <Link to={`/assignments?role=${encodeURIComponent(role.roleName)}&action=assign&from=gaps-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`} className="btn btn-sm btn-primary">
-                        <Plus size={14} /> Assign More Work
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-                {(gapsReport.gapsByRole || []).filter((role: any) => role.gap <= 0).length === 0 && (
-                  <p className="no-items">No roles with adequate capacity</p>
-                )}
+                  ))}
+                  {(gapsReport.gapsByRole || []).filter((role: any) => role.gap <= 0).length === 0 && (
+                    <div className="no-items">No roles with adequate capacity</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

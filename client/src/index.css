@@ -516,6 +516,128 @@ input:focus, select:focus, textarea:focus {
   font-size: 1.125rem;
 }
 
+/* Actionable Tables Layout Styles */
+.actionable-sections {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.actionable-table-container {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.actionable-table-container h3 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.actionable-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.table-section {
+  width: 100%;
+}
+
+.table-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.actionable-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1rem;
+}
+
+.actionable-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.actionable-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.actionable-item.danger {
+  border-left: 4px solid var(--danger);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.actionable-item.success {
+  border-left: 4px solid var(--success);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.item-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.item-detail {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.item-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.no-items {
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .actionable-items-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actionable-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .item-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
 .people-list {
   margin-top: 2rem;
 }
