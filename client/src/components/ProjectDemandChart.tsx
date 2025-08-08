@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush } from 'recharts';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
+import InteractiveTimeline, { TimelineItem, TimelineViewport } from './InteractiveTimeline';
+import useInteractiveTimeline from '../hooks/useInteractiveTimeline';
+import './InteractiveTimeline.css';
 
 interface ProjectDemandChartProps {
   projectId: string;
@@ -329,11 +332,19 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     });
   }, [demandData, capacityData, gapsData, currentView, allRoles]);
 
+  // Handle brush changes from InteractiveTimeline
+  const handleBrushChange = React.useCallback((start: number, end: number) => {
+    setBrushStart(start);
+    setBrushEnd(end);
+  }, []);
+
   // Initialize brush range when data loads
   React.useEffect(() => {
     if (processedDataWithGranularity.length > 0 && brushEnd === 0) {
-      setBrushStart(Math.max(0, Math.floor(processedDataWithGranularity.length * 0.1)));
-      setBrushEnd(processedDataWithGranularity.length - 1);
+      const initialStart = Math.max(0, Math.floor(processedDataWithGranularity.length * 0.1));
+      const initialEnd = processedDataWithGranularity.length - 1;
+      setBrushStart(initialStart);
+      setBrushEnd(initialEnd);
     }
   }, [processedDataWithGranularity, brushEnd]);
 
@@ -348,13 +359,45 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   // Get current dataset for display
   const currentData = displayData;
 
-  // Create brush data with total values
-  const brushData = React.useMemo(() => {
-    return processedDataWithGranularity.map(d => ({
-      ...d,
-      totalValue: allRoles.reduce((sum, role) => sum + (d[role] || 0), 0)
-    }));
-  }, [processedDataWithGranularity, allRoles]);
+  // Create timeline items for brush visualization
+  const timelineItems = React.useMemo((): TimelineItem[] => {
+    if (processedDataWithGranularity.length === 0) return [];
+    
+    // Create a single item representing the data range
+    const startDate = new Date(processedDataWithGranularity[0].date);
+    const endDate = new Date(processedDataWithGranularity[processedDataWithGranularity.length - 1].date);
+    
+    return [{
+      id: 'data-range',
+      name: 'Project Timeline',
+      startDate,
+      endDate,
+      color: '#8884d8',
+      data: processedDataWithGranularity
+    }];
+  }, [processedDataWithGranularity]);
+
+  // Create timeline viewport
+  const timelineViewport = React.useMemo((): TimelineViewport => {
+    if (processedDataWithGranularity.length === 0) {
+      const today = new Date();
+      return {
+        startDate: new Date(today.getFullYear(), 0, 1),
+        endDate: new Date(today.getFullYear(), 11, 31),
+        pixelsPerDay: 2
+      };
+    }
+    
+    const startDate = new Date(processedDataWithGranularity[0].date);
+    const endDate = new Date(processedDataWithGranularity[processedDataWithGranularity.length - 1].date);
+    const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      startDate,
+      endDate,
+      pixelsPerDay: Math.max(0.5, Math.min(4, 600 / totalDays))
+    };
+  }, [processedDataWithGranularity]);
 
   // Measure chart dimensions after render for precise alignment
   useEffect(() => {
@@ -674,44 +717,23 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         </ResponsiveContainer>
       </div>
 
-      {/* Custom brush control using mini chart */}
+      {/* Interactive Timeline for brush control */}
       {processedDataWithGranularity.length > 2 && (
         <div style={{ marginTop: '20px', padding: '0 20px' }}>
           <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-            Drag handles to zoom into specific time periods
+            Drag to select specific time periods for detailed analysis
           </div>
-          <ResponsiveContainer width="100%" height={80}>
-            <AreaChart 
-              data={brushData}
-              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-            >
-              <XAxis 
-                dataKey="date"
-                tick={false}
-                axisLine={false}
-              />
-              <YAxis hide />
-              {/* Show total demand/capacity/gaps as single area */}
-              <Area
-                type="monotone"
-                dataKey="totalValue"
-                stroke="#8884d8"
-                fill="#8884d8"
-                fillOpacity={0.3}
-              />
-              <Brush
-                dataKey="date"
-                height={30}
-                startIndex={brushStart}
-                endIndex={brushEnd}
-                onChange={({ startIndex, endIndex }) => {
-                  if (typeof startIndex === 'number') setBrushStart(startIndex);
-                  if (typeof endIndex === 'number') setBrushEnd(endIndex);
-                }}
-                tickFormatter={() => ''} // Hide ticks to keep it clean
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <InteractiveTimeline
+            items={timelineItems}
+            viewport={timelineViewport}
+            mode="brush"
+            height={60}
+            brushRange={{ start: brushStart, end: brushEnd }}
+            onBrushChange={handleBrushChange}
+            showGrid={true}
+            showToday={true}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '6px' }}
+          />
         </div>
       )}
       
