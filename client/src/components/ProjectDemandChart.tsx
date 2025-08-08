@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush } from 'recharts';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 
@@ -30,6 +30,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartDimensions, setChartDimensions] = useState<{ width: number; left: number; right: number } | null>(null);
   const [currentView, setCurrentView] = useState<ChartView>('demand');
+  const [brushStart, setBrushStart] = useState<number>(0);
+  const [brushEnd, setBrushEnd] = useState<number>(0);
   
   const { data: apiResponse, isLoading, error } = useQuery({
     queryKey: ['project-demand', projectId],
@@ -187,17 +189,61 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     };
   }, [apiResponse, assignmentsResponse, currentView]);
 
-  // Get current dataset based on view selection
-  const currentData = React.useMemo(() => {
-    switch (currentView) {
-      case 'demand': return demandData;
-      case 'capacity': return capacityData;
-      case 'gaps': return gapsData;
-      default: return demandData;
-    }
-  }, [currentView, demandData, capacityData, gapsData]);
+  // Variable granularity functions (copied from PersonAllocationChart)
+  const getGranularity = (startMonth: string, endMonth: string) => {
+    const start = new Date(startMonth + '-01');
+    const end = new Date(endMonth + '-01');
+    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+    
+    if (monthsDiff <= 3) return 'daily';     // 3 months or less: daily
+    if (monthsDiff <= 12) return 'weekly';   // 4-12 months: weekly
+    if (monthsDiff <= 24) return 'monthly';  // 13-24 months: monthly
+    return 'quarterly';                      // > 24 months: quarterly
+  };
 
-  // Get unique roles for stacked areas
+  // Generate date points based on granularity
+  const generateDatePoints = (startMonth: string, endMonth: string, granularity: string) => {
+    const start = new Date(startMonth + '-01');
+    const end = new Date(endMonth + '-01');
+    end.setMonth(end.getMonth() + 1, 0); // Last day of end month
+    
+    const points: string[] = [];
+    const current = new Date(start);
+    
+    if (granularity === 'weekly') {
+      // Start from the beginning of the week containing the start date
+      const startOfWeek = new Date(current);
+      startOfWeek.setDate(current.getDate() - current.getDay()); // Go to Sunday
+      
+      current.setTime(startOfWeek.getTime());
+      
+      while (current <= end) {
+        points.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 7); // Add 7 days for weekly
+      }
+    } else if (granularity === 'daily') {
+      while (current <= end) {
+        points.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    } else { // monthly or quarterly
+      while (current <= end) {
+        const year = current.getFullYear();
+        const month = (current.getMonth() + 1).toString().padStart(2, '0');
+        points.push(`${year}-${month}`);
+        
+        if (granularity === 'quarterly') {
+          current.setMonth(current.getMonth() + 3);
+        } else {
+          current.setMonth(current.getMonth() + 1);
+        }
+      }
+    }
+    
+    return points.sort();
+  };
+
+  // Get unique roles for stacked areas (must be defined before processedDataWithGranularity)
   const allRoles = React.useMemo(() => {
     return [...new Set(demandData.flatMap(d => 
       Object.keys(d).filter(key => 
@@ -205,6 +251,110 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       )
     ))];
   }, [demandData]); // Use demandData to get all roles consistently
+
+  // Process data with variable granularity - convert daily data to appropriate granularity
+  const processedDataWithGranularity = React.useMemo(() => {
+    const baseData = (() => {
+      switch (currentView) {
+        case 'demand': return demandData;
+        case 'capacity': return capacityData;
+        case 'gaps': return gapsData;
+        default: return demandData;
+      }
+    })();
+
+    if (baseData.length === 0) return [];
+
+    // Determine appropriate granularity based on date range
+    const startDate = new Date(baseData[0].date);
+    const endDate = new Date(baseData[baseData.length - 1].date);
+    const startMonth = startDate.getFullYear() + '-' + (startDate.getMonth() + 1).toString().padStart(2, '0');
+    const endMonth = endDate.getFullYear() + '-' + (endDate.getMonth() + 1).toString().padStart(2, '0');
+    const granularity = getGranularity(startMonth, endMonth);
+
+    // If already daily and that's appropriate, return as-is
+    if (granularity === 'daily') {
+      return baseData.map(d => ({ ...d, granularity }));
+    }
+
+    // Aggregate data based on granularity
+    const datePoints = generateDatePoints(startMonth, endMonth, granularity);
+    
+    return datePoints.map(datePoint => {
+      let periodStart: Date;
+      let periodEnd: Date;
+      let displayDate: string;
+      
+      if (granularity === 'weekly') {
+        const pointDate = new Date(datePoint);
+        periodStart = new Date(pointDate);
+        periodEnd = new Date(pointDate);
+        periodEnd.setDate(periodEnd.getDate() + 6);
+        displayDate = datePoint;
+      } else if (granularity === 'monthly') {
+        const [year, monthNum] = datePoint.split('-').map(Number);
+        periodStart = new Date(year, monthNum - 1, 1);
+        periodEnd = new Date(year, monthNum, 0); // Last day of month
+        displayDate = datePoint;
+      } else { // quarterly
+        const [year, monthNum] = datePoint.split('-').map(Number);
+        periodStart = new Date(year, monthNum - 1, 1);
+        periodEnd = new Date(year, monthNum - 1 + 3, 0); // Last day of quarter
+        displayDate = datePoint;
+      }
+      
+      // Aggregate data for this period by averaging daily values
+      const periodData: ChartDataPoint = {
+        date: displayDate,
+        timestamp: periodStart.getTime(),
+        granularity
+      };
+      
+      // For each role, calculate average value over the period
+      allRoles.forEach(role => {
+        const relevantDays = baseData.filter(d => {
+          const dayDate = new Date(d.date);
+          return dayDate >= periodStart && dayDate <= periodEnd;
+        });
+        
+        if (relevantDays.length > 0) {
+          const totalValue = relevantDays.reduce((sum, day) => sum + (day[role] || 0), 0);
+          periodData[role] = totalValue / relevantDays.length; // Average over the period
+        } else {
+          periodData[role] = 0;
+        }
+      });
+      
+      return periodData;
+    });
+  }, [demandData, capacityData, gapsData, currentView, allRoles]);
+
+  // Initialize brush range when data loads
+  React.useEffect(() => {
+    if (processedDataWithGranularity.length > 0 && brushEnd === 0) {
+      setBrushStart(Math.max(0, Math.floor(processedDataWithGranularity.length * 0.1)));
+      setBrushEnd(processedDataWithGranularity.length - 1);
+    }
+  }, [processedDataWithGranularity, brushEnd]);
+
+  // Create filtered data based on brush selection
+  const displayData = React.useMemo(() => {
+    if (processedDataWithGranularity.length === 0 || brushStart === brushEnd) return processedDataWithGranularity;
+    const start = Math.max(0, Math.min(brushStart, brushEnd));
+    const end = Math.min(processedDataWithGranularity.length - 1, Math.max(brushStart, brushEnd));
+    return processedDataWithGranularity.slice(start, end + 1);
+  }, [processedDataWithGranularity, brushStart, brushEnd]);
+
+  // Get current dataset for display
+  const currentData = displayData;
+
+  // Create brush data with total values
+  const brushData = React.useMemo(() => {
+    return processedDataWithGranularity.map(d => ({
+      ...d,
+      totalValue: allRoles.reduce((sum, role) => sum + (d[role] || 0), 0)
+    }));
+  }, [processedDataWithGranularity, allRoles]);
 
   // Measure chart dimensions after render for precise alignment
   useEffect(() => {
@@ -446,8 +596,25 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
               type="category"
               scale="point"
               tickFormatter={(value) => {
-                const date = new Date(value);
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                // Find the data point by value to get granularity
+                const dataPoint = currentData.find(d => d.date === value) || currentData[0];
+                if (!dataPoint) return value;
+                
+                const granularity = dataPoint.granularity || 'daily';
+                
+                if (granularity === 'weekly') {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                } else if (granularity === 'daily') {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                } else if (granularity === 'monthly') {
+                  const date = new Date(value + '-01');
+                  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                } else { // quarterly
+                  const date = new Date(value + '-01');
+                  return 'Q' + Math.ceil(date.getMonth() / 3 + 1) + ' ' + date.getFullYear().toString().slice(-2);
+                }
               }}
               angle={-45}
               textAnchor="end"
@@ -460,7 +627,29 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
             />
             <Tooltip 
               formatter={(value: number, name: string) => [`${value?.toFixed(1)} FTE`, name]}
-              labelFormatter={(label) => `Date: ${formatDate(label as string)}`}
+              labelFormatter={(label) => {
+                const dataPoint = currentData.find(d => d.date === label);
+                if (!dataPoint) return `Date: ${formatDate(label as string)}`;
+                
+                const granularity = dataPoint.granularity || 'daily';
+                
+                if (granularity === 'weekly') {
+                  const startDate = new Date(label);
+                  const endDate = new Date(startDate);
+                  endDate.setDate(endDate.getDate() + 6);
+                  return `Week: ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                } else if (granularity === 'daily') {
+                  const date = new Date(label);
+                  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                } else if (granularity === 'monthly') {
+                  const date = new Date(label + '-01');
+                  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                } else { // quarterly
+                  const date = new Date(label + '-01');
+                  const quarter = Math.ceil((date.getMonth() + 1) / 3);
+                  return `Q${quarter} ${date.getFullYear()}`;
+                }
+              }}
               contentStyle={{ 
                 backgroundColor: 'white', 
                 border: '1px solid #ccc', 
@@ -484,6 +673,47 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           </AreaChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Custom brush control using mini chart */}
+      {processedDataWithGranularity.length > 2 && (
+        <div style={{ marginTop: '20px', padding: '0 20px' }}>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+            Drag handles to zoom into specific time periods
+          </div>
+          <ResponsiveContainer width="100%" height={80}>
+            <AreaChart 
+              data={brushData}
+              margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+            >
+              <XAxis 
+                dataKey="date"
+                tick={false}
+                axisLine={false}
+              />
+              <YAxis hide />
+              {/* Show total demand/capacity/gaps as single area */}
+              <Area
+                type="monotone"
+                dataKey="totalValue"
+                stroke="#8884d8"
+                fill="#8884d8"
+                fillOpacity={0.3}
+              />
+              <Brush
+                dataKey="date"
+                height={30}
+                startIndex={brushStart}
+                endIndex={brushEnd}
+                onChange={({ startIndex, endIndex }) => {
+                  if (typeof startIndex === 'number') setBrushStart(startIndex);
+                  if (typeof endIndex === 'number') setBrushEnd(endIndex);
+                }}
+                tickFormatter={() => ''} // Hide ticks to keep it clean
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       
       <div className="chart-summary">
         <div className="summary-cards">
