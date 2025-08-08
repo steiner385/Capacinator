@@ -172,16 +172,16 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       pixelsPerDay
     };
     
-    // Notify parent of our calculated viewport (use useEffect to avoid render loop)
-    React.useEffect(() => {
-      if (onViewportChange && !externalViewport) {
-        console.log('📈 VisualPhaseManager notifying parent of viewport change:', viewport);
-        onViewportChange(viewport);
-      }
-    }, [viewport.startDate.getTime(), viewport.endDate.getTime(), viewport.pixelsPerDay, onViewportChange, externalViewport]);
-    
     return viewport;
   }, [timelineItems, externalViewport, onViewportChange]);
+
+  // Notify parent of viewport changes
+  React.useEffect(() => {
+    if (onViewportChange && !externalViewport) {
+      console.log('📈 VisualPhaseManager notifying parent of viewport change:', timelineViewport);
+      onViewportChange(timelineViewport);
+    }
+  }, [timelineViewport.startDate.getTime(), timelineViewport.endDate.getTime(), timelineViewport.pixelsPerDay, onViewportChange, externalViewport]);
 
   // Update phase mutation
   const updatePhaseMutation = useMutation({
