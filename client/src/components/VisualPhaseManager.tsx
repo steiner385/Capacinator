@@ -123,6 +123,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
   const timelineViewport = React.useMemo((): TimelineViewport => {
     // Use external viewport if provided (for shared timeline control)
     if (externalViewport) {
+      console.log('📈 VisualPhaseManager using external viewport:', externalViewport);
       return externalViewport;
     }
     
@@ -164,7 +165,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     };
     
     // Notify parent of our calculated viewport
-    onViewportChange?.(viewport);
+    if (onViewportChange) {
+      console.log('📈 VisualPhaseManager notifying parent of viewport change:', viewport);
+      onViewportChange(viewport);
+    }
     return viewport;
   }, [timelineItems, externalViewport, onViewportChange]);
 
