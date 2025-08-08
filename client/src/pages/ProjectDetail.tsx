@@ -10,6 +10,7 @@ import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
 import ProjectPhaseManager from '../components/ProjectPhaseManager';
+import VisualPhaseManager from '../components/VisualPhaseManager';
 import type { Project } from '../types';
 import './PersonDetails.css'; // Reuse existing styles
 import '../components/Charts.css';
@@ -77,6 +78,8 @@ export function ProjectDetail() {
     assignments: true,
     history: false
   });
+
+  const [useVisualPhaseManager, setUseVisualPhaseManager] = useState(false);
 
   // Check user permissions
   const canEdit = localStorage.getItem('userRole') !== 'viewer';
@@ -427,15 +430,69 @@ export function ProjectDetail() {
               <Calendar size={20} />
               Project Phases & Timeline
             </h2>
-            {expandedSections.phases ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Toggle between table and visual phase managers */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                fontSize: '14px',
+                color: '#6b7280'
+              }}>
+                <span>Table</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUseVisualPhaseManager(!useVisualPhaseManager);
+                  }}
+                  style={{
+                    position: 'relative',
+                    width: '44px',
+                    height: '24px',
+                    backgroundColor: useVisualPhaseManager ? '#3b82f6' : '#d1d5db',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: useVisualPhaseManager ? '22px' : '2px',
+                      width: '20px',
+                      height: '20px',
+                      backgroundColor: 'white',
+                      borderRadius: '10px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                    }}
+                  />
+                </button>
+                <span>Visual</span>
+              </div>
+              {expandedSections.phases ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </div>
           
           {expandedSections.phases && (
             <div className="section-content">
-              <ProjectPhaseManager 
-                projectId={project.id} 
-                projectName={project.name}
-              />
+              {useVisualPhaseManager ? (
+                <VisualPhaseManager 
+                  projectId={project.id} 
+                  projectName={project.name}
+                  onPhasesChange={() => {
+                    // Refresh project data when phases change
+                    queryClient.invalidateQueries({ queryKey: ['project', id] });
+                  }}
+                />
+              ) : (
+                <ProjectPhaseManager 
+                  projectId={project.id} 
+                  projectName={project.name}
+                />
+              )}
             </div>
           )}
         </div>
