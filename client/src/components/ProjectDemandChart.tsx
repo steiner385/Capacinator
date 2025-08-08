@@ -1,10 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush } from 'recharts';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
-import InteractiveTimeline, { TimelineItem, TimelineViewport } from './InteractiveTimeline';
-import useInteractiveTimeline from '../hooks/useInteractiveTimeline';
+import { TimelineViewport } from './InteractiveTimeline';
+import VisualPhaseManager from './VisualPhaseManager';
 import './InteractiveTimeline.css';
 
 interface ProjectDemandChartProps {
@@ -28,13 +28,197 @@ interface PhaseInfo {
 
 type ChartView = 'demand' | 'capacity' | 'gaps';
 
+// Simple Brush Control Component for timeline selection
+const SimpleBrushControl = ({ 
+  data, 
+  brushStart, 
+  brushEnd, 
+  onBrushChange 
+}: {
+  data: ChartDataPoint[];
+  brushStart: number;
+  brushEnd: number;
+  onBrushChange: (start: number, end: number) => void;
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<{
+    type: 'start' | 'end' | 'range' | null;
+    startX: number;
+    originalStart: number;
+    originalEnd: number;
+  }>({ type: null, startX: 0, originalStart: 0, originalEnd: 0 });
+
+  const handleMouseDown = useCallback((e: React.MouseEvent, type: 'start' | 'end' | 'range') => {
+    e.preventDefault();
+    if (!containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const startX = e.clientX - rect.left;
+    
+    setDragging({
+      type,
+      startX,
+      originalStart: brushStart,
+      originalEnd: brushEnd
+    });
+  }, [brushStart, brushEnd]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragging.type || !containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const deltaX = currentX - dragging.startX;
+    const containerWidth = rect.width - 20; // Account for handle width
+    const deltaIndex = Math.round((deltaX / containerWidth) * data.length);
+    
+    let newStart = dragging.originalStart;
+    let newEnd = dragging.originalEnd;
+    
+    if (dragging.type === 'start') {
+      newStart = Math.max(0, Math.min(dragging.originalStart + deltaIndex, dragging.originalEnd - 1));
+    } else if (dragging.type === 'end') {
+      newEnd = Math.min(data.length - 1, Math.max(dragging.originalEnd + deltaIndex, dragging.originalStart + 1));
+    } else if (dragging.type === 'range') {
+      const rangeSize = dragging.originalEnd - dragging.originalStart;
+      newStart = Math.max(0, Math.min(dragging.originalStart + deltaIndex, data.length - 1 - rangeSize));
+      newEnd = newStart + rangeSize;
+    }
+    
+    onBrushChange(newStart, newEnd);
+  }, [dragging, data.length, onBrushChange]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragging({ type: null, startX: 0, originalStart: 0, originalEnd: 0 });
+  }, []);
+
+  // Add global mouse events
+  useEffect(() => {
+    if (dragging.type) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [dragging.type, handleMouseMove, handleMouseUp]);
+
+  if (data.length === 0) return null;
+
+  const containerWidth = 400; // Fixed width for consistent layout
+  const startPercent = (brushStart / (data.length - 1)) * 100;
+  const endPercent = (brushEnd / (data.length - 1)) * 100;
+  const rangeWidth = endPercent - startPercent;
+
+  return (
+    <div 
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        height: '40px',
+        backgroundColor: '#f1f5f9',
+        border: '1px solid #e2e8f0',
+        borderRadius: '6px',
+        cursor: 'default',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Background timeline */}
+      <div style={{
+        position: 'absolute',
+        top: '12px',
+        left: '10px',
+        right: '10px',
+        height: '16px',
+        backgroundColor: '#cbd5e1',
+        borderRadius: '2px'
+      }} />
+      
+      {/* Selected range */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '12px',
+          left: `calc(10px + ${startPercent}% * (100% - 20px) / 100%)`,
+          width: `calc(${rangeWidth}% * (100% - 20px) / 100%)`,
+          height: '16px',
+          backgroundColor: '#3b82f6',
+          borderRadius: '2px',
+          cursor: 'grab'
+        }}
+        onMouseDown={(e) => handleMouseDown(e, 'range')}
+      />
+      
+      {/* Start handle */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: `calc(10px + ${startPercent}% * (100% - 20px) / 100% - 6px)`,
+          width: '12px',
+          height: '24px',
+          backgroundColor: '#1e40af',
+          borderRadius: '6px',
+          cursor: 'ew-resize',
+          border: '2px solid white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}
+        onMouseDown={(e) => handleMouseDown(e, 'start')}
+      />
+      
+      {/* End handle */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: `calc(10px + ${endPercent}% * (100% - 20px) / 100% - 6px)`,
+          width: '12px',
+          height: '24px',
+          backgroundColor: '#1e40af',
+          borderRadius: '6px',
+          cursor: 'ew-resize',
+          border: '2px solid white',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}
+        onMouseDown={(e) => handleMouseDown(e, 'end')}
+      />
+      
+      {/* Date labels */}
+      <div style={{
+        position: 'absolute',
+        bottom: '-20px',
+        left: `calc(10px + ${startPercent}% * (100% - 20px) / 100%)`,
+        fontSize: '10px',
+        color: '#6b7280',
+        transform: 'translateX(-50%)'
+      }}>
+        {formatDate(data[brushStart]?.date || '')}
+      </div>
+      
+      <div style={{
+        position: 'absolute',
+        bottom: '-20px',
+        left: `calc(10px + ${endPercent}% * (100% - 20px) / 100%)`,
+        fontSize: '10px',
+        color: '#6b7280',
+        transform: 'translateX(-50%)'
+      }}>
+        {formatDate(data[brushEnd]?.date || '')}
+      </div>
+    </div>
+  );
+};
+
 export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChartProps) {
   // ALL HOOKS MUST BE CALLED FIRST - before any conditional logic or early returns
+  const queryClient = useQueryClient();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartDimensions, setChartDimensions] = useState<{ width: number; left: number; right: number } | null>(null);
   const [currentView, setCurrentView] = useState<ChartView>('demand');
   const [brushStart, setBrushStart] = useState<number>(0);
   const [brushEnd, setBrushEnd] = useState<number>(0);
+  const [sharedViewport, setSharedViewport] = useState<TimelineViewport | null>(null);
   
   const { data: apiResponse, isLoading, error } = useQuery({
     queryKey: ['project-demand', projectId],
@@ -336,17 +520,69 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const handleBrushChange = React.useCallback((start: number, end: number) => {
     setBrushStart(start);
     setBrushEnd(end);
-  }, []);
+    
+    // Update shared viewport when brush changes
+    if (processedDataWithGranularity.length > 0) {
+      const startIndex = Math.max(0, Math.min(start, end));
+      const endIndex = Math.min(processedDataWithGranularity.length - 1, Math.max(start, end));
+      
+      if (startIndex < processedDataWithGranularity.length && endIndex < processedDataWithGranularity.length) {
+        const startDate = new Date(processedDataWithGranularity[startIndex].date);
+        const endDate = new Date(processedDataWithGranularity[endIndex].date);
+        
+        // Calculate appropriate pixels per day for the selected range
+        const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const pixelsPerDay = Math.max(1, Math.min(20, 1400 / totalDays));
+        
+        setSharedViewport({
+          startDate,
+          endDate,
+          pixelsPerDay
+        });
+      }
+    }
+  }, [processedDataWithGranularity]);
 
-  // Initialize brush range when data loads
+  // Handle viewport changes from VisualPhaseManager
+  const handleViewportChange = React.useCallback((viewport: TimelineViewport) => {
+    setSharedViewport(viewport);
+    
+    // Update brush range to match the viewport if we have data
+    if (processedDataWithGranularity.length > 0) {
+      // Find the data indices that correspond to the viewport dates
+      const startIndex = processedDataWithGranularity.findIndex(d => new Date(d.date) >= viewport.startDate);
+      const endIndex = processedDataWithGranularity.findIndex(d => new Date(d.date) >= viewport.endDate);
+      
+      if (startIndex !== -1) {
+        const actualEndIndex = endIndex !== -1 ? endIndex - 1 : processedDataWithGranularity.length - 1;
+        setBrushStart(Math.max(0, startIndex));
+        setBrushEnd(Math.max(0, actualEndIndex));
+      }
+    }
+  }, [processedDataWithGranularity]);
+
+  // Initialize brush range and shared viewport when data loads
   React.useEffect(() => {
     if (processedDataWithGranularity.length > 0 && brushEnd === 0) {
       const initialStart = Math.max(0, Math.floor(processedDataWithGranularity.length * 0.1));
       const initialEnd = processedDataWithGranularity.length - 1;
       setBrushStart(initialStart);
       setBrushEnd(initialEnd);
+      
+      // Initialize shared viewport if not already set
+      if (!sharedViewport) {
+        const startDate = new Date(processedDataWithGranularity[0].date);
+        const endDate = new Date(processedDataWithGranularity[processedDataWithGranularity.length - 1].date);
+        const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        setSharedViewport({
+          startDate,
+          endDate,
+          pixelsPerDay: Math.max(1, Math.min(12, 1400 / totalDays))
+        });
+      }
     }
-  }, [processedDataWithGranularity, brushEnd]);
+  }, [processedDataWithGranularity, brushEnd, sharedViewport]);
 
   // Create filtered data based on brush selection
   const displayData = React.useMemo(() => {
@@ -359,45 +595,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   // Get current dataset for display
   const currentData = displayData;
 
-  // Create timeline items for brush visualization
-  const timelineItems = React.useMemo((): TimelineItem[] => {
-    if (processedDataWithGranularity.length === 0) return [];
-    
-    // Create a single item representing the data range
-    const startDate = new Date(processedDataWithGranularity[0].date);
-    const endDate = new Date(processedDataWithGranularity[processedDataWithGranularity.length - 1].date);
-    
-    return [{
-      id: 'data-range',
-      name: 'Project Timeline',
-      startDate,
-      endDate,
-      color: '#8884d8',
-      data: processedDataWithGranularity
-    }];
-  }, [processedDataWithGranularity]);
 
-  // Create timeline viewport
-  const timelineViewport = React.useMemo((): TimelineViewport => {
-    if (processedDataWithGranularity.length === 0) {
-      const today = new Date();
-      return {
-        startDate: new Date(today.getFullYear(), 0, 1),
-        endDate: new Date(today.getFullYear(), 11, 31),
-        pixelsPerDay: 2
-      };
-    }
-    
-    const startDate = new Date(processedDataWithGranularity[0].date);
-    const endDate = new Date(processedDataWithGranularity[processedDataWithGranularity.length - 1].date);
-    const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    return {
-      startDate,
-      endDate,
-      pixelsPerDay: Math.max(0.5, Math.min(4, 600 / totalDays))
-    };
-  }, [processedDataWithGranularity]);
 
   // Measure chart dimensions after render for precise alignment
   useEffect(() => {
@@ -568,66 +766,33 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         </div>
       </div>
 
-      {/* Project Phase Timeline Chart - Separate chart above demand chart */}
-      {phases.length > 0 && (
-        <div className="phase-timeline-container" style={{ marginBottom: '20px' }}>
-          <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#374151' }}>
-            Project Phase Timeline
-          </h4>
-          <ResponsiveContainer width="100%" height={80}>
-            <BarChart
-              data={currentData}
-              margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
-            >
-              <XAxis 
-                dataKey="date"
-                type="category"
-                scale="point"
-                axisLine={false}
-                tickLine={false}
-                tick={false} // Hide X-axis labels for cleaner look
-              />
-              <YAxis 
-                tick={false}
-                axisLine={false}
-                tickLine={false}
-                width={60} // Reserve same space as demand chart Y-axis
-              />
-              
-              {/* Phase bars using ReferenceArea - perfectly aligned */}
-              {phases.map((phase, index) => {
-                const phaseColor = phaseColors[phase.phase_name?.toLowerCase() || ''] || 
-                                  `hsl(${index * 45 + 200}, 65%, 55%)`;
-                
-                return (
-                  <ReferenceArea
-                    key={`phase-timeline-${phase.id}`}
-                    x1={phase.start_date}
-                    x2={phase.end_date}
-                    fill={phaseColor}
-                    fillOpacity={0.8}
-                    stroke={phaseColor}
-                    strokeWidth={1}
-                    label={{
-                      value: phase.phase_name,
-                      position: 'center',
-                      fontSize: 11,
-                      fill: 'white',
-                      fontWeight: 'bold',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                    }}
-                  />
-                );
-              })}
-              
-              {/* Invisible bar to establish the chart structure */}
-              <Bar dataKey={() => 1} fill="transparent" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {/* Integrated Phase Management Timeline */}
+      <div className="phase-timeline-container" style={{ 
+        marginBottom: '20px',
+        position: 'relative'
+      }}>
+        <VisualPhaseManager 
+          projectId={projectId} 
+          projectName={projectName}
+          compact={true}
+          externalViewport={sharedViewport || undefined}
+          onViewportChange={handleViewportChange}
+          alignmentDimensions={chartDimensions ? {
+            left: chartDimensions.left,
+            width: chartDimensions.width
+          } : undefined}
+          onPhasesChange={() => {
+            // Refresh demand data when phases change to reflect new demand profile
+            queryClient.invalidateQueries({ queryKey: ['project-demand', projectId] });
+          }}
+        />
+      </div>
       
-      <div className="chart-content" ref={chartContainerRef}>
+      <div className="chart-content" ref={chartContainerRef} style={{
+        position: 'relative',
+        marginLeft: chartDimensions ? `${chartDimensions.left}px` : '0',
+        width: chartDimensions ? `${chartDimensions.width}px` : '100%'
+      }}>
         <ResponsiveContainer width="100%" height={400}>
           <AreaChart 
             data={currentData} 
@@ -717,22 +882,22 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         </ResponsiveContainer>
       </div>
 
-      {/* Interactive Timeline for brush control */}
+      {/* Simple Brush Control with drag handles */}
       {processedDataWithGranularity.length > 2 && (
-        <div style={{ marginTop: '20px', padding: '0 20px' }}>
+        <div style={{ 
+          marginTop: '20px', 
+          marginLeft: chartDimensions ? `${chartDimensions.left}px` : '20px',
+          width: chartDimensions ? `${chartDimensions.width}px` : 'calc(100% - 40px)',
+          position: 'relative'
+        }}>
           <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-            Drag to select specific time periods for detailed analysis
+            Drag the timeline range selectors to focus on specific time periods
           </div>
-          <InteractiveTimeline
-            items={timelineItems}
-            viewport={timelineViewport}
-            mode="brush"
-            height={60}
-            brushRange={{ start: brushStart, end: brushEnd }}
+          <SimpleBrushControl
+            data={processedDataWithGranularity}
+            brushStart={brushStart}
+            brushEnd={brushEnd}
             onBrushChange={handleBrushChange}
-            showGrid={true}
-            showToday={true}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '6px' }}
           />
         </div>
       )}
