@@ -69,8 +69,9 @@ const SimpleBrushControl = ({
     const rect = containerRef.current.getBoundingClientRect();
     const currentX = e.clientX - rect.left;
     const deltaX = currentX - dragging.startX;
-    const containerWidth = rect.width - 20; // Account for handle width
-    const deltaIndex = Math.round((deltaX / containerWidth) * data.length);
+    const containerWidth = rect.width; // Full container width
+    const deltaPercent = (deltaX / containerWidth) * 100;
+    const deltaIndex = Math.round((deltaPercent / 100) * (data.length - 1));
     
     let newStart = dragging.originalStart;
     let newEnd = dragging.originalEnd;
@@ -86,7 +87,7 @@ const SimpleBrushControl = ({
     }
     
     onBrushChange(newStart, newEnd);
-  }, [dragging, data.length, onBrushChange]);
+  }, [dragging, data.length, onBrushChange])
 
   const handleMouseUp = useCallback(() => {
     setDragging({ type: null, startX: 0, originalStart: 0, originalEnd: 0 });
@@ -106,105 +107,131 @@ const SimpleBrushControl = ({
 
   if (data.length === 0) return null;
 
-  const containerWidth = 400; // Fixed width for consistent layout
-  const startPercent = (brushStart / (data.length - 1)) * 100;
-  const endPercent = (brushEnd / (data.length - 1)) * 100;
+  const startPercent = (brushStart / Math.max(1, data.length - 1)) * 100;
+  const endPercent = (brushEnd / Math.max(1, data.length - 1)) * 100;
   const rangeWidth = endPercent - startPercent;
 
   return (
-    <div 
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        height: '40px',
-        backgroundColor: '#f1f5f9',
-        border: '1px solid #e2e8f0',
-        borderRadius: '6px',
-        cursor: 'default',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Background timeline */}
-      <div style={{
-        position: 'absolute',
-        top: '12px',
-        left: '10px',
-        right: '10px',
-        height: '16px',
-        backgroundColor: '#cbd5e1',
-        borderRadius: '2px'
-      }} />
-      
-      {/* Selected range */}
+    <div style={{ position: 'relative', height: '60px' }}>
       <div 
+        ref={containerRef}
         style={{
-          position: 'absolute',
-          top: '12px',
-          left: `calc(10px + ${startPercent}% * (100% - 20px) / 100%)`,
-          width: `calc(${rangeWidth}% * (100% - 20px) / 100%)`,
-          height: '16px',
-          backgroundColor: '#3b82f6',
-          borderRadius: '2px',
-          cursor: 'grab'
-        }}
-        onMouseDown={(e) => handleMouseDown(e, 'range')}
-      />
-      
-      {/* Start handle */}
-      <div 
-        style={{
-          position: 'absolute',
-          top: '8px',
-          left: `calc(10px + ${startPercent}% * (100% - 20px) / 100% - 6px)`,
-          width: '12px',
-          height: '24px',
-          backgroundColor: '#1e40af',
+          position: 'relative',
+          height: '40px',
+          backgroundColor: '#f1f5f9',
+          border: '1px solid #e2e8f0',
           borderRadius: '6px',
-          cursor: 'ew-resize',
-          border: '2px solid white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          margin: '0 20px', // Space for handles that extend beyond
+          cursor: 'default',
+          overflow: 'visible'
         }}
-        onMouseDown={(e) => handleMouseDown(e, 'start')}
-      />
-      
-      {/* End handle */}
-      <div 
-        style={{
+      >
+        {/* Background timeline */}
+        <div style={{
           position: 'absolute',
-          top: '8px',
-          left: `calc(10px + ${endPercent}% * (100% - 20px) / 100% - 6px)`,
-          width: '12px',
-          height: '24px',
-          backgroundColor: '#1e40af',
-          borderRadius: '6px',
-          cursor: 'ew-resize',
-          border: '2px solid white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}
-        onMouseDown={(e) => handleMouseDown(e, 'end')}
-      />
+          top: '16px',
+          left: '0',
+          right: '0',
+          height: '8px',
+          backgroundColor: '#cbd5e1',
+          borderRadius: '4px'
+        }} />
+        
+        {/* Selected range */}
+        <div 
+          style={{
+            position: 'absolute',
+            top: '16px',
+            left: `${startPercent}%`,
+            width: `${rangeWidth}%`,
+            height: '8px',
+            backgroundColor: '#3b82f6',
+            borderRadius: '4px',
+            cursor: 'grab'
+          }}
+          onMouseDown={(e) => handleMouseDown(e, 'range')}
+        />
+        
+        {/* Start handle */}
+        <div 
+          style={{
+            position: 'absolute',
+            top: '6px',
+            left: `calc(${startPercent}% - 8px)`,
+            width: '16px',
+            height: '28px',
+            backgroundColor: '#1e40af',
+            borderRadius: '8px',
+            cursor: 'ew-resize',
+            border: '2px solid white',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            zIndex: 10
+          }}
+          onMouseDown={(e) => handleMouseDown(e, 'start')}
+        >
+          ‖
+        </div>
+        
+        {/* End handle */}
+        <div 
+          style={{
+            position: 'absolute',
+            top: '6px',
+            left: `calc(${endPercent}% - 8px)`,
+            width: '16px',
+            height: '28px',
+            backgroundColor: '#1e40af',
+            borderRadius: '8px',
+            cursor: 'ew-resize',
+            border: '2px solid white',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            zIndex: 10
+          }}
+          onMouseDown={(e) => handleMouseDown(e, 'end')}
+        >
+          ‖
+        </div>
+      </div>
       
       {/* Date labels */}
       <div style={{
-        position: 'absolute',
-        bottom: '-20px',
-        left: `calc(10px + ${startPercent}% * (100% - 20px) / 100%)`,
-        fontSize: '10px',
-        color: '#6b7280',
-        transform: 'translateX(-50%)'
+        position: 'relative',
+        height: '20px',
+        margin: '0 20px'
       }}>
-        {formatDate(data[brushStart]?.date || '')}
-      </div>
-      
-      <div style={{
-        position: 'absolute',
-        bottom: '-20px',
-        left: `calc(10px + ${endPercent}% * (100% - 20px) / 100%)`,
-        fontSize: '10px',
-        color: '#6b7280',
-        transform: 'translateX(-50%)'
-      }}>
-        {formatDate(data[brushEnd]?.date || '')}
+        <div style={{
+          position: 'absolute',
+          top: '5px',
+          left: `${startPercent}%`,
+          fontSize: '11px',
+          color: '#6b7280',
+          transform: 'translateX(-50%)'
+        }}>
+          {formatDate(data[brushStart]?.date || '')}
+        </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '5px',
+          left: `${endPercent}%`,
+          fontSize: '11px',
+          color: '#6b7280',
+          transform: 'translateX(-50%)'
+        }}>
+          {formatDate(data[brushEnd]?.date || '')}
+        </div>
       </div>
     </div>
   );
