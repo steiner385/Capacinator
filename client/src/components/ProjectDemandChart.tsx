@@ -31,11 +31,13 @@ type ChartView = 'demand' | 'capacity' | 'gaps';
 // Simple Brush Control Component for timeline selection
 const SimpleBrushControl = ({ 
   data, 
+  dailyData,
   brushStart, 
   brushEnd, 
   onBrushChange 
 }: {
   data: ChartDataPoint[];
+  dailyData: ChartDataPoint[];
   brushStart: number;
   brushEnd: number;
   onBrushChange: (start: number, end: number) => void;
@@ -69,9 +71,12 @@ const SimpleBrushControl = ({
     const rect = containerRef.current.getBoundingClientRect();
     const currentX = e.clientX - rect.left;
     const deltaX = currentX - dragging.startX;
-    const containerWidth = rect.width; // Full container width
+    const containerWidth = rect.width;
+    
+    // Use daily data for fine-grained control
+    const totalDailyPoints = dailyData.length;
     const deltaPercent = (deltaX / containerWidth) * 100;
-    const deltaIndex = Math.round((deltaPercent / 100) * (data.length - 1));
+    const deltaIndex = Math.round((deltaPercent / 100) * (totalDailyPoints - 1));
     
     let newStart = dragging.originalStart;
     let newEnd = dragging.originalEnd;
@@ -79,15 +84,15 @@ const SimpleBrushControl = ({
     if (dragging.type === 'start') {
       newStart = Math.max(0, Math.min(dragging.originalStart + deltaIndex, dragging.originalEnd - 1));
     } else if (dragging.type === 'end') {
-      newEnd = Math.min(data.length - 1, Math.max(dragging.originalEnd + deltaIndex, dragging.originalStart + 1));
+      newEnd = Math.min(totalDailyPoints - 1, Math.max(dragging.originalEnd + deltaIndex, dragging.originalStart + 1));
     } else if (dragging.type === 'range') {
       const rangeSize = dragging.originalEnd - dragging.originalStart;
-      newStart = Math.max(0, Math.min(dragging.originalStart + deltaIndex, data.length - 1 - rangeSize));
+      newStart = Math.max(0, Math.min(dragging.originalStart + deltaIndex, totalDailyPoints - 1 - rangeSize));
       newEnd = newStart + rangeSize;
     }
     
     onBrushChange(newStart, newEnd);
-  }, [dragging, data.length, onBrushChange])
+  }, [dragging, dailyData.length, onBrushChange])
 
   const handleMouseUp = useCallback(() => {
     setDragging({ type: null, startX: 0, originalStart: 0, originalEnd: 0 });
@@ -105,10 +110,11 @@ const SimpleBrushControl = ({
     }
   }, [dragging.type, handleMouseMove, handleMouseUp]);
 
-  if (data.length === 0) return null;
+  if (dailyData.length === 0) return null;
 
-  const startPercent = (brushStart / Math.max(1, data.length - 1)) * 100;
-  const endPercent = (brushEnd / Math.max(1, data.length - 1)) * 100;
+  // Use daily data for percentage calculations to get smooth positioning
+  const startPercent = (brushStart / Math.max(1, dailyData.length - 1)) * 100;
+  const endPercent = (brushEnd / Math.max(1, dailyData.length - 1)) * 100;
   const rangeWidth = endPercent - startPercent;
 
   return (
@@ -219,7 +225,7 @@ const SimpleBrushControl = ({
           color: '#6b7280',
           transform: 'translateX(-50%)'
         }}>
-          {formatDate(data[brushStart]?.date || '')}
+          {formatDate(dailyData[brushStart]?.date || '')}
         </div>
         
         <div style={{
@@ -230,7 +236,7 @@ const SimpleBrushControl = ({
           color: '#6b7280',
           transform: 'translateX(-50%)'
         }}>
-          {formatDate(data[brushEnd]?.date || '')}
+          {formatDate(dailyData[brushEnd]?.date || '')}
         </div>
       </div>
     </div>
@@ -591,8 +597,14 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   // Initialize brush range and shared viewport when data loads
   React.useEffect(() => {
     if (processedDataWithGranularity.length > 0 && brushEnd === 0) {
-      const initialStart = Math.max(0, Math.floor(processedDataWithGranularity.length * 0.1));
-      const initialEnd = processedDataWithGranularity.length - 1;
+      // Use daily data length for brush indices for fine granularity
+      const dailyDataLength = (
+        currentView === 'demand' ? demandData.length :
+        currentView === 'capacity' ? capacityData.length :
+        gapsData.length
+      );
+      const initialStart = Math.max(0, Math.floor(dailyDataLength * 0.1));
+      const initialEnd = dailyDataLength - 1;
       setBrushStart(initialStart);
       setBrushEnd(initialEnd);
       
@@ -609,15 +621,36 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         });
       }
     }
-  }, [processedDataWithGranularity, brushEnd, sharedViewport]);
+  }, [processedDataWithGranularity, brushEnd, sharedViewport, currentView, demandData.length, capacityData.length, gapsData.length]);
 
   // Create filtered data based on brush selection
   const displayData = React.useMemo(() => {
     if (processedDataWithGranularity.length === 0 || brushStart === brushEnd) return processedDataWithGranularity;
-    const start = Math.max(0, Math.min(brushStart, brushEnd));
-    const end = Math.min(processedDataWithGranularity.length - 1, Math.max(brushStart, brushEnd));
-    return processedDataWithGranularity.slice(start, end + 1);
-  }, [processedDataWithGranularity, brushStart, brushEnd]);
+    
+    // Get the current daily data to map brush indices
+    const currentDailyData = (
+      currentView === 'demand' ? demandData :
+      currentView === 'capacity' ? capacityData :
+      gapsData
+    );
+    
+    if (currentDailyData.length === 0) return processedDataWithGranularity;
+    
+    // Map daily brush indices to processed data date range
+    const dailyStart = Math.max(0, Math.min(brushStart, brushEnd));
+    const dailyEnd = Math.min(currentDailyData.length - 1, Math.max(brushStart, brushEnd));
+    
+    const startDate = currentDailyData[dailyStart]?.date;
+    const endDate = currentDailyData[dailyEnd]?.date;
+    
+    if (!startDate || !endDate) return processedDataWithGranularity;
+    
+    // Filter processed data by date range
+    return processedDataWithGranularity.filter(dataPoint => {
+      const pointDate = dataPoint.date;
+      return pointDate >= startDate && pointDate <= endDate;
+    });
+  }, [processedDataWithGranularity, brushStart, brushEnd, currentView, demandData, capacityData, gapsData]);
 
   // Get current dataset for display
   const currentData = displayData;
@@ -922,6 +955,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           </div>
           <SimpleBrushControl
             data={processedDataWithGranularity}
+            dailyData={currentView === 'demand' ? demandData : currentView === 'capacity' ? capacityData : gapsData}
             brushStart={brushStart}
             brushEnd={brushEnd}
             onBrushChange={handleBrushChange}
