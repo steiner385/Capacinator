@@ -685,19 +685,33 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
 
   // Measure chart dimensions after render for precise alignment
   useEffect(() => {
-    if (!chartContainerRef.current || currentData.length === 0) return;
+    console.log('🔍 Starting chart measurement effect. Container:', !!chartContainerRef.current, 'Data length:', currentData.length);
+    
+    if (!chartContainerRef.current || currentData.length === 0) {
+      console.log('⚠️ Chart measurement skipped - no container or data');
+      return;
+    }
     
     const measureChart = () => {
+      console.log('📀 Attempting to measure chart...');
       const container = chartContainerRef.current;
-      if (!container) return;
+      if (!container) {
+        console.log('⚠️ No container found');
+        return;
+      }
       
       // Find the actual chart area (SVG) within the ResponsiveContainer
       const svg = container.querySelector('svg');
-      if (!svg) return;
+      if (!svg) {
+        console.log('⚠️ No SVG found in container');
+        return;
+      }
       
       // Find the actual plotting area by looking for X-axis ticks
       const xAxisGroup = svg.querySelector('.recharts-xAxis');
       const plotArea = svg.querySelector('.recharts-cartesian-grid');
+      
+      console.log('🔍 Found elements:', { xAxisGroup: !!xAxisGroup, plotArea: !!plotArea });
       
       if (xAxisGroup && plotArea) {
         const containerRect = container.getBoundingClientRect();
@@ -751,9 +765,13 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     };
     
     // Measure after multiple delays to ensure Recharts is fully rendered
-    const timer1 = setTimeout(measureChart, 500);
-    const timer2 = setTimeout(measureChart, 1000);
-    const timer3 = setTimeout(measureChart, 2000);
+    const timer1 = setTimeout(measureChart, 100);
+    const timer2 = setTimeout(measureChart, 500);
+    const timer3 = setTimeout(measureChart, 1000);
+    const timer4 = setTimeout(measureChart, 2000);
+    
+    // Try immediate measurement as well
+    measureChart();
     
     // Also measure on resize
     window.addEventListener('resize', measureChart);
@@ -762,6 +780,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
+      clearTimeout(timer4);
       window.removeEventListener('resize', measureChart);
     };
   }, [currentData]); // Re-measure when data changes
