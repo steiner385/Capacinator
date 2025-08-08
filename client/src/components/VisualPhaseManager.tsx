@@ -395,14 +395,19 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         minHeight: compact ? '160px' : '220px', 
         position: 'relative', 
         width: '100%',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        // Apply alignment if provided
-        ...(alignmentDimensions && compact ? {
-          marginLeft: `${alignmentDimensions.left}px`,
-          width: `${alignmentDimensions.width}px`
-        } : {})
+        overflowX: 'hidden', // Changed from auto to hidden
+        overflowY: 'hidden'
       }}>
+        {/* Timeline container with precise alignment */}
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          // Apply alignment constraints when in compact mode
+          ...(alignmentDimensions && compact ? {
+            paddingLeft: `${alignmentDimensions.left}px`,
+            paddingRight: `calc(100% - ${alignmentDimensions.left + alignmentDimensions.width}px)`
+          } : {})
+        }}>
         {timelineItems.length > 0 ? (
           <div>
             {/* Phase Timeline */}
@@ -533,6 +538,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             {isLoading ? 'Loading project phases...' : 'No project phases found. Click "Add Phase" to create the first phase.'}
           </div>
         )}
+        </div>
       </div>
 
 

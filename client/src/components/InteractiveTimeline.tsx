@@ -91,15 +91,53 @@ export function InteractiveTimeline({
     startX?: number;
     originalStart?: Date;
     originalEnd?: Date;
+    previewStart?: Date;
+    previewEnd?: Date;
   }>({ type: null });
   
   const [hoverItemId, setHoverItemId] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    content: React.ReactNode;
+  }>({ visible: false, x: 0, y: 0, content: null });
 
-  // Calculate timeline width
-  const timelineWidth = Math.max(
-    (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24) * viewport.pixelsPerDay,
-    800
-  );
+  // Calculate timeline width - use container width for alignment
+  const calculateTimelineWidth = () => {
+    const naturalWidth = (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24) * viewport.pixelsPerDay;
+    
+    // Get container width if available - for precise alignment, use container width exactly
+    if (timelineRef.current?.parentElement) {
+      const containerWidth = timelineRef.current.parentElement.clientWidth;
+      // For alignment purposes, use the container width exactly instead of natural width
+      return containerWidth > 0 ? containerWidth : Math.max(naturalWidth, 800);
+    }
+    
+    return Math.max(naturalWidth, 800); // Fallback minimum
+  };
+  
+  const [timelineWidth, setTimelineWidth] = useState(() => calculateTimelineWidth());
+  
+  // Recalculate width when container resizes
+  useEffect(() => {
+    const updateWidth = () => {
+      setTimelineWidth(calculateTimelineWidth());
+    };
+    
+    const resizeObserver = new ResizeObserver(updateWidth);
+    if (timelineRef.current?.parentElement) {
+      resizeObserver.observe(timelineRef.current.parentElement);
+    }
+    
+    // Also listen to window resize as fallback
+    window.addEventListener('resize', updateWidth);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, [viewport]);
 
   // Generate grid lines for visual reference
   const generateGridLines = useCallback(() => {
@@ -225,6 +263,13 @@ export function InteractiveTimeline({
         }
       }
       
+      // Update preview dates for visual feedback
+      setDragState(prev => ({
+        ...prev,
+        previewStart: newStartDate,
+        previewEnd: newEndDate
+      }));
+      
       // Check for overlaps if not allowed
       if (!allowOverlap) {
         // TODO: Implement overlap prevention logic
@@ -244,6 +289,9 @@ export function InteractiveTimeline({
   }, []);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent, itemId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (itemId && onItemEdit) {
       onItemEdit(itemId);
     } else if (!itemId && onItemAdd) {
@@ -301,7 +349,8 @@ export function InteractiveTimeline({
         className="timeline-container"
         style={{
           position: 'relative',
-          width: timelineWidth,
+          width: '100%',
+          maxWidth: '100%', // Ensure it doesn't exceed container
           height: height,
           backgroundColor: '#f8fafc',
           border: '1px solid #e2e8f0',
@@ -419,8 +468,59 @@ export function InteractiveTimeline({
               onMouseDown={(e) => handleMouseDown(e, item.id, 'move')}
               onDoubleClick={(e) => handleDoubleClick(e, item.id)}
               onContextMenu={(e) => handleRightClick(e, item.id)}
-              onMouseEnter={() => setHoverItemId(item.id)}
-              onMouseLeave={() => setHoverItemId(null)}
+              onMouseEnter={(e) => {
+                setHoverItemId(item.id);
+                if (mode === 'phase-manager' && item.data) {
+                  const rect = timelineRef.current?.getBoundingClientRect();
+                  if (rect) {
+                    const phase = item.data as any;
+                    const startDate = new Date(phase.start_date);
+                    const endDate = new Date(phase.end_date);
+                    const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                    
+                    setTooltip({
+                      visible: true,
+                      x: e.clientX - rect.left + 10,
+                      y: e.clientY - rect.top - 10,
+                      content: (
+                        <div style={{
+                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          color: 'white',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          minWidth: '200px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>{phase.phase_name}</div>
+                          <div>Start: {format(startDate, 'MMM dd, yyyy')}</div>
+                          <div>End: {format(endDate, 'MMM dd, yyyy')}</div>
+                          <div>Duration: {duration} days</div>
+                          <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>
+                            Double-click to edit • Right-click for options
+                          </div>
+                        </div>
+                      )
+                    });
+                  }
+                }
+              }}
+              onMouseLeave={() => {
+                setHoverItemId(null);
+                setTooltip({ visible: false, x: 0, y: 0, content: null });
+              }}
+              onMouseMove={(e) => {
+                if (mode === 'phase-manager' && item.data && tooltip.visible) {
+                  const rect = timelineRef.current?.getBoundingClientRect();
+                  if (rect) {
+                    setTooltip(prev => ({
+                      ...prev,
+                      x: e.clientX - rect.left + 10,
+                      y: e.clientY - rect.top - 10
+                    }));
+                  }
+                }
+              }}
             >
               {/* Item name */}
               <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
@@ -473,6 +573,46 @@ export function InteractiveTimeline({
           );
         })}
 
+        {/* Preview overlay during drag */}
+        {dragState.itemId && dragState.previewStart && dragState.previewEnd && (
+          (() => {
+            const previewPosition = calculateItemPosition(
+              {
+                id: 'preview',
+                name: '',
+                startDate: dragState.previewStart,
+                endDate: dragState.previewEnd
+              },
+              viewport
+            );
+            
+            return (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: previewPosition.left,
+                  width: previewPosition.width,
+                  top: 8,
+                  height: height - 16,
+                  backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                  border: '2px dashed #3b82f6',
+                  borderRadius: '4px',
+                  pointerEvents: 'none',
+                  zIndex: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  color: '#1e40af',
+                  fontWeight: 600
+                }}
+              >
+                {format(dragState.previewStart, 'MMM dd')} - {format(dragState.previewEnd, 'MMM dd')}
+              </div>
+            );
+          })()
+        )}
+
         {/* Brush overlay for brush mode */}
         {mode === 'brush' && brushRange && (
           <div
@@ -490,6 +630,21 @@ export function InteractiveTimeline({
           />
         )}
       </div>
+
+      {/* Tooltip */}
+      {tooltip.visible && (
+        <div
+          style={{
+            position: 'absolute',
+            left: tooltip.x,
+            top: tooltip.y,
+            zIndex: 1000,
+            pointerEvents: 'none'
+          }}
+        >
+          {tooltip.content}
+        </div>
+      )}
     </div>
   );
 }
