@@ -50,6 +50,14 @@ const getPhaseColor = (phaseName: string): string => {
 };
 
 export function VisualPhaseManager({ projectId, projectName, onPhasesChange, compact = false, externalViewport, onViewportChange, alignmentDimensions }: VisualPhaseManagerProps) {
+  // Debug alignment dimensions
+  React.useEffect(() => {
+    if (alignmentDimensions) {
+      console.log('📈 VisualPhaseManager received alignment dimensions:', alignmentDimensions);
+    } else {
+      console.log('⚠️ VisualPhaseManager: No alignment dimensions provided');
+    }
+  }, [alignmentDimensions]);
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPhase, setEditingPhase] = useState<ProjectPhaseTimeline | null>(null);

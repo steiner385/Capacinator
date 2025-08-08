@@ -736,23 +736,32 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           right: plotRect.right - containerRect.left
         });
         
-        console.log('Chart dimensions measured:', {
+        const dimensions = {
           containerWidth: containerRect.width,
           plotWidth: plotRect.width,
           plotLeft: plotRect.left - containerRect.left,
-          plotRight: plotRect.right - containerRect.left
-        });
+          plotRight: plotRect.right - containerRect.left,
+          width: plotRect.width,
+          left: plotRect.left - containerRect.left,
+          right: plotRect.right - containerRect.left
+        };
+        
+        console.log('📐 Chart dimensions measured:', dimensions);
       }
     };
     
-    // Measure after a longer delay to ensure Recharts is fully rendered
-    const timer = setTimeout(measureChart, 500);
+    // Measure after multiple delays to ensure Recharts is fully rendered
+    const timer1 = setTimeout(measureChart, 500);
+    const timer2 = setTimeout(measureChart, 1000);
+    const timer3 = setTimeout(measureChart, 2000);
     
     // Also measure on resize
     window.addEventListener('resize', measureChart);
     
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
       window.removeEventListener('resize', measureChart);
     };
   }, [currentData]); // Re-measure when data changes
@@ -863,10 +872,17 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           compact={true}
           externalViewport={sharedViewport || undefined}
           onViewportChange={handleViewportChange}
-          alignmentDimensions={chartDimensions ? {
-            left: chartDimensions.left,
-            width: chartDimensions.width
-          } : undefined}
+          alignmentDimensions={(() => {
+            if (chartDimensions) {
+              const dims = {
+                left: chartDimensions.left,
+                width: chartDimensions.width
+              };
+              console.log('📈 Passing alignment dimensions to VisualPhaseManager:', dims);
+              return dims;
+            }
+            return undefined;
+          })()}
           onPhasesChange={() => {
             // Refresh demand data when phases change to reflect new demand profile
             queryClient.invalidateQueries({ queryKey: ['project-demand', projectId] });
