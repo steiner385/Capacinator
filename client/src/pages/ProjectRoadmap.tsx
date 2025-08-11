@@ -4,6 +4,7 @@ import { Calendar, Edit2, Save, X, ZoomIn, ZoomOut, Filter, Search, ChevronDown,
 import { api } from '../lib/api-client';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
+import InteractiveTimeline, { TimelineItem, TimelineViewport } from '../components/InteractiveTimeline';
 import type { Project, ProjectPhase } from '../types';
 import './ProjectRoadmap.css';
 
@@ -24,11 +25,6 @@ interface ProjectPhaseTimeline {
   updated_at: string;
 }
 
-interface TimelineViewport {
-  startDate: Date;
-  endDate: Date;
-  pixelsPerDay: number;
-}
 
 interface EditingPhase {
   projectId: string;
@@ -36,6 +32,24 @@ interface EditingPhase {
   startDate: string;
   endDate: string;
 }
+
+// Phase colors matching the existing system
+const PHASE_COLORS: Record<string, string> = {
+  'business planning': '#3b82f6',
+  'development': '#10b981',
+  'system integration testing': '#f59e0b',
+  'user acceptance testing': '#8b5cf6',
+  'validation': '#ec4899',
+  'cutover': '#ef4444',
+  'hypercare': '#06b6d4',
+  'support': '#84cc16',
+  'custom': '#6b7280'
+};
+
+const getPhaseColor = (phaseName: string): string => {
+  const normalizedName = phaseName.toLowerCase();
+  return PHASE_COLORS[normalizedName] || PHASE_COLORS['custom'];
+};
 
 export default function ProjectRoadmap() {
   const queryClient = useQueryClient();
@@ -142,15 +156,6 @@ export default function ProjectRoadmap() {
   
   const [editingPhase, setEditingPhase] = useState<EditingPhase | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectWithPhases | null>(null);
-  const [dragState, setDragState] = useState<{
-    isDragging: boolean;
-    projectId: string;
-    phaseId: string;
-    dragType: 'start' | 'end' | 'move';
-    startX: number;
-    originalStartDate: Date;
-    originalEndDate: Date;
-  } | null>(null);
   
   const [filters, setFilters] = useState({
     search: '',
@@ -158,6 +163,72 @@ export default function ProjectRoadmap() {
     projectType: '',
     owner: ''
   });
+
+  // Convert project phases to timeline items for InteractiveTimeline
+  const convertPhasesToTimelineItems = useCallback((project: ProjectWithPhases): TimelineItem[] => {
+    return project.phases.map(phase => ({
+      id: phase.id,
+      name: phase.phase_name,
+      startDate: new Date(phase.start_date),
+      endDate: new Date(phase.end_date),
+      color: getPhaseColor(phase.phase_name),
+      data: { ...phase, projectId: project.id } // Include project context
+    }));
+  }, []);
+
+  // Handle phase move/resize from InteractiveTimeline
+  const handlePhaseMove = useCallback((itemId: string, newStartDate: Date, newEndDate: Date) => {
+    // Find which project this phase belongs to
+    const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
+    if (!projectWithPhase) return;
+
+    // Update in-memory state optimistically
+    queryClient.setQueryData(['projectsRoadmap', debouncedFilters], (oldData: ProjectWithPhases[] | undefined) => {
+      if (!oldData) return oldData;
+      
+      return oldData.map(project => {
+        if (project.id === projectWithPhase.id) {
+          return {
+            ...project,
+            phases: project.phases.map(phase => {
+              if (phase.id === itemId) {
+                return {
+                  ...phase,
+                  start_date: newStartDate.toISOString().split('T')[0],
+                  end_date: newEndDate.toISOString().split('T')[0]
+                };
+              }
+              return phase;
+            })
+          };
+        }
+        return project;
+      });
+    });
+
+    // Update in backend
+    updatePhaseDragMutation.mutate({
+      projectId: projectWithPhase.id,
+      phaseId: itemId,
+      startDate: newStartDate.toISOString().split('T')[0],
+      endDate: newEndDate.toISOString().split('T')[0]
+    });
+  }, [projects, queryClient, debouncedFilters]);
+
+  // Handle phase edit from InteractiveTimeline
+  const handlePhaseEdit = useCallback((itemId: string) => {
+    const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
+    const phase = projectWithPhase?.phases.find(ph => ph.id === itemId);
+    
+    if (phase && projectWithPhase) {
+      setEditingPhase({
+        projectId: projectWithPhase.id,
+        phaseId: phase.id,
+        startDate: phase.start_date,
+        endDate: phase.end_date
+      });
+    }
+  }, [projects]);
   
   // Debounced filters to prevent excessive API calls
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
@@ -271,182 +342,7 @@ export default function ProjectRoadmap() {
     }));
   };
 
-  // Handle mouse down for dragging
-  const handleMouseDown = (
-    e: React.MouseEvent,
-    projectId: string,
-    phaseId: string,
-    dragType: 'start' | 'end' | 'move',
-    startDate: Date,
-    endDate: Date
-  ) => {
-    e.preventDefault();
-    setDragState({
-      isDragging: true,
-      projectId,
-      phaseId,
-      dragType,
-      startX: e.clientX,
-      originalStartDate: startDate,
-      originalEndDate: endDate
-    });
-  };
 
-  // Validate phase doesn't overlap with other phases
-  const validatePhasePosition = (projectId: string, phaseId: string, newStartDate: Date, newEndDate: Date) => {
-    const project = projects?.find(p => p.id === projectId);
-    if (!project) return { newStartDate, newEndDate };
-
-    const otherPhases = project.phases.filter(p => p.id !== phaseId);
-    const currentPhase = project.phases.find(p => p.id === phaseId);
-    if (!currentPhase) return { newStartDate, newEndDate };
-
-    // Sort phases by order to check adjacent phases
-    const sortedPhases = [...otherPhases].sort((a, b) => a.phase_order - b.phase_order);
-    const currentOrder = currentPhase.phase_order;
-
-    // Find previous and next phases
-    const previousPhase = sortedPhases.find(p => p.phase_order < currentOrder && p.phase_order === Math.max(...sortedPhases.filter(ph => ph.phase_order < currentOrder).map(ph => ph.phase_order)));
-    const nextPhase = sortedPhases.find(p => p.phase_order > currentOrder && p.phase_order === Math.min(...sortedPhases.filter(ph => ph.phase_order > currentOrder).map(ph => ph.phase_order)));
-
-    let adjustedStartDate = newStartDate;
-    let adjustedEndDate = newEndDate;
-
-    // Check overlap with previous phase
-    if (previousPhase) {
-      const prevEndDate = new Date(previousPhase.end_date);
-      if (adjustedStartDate < prevEndDate) {
-        adjustedStartDate = new Date(prevEndDate.getTime() + 24 * 60 * 60 * 1000); // Add 1 day after previous phase
-        // Maintain duration if possible
-        const duration = adjustedEndDate.getTime() - newStartDate.getTime();
-        adjustedEndDate = new Date(adjustedStartDate.getTime() + duration);
-      }
-    }
-
-    // Check overlap with next phase
-    if (nextPhase) {
-      const nextStartDate = new Date(nextPhase.start_date);
-      if (adjustedEndDate > nextStartDate) {
-        adjustedEndDate = new Date(nextStartDate.getTime() - 24 * 60 * 60 * 1000); // End 1 day before next phase
-        // Ensure minimum 1 day duration
-        if (adjustedEndDate <= adjustedStartDate) {
-          adjustedStartDate = new Date(adjustedEndDate.getTime() - 24 * 60 * 60 * 1000);
-        }
-      }
-    }
-
-    return { newStartDate: adjustedStartDate, newEndDate: adjustedEndDate };
-  };
-
-  // Handle mouse move during drag
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!dragState || !timelineRef.current) return;
-
-    const rect = timelineRef.current.getBoundingClientRect();
-    const deltaX = e.clientX - dragState.startX;
-    const deltaDays = deltaX / viewport.pixelsPerDay;
-    const deltaMs = deltaDays * 24 * 60 * 60 * 1000;
-
-    let newStartDate = dragState.originalStartDate;
-    let newEndDate = dragState.originalEndDate;
-
-    switch (dragState.dragType) {
-      case 'start':
-        newStartDate = new Date(dragState.originalStartDate.getTime() + deltaMs);
-        // Ensure start doesn't go past end
-        if (newStartDate >= dragState.originalEndDate) {
-          newStartDate = new Date(dragState.originalEndDate.getTime() - 24 * 60 * 60 * 1000);
-        }
-        break;
-      case 'end':
-        newEndDate = new Date(dragState.originalEndDate.getTime() + deltaMs);
-        // Ensure end doesn't go before start
-        if (newEndDate <= dragState.originalStartDate) {
-          newEndDate = new Date(dragState.originalStartDate.getTime() + 24 * 60 * 60 * 1000);
-        }
-        break;
-      case 'move':
-        const duration = dragState.originalEndDate.getTime() - dragState.originalStartDate.getTime();
-        newStartDate = new Date(dragState.originalStartDate.getTime() + deltaMs);
-        newEndDate = new Date(newStartDate.getTime() + duration);
-        break;
-    }
-
-    // Validate and adjust for phase overlaps
-    const validated = validatePhasePosition(dragState.projectId, dragState.phaseId, newStartDate, newEndDate);
-    newStartDate = validated.newStartDate;
-    newEndDate = validated.newEndDate;
-
-    // Update the visual representation immediately (optimistic update)
-    queryClient.setQueryData(['projectsRoadmap', filters], (oldData: ProjectWithPhases[] | undefined) => {
-      if (!oldData) return oldData;
-      
-      return oldData.map(project => {
-        if (project.id === dragState.projectId) {
-          return {
-            ...project,
-            phases: project.phases.map(phase => {
-              if (phase.id === dragState.phaseId) {
-                return {
-                  ...phase,
-                  start_date: newStartDate.toISOString().split('T')[0],
-                  end_date: newEndDate.toISOString().split('T')[0]
-                };
-              }
-              return phase;
-            })
-          };
-        }
-        return project;
-      });
-    });
-  }, [dragState, viewport.pixelsPerDay, queryClient, filters]);
-
-  // Handle mouse up to end drag
-  const handleMouseUp = useCallback(() => {
-    if (dragState) {
-      // Get the current data from query cache to ensure we have the latest optimistic updates
-      const currentData = queryClient.getQueryData(['projectsRoadmap', filters]) as ProjectWithPhases[] | undefined;
-      const project = currentData?.find(p => p.id === dragState.projectId);
-      const phase = project?.phases.find(ph => ph.id === dragState.phaseId);
-      
-      if (phase) {
-        updatePhaseDragMutation.mutate({
-          projectId: dragState.projectId,
-          phaseId: dragState.phaseId,
-          startDate: phase.start_date,
-          endDate: phase.end_date
-        });
-      }
-      
-      setDragState(null);
-    }
-  }, [dragState, queryClient, filters, updatePhaseDragMutation]);
-
-  // Add event listeners for drag
-  React.useEffect(() => {
-    if (dragState?.isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-      };
-    }
-  }, [dragState, handleMouseMove, handleMouseUp]);
-
-  // Handle phase click for manual editing
-  const handlePhaseClick = (projectId: string, phase: ProjectPhaseTimeline) => {
-    setEditingPhase({
-      projectId,
-      phaseId: phase.id,
-      startDate: phase.start_date,
-      endDate: phase.end_date
-    });
-  };
 
   // Save manual edit
   const savePhaseEdit = () => {
@@ -836,65 +732,24 @@ export default function ProjectRoadmap() {
                   </div>
                 
                 <div className="project-timeline" style={{ width: timelineWidth }}>
-                  {project.phases.map((phase, index) => {
-                    const startDate = new Date(phase.start_date);
-                    const endDate = new Date(phase.end_date);
-                    const left = getDatePosition(startDate);
-                    const width = getDatePosition(endDate) - left;
-                    const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                    
-                    // Generate better phase colors based on phase type
-                    const phaseColors: Record<string, string> = {
-                      'pending': '#64748b',
-                      'business planning': '#3b82f6',
-                      'development': '#10b981',
-                      'system integration testing': '#f59e0b',
-                      'user acceptance testing': '#8b5cf6',
-                      'validation': '#ec4899',
-                      'cutover': '#ef4444',
-                      'hypercare': '#06b6d4',
-                      'support': '#84cc16'
-                    };
-                    
-                    const phaseColor = phaseColors[phase.phase_name?.toLowerCase() || ''] || `hsl(${index * 45 + 200}, 65%, 55%)`;
-                    
-                    return (
-                      <div
-                        key={phase.id}
-                        className="phase-bar"
-                        style={{
-                          left: left,
-                          width: Math.max(width, 30), // Minimum width for visibility
-                          backgroundColor: phaseColor,
-                        }}
-                        onClick={() => handlePhaseClick(project.id, phase)}
-                        title={`${phase.phase_name}: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()} (${duration} days)`}
-                      >
-                        {/* Start resize handle */}
-                        <div
-                          className="resize-handle resize-start"
-                          onMouseDown={(e) => handleMouseDown(e, project.id, phase.id, 'start', startDate, endDate)}
-                        />
-                        
-                        {/* Phase content */}
-                        <div
-                          className="phase-content"
-                          onMouseDown={(e) => handleMouseDown(e, project.id, phase.id, 'move', startDate, endDate)}
-                        >
-                          <span className="phase-name">{phase.phase_name}</span>
-                          <span className="phase-duration">
-                            {Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))}d
-                          </span>
-                        </div>
-                        
-                        {/* End resize handle */}
-                        <div
-                          className="resize-handle resize-end"
-                          onMouseDown={(e) => handleMouseDown(e, project.id, phase.id, 'end', startDate, endDate)}
-                        />
-                      </div>
-                    );
-                  })}
+                  {/* Use InteractiveTimeline in roadmap mode for consistent phase visualization */}
+                  <InteractiveTimeline
+                    items={convertPhasesToTimelineItems(project)}
+                    viewport={viewport}
+                    mode="roadmap"
+                    height={60}
+                    onItemMove={handlePhaseMove}
+                    onItemResize={handlePhaseMove}
+                    onItemEdit={handlePhaseEdit}
+                    showGrid={false} // Grid is handled by the parent timeline
+                    showToday={false} // Today line is handled by the parent
+                    allowOverlap={false}
+                    minItemDuration={1}
+                    style={{
+                      border: 'none',
+                      backgroundColor: 'transparent'
+                    }}
+                  />
                 </div>
                 </div>
               );
