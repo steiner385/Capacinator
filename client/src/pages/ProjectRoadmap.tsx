@@ -191,6 +191,44 @@ export default function ProjectRoadmap() {
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [allCollapsed, setAllCollapsed] = useState(true);
 
+  // Update phase dates mutation for drag operations
+  const updatePhaseDragMutation = useMutation({
+    mutationFn: async ({ projectId, phaseId, startDate, endDate }: {
+      projectId: string;
+      phaseId: string;
+      startDate: string;
+      endDate: string;
+    }) => {
+      return api.projectPhases.update(phaseId, {
+        start_date: startDate,
+        end_date: endDate
+      });
+    },
+    onError: () => {
+      // Revert optimistic update on error
+      queryClient.invalidateQueries({ queryKey: ['projectsRoadmap'] });
+    }
+  });
+
+  // Update phase dates mutation for manual editing
+  const updatePhaseManualMutation = useMutation({
+    mutationFn: async ({ projectId, phaseId, startDate, endDate }: {
+      projectId: string;
+      phaseId: string;
+      startDate: string;
+      endDate: string;
+    }) => {
+      return api.projectPhases.update(phaseId, {
+        start_date: startDate,
+        end_date: endDate
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projectsRoadmap'] });
+      setEditingPhase(null);
+    }
+  });
+
   // Fetch projects with phases
   const { data: projects, isLoading, error } = useQuery({
     queryKey: ['projectsRoadmap', debouncedFilters],
@@ -280,44 +318,6 @@ export default function ProjectRoadmap() {
       setCollapsedProjects(allProjectIds);
     }
   }, [projects, allCollapsed]);
-
-  // Update phase dates mutation for drag operations
-  const updatePhaseDragMutation = useMutation({
-    mutationFn: async ({ projectId, phaseId, startDate, endDate }: {
-      projectId: string;
-      phaseId: string;
-      startDate: string;
-      endDate: string;
-    }) => {
-      return api.projectPhases.update(phaseId, {
-        start_date: startDate,
-        end_date: endDate
-      });
-    },
-    onError: () => {
-      // Revert optimistic update on error
-      queryClient.invalidateQueries({ queryKey: ['projectsRoadmap'] });
-    }
-  });
-
-  // Update phase dates mutation for manual editing
-  const updatePhaseManualMutation = useMutation({
-    mutationFn: async ({ projectId, phaseId, startDate, endDate }: {
-      projectId: string;
-      phaseId: string;
-      startDate: string;
-      endDate: string;
-    }) => {
-      return api.projectPhases.update(phaseId, {
-        start_date: startDate,
-        end_date: endDate
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectsRoadmap'] });
-      setEditingPhase(null);
-    }
-  });
 
   // Calculate date position on timeline
   const getDatePosition = useCallback((date: Date) => {
