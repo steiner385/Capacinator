@@ -128,8 +128,14 @@ export function InteractiveTimeline({
   useEffect(() => {
     const updateWidth = () => {
       const newWidth = calculateTimelineWidth();
-      setTimelineWidth(newWidth);
-      console.log('📏 InteractiveTimeline width updated:', newWidth);
+      // Only update if the width actually changed to prevent unnecessary re-renders
+      setTimelineWidth(prevWidth => {
+        if (Math.abs(newWidth - prevWidth) > 1) { // Allow 1px tolerance
+          console.log('📏 InteractiveTimeline width updated:', prevWidth, '→', newWidth);
+          return newWidth;
+        }
+        return prevWidth;
+      });
     };
     
     // Update immediately
@@ -155,7 +161,7 @@ export function InteractiveTimeline({
     // Additional fallback: check for size changes periodically if ResizeObserver is unavailable
     let intervalId: NodeJS.Timeout | null = null;
     if (!resizeObserver) {
-      intervalId = setInterval(updateWidth, 1000); // Check every second as last resort
+      intervalId = setInterval(updateWidth, 5000); // Check every 5 seconds as last resort (reduced frequency)
     }
     
     return () => {

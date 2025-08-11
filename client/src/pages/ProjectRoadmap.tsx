@@ -643,23 +643,11 @@ export default function ProjectRoadmap() {
             const today = new Date();
             const todayPosition = getDatePosition(today);
             
-            // Debug logging for today line positioning
-            console.log('📅 Today line debug:', {
-              today: today.toISOString().split('T')[0],
-              viewportStart: viewport.startDate.toISOString().split('T')[0],
-              viewportEnd: viewport.endDate.toISOString().split('T')[0],
-              todayPosition,
-              timelineWidth,
-              pixelsPerDay: viewport.pixelsPerDay
-            });
-            
             // Only show today line if it's within the current viewport
             if (todayPosition >= 0 && todayPosition <= timelineWidth) {
               // Calculate proper offset based on actual project info panel
               const projectInfoPanelWidth = 320; // This should match the actual panel width
               const adjustedPosition = projectInfoPanelWidth + todayPosition;
-              
-              console.log('📅 Today line positioned at:', adjustedPosition, 'px');
               
               return (
                 <div 
@@ -698,7 +686,6 @@ export default function ProjectRoadmap() {
                 </div>
               );
             }
-            console.log('📅 Today line not shown - outside viewport range');
             return null;
           })()}
           
