@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush, ComposedChart, Cell, ReferenceLine } from 'recharts';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { TimelineViewport } from './InteractiveTimeline';
@@ -223,7 +223,8 @@ const SimpleBrushControl = ({
           left: `${startPercent}%`,
           fontSize: '11px',
           color: '#6b7280',
-          transform: 'translateX(-50%)'
+          transform: 'translateX(-50%)',
+          whiteSpace: 'nowrap'
         }}>
           {formatDate(dailyData[brushStart]?.date || '')}
         </div>
@@ -234,7 +235,8 @@ const SimpleBrushControl = ({
           left: `${endPercent}%`,
           fontSize: '11px',
           color: '#6b7280',
-          transform: 'translateX(-50%)'
+          transform: 'translateX(-50%)',
+          whiteSpace: 'nowrap'
         }}>
           {formatDate(dailyData[brushEnd]?.date || '')}
         </div>
@@ -270,6 +272,33 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     }
   });
 
+  // Get project phases for integrated visualization
+  const { data: phasesResponse } = useQuery({
+    queryKey: ['project-phases', projectId],
+    queryFn: async () => {
+      const response = await api.projectPhases.list({ project_id: projectId });
+      return response.data;
+    }
+  });
+
+  // Phase colors matching the existing system
+  const getPhaseColor = React.useCallback((phaseName: string): string => {
+    const phaseColors: Record<string, string> = {
+      'business planning': '#3b82f6',
+      'development': '#10b981',
+      'system integration testing': '#f59e0b',
+      'user acceptance testing': '#8b5cf6',
+      'validation': '#ec4899',
+      'cutover': '#ef4444',
+      'hypercare': '#06b6d4',
+      'support': '#84cc16',
+      'custom': '#6b7280'
+    };
+    
+    const normalizedName = phaseName.toLowerCase();
+    return phaseColors[normalizedName] || phaseColors['custom'];
+  }, []);
+
   // Process data for all three views: demand, capacity, and gaps
   const { demandData, capacityData, gapsData, phases, dateRange } = React.useMemo(() => {
     if (!apiResponse || !apiResponse.phases || !Array.isArray(apiResponse.phases)) {
@@ -278,7 +307,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         capacityData: [], 
         gapsData: [], 
         phases: [], 
-        dateRange: { start: new Date(), end: new Date() } 
+        dateRange: { start: new Date(), end: new Date() }
       };
     }
 
@@ -291,10 +320,39 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       phase_order: phase.phase_order
     })).sort((a, b) => a.phase_order - b.phase_order);
 
-    // Find the overall date range for the project
+    // Find the overall date range for the project - consider both phases AND demands/assignments
     const allDates = phases.flatMap(p => [new Date(p.start_date), new Date(p.end_date)]);
-    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+    
+    // Also include dates from demands and assignments to ensure full coverage
+    const demandDates = apiResponse.demands.flatMap(d => [new Date(d.start_date), new Date(d.end_date)]);
+    const assignmentDates = assignmentsResponse?.data ? 
+      assignmentsResponse.data.flatMap(a => [
+        new Date(a.computed_start_date || a.start_date), 
+        new Date(a.computed_end_date || a.end_date)
+      ]) : [];
+    
+    const allProjectDates = [...allDates, ...demandDates, ...assignmentDates];
+    const minDate = new Date(Math.min(...allProjectDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allProjectDates.map(d => d.getTime())));
+    
+    console.log('🗓️ Complete project date range:', { 
+      minDate: minDate.toISOString().split('T')[0], 
+      maxDate: maxDate.toISOString().split('T')[0],
+      phases: phases.map(p => ({ name: p.phase_name, start: p.start_date, end: p.end_date })),
+      demandDateRange: demandDates.length > 0 ? {
+        min: new Date(Math.min(...demandDates.map(d => d.getTime()))).toISOString().split('T')[0],
+        max: new Date(Math.max(...demandDates.map(d => d.getTime()))).toISOString().split('T')[0]
+      } : 'none',
+      assignmentDateRange: assignmentDates.length > 0 ? {
+        min: new Date(Math.min(...assignmentDates.map(d => d.getTime()))).toISOString().split('T')[0],
+        max: new Date(Math.max(...assignmentDates.map(d => d.getTime()))).toISOString().split('T')[0]
+      } : 'none',
+      totalDateSources: {
+        phases: allDates.length,
+        demands: demandDates.length,
+        assignments: assignmentDates.length
+      }
+    });
     
     // Create daily data points across the entire project timeline
     const createEmptyTimeline = () => {
@@ -399,6 +457,14 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     const demandData = Object.values(demandTimeline).sort((a, b) => a.timestamp - b.timestamp);
     const capacityData = Object.values(capacityTimeline).sort((a, b) => a.timestamp - b.timestamp);
     const gapsData = Object.values(gapsTimeline).sort((a, b) => a.timestamp - b.timestamp);
+    
+    console.log('📊 Final data ranges:', {
+      demandStart: demandData[0]?.date,
+      demandEnd: demandData[demandData.length - 1]?.date,
+      capacityStart: capacityData[0]?.date,
+      capacityEnd: capacityData[capacityData.length - 1]?.date,
+      dataLength: demandData.length
+    });
 
     return {
       demandData,
@@ -407,7 +473,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       phases,
       dateRange: { start: minDate, end: maxDate }
     };
-  }, [apiResponse, assignmentsResponse, currentView]);
+  }, [apiResponse, assignmentsResponse, currentView, phasesResponse, getPhaseColor]);
 
   // Variable granularity functions (copied from PersonAllocationChart)
   const getGranularity = (startMonth: string, endMonth: string) => {
@@ -421,11 +487,20 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     return 'quarterly';                      // > 24 months: quarterly
   };
 
-  // Generate date points based on granularity
+  // Generate date points based on granularity - original version using month boundaries
   const generateDatePoints = (startMonth: string, endMonth: string, granularity: string) => {
     const start = new Date(startMonth + '-01');
-    const end = new Date(endMonth + '-01');
-    end.setMonth(end.getMonth() + 1, 0); // Last day of end month
+    const [year, month] = endMonth.split('-').map(Number);
+    const end = new Date(year, month, 0); // Last day of the end month (month is 1-indexed here)
+    
+    console.log('🔧 Date calculation debug (generateDatePoints):', {
+      endMonth,
+      year, month,
+      calculatedEndDate: end.toISOString().split('T')[0],
+      endGetMonth: end.getMonth(),
+      endGetDate: end.getDate(),
+      context: 'generateDatePoints function - this determines the theoretical month end'
+    });
     
     const points: string[] = [];
     const current = new Date(start);
@@ -441,6 +516,35 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         points.push(current.toISOString().split('T')[0]);
         current.setDate(current.getDate() + 7); // Add 7 days for weekly
       }
+      
+      // Check if we need to add a partial week at the end
+      const lastWeekStart = new Date(current);
+      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // Go back to the last added week
+      const lastWeekEnd = new Date(lastWeekStart);
+      lastWeekEnd.setDate(lastWeekEnd.getDate() + 6); // End of that week
+      
+      // If the target end date is beyond the last complete week, add a partial week point
+      if (end > lastWeekEnd && points.length > 0) {
+        // Find a representative date within the partial week (could be the end date itself)
+        const partialWeekStart = new Date(lastWeekEnd);
+        partialWeekStart.setDate(partialWeekStart.getDate() + 1); // Day after last complete week
+        points.push(partialWeekStart.toISOString().split('T')[0]);
+        
+        console.log('📅 Added partial week at end:', {
+          lastCompleteWeekEnd: lastWeekEnd.toISOString().split('T')[0],
+          partialWeekStart: partialWeekStart.toISOString().split('T')[0],
+          targetEnd: end.toISOString().split('T')[0]
+        });
+      }
+      
+      console.log('📅 Weekly date points generated:', {
+        startMonth, endMonth, granularity,
+        actualStartDate: start.toISOString().split('T')[0],
+        actualEndDate: end.toISOString().split('T')[0],
+        totalPoints: points.length,
+        firstFew: points.slice(0, 3),
+        lastFew: points.slice(-3)
+      });
     } else if (granularity === 'daily') {
       while (current <= end) {
         points.push(current.toISOString().split('T')[0]);
@@ -451,6 +555,95 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         const year = current.getFullYear();
         const month = (current.getMonth() + 1).toString().padStart(2, '0');
         points.push(`${year}-${month}`);
+        
+        if (granularity === 'quarterly') {
+          current.setMonth(current.getMonth() + 3);
+        } else {
+          current.setMonth(current.getMonth() + 1);
+        }
+      }
+    }
+    
+    return points.sort();
+  };
+
+  // Generate date points based on granularity - version that respects actual start and end dates  
+  const generateDatePointsWithActualEnd = (actualStartDate: Date, actualEndDate: Date, granularity: string) => {
+    const start = new Date(actualStartDate);
+    const end = new Date(actualEndDate); 
+    
+    console.log('🔧 Date calculation debug (generateDatePointsWithActualEnd):', {
+      actualStartDate: actualStartDate.toISOString().split('T')[0],
+      actualEndDate: actualEndDate.toISOString().split('T')[0],
+      granularity,
+      context: 'Using actual data start and end dates instead of month boundaries'
+    });
+    
+    const points: string[] = [];
+    const current = new Date(start);
+    
+    if (granularity === 'weekly') {
+      // Start from the beginning of the week containing the start date, but don't go before actual data start
+      const startOfWeek = new Date(current);
+      startOfWeek.setDate(current.getDate() - current.getDay()); // Go to Sunday
+      
+      // Don't start before the actual data start date
+      if (startOfWeek < start) {
+        current.setTime(start.getTime());
+      } else {
+        current.setTime(startOfWeek.getTime());
+      }
+      
+      console.log('📅 Weekly start adjusted:', {
+        originalStart: start.toISOString().split('T')[0],
+        weekStart: startOfWeek.toISOString().split('T')[0],
+        adjustedStart: current.toISOString().split('T')[0],
+        context: 'Ensuring weekly data doesnt start before actual data'
+      });
+      
+      while (current <= end) {
+        points.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 7); // Add 7 days for weekly
+      }
+      
+      // Check if we need to add a partial week at the end
+      const lastWeekStart = new Date(current);
+      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // Go back to the last added week
+      const lastWeekEnd = new Date(lastWeekStart);
+      lastWeekEnd.setDate(lastWeekEnd.getDate() + 6); // End of that week
+      
+      // If the target end date is beyond the last complete week, add a partial week point
+      if (end > lastWeekEnd && points.length > 0) {
+        // Find a representative date within the partial week (could be the end date itself)
+        const partialWeekStart = new Date(lastWeekEnd);
+        partialWeekStart.setDate(partialWeekStart.getDate() + 1); // Day after last complete week
+        points.push(partialWeekStart.toISOString().split('T')[0]);
+        
+        console.log('📅 Added partial week at end (actualEnd version):', {
+          lastCompleteWeekEnd: lastWeekEnd.toISOString().split('T')[0],
+          partialWeekStart: partialWeekStart.toISOString().split('T')[0],
+          targetEnd: end.toISOString().split('T')[0]
+        });
+      }
+      
+      console.log('📅 Weekly date points generated (actualEnd version):', {
+        actualStartDate: actualStartDate.toISOString().split('T')[0],
+        actualEndDate: actualEndDate.toISOString().split('T')[0], 
+        granularity,
+        totalPoints: points.length,
+        firstFew: points.slice(0, 3),
+        lastFew: points.slice(-3)
+      });
+    } else if (granularity === 'daily') {
+      while (current <= end) {
+        points.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    } else { // monthly or quarterly
+      while (current <= end) {
+        const year = current.getFullYear();
+        const month = (current.getMonth() + 1).toString().padStart(2, '0');
+        points.push(`${year}-${month}-01`);
         
         if (granularity === 'quarterly') {
           current.setMonth(current.getMonth() + 3);
@@ -491,16 +684,26 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     const startMonth = startDate.getFullYear() + '-' + (startDate.getMonth() + 1).toString().padStart(2, '0');
     const endMonth = endDate.getFullYear() + '-' + (endDate.getMonth() + 1).toString().padStart(2, '0');
     const granularity = getGranularity(startMonth, endMonth);
+    
+    console.log('📅 Granularity calculation:', {
+      baseDataStart: baseData[0]?.date,
+      baseDataEnd: baseData[baseData.length - 1]?.date,
+      baseDataLength: baseData.length,
+      startMonth, endMonth, granularity,
+      context: 'This endMonth determines what generateDatePoints will use',
+      actualEndDateObject: endDate,
+      calculatedEndMonth: endMonth
+    });
 
     // If already daily and that's appropriate, return as-is
     if (granularity === 'daily') {
       return baseData.map(d => ({ ...d, granularity }));
     }
 
-    // Aggregate data based on granularity
-    const datePoints = generateDatePoints(startMonth, endMonth, granularity);
+    // Aggregate data based on granularity - use actual start and end dates instead of month boundaries
+    const datePoints = generateDatePointsWithActualEnd(startDate, endDate, granularity);
     
-    return datePoints.map(datePoint => {
+    const processedData = datePoints.map(datePoint => {
       let periodStart: Date;
       let periodEnd: Date;
       let displayDate: string;
@@ -510,7 +713,24 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         periodStart = new Date(pointDate);
         periodEnd = new Date(pointDate);
         periodEnd.setDate(periodEnd.getDate() + 6);
-        displayDate = datePoint;
+        
+        // For partial weeks at the end, don't exceed the actual data end date
+        const actualEndDate = new Date(baseData[baseData.length - 1].date);
+        if (periodEnd > actualEndDate) {
+          periodEnd = new Date(actualEndDate);
+          // CRITICAL FIX: Use the actual end date as the display date for partial weeks
+          displayDate = periodEnd.toISOString().split('T')[0];
+          console.log('📅 Adjusted partial week end (CRITICAL FIX):', {
+            weekStart: pointDate.toISOString().split('T')[0],
+            originalWeekEnd: new Date(pointDate.getTime()).setDate(pointDate.getDate() + 6),
+            adjustedWeekEnd: periodEnd.toISOString().split('T')[0],
+            actualDataEnd: actualEndDate.toISOString().split('T')[0],
+            displayDate: displayDate,
+            context: 'Using actual end date as display date - should make chart show Dec 30'
+          });
+        } else {
+          displayDate = datePoint;
+        }
       } else if (granularity === 'monthly') {
         const [year, monthNum] = datePoint.split('-').map(Number);
         periodStart = new Date(year, monthNum - 1, 1);
@@ -547,6 +767,24 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       
       return periodData;
     });
+    
+    console.log('📈 Processed data with granularity (DETAILED):', {
+      granularity,
+      length: processedData.length,
+      start: processedData[0]?.date,
+      end: processedData[processedData.length - 1]?.date,
+      sample: processedData.slice(0, 3).map(d => d.date),
+      endSample: processedData.slice(-3).map(d => d.date),
+      baseDataRange: {
+        start: baseData[0]?.date,
+        end: baseData[baseData.length - 1]?.date,
+        length: baseData.length
+      },
+      ALL_PROCESSED_DATES: processedData.map(d => d.date),
+      context: 'This is what the chart will display'
+    });
+    
+    return processedData;
   }, [demandData, capacityData, gapsData, currentView, allRoles]);
 
   // Handle brush changes and update shared viewport
@@ -625,10 +863,22 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       
       // Use daily data length for brush indices for fine granularity
       const dailyDataLength = currentDailyData.length;
-      const initialStart = Math.max(0, Math.floor(dailyDataLength * 0.1));
+      const initialStart = 0; // Start from the beginning to show full date range
       const initialEnd = dailyDataLength - 1;
       setBrushStart(initialStart);
       setBrushEnd(initialEnd);
+      
+      console.log('🎯 Brush initialization (DETAILED):', {
+        dailyDataLength,
+        initialStart, 
+        initialEnd,
+        dailyDataStart: currentDailyData[0]?.date,
+        dailyDataEnd: currentDailyData[dailyDataLength - 1]?.date,
+        processedDataLength: processedDataWithGranularity.length,
+        processedDataStart: processedDataWithGranularity[0]?.date,
+        processedDataEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date,
+        context: 'Brush indices should map to daily data, but chart shows processed data'
+      });
       
       // Initialize shared viewport if not already set
       if (!sharedViewport && currentDailyData.length > 0) {
@@ -644,21 +894,112 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         };
         
         setSharedViewport(initialViewport);
-        console.log('🎆 Initialized shared viewport:', initialViewport);
+        console.log('🎆 Initialized shared viewport:', {
+          ...initialViewport,
+          startDateStr: initialViewport.startDate.toISOString().split('T')[0],
+          endDateStr: initialViewport.endDate.toISOString().split('T')[0],
+          context: 'This viewport is sent to phase timeline',
+          dataSource: `currentDailyData (${currentView})`
+        });
       }
     }
   }, [processedDataWithGranularity, brushEnd, sharedViewport, currentView, demandData.length, capacityData.length, gapsData.length]);
 
+  // Measure chart dimensions for phase diagram alignment
+  React.useEffect(() => {
+    const measureChart = () => {
+      if (chartContainerRef.current) {
+        const container = chartContainerRef.current;
+        const containerRect = container.getBoundingClientRect();
+        
+        // Look for the actual chart area within the ResponsiveContainer
+        const rechartWrapper = container.querySelector('.recharts-wrapper');
+        const rechartSurface = container.querySelector('.recharts-surface');
+        
+        if (rechartSurface && rechartWrapper) {
+          const surfaceRect = rechartSurface.getBoundingClientRect();
+          const wrapperRect = rechartWrapper.getBoundingClientRect();
+          
+          // Find the actual chart plotting area (CartesianGrid or first Area element)
+          const cartesianGrid = container.querySelector('.recharts-cartesian-grid') || container.querySelector('.recharts-area');
+          const yAxisElement = container.querySelector('.recharts-yAxis');
+          
+          let actualChartLeft = wrapperRect.left - containerRect.left;
+          let actualChartWidth = wrapperRect.width;
+          
+          if (cartesianGrid) {
+            const gridRect = cartesianGrid.getBoundingClientRect();
+            actualChartLeft = gridRect.left - containerRect.left;
+            actualChartWidth = gridRect.width;
+          } else if (yAxisElement) {
+            // If no grid found, estimate based on Y-axis position
+            const yAxisRect = yAxisElement.getBoundingClientRect();
+            actualChartLeft = yAxisRect.right - containerRect.left;
+            actualChartWidth = wrapperRect.right - yAxisRect.right;
+          }
+          
+          const dimensions = {
+            left: actualChartLeft,
+            width: Math.max(200, actualChartWidth),
+            right: actualChartLeft + actualChartWidth
+          };
+          
+          console.log('📏 Chart dimensions measured (EXACT chart area):', dimensions);
+          console.log('📏 Raw measurements:', { 
+            surfaceRect: surfaceRect.width, 
+            wrapperRect: wrapperRect.width,
+            containerRect: containerRect.width,
+            actualChartLeft,
+            actualChartWidth,
+            cartesianGridFound: !!cartesianGrid,
+            yAxisFound: !!yAxisElement
+          });
+          setChartDimensions(dimensions);
+        } else {
+          // Fallback to container-based calculation
+          const fallbackDimensions = {
+            left: 20,
+            width: Math.max(200, containerRect.width - 50),
+            right: containerRect.width - 30
+          };
+          
+          console.log('📏 Using fallback dimensions:', fallbackDimensions);
+          setChartDimensions(fallbackDimensions);
+        }
+      }
+    };
+
+    // Measure after data loads and chart renders
+    if (processedDataWithGranularity.length > 0) {
+      // Wait for chart to render
+      const timer = setTimeout(measureChart, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [processedDataWithGranularity]);
+
   // Create filtered data based on brush selection
   const displayData = React.useMemo(() => {
-    if (processedDataWithGranularity.length === 0 || brushStart === brushEnd) return processedDataWithGranularity;
+    if (processedDataWithGranularity.length === 0) return processedDataWithGranularity;
     
-    // Get the current daily data to map brush indices
+    // Get the current daily data to check if brush is showing full range
     const currentDailyData = (
       currentView === 'demand' ? demandData :
       currentView === 'capacity' ? capacityData :
       gapsData
     );
+    
+    // If brush is uninitialized or showing full range, return unfiltered data
+    if (brushStart === brushEnd || 
+        (brushStart === 0 && brushEnd === currentDailyData.length - 1)) {
+      console.log('🔍 Returning unfiltered data (full range or uninitialized):', {
+        brushStart, brushEnd, 
+        dailyDataLength: currentDailyData.length,
+        returning: 'processedDataWithGranularity',
+        dataStart: processedDataWithGranularity[0]?.date,
+        dataEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date
+      });
+      return processedDataWithGranularity;
+    }
     
     if (currentDailyData.length === 0) return processedDataWithGranularity;
     
@@ -671,119 +1012,79 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     
     if (!startDate || !endDate) return processedDataWithGranularity;
     
-    // Filter processed data by date range
-    return processedDataWithGranularity.filter(dataPoint => {
+    // Filter processed data by date range with granularity-aware filtering
+    const filtered = processedDataWithGranularity.filter(dataPoint => {
       const pointDate = dataPoint.date;
-      return pointDate >= startDate && pointDate <= endDate;
+      const granularity = dataPoint.granularity || 'daily';
+      
+      // For non-daily granularity, be more inclusive in filtering
+      if (granularity === 'weekly') {
+        // Include if the week overlaps with our date range
+        const weekStart = new Date(pointDate);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        const rangeStart = new Date(startDate);
+        const rangeEnd = new Date(endDate);
+        
+        // Include if week overlaps with range
+        return weekStart <= rangeEnd && weekEnd >= rangeStart;
+      } else if (granularity === 'monthly') {
+        // Include if the month overlaps with our date range
+        const [year, month] = pointDate.split('-').map(Number);
+        const monthStart = new Date(year, month - 1, 1);
+        const monthEnd = new Date(year, month, 0);
+        
+        const rangeStart = new Date(startDate);
+        const rangeEnd = new Date(endDate);
+        
+        // Include if month overlaps with range
+        return monthStart <= rangeEnd && monthEnd >= rangeStart;
+      } else {
+        // Daily or quarterly - use exact date filtering
+        return pointDate >= startDate && pointDate <= endDate;
+      }
     });
+    
+    console.log('🔍 Brush filtering:', {
+      brushStart, brushEnd,
+      startDate, endDate,
+      currentDailyDataLength: currentDailyData.length,
+      dailyDataStart: currentDailyData[0]?.date,
+      dailyDataEnd: currentDailyData[currentDailyData.length - 1]?.date,
+      originalLength: processedDataWithGranularity.length,
+      filteredLength: filtered.length,
+      filteredStart: filtered[0]?.date,
+      filteredEnd: filtered[filtered.length - 1]?.date,
+      granularity: processedDataWithGranularity[0]?.granularity || 'unknown',
+      sampleProcessedDates: processedDataWithGranularity.slice(0, 3).map(d => d.date),
+      sampleFilteredDates: filtered.slice(-3).map(d => d.date),
+      processedStart: processedDataWithGranularity[0]?.date,
+      processedEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date
+    });
+    
+    return filtered;
   }, [processedDataWithGranularity, brushStart, brushEnd, currentView, demandData, capacityData, gapsData]);
 
   // Get current dataset for display
   const currentData = displayData;
-
-
-
-  // Measure chart dimensions after render for precise alignment
-  useEffect(() => {
-    console.log('🔍 Starting chart measurement effect. Container:', !!chartContainerRef.current, 'Data length:', currentData.length);
-    
-    if (!chartContainerRef.current || currentData.length === 0) {
-      console.log('⚠️ Chart measurement skipped - no container or data');
-      return;
+  
+  // Log what data is actually being sent to the chart
+  React.useEffect(() => {
+    if (currentData.length > 0) {
+      console.log('📊 Chart currentData (what X-axis sees):', {
+        length: currentData.length,
+        start: currentData[0]?.date,
+        end: currentData[currentData.length - 1]?.date,
+        ALL_DATES: currentData.map(d => d.date),
+        context: 'This is what the AreaChart component receives'
+      });
     }
-    
-    const measureChart = () => {
-      console.log('📀 Attempting to measure chart...');
-      const container = chartContainerRef.current;
-      if (!container) {
-        console.log('⚠️ No container found');
-        return;
-      }
-      
-      // Find the actual chart area (SVG) within the ResponsiveContainer
-      const svg = container.querySelector('svg');
-      if (!svg) {
-        console.log('⚠️ No SVG found in container');
-        return;
-      }
-      
-      // Find the actual plotting area by looking for X-axis ticks
-      const xAxisGroup = svg.querySelector('.recharts-xAxis');
-      const plotArea = svg.querySelector('.recharts-cartesian-grid');
-      
-      console.log('🔍 Found elements:', { xAxisGroup: !!xAxisGroup, plotArea: !!plotArea });
-      
-      if (xAxisGroup && plotArea) {
-        const containerRect = container.getBoundingClientRect();
-        const plotRect = plotArea.getBoundingClientRect();
-        
-        // DEBUGGING: Inspect actual Recharts tick positions
-        const ticks = xAxisGroup.querySelectorAll('.recharts-cartesian-axis-tick');
-        console.log('🔍 RECHARTS TICK ANALYSIS:');
-        console.log(`Found ${ticks.length} X-axis ticks`);
-        
-        ticks.forEach((tick, index) => {
-          const tickRect = tick.getBoundingClientRect();
-          const relativeX = tickRect.left - plotRect.left;
-          const percentageX = (relativeX / plotRect.width) * 100;
-          
-          // Get the tick's text content (date)
-          const textElement = tick.querySelector('text');
-          const tickText = textElement ? textElement.textContent : 'N/A';
-          
-          console.log(`Tick ${index}: "${tickText}" at ${relativeX.toFixed(1)}px = ${percentageX.toFixed(1)}%`);
-          
-          // Compare with our calculated positions for key dates
-          if (index === 0) {
-            console.log(`  → First tick (should align with Business Planning start)`);
-          } else if (index === ticks.length - 1) {
-            console.log(`  → Last tick (should align with Cutover end)`);
-          }
-        });
-        
-        console.log(`Plot area: ${plotRect.width.toFixed(1)}px wide`);
-        
-        // Calculate precise positioning based on actual plot area
-        setChartDimensions({
-          width: plotRect.width,
-          left: plotRect.left - containerRect.left,
-          right: plotRect.right - containerRect.left
-        });
-        
-        const dimensions = {
-          containerWidth: containerRect.width,
-          plotWidth: plotRect.width,
-          plotLeft: plotRect.left - containerRect.left,
-          plotRight: plotRect.right - containerRect.left,
-          width: plotRect.width,
-          left: plotRect.left - containerRect.left,
-          right: plotRect.right - containerRect.left
-        };
-        
-        console.log('📐 Chart dimensions measured:', dimensions);
-      }
-    };
-    
-    // Measure after multiple delays to ensure Recharts is fully rendered
-    const timer1 = setTimeout(measureChart, 100);
-    const timer2 = setTimeout(measureChart, 500);
-    const timer3 = setTimeout(measureChart, 1000);
-    const timer4 = setTimeout(measureChart, 2000);
-    
-    // Try immediate measurement as well
-    measureChart();
-    
-    // Also measure on resize
-    window.addEventListener('resize', measureChart);
-    
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
-      window.removeEventListener('resize', measureChart);
-    };
-  }, [currentData]); // Re-measure when data changes
+  }, [currentData]);
+
+
+
+  // Simplified: No complex chart measurement needed with integrated approach
   
   const roleColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0', '#ff8c00', '#9932cc'];
 
@@ -880,46 +1181,39 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         </div>
       </div>
 
-      {/* Integrated Phase Management Timeline */}
-      <div className="phase-timeline-container" style={{ 
-        marginBottom: '20px',
-        position: 'relative'
-      }}>
+      {/* Phase Timeline - positioned above the resource chart for alignment */}
+      <div className="phase-timeline-container" style={{ marginBottom: '10px' }}>
         <VisualPhaseManager 
-          projectId={projectId} 
+          projectId={projectId}
           projectName={projectName}
           compact={true}
-          externalViewport={sharedViewport || undefined}
+          externalViewport={sharedViewport}
           onViewportChange={handleViewportChange}
-          alignmentDimensions={(() => {
-            if (chartDimensions) {
-              const dims = {
-                left: chartDimensions.left,
-                width: chartDimensions.width
-              };
-              console.log('📈 Passing alignment dimensions to VisualPhaseManager:', dims);
-              return dims;
-            }
-            return undefined;
-          })()}
+          alignmentDimensions={chartDimensions}
+          chartTimeData={currentData} // Pass the actual chart data for time axis alignment
           onPhasesChange={() => {
-            // Refresh demand data when phases change to reflect new demand profile
-            queryClient.invalidateQueries({ queryKey: ['project-demand', projectId] });
+            // Refresh chart data when phases change
+            console.log('🔄 Phases changed, refreshing chart data');
           }}
         />
       </div>
-      
+
       <div className="chart-content" ref={chartContainerRef}>
         <ResponsiveContainer width="100%" height={400}>
           <AreaChart 
             data={currentData} 
-            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="date"
               type="category"
               scale="point"
+              interval="preserveStartEnd"
+              domain={[
+                () => currentData[0]?.date || 'dataMin',
+                () => currentData[currentData.length - 1]?.date || 'dataMax'
+              ]}
               tickFormatter={(value) => {
                 // Find the data point by value to get granularity
                 const dataPoint = currentData.find(d => d.date === value) || currentData[0];
@@ -1003,8 +1297,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       {processedDataWithGranularity.length > 2 && (
         <div style={{ 
           marginTop: '20px', 
-          marginLeft: chartDimensions ? `${chartDimensions.left}px` : '20px',
-          width: chartDimensions ? `${chartDimensions.width}px` : 'calc(100% - 40px)',
+          marginLeft: '20px',
+          width: 'calc(100% - 40px)',
           position: 'relative'
         }}>
           <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
@@ -1016,6 +1310,9 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
             brushStart={brushStart}
             brushEnd={brushEnd}
             onBrushChange={handleBrushChange}
+            // Add some debug info via a comment for the brush component
+            // Brush uses: dailyData (Sep 25 - Dec 30, 97 days), indices 0-96
+            // Chart uses: processedDataWithGranularity (should also be Sep 25 - Dec 30 with weekly granularity)
           />
         </div>
       )}

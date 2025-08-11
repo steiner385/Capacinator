@@ -41,6 +41,9 @@ export interface InteractiveTimelineProps {
   allowOverlap?: boolean;
   minItemDuration?: number; // in days
   
+  // Chart alignment
+  chartTimeData?: Array<{ date: string; [key: string]: any }>; // For aligning with chart time axis
+  
   // Styling
   className?: string;
   style?: React.CSSProperties;
@@ -80,6 +83,7 @@ export function InteractiveTimeline({
   showToday = true,
   allowOverlap = false,
   minItemDuration = 1,
+  chartTimeData,
   className = '',
   style = {}
 }: InteractiveTimelineProps) {
@@ -103,27 +107,33 @@ export function InteractiveTimeline({
     content: React.ReactNode;
   }>({ visible: false, x: 0, y: 0, content: null });
 
-  // Calculate timeline width - use container width for alignment
+  // Calculate timeline width - use container width when available for precise alignment
   const calculateTimelineWidth = () => {
-    const naturalWidth = (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24) * viewport.pixelsPerDay;
-    
-    // Get container width if available - for precise alignment, use container width exactly
+    // If we have a container, use its actual width for perfect alignment
     if (timelineRef.current?.parentElement) {
-      const containerWidth = timelineRef.current.parentElement.clientWidth;
-      // For alignment purposes, use the container width exactly instead of natural width
-      return containerWidth > 0 ? containerWidth : Math.max(naturalWidth, 800);
+      const containerWidth = timelineRef.current.parentElement.getBoundingClientRect().width;
+      if (containerWidth > 0) {
+        return containerWidth;
+      }
     }
     
-    return Math.max(naturalWidth, 800); // Fallback minimum
+    // Fallback to natural width based on viewport
+    const naturalWidth = (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24) * viewport.pixelsPerDay;
+    return Math.max(naturalWidth, 200); // Reduced minimum for better alignment
   };
   
-  const [timelineWidth, setTimelineWidth] = useState(() => calculateTimelineWidth());
+  const [timelineWidth, setTimelineWidth] = useState(400); // Start with default
   
-  // Recalculate width when container resizes
+  // Recalculate width when container resizes or viewport changes
   useEffect(() => {
     const updateWidth = () => {
-      setTimelineWidth(calculateTimelineWidth());
+      const newWidth = calculateTimelineWidth();
+      setTimelineWidth(newWidth);
+      console.log('📏 InteractiveTimeline width updated:', newWidth);
     };
+    
+    // Update immediately
+    updateWidth();
     
     const resizeObserver = new ResizeObserver(updateWidth);
     if (timelineRef.current?.parentElement) {
@@ -142,6 +152,38 @@ export function InteractiveTimeline({
   // Generate grid lines for visual reference
   const generateGridLines = useCallback(() => {
     const lines: Array<{ date: Date; label: string; type: 'major' | 'minor' }> = [];
+    
+    // If we have chart time data, use its time points for exact alignment
+    if (chartTimeData && chartTimeData.length > 0) {
+      // Sample every few data points to avoid overcrowding - use fewer samples for better spacing
+      const sampleInterval = Math.max(1, Math.floor(chartTimeData.length / 6));
+      
+      chartTimeData.forEach((dataPoint, index) => {
+        if (index % sampleInterval === 0) {
+          const date = new Date(dataPoint.date);
+          const isFirstOrLast = index === 0 || index === chartTimeData.length - 1;
+          const isMonthStart = date.getDate() <= 7; // Approximate month start
+          
+          // Create shorter labels to prevent wrapping
+          let label;
+          if (isFirstOrLast || isMonthStart) {
+            label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          } else {
+            label = date.toLocaleDateString('en-US', { day: 'numeric' });
+          }
+          
+          lines.push({
+            date: date,
+            label: label,
+            type: (isFirstOrLast || isMonthStart) ? 'major' : 'minor'
+          });
+        }
+      });
+      
+      return lines;
+    }
+    
+    // Fallback to original grid generation
     const current = new Date(viewport.startDate);
     
     // Determine grid granularity based on zoom level
@@ -185,7 +227,7 @@ export function InteractiveTimeline({
     }
     
     return lines;
-  }, [viewport]);
+  }, [viewport, chartTimeData]);
 
   const gridLines = showGrid ? generateGridLines() : [];
 
@@ -354,7 +396,8 @@ export function InteractiveTimeline({
           height: height,
           backgroundColor: '#f8fafc',
           border: '1px solid #e2e8f0',
-          borderRadius: '6px'
+          borderRadius: '6px',
+          overflow: 'hidden' // Prevent content from overflowing
         }}
         onMouseDown={(e) => handleMouseDown(e)}
         onDoubleClick={(e) => handleDoubleClick(e)}
@@ -380,10 +423,13 @@ export function InteractiveTimeline({
                   position: 'absolute',
                   top: -25,
                   left: 2,
-                  fontSize: '11px',
+                  fontSize: '10px',
                   color: line.type === 'major' ? '#374151' : '#6b7280',
                   fontWeight: line.type === 'major' ? 500 : 400,
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  maxWidth: '60px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}
               >
                 {line.label}
@@ -478,10 +524,32 @@ export function InteractiveTimeline({
                     const endDate = new Date(phase.end_date);
                     const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                     
+                    // Calculate tooltip position with boundary checking
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    const tooltipWidth = 200; // minWidth from style
+                    const tooltipHeight = 120; // estimated height
+                    
+                    // Position tooltip to the left if it would overflow on the right
+                    let tooltipX = mouseX + 10;
+                    if (tooltipX + tooltipWidth > rect.width) {
+                      tooltipX = mouseX - tooltipWidth - 10;
+                    }
+                    
+                    // Position tooltip below if it would overflow at the top
+                    let tooltipY = mouseY - 10;
+                    if (tooltipY < 0) {
+                      tooltipY = mouseY + 20;
+                    }
+                    
+                    // Ensure tooltip doesn't go beyond container bounds
+                    tooltipX = Math.max(5, Math.min(tooltipX, rect.width - tooltipWidth - 5));
+                    tooltipY = Math.max(5, Math.min(tooltipY, rect.height - tooltipHeight - 5));
+                    
                     setTooltip({
                       visible: true,
-                      x: e.clientX - rect.left + 10,
-                      y: e.clientY - rect.top - 10,
+                      x: tooltipX,
+                      y: tooltipY,
                       content: (
                         <div style={{
                           backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -513,10 +581,32 @@ export function InteractiveTimeline({
                 if (mode === 'phase-manager' && item.data && tooltip.visible) {
                   const rect = timelineRef.current?.getBoundingClientRect();
                   if (rect) {
+                    // Calculate tooltip position with boundary checking for mouse move
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    const tooltipWidth = 200; // minWidth from style
+                    const tooltipHeight = 120; // estimated height
+                    
+                    // Position tooltip to the left if it would overflow on the right
+                    let tooltipX = mouseX + 10;
+                    if (tooltipX + tooltipWidth > rect.width) {
+                      tooltipX = mouseX - tooltipWidth - 10;
+                    }
+                    
+                    // Position tooltip below if it would overflow at the top
+                    let tooltipY = mouseY - 10;
+                    if (tooltipY < 0) {
+                      tooltipY = mouseY + 20;
+                    }
+                    
+                    // Ensure tooltip doesn't go beyond container bounds
+                    tooltipX = Math.max(5, Math.min(tooltipX, rect.width - tooltipWidth - 5));
+                    tooltipY = Math.max(5, Math.min(tooltipY, rect.height - tooltipHeight - 5));
+                    
                     setTooltip(prev => ({
                       ...prev,
-                      x: e.clientX - rect.left + 10,
-                      y: e.clientY - rect.top - 10
+                      x: tooltipX,
+                      y: tooltipY
                     }));
                   }
                 }

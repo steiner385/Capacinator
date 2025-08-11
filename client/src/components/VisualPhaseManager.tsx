@@ -18,6 +18,7 @@ interface VisualPhaseManagerProps {
     left: number;
     width: number;
   };
+  chartTimeData?: Array<{ date: string; [key: string]: any }>; // Chart data for time axis alignment
 }
 
 interface ProjectPhaseTimeline {
@@ -49,7 +50,7 @@ const getPhaseColor = (phaseName: string): string => {
   return PHASE_COLORS[normalizedName] || PHASE_COLORS['custom'];
 };
 
-export function VisualPhaseManager({ projectId, projectName, onPhasesChange, compact = false, externalViewport, onViewportChange, alignmentDimensions }: VisualPhaseManagerProps) {
+export function VisualPhaseManager({ projectId, projectName, onPhasesChange, compact = false, externalViewport, onViewportChange, alignmentDimensions, chartTimeData }: VisualPhaseManagerProps) {
   // Debug alignment dimensions
   React.useEffect(() => {
     if (alignmentDimensions) {
@@ -129,13 +130,47 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Create timeline viewport - use external if provided, otherwise calculate from data
   const timelineViewport = React.useMemo((): TimelineViewport => {
-    // Use external viewport if provided (for shared timeline control)
+    // If we have external viewport AND alignment constraints, adjust pixelsPerDay to fit
+    if (externalViewport && alignmentDimensions && compact) {
+      const totalDays = (externalViewport.endDate.getTime() - externalViewport.startDate.getTime()) / (1000 * 60 * 60 * 24);
+      const availableWidth = alignmentDimensions.width;
+      const fittedPixelsPerDay = Math.max(0.5, availableWidth / totalDays); // Ensure it fits exactly
+      
+      const adjustedViewport = {
+        ...externalViewport,
+        pixelsPerDay: fittedPixelsPerDay
+      };
+      
+      console.log('📈 VisualPhaseManager adjusted viewport for alignment:', {
+        original: externalViewport,
+        adjusted: adjustedViewport,
+        totalDays,
+        availableWidth,
+        fittedPixelsPerDay
+      });
+      
+      return adjustedViewport;
+    }
+    
+    // ALWAYS use external viewport if provided (for shared timeline control)
     if (externalViewport) {
       console.log('📈 VisualPhaseManager using external viewport:', externalViewport);
       return externalViewport;
     }
     
-    // Calculate own viewport if no external control
+    // Only calculate own viewport if no external control AND not in compact mode
+    // In compact mode (integrated with resource chart), we should wait for external viewport
+    if (compact) {
+      // Return a default viewport while waiting for external control
+      const today = new Date();
+      return {
+        startDate: new Date(today.getFullYear(), 0, 1),
+        endDate: new Date(today.getFullYear() + 1, 11, 31),
+        pixelsPerDay: 2
+      };
+    }
+    
+    // Calculate own viewport only for standalone mode
     if (timelineItems.length === 0) {
       const today = new Date();
       const startDate = new Date(today.getFullYear(), 0, 1); // Start of current year
@@ -146,12 +181,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         pixelsPerDay: 2
       };
       
-      // Notify parent of our calculated viewport
-      onViewportChange?.(viewport);
+      // Only notify parent in standalone mode
+      if (!compact) {
+        onViewportChange?.(viewport);
+      }
       return viewport;
     }
     
-    // Calculate date range from actual phase data
+    // Calculate date range from actual phase data - only in standalone mode
     const allDates = timelineItems.flatMap(item => [item.startDate, item.endDate]);
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
@@ -172,16 +209,15 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       pixelsPerDay
     };
     
-    return viewport;
-  }, [timelineItems, externalViewport, onViewportChange]);
-
-  // Notify parent of viewport changes
-  React.useEffect(() => {
-    if (onViewportChange && !externalViewport) {
-      console.log('📈 VisualPhaseManager notifying parent of viewport change:', timelineViewport);
-      onViewportChange(timelineViewport);
+    // Only notify parent in standalone mode
+    if (!compact) {
+      onViewportChange?.(viewport);
     }
-  }, [timelineViewport.startDate.getTime(), timelineViewport.endDate.getTime(), timelineViewport.pixelsPerDay, onViewportChange, externalViewport]);
+    
+    return viewport;
+  }, [timelineItems, externalViewport, onViewportChange, compact]);
+
+  // Remove the separate effect since we handle notification in the useMemo above
 
   // Update phase mutation
   const updatePhaseMutation = useMutation({
@@ -406,17 +442,18 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         minHeight: compact ? '160px' : '220px', 
         position: 'relative', 
         width: '100%',
-        overflowX: 'hidden', // Changed from auto to hidden
+        overflowX: compact ? 'hidden' : 'auto', // Hidden in compact mode for alignment
         overflowY: 'hidden'
       }}>
         {/* Timeline container with precise alignment */}
         <div style={{
           position: 'relative',
           width: '100%',
-          // Apply alignment constraints when in compact mode
+          // Apply exact chart alignment when in compact mode
           ...(alignmentDimensions && compact ? {
-            paddingLeft: `${alignmentDimensions.left}px`,
-            paddingRight: `calc(100% - ${alignmentDimensions.left + alignmentDimensions.width}px)`
+            marginLeft: `${alignmentDimensions.left}px`,
+            width: `${alignmentDimensions.width}px`,
+            maxWidth: `${alignmentDimensions.width}px`
           } : {})
         }}>
         {timelineItems.length > 0 ? (
@@ -442,6 +479,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               allowOverlap={false}
               minItemDuration={1}
               className="project-phase-timeline"
+              chartTimeData={chartTimeData} // Pass chart data for exact time axis alignment
               style={{ 
                 backgroundColor: '#ffffff',
                 border: '1px solid #e5e7eb',

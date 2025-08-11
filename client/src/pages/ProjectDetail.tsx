@@ -79,7 +79,14 @@ export function ProjectDetail() {
     history: false
   });
 
-  const [useVisualPhaseManager, setUseVisualPhaseManager] = useState(false);
+  // Assignment modal state
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [isEditingAssignment, setIsEditingAssignment] = useState(false);
+  const [assignmentForm, setAssignmentForm] = useState({
+    allocation_percentage: 0,
+    start_date: '',
+    end_date: ''
+  });
 
   // Check user permissions
   const canEdit = localStorage.getItem('userRole') !== 'viewer';
@@ -134,9 +141,56 @@ export function ProjectDetail() {
     }
   });
 
+  // Update assignment mutation
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({ assignmentId, updates }: { assignmentId: string; updates: any }) => {
+      const response = await api.assignments.update(assignmentId, updates);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      setSelectedAssignment(null);
+      setIsEditingAssignment(false);
+    }
+  });
+
   // Handle individual field updates
   const handleFieldUpdate = (field: string, value: any) => {
     updateProjectFieldMutation.mutate({ field, value });
+  };
+
+  // Handle assignment card click
+  const handleAssignmentClick = (assignment: any) => {
+    setSelectedAssignment(assignment);
+    setAssignmentForm({
+      allocation_percentage: assignment.allocation_percentage,
+      start_date: new Date(assignment.start_date).toISOString().split('T')[0],
+      end_date: new Date(assignment.end_date).toISOString().split('T')[0]
+    });
+  };
+
+  // Handle assignment form submission
+  const handleAssignmentSubmit = () => {
+    if (!selectedAssignment) return;
+    
+    updateAssignmentMutation.mutate({
+      assignmentId: selectedAssignment.id,
+      updates: {
+        allocation_percentage: parseInt(assignmentForm.allocation_percentage.toString()),
+        start_date: new Date(assignmentForm.start_date).getTime(),
+        end_date: new Date(assignmentForm.end_date).getTime()
+      }
+    });
+  };
+
+  // Handle assignment deletion
+  const handleAssignmentDelete = () => {
+    if (!selectedAssignment) return;
+    
+    if (confirm('Are you sure you want to delete this assignment?')) {
+      deleteAssignmentMutation.mutate(selectedAssignment.id);
+      setSelectedAssignment(null);
+    }
   };
 
   // Inline editing component
@@ -423,79 +477,6 @@ export function ProjectDetail() {
           )}
         </div>
 
-        {/* Project Phases Section */}
-        <div className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('phases')}>
-            <h2>
-              <Calendar size={20} />
-              Project Phases & Timeline
-            </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {/* Toggle between table and visual phase managers */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                fontSize: '14px',
-                color: '#6b7280'
-              }}>
-                <span>Table</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUseVisualPhaseManager(!useVisualPhaseManager);
-                  }}
-                  style={{
-                    position: 'relative',
-                    width: '44px',
-                    height: '24px',
-                    backgroundColor: useVisualPhaseManager ? '#3b82f6' : '#d1d5db',
-                    borderRadius: '12px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      left: useVisualPhaseManager ? '22px' : '2px',
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: 'white',
-                      borderRadius: '10px',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                    }}
-                  />
-                </button>
-                <span>Visual</span>
-              </div>
-              {expandedSections.phases ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </div>
-          </div>
-          
-          {expandedSections.phases && (
-            <div className="section-content">
-              {useVisualPhaseManager ? (
-                <VisualPhaseManager 
-                  projectId={project.id} 
-                  projectName={project.name}
-                  onPhasesChange={() => {
-                    // Refresh project data when phases change
-                    queryClient.invalidateQueries({ queryKey: ['project', id] });
-                  }}
-                />
-              ) : (
-                <ProjectPhaseManager 
-                  projectId={project.id} 
-                  projectName={project.name}
-                />
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Resource Demand Section */}
         <div className="detail-section">
@@ -529,15 +510,27 @@ export function ProjectDetail() {
               {project.assignments.length > 0 ? (
                 <div className="assignments-grid">
                   {project.assignments.map((assignment) => (
-                    <div key={assignment.id} className="assignment-card">
+                    <div 
+                      key={assignment.id} 
+                      className="assignment-card"
+                      onClick={() => handleAssignmentClick(assignment)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="assignment-header">
-                        <Link to={`/people/${assignment.person_id}`} className="assignment-person">
+                        <Link 
+                          to={`/people/${assignment.person_id}`} 
+                          className="assignment-person"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {assignment.person_name}
                         </Link>
                         {canEdit && (
                           <button
                             className="btn btn-icon btn-danger"
-                            onClick={() => deleteAssignmentMutation.mutate(assignment.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteAssignmentMutation.mutate(assignment.id);
+                            }}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -596,6 +589,157 @@ export function ProjectDetail() {
             </div>
           )}
         </div>
+
+        {/* Assignment Modal */}
+        {selectedAssignment && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3 className="modal-title">
+                  {isEditingAssignment ? 'Edit Assignment' : 'Assignment Details'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setSelectedAssignment(null);
+                    setIsEditingAssignment(false);
+                  }}
+                  className="modal-close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="assignment-modal-info">
+                  <div className="info-item">
+                    <label>Person</label>
+                    <div className="info-value">{selectedAssignment.person_name}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Role</label>
+                    <div className="info-value">{selectedAssignment.role_name}</div>
+                  </div>
+                </div>
+
+                {isEditingAssignment ? (
+                  <form onSubmit={(e) => { e.preventDefault(); handleAssignmentSubmit(); }}>
+                    <div className="form-group">
+                      <label className="form-label">Allocation Percentage</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={assignmentForm.allocation_percentage}
+                        onChange={(e) => setAssignmentForm(prev => ({
+                          ...prev,
+                          allocation_percentage: parseInt(e.target.value) || 0
+                        }))}
+                        className="form-input"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group grid">
+                      <div>
+                        <label className="form-label">Start Date</label>
+                        <input
+                          type="date"
+                          value={assignmentForm.start_date}
+                          onChange={(e) => setAssignmentForm(prev => ({
+                            ...prev,
+                            start_date: e.target.value
+                          }))}
+                          className="form-input"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">End Date</label>
+                        <input
+                          type="date"
+                          value={assignmentForm.end_date}
+                          onChange={(e) => setAssignmentForm(prev => ({
+                            ...prev,
+                            end_date: e.target.value
+                          }))}
+                          className="form-input"
+                          min={assignmentForm.start_date}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="modal-actions">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingAssignment(false)}
+                        className="btn btn-secondary"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={updateAssignmentMutation.isPending}
+                      >
+                        <Save size={16} />
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div>
+                    <div className="assignment-modal-details">
+                      <div className="info-item">
+                        <label>Allocation</label>
+                        <div className="info-value">{selectedAssignment.allocation_percentage}%</div>
+                      </div>
+                      <div className="info-item">
+                        <label>Start Date</label>
+                        <div className="info-value">
+                          {formatDate(new Date(selectedAssignment.start_date).toISOString())}
+                        </div>
+                      </div>
+                      <div className="info-item">
+                        <label>End Date</label>
+                        <div className="info-value">
+                          {formatDate(new Date(selectedAssignment.end_date).toISOString())}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="modal-actions">
+                      <button
+                        onClick={() => setSelectedAssignment(null)}
+                        className="btn btn-secondary"
+                      >
+                        Close
+                      </button>
+                      {canEdit && (
+                        <>
+                          <button
+                            onClick={() => setIsEditingAssignment(true)}
+                            className="btn btn-primary"
+                          >
+                            <Edit2 size={16} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={handleAssignmentDelete}
+                            className="btn btn-danger"
+                          >
+                            <Trash2 size={16} />
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
