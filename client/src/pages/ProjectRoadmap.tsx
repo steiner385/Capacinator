@@ -175,60 +175,6 @@ export default function ProjectRoadmap() {
       data: { ...phase, projectId: project.id } // Include project context
     }));
   }, []);
-
-  // Handle phase move/resize from InteractiveTimeline
-  const handlePhaseMove = useCallback((itemId: string, newStartDate: Date, newEndDate: Date) => {
-    // Find which project this phase belongs to
-    const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
-    if (!projectWithPhase) return;
-
-    // Update in-memory state optimistically
-    queryClient.setQueryData(['projectsRoadmap', debouncedFilters], (oldData: ProjectWithPhases[] | undefined) => {
-      if (!oldData) return oldData;
-      
-      return oldData.map(project => {
-        if (project.id === projectWithPhase.id) {
-          return {
-            ...project,
-            phases: project.phases.map(phase => {
-              if (phase.id === itemId) {
-                return {
-                  ...phase,
-                  start_date: newStartDate.toISOString().split('T')[0],
-                  end_date: newEndDate.toISOString().split('T')[0]
-                };
-              }
-              return phase;
-            })
-          };
-        }
-        return project;
-      });
-    });
-
-    // Update in backend
-    updatePhaseDragMutation.mutate({
-      projectId: projectWithPhase.id,
-      phaseId: itemId,
-      startDate: newStartDate.toISOString().split('T')[0],
-      endDate: newEndDate.toISOString().split('T')[0]
-    });
-  }, [projects, queryClient, debouncedFilters]);
-
-  // Handle phase edit from InteractiveTimeline
-  const handlePhaseEdit = useCallback((itemId: string) => {
-    const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
-    const phase = projectWithPhase?.phases.find(ph => ph.id === itemId);
-    
-    if (phase && projectWithPhase) {
-      setEditingPhase({
-        projectId: projectWithPhase.id,
-        phaseId: phase.id,
-        startDate: phase.start_date,
-        endDate: phase.end_date
-      });
-    }
-  }, [projects]);
   
   // Debounced filters to prevent excessive API calls
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
@@ -272,6 +218,60 @@ export default function ProjectRoadmap() {
       return projectsWithPhases;
     }
   });
+
+  // Handle phase move/resize from InteractiveTimeline
+  const handlePhaseMove = useCallback((itemId: string, newStartDate: Date, newEndDate: Date) => {
+    // Find which project this phase belongs to
+    const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
+    if (!projectWithPhase) return;
+
+    // Update in-memory state optimistically
+    queryClient.setQueryData(['projectsRoadmap', debouncedFilters], (oldData: ProjectWithPhases[] | undefined) => {
+      if (!oldData) return oldData;
+      
+      return oldData.map(project => {
+        if (project.id === projectWithPhase.id) {
+          return {
+            ...project,
+            phases: project.phases.map(phase => {
+              if (phase.id === itemId) {
+                return {
+                  ...phase,
+                  start_date: newStartDate.toISOString().split('T')[0],
+                  end_date: newEndDate.toISOString().split('T')[0]
+                };
+              }
+              return phase;
+            })
+          };
+        }
+        return project;
+      });
+    });
+
+    // Update in backend
+    updatePhaseDragMutation.mutate({
+      projectId: projectWithPhase.id,
+      phaseId: itemId,
+      startDate: newStartDate.toISOString().split('T')[0],
+      endDate: newEndDate.toISOString().split('T')[0]
+    });
+  }, [projects, queryClient, debouncedFilters, updatePhaseDragMutation]);
+
+  // Handle phase edit from InteractiveTimeline
+  const handlePhaseEdit = useCallback((itemId: string) => {
+    const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
+    const phase = projectWithPhase?.phases.find(ph => ph.id === itemId);
+    
+    if (phase && projectWithPhase) {
+      setEditingPhase({
+        projectId: projectWithPhase.id,
+        phaseId: phase.id,
+        startDate: phase.start_date,
+        endDate: phase.end_date
+      });
+    }
+  }, [projects]);
 
   // Set all projects as collapsed by default when data loads
   React.useEffect(() => {
