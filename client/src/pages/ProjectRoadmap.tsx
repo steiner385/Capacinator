@@ -605,7 +605,7 @@ export default function ProjectRoadmap() {
         </div>
       </div>
 
-      <div className="roadmap-content">
+      <div className="roadmap-content" style={{ position: 'relative' }}>
         {/* Left Navigation Bar */}
         <div className="timeline-nav-side left" onClick={() => scrollTimeline('left')}>
           <div className="nav-side-content">
@@ -622,6 +622,57 @@ export default function ProjectRoadmap() {
           </div>
         </div>
 
+        {/* Today Line - Full Height */}
+        {(() => {
+          const today = new Date();
+          const todayPosition = getDatePosition(today);
+          
+          // Only show today line if it's within the current viewport
+          if (todayPosition >= 0 && todayPosition <= timelineWidth) {
+            // Calculate proper offset based on actual project info panel
+            const projectInfoPanelWidth = 320; // This should match the actual panel width
+            const adjustedPosition = projectInfoPanelWidth + todayPosition;
+            
+            return (
+              <div 
+                className="today-line-full"
+                style={{ 
+                  position: 'absolute',
+                  left: adjustedPosition,
+                  top: 0,
+                  bottom: 0,
+                  width: '2px',
+                  backgroundColor: '#ef4444',
+                  zIndex: 999,
+                  pointerEvents: 'none'
+                }}
+                title={`Today: ${today.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}`}
+              >
+                <div className="today-line-indicator" style={{
+                  position: 'absolute',
+                  top: '80px', // Position below the header
+                  left: '4px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span className="today-label">Today</span>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         <div className="timeline-container" ref={timelineRef}>
           {/* Timeline Header */}
           <div className="timeline-header">
@@ -637,57 +688,6 @@ export default function ProjectRoadmap() {
               {generateTimelineHeader()}
             </div>
           </div>
-          
-          {/* Today Line */}
-          {(() => {
-            const today = new Date();
-            const todayPosition = getDatePosition(today);
-            
-            // Only show today line if it's within the current viewport
-            if (todayPosition >= 0 && todayPosition <= timelineWidth) {
-              // Calculate proper offset based on actual project info panel
-              const projectInfoPanelWidth = 320; // This should match the actual panel width
-              const adjustedPosition = projectInfoPanelWidth + todayPosition;
-              
-              return (
-                <div 
-                  className="today-line"
-                  style={{ 
-                    left: adjustedPosition,
-                    top: 0,
-                    bottom: 0,
-                    width: '2px',
-                    backgroundColor: '#ef4444',
-                    position: 'absolute',
-                    zIndex: 1000,
-                    pointerEvents: 'none'
-                  }}
-                  title={`Today: ${today.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}`}
-                >
-                  <div className="today-line-indicator" style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: '4px',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap'
-                  }}>
-                    <span className="today-label">Today</span>
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })()}
           
           {/* Project Rows */}
           <div className="projects-timeline">
