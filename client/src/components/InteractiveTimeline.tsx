@@ -135,17 +135,37 @@ export function InteractiveTimeline({
     // Update immediately
     updateWidth();
     
-    const resizeObserver = new ResizeObserver(updateWidth);
-    if (timelineRef.current?.parentElement) {
-      resizeObserver.observe(timelineRef.current.parentElement);
+    // Use ResizeObserver if available, otherwise fallback to window resize only
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      try {
+        resizeObserver = new ResizeObserver(updateWidth);
+        if (timelineRef.current?.parentElement) {
+          resizeObserver.observe(timelineRef.current.parentElement);
+        }
+      } catch (error) {
+        console.warn('ResizeObserver failed to initialize, using window resize fallback:', error);
+        resizeObserver = null;
+      }
     }
     
-    // Also listen to window resize as fallback
+    // Always listen to window resize as fallback
     window.addEventListener('resize', updateWidth);
     
+    // Additional fallback: check for size changes periodically if ResizeObserver is unavailable
+    let intervalId: NodeJS.Timeout | null = null;
+    if (!resizeObserver) {
+      intervalId = setInterval(updateWidth, 1000); // Check every second as last resort
+    }
+    
     return () => {
-      resizeObserver.disconnect();
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       window.removeEventListener('resize', updateWidth);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [viewport]);
 
