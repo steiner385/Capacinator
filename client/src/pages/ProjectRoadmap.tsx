@@ -643,14 +643,36 @@ export default function ProjectRoadmap() {
             const today = new Date();
             const todayPosition = getDatePosition(today);
             
+            // Debug logging for today line positioning
+            console.log('📅 Today line debug:', {
+              today: today.toISOString().split('T')[0],
+              viewportStart: viewport.startDate.toISOString().split('T')[0],
+              viewportEnd: viewport.endDate.toISOString().split('T')[0],
+              todayPosition,
+              timelineWidth,
+              pixelsPerDay: viewport.pixelsPerDay
+            });
+            
             // Only show today line if it's within the current viewport
             if (todayPosition >= 0 && todayPosition <= timelineWidth) {
+              // Calculate proper offset based on actual project info panel
+              const projectInfoPanelWidth = 320; // This should match the actual panel width
+              const adjustedPosition = projectInfoPanelWidth + todayPosition;
+              
+              console.log('📅 Today line positioned at:', adjustedPosition, 'px');
+              
               return (
                 <div 
                   className="today-line"
                   style={{ 
-                    left: todayPosition + 320, // Offset by project info panel width (320px)
-                    height: '100%'
+                    left: adjustedPosition,
+                    top: 0,
+                    bottom: 0,
+                    width: '2px',
+                    backgroundColor: '#ef4444',
+                    position: 'absolute',
+                    zIndex: 1000,
+                    pointerEvents: 'none'
                   }}
                   title={`Today: ${today.toLocaleDateString('en-US', { 
                     weekday: 'long', 
@@ -659,12 +681,24 @@ export default function ProjectRoadmap() {
                     day: 'numeric' 
                   })}`}
                 >
-                  <div className="today-line-indicator">
+                  <div className="today-line-indicator" style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '4px',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}>
                     <span className="today-label">Today</span>
                   </div>
                 </div>
               );
             }
+            console.log('📅 Today line not shown - outside viewport range');
             return null;
           })()}
           
