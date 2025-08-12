@@ -9,8 +9,7 @@ import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
-import ProjectPhaseManager from '../components/ProjectPhaseManager';
-import VisualPhaseManager from '../components/VisualPhaseManager';
+import PhaseTimeline from '../components/PhaseTimeline';
 import type { Project } from '../types';
 import './PersonDetails.css'; // Reuse existing styles
 import '../components/Charts.css';
@@ -477,6 +476,22 @@ export function ProjectDetail() {
           )}
         </div>
 
+        {/* Project Phases Section */}
+        <div className="detail-section">
+          <div className="section-header" onClick={() => toggleSection('phases')}>
+            <h2>
+              <Calendar size={20} />
+              Project Timeline
+            </h2>
+            {expandedSections.phases ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </div>
+          
+          {expandedSections.phases && (
+            <div className="section-content">
+              <PhaseTimeline projectId={project.id} projectName={project.name} />
+            </div>
+          )}
+        </div>
 
         {/* Resource Demand Section */}
         <div className="detail-section">

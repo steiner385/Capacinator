@@ -5,7 +5,7 @@ import InteractiveTimeline, { TimelineItem, TimelineViewport } from './Interacti
 import useInteractiveTimeline from '../hooks/useInteractiveTimeline';
 import './InteractiveTimeline.css';
 import { addDays, format, startOfMonth, endOfMonth } from 'date-fns';
-import { X, Calendar, Type, Save } from 'lucide-react';
+import { X, Calendar, Type, Save, Plus } from 'lucide-react';
 
 interface VisualPhaseManagerProps {
   projectId: string;
@@ -77,6 +77,16 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     phase_order: 1
   });
 
+  // Dependency-related state
+  const [showDependencyModal, setShowDependencyModal] = useState(false);
+  const [editingDependency, setEditingDependency] = useState<any>(null);
+  const [dependencyForm, setDependencyForm] = useState({
+    predecessor_phase_timeline_id: '',
+    successor_phase_timeline_id: '',
+    dependency_type: 'FS' as 'FS' | 'SS' | 'FF' | 'SF',
+    lag_days: 0
+  });
+
   // Fetch project phases
   const { data: phasesData, isLoading } = useQuery({
     queryKey: ['project-phases', projectId],
@@ -91,6 +101,15 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     queryKey: ['phase-templates'],
     queryFn: async () => {
       const response = await api.phases.list();
+      return response.data;
+    }
+  });
+
+  // Fetch project phase dependencies
+  const { data: dependenciesData, refetch: refetchDependencies } = useQuery({
+    queryKey: ['project-phase-dependencies', projectId],
+    queryFn: async () => {
+      const response = await api.projectPhaseDependencies.list({ project_id: projectId });
       return response.data;
     }
   });
@@ -114,7 +133,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     });
     
     // Sort by start date
-    const sortedPhases = cleanPhases.sort((a, b) => 
+    const sortedPhases = cleanPhases.sort((a: any, b: any) => 
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
     
@@ -328,6 +347,29 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     setShowAddModal(true);
   }, [timelineItems, isModalActive]);
 
+  // Dependency handlers
+  const handleEditDependency = useCallback((dependency: any) => {
+    setEditingDependency(dependency);
+    setDependencyForm({
+      predecessor_phase_timeline_id: dependency.predecessor_phase_timeline_id,
+      successor_phase_timeline_id: dependency.successor_phase_timeline_id,
+      dependency_type: dependency.dependency_type,
+      lag_days: dependency.lag_days || 0
+    });
+    setShowDependencyModal(true);
+  }, []);
+
+  const handleDeleteDependency = useCallback(async (dependencyId: string) => {
+    if (window.confirm('Are you sure you want to delete this dependency?')) {
+      try {
+        await api.projectPhaseDependencies.delete(dependencyId);
+        refetchDependencies();
+      } catch (error) {
+        console.error('Failed to delete dependency:', error);
+      }
+    }
+  }, [refetchDependencies]);
+
   // Handle context menu
   const handleContextMenu = useCallback((e: React.MouseEvent, phaseId: string) => {
     e.preventDefault();
@@ -343,8 +385,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Track modal state
   useEffect(() => {
-    setIsModalActive(showAddModal || editingPhase !== null);
-  }, [showAddModal, editingPhase]);
+    setIsModalActive(showAddModal || editingPhase !== null || showDependencyModal);
+  }, [showAddModal, editingPhase, showDependencyModal]);
 
   if (isLoading) {
     return (
@@ -443,7 +485,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         position: 'relative', 
         width: '100%',
         overflowX: compact ? 'hidden' : 'auto', // Hidden in compact mode for alignment
-        overflowY: 'hidden'
+        overflowY: 'visible' // Allow handles to show above phases
       }}>
         {/* Timeline container with precise alignment */}
         <div style={{
@@ -466,7 +508,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               }))}
               viewport={timelineViewport}
               mode="phase-manager"
-              height={140}
+              height={170}
+              dependencies={dependenciesData?.data?.map((dep: any) => ({
+                id: dep.id,
+                predecessorId: dep.predecessor_phase_timeline_id,
+                successorId: dep.successor_phase_timeline_id,
+                dependencyType: dep.dependency_type,
+                lagDays: dep.lag_days
+              })) || []}
               onItemAdd={handleAddPhase}
               onItemEdit={(itemId) => {
                 handlePhaseEdit(itemId);
@@ -585,6 +634,113 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             fontSize: '14px'
           }}>
             {isLoading ? 'Loading project phases...' : 'No project phases found. Click "Add Phase" to create the first phase.'}
+          </div>
+        )}
+        
+        {/* Phase Dependencies Section */}
+        {!compact && timelineItems.length > 0 && (
+          <div style={{ marginTop: '24px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              padding: '0 4px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+                Phase Dependencies
+              </h3>
+              <button
+                onClick={() => setShowDependencyModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Plus size={16} />
+                Add Dependency
+              </button>
+            </div>
+            
+            {/* Dependencies List */}
+            <div style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              {dependenciesData?.data?.length > 0 ? (
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {dependenciesData.data.map((dep: any) => (
+                    <div
+                      key={dep.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                          {dep.predecessor_phase_name} → {dep.successor_phase_name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {dep.dependency_type} {dep.lag_days > 0 && `(+${dep.lag_days} days)`}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleEditDependency(dep)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: 'transparent',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDependency(dep.id)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '24px',
+                  textAlign: 'center',
+                  color: '#6b7280',
+                  fontSize: '14px'
+                }}>
+                  No dependencies defined. Click "Add Dependency" to create phase dependencies.
+                </div>
+              )}
+            </div>
           </div>
         )}
         </div>
@@ -741,9 +897,11 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             
             <form className="modal-form" onSubmit={(e) => {
               e.preventDefault();
+              const selectedPhase = phaseTemplates?.data?.find((p: any) => p.id === addPhaseForm.phase_id);
               addPhaseMutation.mutate({
                 project_id: projectId,
                 phase_id: addPhaseForm.phase_id,
+                phase_name: selectedPhase?.name || 'Unknown Phase',
                 start_date: addPhaseForm.start_date,
                 end_date: addPhaseForm.end_date,
                 phase_order: addPhaseForm.phase_order
@@ -929,6 +1087,160 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 >
                   <Save size={16} />
                   Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Dependency Modal */}
+      {showDependencyModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {editingDependency ? 'Edit' : 'Add'} Phase Dependency
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDependencyModal(false);
+                  setEditingDependency(null);
+                  setDependencyForm({
+                    predecessor_phase_timeline_id: '',
+                    successor_phase_timeline_id: '',
+                    dependency_type: 'FS',
+                    lag_days: 0
+                  });
+                }}
+                className="modal-close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form className="modal-form" onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const data = {
+                  project_id: projectId,
+                  ...dependencyForm
+                };
+                
+                if (editingDependency) {
+                  await api.projectPhaseDependencies.update(editingDependency.id, data);
+                } else {
+                  await api.projectPhaseDependencies.create(data);
+                }
+                
+                refetchDependencies();
+                setShowDependencyModal(false);
+                setEditingDependency(null);
+                setDependencyForm({
+                  predecessor_phase_timeline_id: '',
+                  successor_phase_timeline_id: '',
+                  dependency_type: 'FS',
+                  lag_days: 0
+                });
+              } catch (error) {
+                console.error('Failed to save dependency:', error);
+              }
+            }}>
+              <div className="form-group">
+                <label className="form-label">
+                  Predecessor Phase (must complete first)
+                </label>
+                <select
+                  value={dependencyForm.predecessor_phase_timeline_id}
+                  onChange={(e) => setDependencyForm(prev => ({ ...prev, predecessor_phase_timeline_id: e.target.value }))}
+                  required
+                  className="form-select"
+                >
+                  <option value="">Select predecessor phase...</option>
+                  {timelineItems.map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Successor Phase (depends on predecessor)
+                </label>
+                <select
+                  value={dependencyForm.successor_phase_timeline_id}
+                  onChange={(e) => setDependencyForm(prev => ({ ...prev, successor_phase_timeline_id: e.target.value }))}
+                  required
+                  className="form-select"
+                >
+                  <option value="">Select successor phase...</option>
+                  {timelineItems.map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Dependency Type
+                </label>
+                <select
+                  value={dependencyForm.dependency_type}
+                  onChange={(e) => setDependencyForm(prev => ({ ...prev, dependency_type: e.target.value as 'FS' | 'SS' | 'FF' | 'SF' }))}
+                  className="form-select"
+                >
+                  <option value="FS">Finish-to-Start (FS)</option>
+                  <option value="SS">Start-to-Start (SS)</option>
+                  <option value="FF">Finish-to-Finish (FF)</option>
+                  <option value="SF">Start-to-Finish (SF)</option>
+                </select>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  {dependencyForm.dependency_type === 'FS' && 'Successor starts after predecessor finishes'}
+                  {dependencyForm.dependency_type === 'SS' && 'Successor starts when predecessor starts'}
+                  {dependencyForm.dependency_type === 'FF' && 'Successor finishes when predecessor finishes'}
+                  {dependencyForm.dependency_type === 'SF' && 'Successor finishes before predecessor starts'}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Lag Days (optional delay)
+                </label>
+                <input
+                  type="number"
+                  value={dependencyForm.lag_days}
+                  onChange={(e) => setDependencyForm(prev => ({ ...prev, lag_days: parseInt(e.target.value) || 0 }))}
+                  min="-365"
+                  max="365"
+                  className="form-input"
+                />
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  Positive values add delay, negative values create overlap
+                </div>
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDependencyModal(false);
+                    setEditingDependency(null);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!dependencyForm.predecessor_phase_timeline_id || !dependencyForm.successor_phase_timeline_id}
+                  className="btn btn-primary"
+                >
+                  <Save size={16} />
+                  {editingDependency ? 'Update' : 'Create'} Dependency
                 </button>
               </div>
             </form>

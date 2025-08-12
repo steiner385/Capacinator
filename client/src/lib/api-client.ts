@@ -235,6 +235,17 @@ export const api = {
     createCustomPhase: (data: any) => apiClient.post('/project-phases/create-custom', data),
   },
 
+  // Project Phase Dependencies
+  projectPhaseDependencies: {
+    list: (params?: any) => apiClient.get('/project-phase-dependencies', { params }),
+    get: (id: string) => apiClient.get(`/project-phase-dependencies/${id}`),
+    create: (data: any) => apiClient.post('/project-phase-dependencies', data),
+    update: (id: string, data: any) => apiClient.put(`/project-phase-dependencies/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/project-phase-dependencies/${id}`),
+    calculateCascade: (data: any) => apiClient.post('/project-phase-dependencies/calculate-cascade', data),
+    applyCascade: (data: any) => apiClient.post('/project-phase-dependencies/apply-cascade', data),
+  },
+
   projectAllocations: {
     get: (projectId: string) => apiClient.get(`/project-allocations/${projectId}`),
     initialize: (projectId: string) => apiClient.post(`/project-allocations/${projectId}/initialize`),

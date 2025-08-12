@@ -260,5 +260,10 @@ process.on('uncaughtException', (error) => {
   console.log('⚠️  Attempting to continue...');
 });
 
+// Export app for testing
+export { app };
+
 // Start the server
-startServer();
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}

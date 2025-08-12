@@ -376,6 +376,39 @@ async function createTestTables() {
     END;
   `);
 
+  // Create project_phases table
+  await testDb.schema.createTable('project_phases', table => {
+    table.string('id').primary();
+    table.string('name').notNullable();
+    table.text('description');
+    table.integer('order_index').defaultTo(0);
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create project_phases_timeline table
+  await testDb.schema.createTable('project_phases_timeline', table => {
+    table.string('id').primary();
+    table.string('project_id').references('id').inTable('projects').onDelete('CASCADE');
+    table.string('phase_id').references('id').inTable('project_phases').onDelete('CASCADE');
+    table.timestamp('start_date').notNullable();
+    table.timestamp('end_date').notNullable();
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
+  // Create project_phase_dependencies table
+  await testDb.schema.createTable('project_phase_dependencies', table => {
+    table.string('id').primary();
+    table.string('project_id').references('id').inTable('projects').onDelete('CASCADE');
+    table.string('predecessor_phase_timeline_id').references('id').inTable('project_phases_timeline').onDelete('CASCADE');
+    table.string('successor_phase_timeline_id').references('id').inTable('project_phases_timeline').onDelete('CASCADE');
+    table.enum('dependency_type', ['FS', 'SS', 'FF', 'SF']).notNullable().defaultTo('FS');
+    table.integer('lag_days').nullable().defaultTo(0);
+    table.timestamp('created_at').defaultTo(testDb.fn.now());
+    table.timestamp('updated_at').defaultTo(testDb.fn.now());
+  });
+
   // Create email_templates table
   await testDb.schema.createTable('email_templates', table => {
     table.string('id').primary();
@@ -427,6 +460,8 @@ beforeEach(async () => {
     'scenario_project_phases',
     'scenario_projects',
     'scenarios',
+    'project_phase_dependencies',
+    'project_phases_timeline',
     'project_assignments',
     'person_availability_overrides',
     'notification_history',
@@ -435,6 +470,7 @@ beforeEach(async () => {
     'person_roles',
     'people',
     'projects',
+    'project_phases',
     'roles',
     'locations'
   ];

@@ -109,6 +109,23 @@ export interface ProjectPhaseTimeline extends BaseEntity {
   phase_name?: string;
   phase_description?: string;
   phase_order?: number;
+  // Dependencies
+  dependencies?: ProjectPhaseDependency[];
+  dependents?: ProjectPhaseDependency[]; // Phases that depend on this one
+}
+
+// Phase dependency types: Finish-to-Start, Start-to-Start, Finish-to-Finish, Start-to-Finish
+export type DependencyType = 'FS' | 'SS' | 'FF' | 'SF';
+
+export interface ProjectPhaseDependency extends BaseEntity {
+  project_id: string;
+  predecessor_phase_timeline_id: string; // The phase that must complete first
+  successor_phase_timeline_id: string;   // The phase that depends on the predecessor
+  dependency_type: DependencyType;
+  lag_days?: number; // Optional delay between phases (e.g., +2 days after predecessor finishes)
+  // Relations
+  predecessor_phase?: ProjectPhaseTimeline;
+  successor_phase?: ProjectPhaseTimeline;
 }
 
 export interface ProjectAssignment extends BaseEntity {

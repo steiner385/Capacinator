@@ -3,9 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush, ComposedChart, Cell, ReferenceLine } from 'recharts';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
+import { VisualPhaseManager } from './VisualPhaseManager';
 import { TimelineViewport } from './InteractiveTimeline';
-import VisualPhaseManager from './VisualPhaseManager';
-import './InteractiveTimeline.css';
 
 interface ProjectDemandChartProps {
   projectId: string;
@@ -787,71 +786,78 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     return processedData;
   }, [demandData, capacityData, gapsData, currentView, allRoles]);
 
-  // Handle brush changes and update shared viewport
+  // Handle brush changes
   const handleBrushChange = React.useCallback((start: number, end: number) => {
     setBrushStart(start);
     setBrushEnd(end);
-    
-    // Get the current daily data to convert brush indices to dates
-    const currentDailyData = (
-      currentView === 'demand' ? demandData :
-      currentView === 'capacity' ? capacityData :
-      gapsData
-    );
-    
-    if (currentDailyData.length > 0) {
-      const dailyStart = Math.max(0, Math.min(start, end));
-      const dailyEnd = Math.min(currentDailyData.length - 1, Math.max(start, end));
-      
-      if (dailyStart < currentDailyData.length && dailyEnd < currentDailyData.length) {
-        const startDate = new Date(currentDailyData[dailyStart].date);
-        const endDate = new Date(currentDailyData[dailyEnd].date);
-        
-        // Calculate appropriate pixels per day for the selected range
-        const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const pixelsPerDay = Math.max(2, Math.min(20, (chartDimensions?.width || 1400) / totalDays));
-        
-        const newViewport = {
-          startDate,
-          endDate,
-          pixelsPerDay
-        };
-        
-        setSharedViewport(newViewport);
-        console.log('🔄 Brush changed - updating shared viewport:', newViewport);
-      }
-    }
-  }, [currentView, demandData, capacityData, gapsData, chartDimensions]);
+  }, []);
 
-  // Handle viewport changes from VisualPhaseManager
+  // Handle viewport changes from phase diagram
   const handleViewportChange = React.useCallback((viewport: TimelineViewport) => {
-    console.log('🔄 Phase manager changed viewport:', viewport);
     setSharedViewport(viewport);
     
-    // Update brush range to match the viewport using daily data
+    // Convert viewport to brush indices for synchronization
     const currentDailyData = (
       currentView === 'demand' ? demandData :
       currentView === 'capacity' ? capacityData :
       gapsData
     );
-    
+
     if (currentDailyData.length > 0) {
-      // Find the daily data indices that correspond to the viewport dates
-      const startIndex = currentDailyData.findIndex(d => new Date(d.date) >= viewport.startDate);
-      let endIndex = currentDailyData.findIndex(d => new Date(d.date) > viewport.endDate);
+      const startDateStr = viewport.startDate.toISOString().split('T')[0];
+      const endDateStr = viewport.endDate.toISOString().split('T')[0];
       
-      // Adjust indices
-      const actualStartIndex = Math.max(0, startIndex !== -1 ? startIndex : 0);
-      const actualEndIndex = endIndex !== -1 ? endIndex - 1 : currentDailyData.length - 1;
+      const startIndex = currentDailyData.findIndex(d => d.date >= startDateStr);
+      const endIndex = currentDailyData.findIndex(d => d.date > endDateStr) - 1;
       
-      setBrushStart(actualStartIndex);
-      setBrushEnd(actualEndIndex);
+      const validStartIndex = Math.max(0, startIndex !== -1 ? startIndex : 0);
+      const validEndIndex = Math.min(currentDailyData.length - 1, endIndex !== -1 ? endIndex : currentDailyData.length - 1);
       
-      console.log('🔄 Updated brush indices:', { start: actualStartIndex, end: actualEndIndex });
+      console.log('🔄 Viewport synchronization:', {
+        viewport: { start: startDateStr, end: endDateStr },
+        dailyDataRange: { start: currentDailyData[0]?.date, end: currentDailyData[currentDailyData.length - 1]?.date },
+        brushIndices: { start: validStartIndex, end: validEndIndex }
+      });
+      
+      setBrushStart(validStartIndex);
+      setBrushEnd(validEndIndex);
     }
   }, [currentView, demandData, capacityData, gapsData]);
 
-  // Initialize brush range and shared viewport when data loads
+  // Create initial viewport based on current chart data range
+  const initialViewport = React.useMemo((): TimelineViewport => {
+    const currentDailyData = (
+      currentView === 'demand' ? demandData :
+      currentView === 'capacity' ? capacityData :
+      gapsData
+    );
+
+    if (currentDailyData.length === 0) {
+      const today = new Date();
+      return {
+        startDate: new Date(today.getFullYear(), 0, 1),
+        endDate: new Date(today.getFullYear() + 1, 11, 31),
+        pixelsPerDay: 2
+      };
+    }
+
+    const startDate = new Date(currentDailyData[0].date);
+    const endDate = new Date(currentDailyData[currentDailyData.length - 1].date);
+    
+    // Calculate pixels per day based on available width
+    const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const availableWidth = chartDimensions?.width || 800;
+    const pixelsPerDay = Math.max(1, availableWidth / totalDays);
+
+    return {
+      startDate,
+      endDate,
+      pixelsPerDay
+    };
+  }, [currentView, demandData, capacityData, gapsData, chartDimensions]);
+
+
+  // Initialize brush range when data loads
   React.useEffect(() => {
     if (processedDataWithGranularity.length > 0 && brushEnd === 0) {
       // Get current daily data for initialization
@@ -867,43 +873,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       const initialEnd = dailyDataLength - 1;
       setBrushStart(initialStart);
       setBrushEnd(initialEnd);
-      
-      console.log('🎯 Brush initialization (DETAILED):', {
-        dailyDataLength,
-        initialStart, 
-        initialEnd,
-        dailyDataStart: currentDailyData[0]?.date,
-        dailyDataEnd: currentDailyData[dailyDataLength - 1]?.date,
-        processedDataLength: processedDataWithGranularity.length,
-        processedDataStart: processedDataWithGranularity[0]?.date,
-        processedDataEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date,
-        context: 'Brush indices should map to daily data, but chart shows processed data'
-      });
-      
-      // Initialize shared viewport if not already set
-      if (!sharedViewport && currentDailyData.length > 0) {
-        const startDate = new Date(currentDailyData[0].date);
-        const endDate = new Date(currentDailyData[currentDailyData.length - 1].date);
-        const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const pixelsPerDay = Math.max(1, Math.min(12, (chartDimensions?.width || 1400) / totalDays));
-        
-        const initialViewport = {
-          startDate,
-          endDate,
-          pixelsPerDay
-        };
-        
-        setSharedViewport(initialViewport);
-        console.log('🎆 Initialized shared viewport:', {
-          ...initialViewport,
-          startDateStr: initialViewport.startDate.toISOString().split('T')[0],
-          endDateStr: initialViewport.endDate.toISOString().split('T')[0],
-          context: 'This viewport is sent to phase timeline',
-          dataSource: `currentDailyData (${currentView})`
-        });
-      }
     }
-  }, [processedDataWithGranularity, brushEnd, sharedViewport, currentView, demandData.length, capacityData.length, gapsData.length]);
+  }, [processedDataWithGranularity, brushEnd, currentView, demandData.length, capacityData.length, gapsData.length]);
 
   // Measure chart dimensions for phase diagram alignment
   React.useEffect(() => {
@@ -1181,20 +1152,16 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
         </div>
       </div>
 
-      {/* Phase Timeline - positioned above the resource chart for alignment */}
-      <div className="phase-timeline-container" style={{ marginBottom: '10px' }}>
+      {/* Phase Timeline Diagram - Integrated above resource chart */}
+      <div style={{ marginBottom: '20px' }}>
         <VisualPhaseManager 
           projectId={projectId}
           projectName={projectName}
           compact={true}
-          externalViewport={sharedViewport}
+          externalViewport={sharedViewport || initialViewport}
           onViewportChange={handleViewportChange}
-          alignmentDimensions={chartDimensions}
-          chartTimeData={currentData} // Pass the actual chart data for time axis alignment
-          onPhasesChange={() => {
-            // Refresh chart data when phases change
-            console.log('🔄 Phases changed, refreshing chart data');
-          }}
+          alignmentDimensions={chartDimensions || undefined}
+          chartTimeData={displayData}
         />
       </div>
 

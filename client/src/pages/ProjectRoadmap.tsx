@@ -257,13 +257,58 @@ export default function ProjectRoadmap() {
     }
   });
 
+  // Debounced phase move state to prevent excessive API calls
+  const [pendingPhaseUpdates, setPendingPhaseUpdates] = useState<Map<string, {
+    projectId: string;
+    phaseId: string;
+    newStartDate: Date;
+    newEndDate: Date;
+    timestamp: number;
+  }>>(new Map());
+
+  // Process debounced phase updates
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (pendingPhaseUpdates.size === 0) return;
+
+      // Get the most recent update for each phase
+      const updatesToProcess = Array.from(pendingPhaseUpdates.values());
+      
+      updatesToProcess.forEach(update => {
+        // Update in backend
+        updatePhaseDragMutation.mutate({
+          projectId: update.projectId,
+          phaseId: update.phaseId,
+          startDate: update.newStartDate.toISOString().split('T')[0],
+          endDate: update.newEndDate.toISOString().split('T')[0]
+        });
+      });
+
+      // Clear pending updates
+      setPendingPhaseUpdates(new Map());
+    }, 150); // 150ms debounce delay for phase moves
+
+    return () => clearTimeout(timer);
+  }, [pendingPhaseUpdates, updatePhaseDragMutation]);
+
   // Handle phase move/resize from InteractiveTimeline
   const handlePhaseMove = useCallback((itemId: string, newStartDate: Date, newEndDate: Date) => {
+    console.log('🔄 Phase move/resize requested:', {
+      itemId,
+      newStartDate: newStartDate.toISOString(),
+      newEndDate: newEndDate.toISOString()
+    });
+    
     // Find which project this phase belongs to
     const projectWithPhase = projects?.find(p => p.phases.some(ph => ph.id === itemId));
-    if (!projectWithPhase) return;
+    if (!projectWithPhase) {
+      console.log('⚠️ Could not find project for phase:', itemId);
+      return;
+    }
+    
+    console.log('📦 Found project:', projectWithPhase.name);
 
-    // Update in-memory state optimistically
+    // Update in-memory state optimistically (immediate UI feedback)
     queryClient.setQueryData(['projectsRoadmap', debouncedFilters], (oldData: ProjectWithPhases[] | undefined) => {
       if (!oldData) return oldData;
       
@@ -287,14 +332,19 @@ export default function ProjectRoadmap() {
       });
     });
 
-    // Update in backend
-    updatePhaseDragMutation.mutate({
-      projectId: projectWithPhase.id,
-      phaseId: itemId,
-      startDate: newStartDate.toISOString().split('T')[0],
-      endDate: newEndDate.toISOString().split('T')[0]
+    // Store the update to be processed after debounce delay
+    setPendingPhaseUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.set(itemId, {
+        projectId: projectWithPhase.id,
+        phaseId: itemId,
+        newStartDate,
+        newEndDate,
+        timestamp: Date.now()
+      });
+      return newMap;
     });
-  }, [projects, queryClient, debouncedFilters, updatePhaseDragMutation]);
+  }, [projects, queryClient, debouncedFilters]);
 
   // Handle phase edit from InteractiveTimeline
   const handlePhaseEdit = useCallback((itemId: string) => {
@@ -762,6 +812,11 @@ export default function ProjectRoadmap() {
                     onItemMove={handlePhaseMove}
                     onItemResize={handlePhaseMove}
                     onItemEdit={handlePhaseEdit}
+                    onItemAdd={(afterItemId, position) => {
+                      // Handle phase insertion - for now just log
+                      console.log('Insert phase requested:', { afterItemId, position, projectId: project.id });
+                      // TODO: Implement phase insertion functionality
+                    }}
                     showGrid={false} // Grid is handled by the parent timeline
                     showToday={false} // Today line is handled by the parent
                     allowOverlap={false}

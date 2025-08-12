@@ -301,6 +301,18 @@
   }
 }
 
+/* Pulse animation for handle highlights */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .interactive-timeline {

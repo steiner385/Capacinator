@@ -132,7 +132,7 @@ describe('PersonDetails Utilization Timeline', () => {
     // Ensure all API mocks are reset and set consistently
     api.people.get.mockReset().mockResolvedValue({ data: mockPersonData });
     api.locations.list.mockReset().mockResolvedValue({ data: { data: [] } });
-    api.roles.list.mockReset().mockResolvedValue({ data: { data: [] } });
+    api.roles.list.mockReset().mockResolvedValue({ data: [{ id: 'role-1', name: 'Test Role' }] });
     api.people.list.mockReset().mockResolvedValue({ data: { data: [] } });
 
     // Mock fetch for utilization timeline
@@ -154,7 +154,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
     });
@@ -164,7 +164,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/different-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/different-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
     });
@@ -180,7 +180,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // The component should still render without crashing
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
     });
@@ -197,7 +197,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // Should still make the API call
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
     });
@@ -223,7 +223,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
     });
@@ -244,7 +244,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
     });
@@ -257,7 +257,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // Verify that the utilization timeline query is made
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2023-01-01&endDate=2026-12-31'
+          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
         );
       });
 
@@ -279,7 +279,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       // Verify query includes correct date range parameters
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('startDate=2023-01-01&endDate=2026-12-31')
+        expect.stringContaining('startDate=2024-01-01&endDate=2026-12-31')
       );
     });
   });
