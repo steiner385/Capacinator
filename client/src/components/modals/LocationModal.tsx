@@ -2,13 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Save } from 'lucide-react';
 import { Location } from '../../types';
 import { api } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../ui/dialog';
+import { PortalModal } from '../ui/PortalModal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -22,6 +16,7 @@ interface LocationModalProps {
 }
 
 export function LocationModal({ location, onSave, onCancel }: LocationModalProps) {
+  const [isOpen, setIsOpen] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     description: ''
@@ -78,15 +73,18 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
     }));
   };
 
+  const handleClose = () => {
+    setIsOpen(false);
+    onCancel();
+  };
+
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
-            {location ? 'Edit Location' : 'Add Location'}
-          </DialogTitle>
-        </DialogHeader>
+    <PortalModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={location ? 'Edit Location' : 'Add Location'}
+    >
+      <div className="p-6">
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
@@ -122,17 +120,17 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onCancel}>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save Location'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </PortalModal>
   );
 }

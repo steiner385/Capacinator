@@ -247,11 +247,13 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onClose} modal>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-xl font-semibold">
+            {isEditing ? 'Edit Assignment' : 'Create New Assignment'}
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             {isEditing 
               ? 'Update the assignment details below.' 
               : 'Fill in the information to create a new assignment.'}
@@ -259,7 +261,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
         </DialogHeader>
 
         {hasErrors && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Please fix the errors below before submitting.
@@ -267,8 +269,8 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 px-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="project_id">Project *</Label>
               <Select value={formData.project_id} onValueChange={(value) => handleChange('project_id', value)}>
@@ -320,7 +322,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
               {errors.role_id && <p className="text-sm text-destructive">{errors.role_id}</p>}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="assignment_date_mode">Date Mode *</Label>
               <Select 
                 value={formData.assignment_date_mode} 
@@ -339,54 +341,57 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
                 Fixed: Use specific dates | Phase: Follow selected phase timeline | Project: Follow project aspiration dates
               </p>
             </div>
+          </div>
 
-            {formData.assignment_date_mode === 'phase' && (
+          {/* Conditional fields based on date mode */}
+          {formData.assignment_date_mode === 'phase' && (
+            <div className="space-y-2">
+              <Label htmlFor="phase_id">Phase *</Label>
+              <Select value={formData.phase_id} onValueChange={(value) => handleChange('phase_id', value)}>
+                <SelectTrigger className={errors.phase_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePhases?.map((phase: any) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      {phase.name} ({phase.start_date} - {phase.end_date})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.phase_id && <p className="text-sm text-destructive">{errors.phase_id}</p>}
+            </div>
+          )}
+
+          {formData.assignment_date_mode === 'fixed' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phase_id">Phase *</Label>
-                <Select value={formData.phase_id} onValueChange={(value) => handleChange('phase_id', value)}>
-                  <SelectTrigger className={errors.phase_id ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Select phase" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePhases?.map((phase: any) => (
-                      <SelectItem key={phase.id} value={phase.id}>
-                        {phase.name} ({phase.start_date} - {phase.end_date})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.phase_id && <p className="text-sm text-destructive">{errors.phase_id}</p>}
+                <Label htmlFor="start_date">Start Date *</Label>
+                <Input
+                  type="date"
+                  id="start_date"
+                  value={formData.start_date}
+                  onChange={(e) => handleChange('start_date', e.target.value)}
+                  className={errors.start_date ? 'border-destructive' : ''}
+                />
+                {errors.start_date && <p className="text-sm text-destructive">{errors.start_date}</p>}
               </div>
-            )}
 
-            {formData.assignment_date_mode === 'fixed' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Start Date *</Label>
-                  <Input
-                    type="date"
-                    id="start_date"
-                    value={formData.start_date}
-                    onChange={(e) => handleChange('start_date', e.target.value)}
-                    className={errors.start_date ? 'border-destructive' : ''}
-                  />
-                  {errors.start_date && <p className="text-sm text-destructive">{errors.start_date}</p>}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date *</Label>
+                <Input
+                  type="date"
+                  id="end_date"
+                  value={formData.end_date}
+                  onChange={(e) => handleChange('end_date', e.target.value)}
+                  className={errors.end_date ? 'border-destructive' : ''}
+                />
+                {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
+              </div>
+            </div>
+          )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="end_date">End Date *</Label>
-                  <Input
-                    type="date"
-                    id="end_date"
-                    value={formData.end_date}
-                    onChange={(e) => handleChange('end_date', e.target.value)}
-                    className={errors.end_date ? 'border-destructive' : ''}
-                  />
-                  {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
-                </div>
-              </>
-            )}
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <div className="space-y-2">
               <Label htmlFor="allocation_percentage">Allocation Percentage *</Label>
               <Input
@@ -402,7 +407,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
               {errors.allocation_percentage && <p className="text-sm text-destructive">{errors.allocation_percentage}</p>}
             </div>
 
-            <div className="flex items-center space-x-2 mt-8">
+            <div className="flex items-center space-x-2 pt-6">
               <Checkbox
                 id="billable"
                 checked={formData.billable}
@@ -415,8 +420,8 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
           </div>
 
           {formData.assignment_date_mode !== 'fixed' && (
-            <Alert>
-              <AlertDescription>
+            <Alert className="border-blue-200 bg-blue-50/50">
+              <AlertDescription className="text-blue-800">
                 <strong>Automatic Dates:</strong> 
                 {formData.assignment_date_mode === 'phase' 
                   ? ' Assignment dates will be calculated from the selected project phase timeline.'
@@ -459,11 +464,11 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
             </Alert>
           )}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+          <DialogFooter className="pt-6 border-t border-border/50">
+            <Button type="button" variant="outline" onClick={onClose} className="min-w-[100px]">
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="min-w-[150px]">
               {isLoading && <Spinner className="mr-2" size="sm" />}
               {isEditing ? 'Update Assignment' : 'Create Assignment'}
             </Button>

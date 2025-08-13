@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from './dialog';
+import { PortalModal } from './PortalModal';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
 
@@ -23,12 +17,6 @@ interface FormModalProps {
   className?: string;
 }
 
-const sizeClasses = {
-  sm: 'sm:max-w-md',
-  md: 'sm:max-w-lg',
-  lg: 'sm:max-w-2xl',
-  xl: 'sm:max-w-4xl',
-};
 
 export const FormModal: React.FC<FormModalProps> = ({
   isOpen,
@@ -51,17 +39,18 @@ export const FormModal: React.FC<FormModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={cn(sizeClasses[size], className)}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
+    <PortalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+    >
+      <div className={cn("p-6", className)}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="py-4">
+          <div>
             {children}
           </div>
           {showActions && (
-            <DialogFooter>
+            <div className="flex justify-end gap-3 pt-4 border-t">
               <Button 
                 type="button" 
                 variant="outline"
@@ -76,11 +65,11 @@ export const FormModal: React.FC<FormModalProps> = ({
               >
                 {isLoading ? 'Saving...' : submitText}
               </Button>
-            </DialogFooter>
+            </div>
           )}
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </PortalModal>
   );
 };
 

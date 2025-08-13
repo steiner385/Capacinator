@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { PortalModal } from '../ui/PortalModal';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -126,16 +119,17 @@ export default function PersonRoleModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{editingRole ? 'Edit Role' : 'Add Role'}</DialogTitle>
-          <DialogDescription>
-            {editingRole 
-              ? 'Update the role details for this person.' 
-              : 'Add a new role for this person.'}
-          </DialogDescription>
-        </DialogHeader>
+    <PortalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingRole ? 'Edit Role' : 'Add Role'}
+    >
+      <div className="p-6">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          {editingRole 
+            ? 'Update the role details for this person.' 
+            : 'Add a new role for this person.'}
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -219,7 +213,7 @@ export default function PersonRoleModal({
             </div>
           </div>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
@@ -227,9 +221,9 @@ export default function PersonRoleModal({
               {isSubmitting && <Spinner className="mr-2" size="sm" />}
               {editingRole ? 'Update Role' : 'Add Role'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </PortalModal>
   );
 }

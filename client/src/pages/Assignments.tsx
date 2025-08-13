@@ -7,7 +7,8 @@ import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-import AssignmentModal from '../components/modals/AssignmentModal';
+import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
+import { TestModal } from '../components/modals/TestModal';
 import { useModal } from '../hooks/useModal';
 import type { ProjectAssignment, Project, Person, Role } from '../types';
 import './Assignments.css';
@@ -272,6 +273,8 @@ const RecommendationCard = ({ recommendation, onExecute }: {
 };
 
 export default function Assignments() {
+  console.log('Assignments component rendering');
+  
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -285,8 +288,9 @@ export default function Assignments() {
     date_range: ''
   });
   
-  const addAssignmentModal = useModal();
-  const editAssignmentModal = useModal();
+  // Use state directly instead of useModal hook to avoid re-render issues
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<ProjectAssignment | null>(null);
 
   // Handle contextual messages from URL parameters
@@ -704,7 +708,7 @@ export default function Assignments() {
             <>
               <button
                 className="btn btn-primary"
-                onClick={addAssignmentModal.open}
+                onClick={() => setIsAddModalOpen(true)}
               >
                 <Plus size={16} />
                 New Assignment
@@ -781,17 +785,20 @@ export default function Assignments() {
       {activeTab === 'assignments' ? renderAssignmentsTab() : renderRecommendationsTab()}
 
       {/* Add Assignment Modal */}
-      <AssignmentModal
-        isOpen={addAssignmentModal.isOpen}
-        onClose={addAssignmentModal.close}
+      <AssignmentModalNew
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          console.log('Modal close called');
+          setIsAddModalOpen(false);
+        }}
         onSuccess={handleAssignmentSuccess}
       />
 
       {/* Edit Assignment Modal */}
-      <AssignmentModal
-        isOpen={editAssignmentModal.isOpen}
+      <AssignmentModalNew
+        isOpen={isEditModalOpen}
         onClose={() => {
-          editAssignmentModal.close();
+          setIsEditModalOpen(false);
           setEditingAssignment(null);
         }}
         onSuccess={handleAssignmentSuccess}

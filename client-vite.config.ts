@@ -29,13 +29,14 @@ export default defineConfig({
     }
   },
   server: {
-    port: parseInt(process.env.VITE_PORT || '3120'),
+    port: parseInt(process.env.VITE_PORT || '3121'),
     https: false, // We'll use nginx for HTTPS
+    allowedHosts: ['devlocal.capacinator.com', 'local.capacinator.com'],
     hmr: {
       overlay: true,
       clientPort: 443, // Tell HMR to use the nginx proxy
       protocol: 'wss',
-      host: 'local.capacinator.com',
+      host: 'devlocal.capacinator.com',
     },
     watch: {
       usePolling: true,

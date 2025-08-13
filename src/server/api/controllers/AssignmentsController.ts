@@ -107,6 +107,9 @@ export class AssignmentsController extends BaseController {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Validate assignment data based on date mode
+      await this.validateAssignmentData(assignmentData);
+
       // Compute dates based on assignment mode
       const computedDates = await this.computeAssignmentDates(assignmentData);
       
@@ -813,6 +816,107 @@ export class AssignmentsController extends BaseController {
         
       default:
         throw new Error(`Unknown assignment_date_mode: ${mode}`);
+    }
+  }
+
+  /**
+   * Validate assignment data based on assignment_date_mode
+   */
+  private async validateAssignmentData(assignmentData: any): Promise<void> {
+    // Basic required fields
+    if (!assignmentData.project_id) {
+      throw new Error('project_id is required');
+    }
+    if (!assignmentData.person_id) {
+      throw new Error('person_id is required');
+    }
+    if (!assignmentData.role_id) {
+      throw new Error('role_id is required');
+    }
+    if (!assignmentData.allocation_percentage || assignmentData.allocation_percentage <= 0 || assignmentData.allocation_percentage > 100) {
+      throw new Error('allocation_percentage must be between 1 and 100');
+    }
+
+    const mode = assignmentData.assignment_date_mode || 'fixed';
+
+    switch (mode) {
+      case 'fixed':
+        // Require explicit start_date and end_date
+        if (!assignmentData.start_date) {
+          throw new Error('start_date is required for fixed date mode');
+        }
+        if (!assignmentData.end_date) {
+          throw new Error('end_date is required for fixed date mode');
+        }
+        
+        // Validate date order
+        if (new Date(assignmentData.start_date) >= new Date(assignmentData.end_date)) {
+          throw new Error('start_date must be before end_date');
+        }
+        break;
+
+      case 'phase':
+        // Require phase_id and project_id
+        if (!assignmentData.phase_id) {
+          throw new Error('phase_id is required for phase-aligned assignments');
+        }
+        
+        // Verify the phase exists in the project
+        const phaseTimeline = await this.db('project_phases_timeline')
+          .where('project_id', assignmentData.project_id)
+          .where('phase_id', assignmentData.phase_id)
+          .first();
+          
+        if (!phaseTimeline) {
+          throw new Error(`Phase ${assignmentData.phase_id} not found in project ${assignmentData.project_id}`);
+        }
+        
+        // Verify phase has valid dates
+        if (!phaseTimeline.start_date || !phaseTimeline.end_date) {
+          throw new Error('Selected phase does not have valid start and end dates');
+        }
+        break;
+
+      case 'project':
+        // Verify project exists and has aspiration dates
+        const project = await this.db('projects')
+          .where('id', assignmentData.project_id)
+          .first();
+          
+        if (!project) {
+          throw new Error(`Project ${assignmentData.project_id} not found`);
+        }
+        
+        if (!project.aspiration_start || !project.aspiration_finish) {
+          throw new Error('Project does not have aspiration dates set. Please set project aspiration dates first.');
+        }
+        
+        // Validate aspiration date order
+        if (new Date(project.aspiration_start) >= new Date(project.aspiration_finish)) {
+          throw new Error('Project aspiration dates are invalid (start must be before finish)');
+        }
+        break;
+
+      default:
+        throw new Error(`Invalid assignment_date_mode: ${mode}. Must be 'fixed', 'phase', or 'project'`);
+    }
+
+    // Verify person exists
+    const person = await this.db('people')
+      .where('id', assignmentData.person_id)
+      .first();
+      
+    if (!person) {
+      throw new Error(`Person ${assignmentData.person_id} not found`);
+    }
+
+    // Verify role exists
+    const role = await this.db('roles')
+      .where('id', assignmentData.role_id)
+      .first();
+      
+    if (!role) {
+      throw new Error(`Role ${assignmentData.role_id} not found`);
     }
   }
 }

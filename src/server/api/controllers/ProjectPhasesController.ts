@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { AssignmentRecalculationService } from '../../services/AssignmentRecalculationService.js';
 
 export class ProjectPhasesController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -239,6 +240,16 @@ export class ProjectPhasesController extends BaseController {
           });
       }
 
+      // Recalculate assignments if phase dates changed
+      let assignmentResult = { updated_assignments: [], conflicts: [] };
+      if (Object.keys(timelineUpdateData).length > 0 && (timelineUpdateData.start_date || timelineUpdateData.end_date)) {
+        const assignmentService = new AssignmentRecalculationService(this.db);
+        assignmentResult = await assignmentService.recalculateAssignmentsForPhaseChanges(
+          currentPhase.project_id,
+          [currentPhase.phase_id]
+        );
+      }
+
       // Get the updated phase data
       const projectPhase = await this.db('project_phases_timeline')
         .leftJoin('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
@@ -255,7 +266,15 @@ export class ProjectPhasesController extends BaseController {
         return null;
       }
 
-      return { data: projectPhase };
+      return { 
+        data: projectPhase,
+        assignment_updates: {
+          updated_count: assignmentResult.updated_assignments.length,
+          conflicts_count: assignmentResult.conflicts.length,
+          updated_assignments: assignmentResult.updated_assignments,
+          conflicts: assignmentResult.conflicts
+        }
+      };
     }, res, 'Failed to update project phase');
 
     if (result) {

@@ -1,14 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { PortalModal } from '../ui/PortalModal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -235,16 +228,17 @@ export const PersonModal: React.FC<PersonModalProps> = ({
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Person' : 'Add New Person'}</DialogTitle>
-          <DialogDescription>
-            {isEditing 
-              ? 'Update the person\'s information below.' 
-              : 'Fill in the information to create a new person.'}
-          </DialogDescription>
-        </DialogHeader>
+    <PortalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Edit Person' : 'Add New Person'}
+    >
+      <div className="p-6">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          {isEditing 
+            ? 'Update the person\'s information below.' 
+            : 'Fill in the information to create a new person.'}
+        </p>
 
         {hasErrors && (
           <Alert variant="destructive">
@@ -444,7 +438,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
@@ -452,10 +446,10 @@ export const PersonModal: React.FC<PersonModalProps> = ({
               {isLoading && <Spinner className="mr-2" size="sm" />}
               {isEditing ? 'Update Person' : 'Create Person'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </PortalModal>
   );
 };
 

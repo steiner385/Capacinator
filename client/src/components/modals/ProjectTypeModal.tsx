@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { PortalModal } from '../ui/PortalModal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -145,16 +138,17 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Project Type' : 'Create Project Type'}</DialogTitle>
-          <DialogDescription>
-            {isEditing 
-              ? 'Update the project type details below.' 
-              : 'Fill in the information to create a new project type.'}
-          </DialogDescription>
-        </DialogHeader>
+    <PortalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Edit Project Type' : 'Create Project Type'}
+    >
+      <div className="p-6">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          {isEditing 
+            ? 'Update the project type details below.' 
+            : 'Fill in the information to create a new project type.'}
+        </p>
 
         {hasErrors && (
           <Alert variant="destructive">
@@ -224,7 +218,7 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
@@ -232,10 +226,10 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
               {isLoading && <Spinner className="mr-2" size="sm" />}
               {isEditing ? 'Update Project Type' : 'Create Project Type'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </PortalModal>
   );
 };
 

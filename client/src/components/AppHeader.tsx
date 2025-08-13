@@ -193,7 +193,7 @@ export const AppHeader: React.FC = () => {
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
               >
                 <User size={14} />
-                <span className="profile-name">{currentUser.first_name || 'User'}</span>
+                <span className="profile-name">{currentUser.name?.split(' ')[0] || 'User'}</span>
                 <ChevronDown size={12} className={`chevron ${isProfileDropdownOpen ? 'open' : ''}`} />
               </button>
 
@@ -204,7 +204,7 @@ export const AppHeader: React.FC = () => {
                       <User size={16} className="profile-avatar" />
                       <div className="profile-details">
                         <div className="profile-full-name">
-                          {currentUser.first_name} {currentUser.last_name}
+                          {currentUser.name}
                         </div>
                         <div className="profile-email">{currentUser.email}</div>
                       </div>

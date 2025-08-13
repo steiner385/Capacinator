@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { v4 as uuidv4 } from 'uuid';
 import { ProjectPhaseCascadeService } from '../../services/ProjectPhaseCascadeService.js';
+import { AssignmentRecalculationService } from '../../services/AssignmentRecalculationService.js';
 
 export class ProjectPhaseDependenciesController extends BaseController {
   // Get all dependencies for a project
@@ -288,9 +289,31 @@ export class ProjectPhaseDependenciesController extends BaseController {
       }
 
       const cascadeService = new ProjectPhaseCascadeService(this.db);
+      const assignmentService = new AssignmentRecalculationService(this.db);
+
+      // Apply cascade changes to phases
       await cascadeService.applyCascade(project_id, cascade_data);
 
-      return { message: 'Cascade changes applied successfully' };
+      // Recalculate assignments affected by phase changes
+      const affectedPhaseIds = cascade_data.affected_phases?.map((phase: any) => phase.phase_timeline_id) || [];
+      let assignmentResult = { updated_assignments: [], conflicts: [] };
+      
+      if (affectedPhaseIds.length > 0) {
+        assignmentResult = await assignmentService.recalculateAssignmentsForPhaseChanges(
+          project_id,
+          affectedPhaseIds
+        );
+      }
+
+      return { 
+        message: 'Cascade changes applied successfully',
+        assignment_updates: {
+          updated_count: assignmentResult.updated_assignments.length,
+          conflicts_count: assignmentResult.conflicts.length,
+          updated_assignments: assignmentResult.updated_assignments,
+          conflicts: assignmentResult.conflicts
+        }
+      };
     }, res, 'Failed to apply cascade changes');
 
     if (result) {

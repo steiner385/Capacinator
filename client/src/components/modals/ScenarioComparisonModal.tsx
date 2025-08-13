@@ -2,14 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowRightLeft, TrendingUp, TrendingDown, Plus, Minus, Edit } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { Scenario } from '../../types';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+import { PortalModal } from '../ui/PortalModal';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -300,19 +293,19 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ArrowRightLeft size={20} />
-            Scenario Comparison
-          </DialogTitle>
-          <DialogDescription>
+    <PortalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Scenario Comparison"
+    >
+      <div className="flex flex-col h-full">
+        <div className="p-6 pb-0">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Compare scenarios to understand differences in assignments, phases, projects, and overall impact.
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6">
           {!comparisonData ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-[1fr,auto,1fr]">
@@ -422,7 +415,7 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
           )}
         </div>
 
-        <DialogFooter className="flex-shrink-0">
+        <div className="flex justify-end gap-3 p-6 pt-0 border-t">
           {!comparisonData ? (
             <>
               <Button variant="outline" onClick={onClose}>
@@ -454,8 +447,8 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
               <Button onClick={onClose}>Close</Button>
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </PortalModal>
   );
 };
