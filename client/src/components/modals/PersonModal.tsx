@@ -309,12 +309,12 @@ export const PersonModal: React.FC<PersonModalProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="location_id">Location</Label>
-              <Select value={formData.location_id} onValueChange={(value) => handleChange('location_id', value)}>
+              <Select value={formData.location_id || 'none'} onValueChange={(value) => handleChange('location_id', value === 'none' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {locations?.map((location: any) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
@@ -346,12 +346,12 @@ export const PersonModal: React.FC<PersonModalProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="supervisor_id">Supervisor</Label>
-              <Select value={formData.supervisor_id} onValueChange={(value) => handleChange('supervisor_id', value)}>
+              <Select value={formData.supervisor_id || 'none'} onValueChange={(value) => handleChange('supervisor_id', value === 'none' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select supervisor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {filteredSupervisors?.map((person: any) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name} ({person.title || 'No Title'})

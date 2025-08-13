@@ -334,12 +334,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
             <div className="space-y-2 col-span-2">
               <Label htmlFor="current_phase_id">Current Phase</Label>
-              <Select value={formData.current_phase_id} onValueChange={(value) => handleChange('current_phase_id', value)}>
+              <Select value={formData.current_phase_id || 'none'} onValueChange={(value) => handleChange('current_phase_id', value === 'none' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select current phase" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {phases?.data?.map((phase: any) => (
                     <SelectItem key={phase.id} value={phase.id}>
                       {phase.name}
