@@ -65,11 +65,11 @@ export const PortalModal: React.FC<PortalModalProps> = ({
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            padding: '20px 20px 0 20px',
+            padding: '24px 24px 20px 24px',
             borderBottom: '1px solid #e5e7eb'
           }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>{title}</h2>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
               <X size={20} />
             </button>
           </div>

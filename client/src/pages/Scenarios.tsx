@@ -20,6 +20,7 @@ import {
 import { api } from '../lib/api-client';
 import { Scenario } from '../types';
 import { useUser } from '../contexts/UserContext';
+import { CreateScenarioModal, EditScenarioModal, DeleteConfirmationModal } from '../components/modals/ScenarioModal';
 import './Scenarios.css';
 
 // Tree node type for hierarchical display
@@ -246,300 +247,7 @@ interface CompareModalProps {
   scenarios: Scenario[];
 }
 
-const CreateScenarioModal: React.FC<CreateScenarioModalProps> = ({
-  isOpen,
-  onClose,
-  parentScenario
-}) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [scenarioType, setScenarioType] = useState<'branch' | 'sandbox'>('branch');
-  const { currentUser } = useUser();
-  const queryClient = useQueryClient();
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) => api.scenarios.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      onClose();
-      setName('');
-      setDescription('');
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !currentUser) return;
-
-    createMutation.mutate({
-      name: name.trim(),
-      description: description.trim(),
-      parent_scenario_id: parentScenario?.id,
-      created_by: currentUser.id,
-      scenario_type: scenarioType
-    });
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Create New Scenario</h2>
-          <button onClick={onClose} className="modal-close">×</button>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="modal-body">
-          {parentScenario && (
-            <div className="parent-info">
-              <GitBranch size={16} />
-              <span>Branching from: <strong>{parentScenario.name}</strong></span>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="scenario-name">Scenario Name *</label>
-            <input
-              id="scenario-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter scenario name"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="scenario-description">Description</label>
-            <textarea
-              id="scenario-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the purpose of this scenario"
-              rows={3}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="scenario-type">Scenario Type</label>
-            <select
-              id="scenario-type"
-              value={scenarioType}
-              onChange={(e) => setScenarioType(e.target.value as 'branch' | 'sandbox')}
-            >
-              <option value="branch">Branch - Copy from parent scenario</option>
-              <option value="sandbox">Sandbox - Start fresh</option>
-            </select>
-          </div>
-        </form>
-
-        <div className="modal-footer">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            onClick={handleSubmit}
-            className="btn-primary"
-            disabled={!name.trim() || createMutation.isPending}
-          >
-            {createMutation.isPending ? 'Creating...' : 'Create Scenario'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EditScenarioModal: React.FC<EditScenarioModalProps> = ({
-  isOpen,
-  onClose,
-  scenario
-}) => {
-  const [name, setName] = useState(scenario.name);
-  const [description, setDescription] = useState(scenario.description || '');
-  const queryClient = useQueryClient();
-
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => api.scenarios.update(scenario.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      onClose();
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    updateMutation.mutate({
-      name: name.trim(),
-      description: description.trim(),
-    });
-  };
-
-  // Reset form when scenario changes
-  React.useEffect(() => {
-    setName(scenario.name);
-    setDescription(scenario.description || '');
-  }, [scenario]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Edit Scenario</h2>
-          <button onClick={onClose} className="modal-close">×</button>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="modal-body">
-          <div className="scenario-type-info">
-            <span className={`scenario-type ${scenario.scenario_type}`}>
-              {scenario.scenario_type}
-            </span>
-            <span className={`scenario-status ${scenario.status}`}>
-              {scenario.status}
-            </span>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="edit-scenario-name">Scenario Name *</label>
-            <input
-              id="edit-scenario-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter scenario name"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="edit-scenario-description">Description</label>
-            <textarea
-              id="edit-scenario-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the purpose of this scenario"
-              rows={3}
-            />
-          </div>
-
-          {scenario.parent_scenario_name && (
-            <div className="parent-info">
-              <GitBranch size={16} />
-              <span>Branched from: <strong>{scenario.parent_scenario_name}</strong></span>
-            </div>
-          )}
-        </form>
-
-        <div className="modal-footer">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            onClick={handleSubmit}
-            className="btn-primary"
-            disabled={!name.trim() || updateMutation.isPending}
-          >
-            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
-  isOpen,
-  onClose,
-  scenario
-}) => {
-  const queryClient = useQueryClient();
-  const [confirmText, setConfirmText] = useState('');
-  const expectedText = scenario.name;
-
-  const deleteMutation = useMutation({
-    mutationFn: () => api.scenarios.delete(scenario.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      onClose();
-      setConfirmText('');
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (confirmText === expectedText) {
-      deleteMutation.mutate();
-    }
-  };
-
-  const isConfirmed = confirmText === expectedText;
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Delete Scenario</h2>
-          <button onClick={onClose} className="modal-close">×</button>
-        </div>
-        
-        <div className="modal-body">
-          <div className="delete-warning">
-            <AlertTriangle size={48} className="warning-icon" />
-            <div className="warning-content">
-              <h3>Are you sure?</h3>
-              <p>
-                This action cannot be undone. This will permanently delete the scenario
-                <strong> "{scenario.name}"</strong> and all its associated data.
-              </p>
-              {scenario.children_count && scenario.children_count > 0 && (
-                <p className="child-warning">
-                  <strong>Warning:</strong> This scenario has {scenario.children_count} child scenarios
-                  that will also be affected.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="confirmation-input">
-            <label htmlFor="delete-confirm">
-              To confirm, type <strong>{expectedText}</strong> below:
-            </label>
-            <input
-              id="delete-confirm"
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Enter scenario name to confirm"
-            />
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            onClick={handleSubmit}
-            className="btn-danger"
-            disabled={!isConfirmed || deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? 'Deleting...' : 'Delete Scenario'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// CreateScenarioModal, EditScenarioModal, and DeleteConfirmationModal have been moved to ScenarioModal.tsx
 
 const MergeModal: React.FC<MergeModalProps> = ({
   isOpen,
@@ -910,6 +618,15 @@ export const Scenarios: React.FC = () => {
   
   // Removed renderGroupedScenarios function - no longer needed
   
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: (scenarioId: string) => api.scenarios.delete(scenarioId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
+      handleCloseDeleteModal();
+    },
+  });
 
   const { data: scenarios, isLoading, error } = useQuery({
     queryKey: ['scenarios'],
@@ -1496,6 +1213,9 @@ export const Scenarios: React.FC = () => {
           isOpen={showDeleteModal}
           onClose={handleCloseDeleteModal}
           scenario={deletingScenario}
+          onConfirm={() => {
+            deleteMutation.mutate(deletingScenario.id);
+          }}
         />
       )}
       
