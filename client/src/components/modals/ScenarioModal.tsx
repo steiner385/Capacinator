@@ -8,7 +8,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { useUser } from '../../hooks/useUser';
+import { useUser } from '../../contexts/UserContext';
 
 interface CreateScenarioModalProps {
   isOpen: boolean;
