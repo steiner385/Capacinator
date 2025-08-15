@@ -44,6 +44,11 @@
   filter: brightness(0) invert(1);
 }
 
+/* Adjust logo filter for dark theme (light sidebar) */
+[data-theme="dark"] .logo-icon {
+  filter: none;
+}
+
 .logo-text {
   font-family: 'Fredoka One', cursive;
   font-size: 1.3rem;

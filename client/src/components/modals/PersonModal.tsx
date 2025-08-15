@@ -1,7 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import { PortalModal } from '../ui/PortalModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -227,29 +233,34 @@ export const PersonModal: React.FC<PersonModalProps> = ({
 
   const hasErrors = Object.keys(errors).length > 0;
 
+  const handleClose = () => {
+    // Give time for animation before calling onClose
+    setTimeout(() => onClose(), 200);
+  };
+
   return (
-    <PortalModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Person' : 'Add New Person'}
-    >
-      <div className="p-6">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {isEditing 
-            ? 'Update the person\'s information below.' 
-            : 'Fill in the information to create a new person.'}
-        </p>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Person' : 'Add New Person'}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            {isEditing 
+              ? 'Update the person\'s information below.' 
+              : 'Fill in the information to create a new person.'}
+          </p>
 
-        {hasErrors && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Please fix the errors below before submitting.
-            </AlertDescription>
-          </Alert>
-        )}
+          {hasErrors && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please fix the errors below before submitting.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
@@ -438,18 +449,19 @@ export const PersonModal: React.FC<PersonModalProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Spinner className="mr-2" size="sm" />}
-              {isEditing ? 'Update Person' : 'Create Person'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </PortalModal>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Spinner className="mr-2" size="sm" />}
+                {isEditing ? 'Update Person' : 'Create Person'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -129,6 +129,9 @@ const calculateDependencyPoints = (
   return { startPoint, endPoint, dependency };
 };
 
+// NOTE: This component uses hex color values instead of CSS variables because
+// it may use canvas rendering for performance, where CSS variables cannot be resolved.
+// All colors in this component must be specified as hex values.
 export function InteractiveTimeline({
   items,
   viewport,

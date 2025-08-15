@@ -2,7 +2,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 import { api } from '../../lib/api-client';
-import { PortalModal } from '../ui/PortalModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -201,29 +207,34 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
   const isLoading = createAssignmentMutation.isPending || updateAssignmentMutation.isPending;
   const hasErrors = Object.keys(errors).length > 0;
 
+  const handleClose = () => {
+    // Give time for animation before calling onClose
+    setTimeout(() => onClose(), 200);
+  };
+
   return (
-    <PortalModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Assignment' : 'Create New Assignment'}
-    >
-      <div className="p-6">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {isEditing 
-            ? 'Update the assignment details below.' 
-            : 'Fill in the information to create a new assignment.'}
-        </p>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            {isEditing 
+              ? 'Update the assignment details below.' 
+              : 'Fill in the information to create a new assignment.'}
+          </p>
 
-        {hasErrors && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Please fix the errors below before submitting.
-            </AlertDescription>
-          </Alert>
-        )}
+          {hasErrors && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Please fix the errors below before submitting.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="project_id">Project *</Label>
@@ -365,23 +376,24 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
             <Label htmlFor="billable">Billable assignment</Label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Spinner className="mr-2 h-4 w-4" />
-                  {isEditing ? 'Updating...' : 'Creating...'}
-                </>
-              ) : (
-                isEditing ? 'Update Assignment' : 'Create Assignment'
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </PortalModal>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Spinner className="mr-2 h-4 w-4" />
+                    {isEditing ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  isEditing ? 'Update Assignment' : 'Create Assignment'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

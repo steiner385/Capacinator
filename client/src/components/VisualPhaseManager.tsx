@@ -33,6 +33,9 @@ interface ProjectPhaseTimeline {
 }
 
 // Phase colors matching the existing system
+// NOTE: Using hex values instead of CSS variables because these colors
+// are passed to InteractiveTimeline which may use canvas rendering
+// where CSS variables cannot be resolved
 const PHASE_COLORS: Record<string, string> = {
   'business planning': '#3b82f6',
   'development': '#10b981',
@@ -418,14 +421,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           marginBottom: '20px' 
         }}>
           <div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
               <span>Drag phases to move them • Resize by dragging edges • Double-click to edit • Right-click for more options</span>
             </div>
           </div>
           
           {/* Timeline controls */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginRight: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginRight: '8px' }}>
               {timelineItems.length} phases
             </div>
             {/* Zoom controls temporarily removed for simplicity */}
@@ -433,14 +436,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               onClick={() => setShowAddModal(true)}
               style={{
                 padding: '6px 16px',
-                border: '1px solid #3b82f6',
+                border: '1px solid var(--primary)',
                 borderRadius: '6px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
+                backgroundColor: 'var(--primary)',
+                color: 'var(--bg-primary)',
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: 500,
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 1px 2px var(--shadow-sm)'
               }}
             >
               + Add Phase
@@ -456,7 +459,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           alignItems: 'center', 
           marginBottom: '12px' 
         }}>
-          <h4 style={{ margin: '0', fontSize: '14px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h4 style={{ margin: '0', fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={16} />
             Project Phases ({timelineItems.length})
           </h4>
@@ -464,9 +467,9 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             onClick={() => setShowAddModal(true)}
             style={{
               padding: '4px 12px',
-              border: '1px solid #3b82f6',
+              border: '1px solid var(--primary)',
               borderRadius: '4px',
-              backgroundColor: '#3b82f6',
+              backgroundColor: 'var(--primary)',
               color: 'white',
               cursor: 'pointer',
               fontSize: '11px',
@@ -530,10 +533,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               className="project-phase-timeline"
               chartTimeData={chartTimeData} // Pass chart data for exact time axis alignment
               style={{ 
-                backgroundColor: '#ffffff',
-                border: '1px solid #e5e7eb',
+                backgroundColor: 'var(--bg-primary)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '8px 8px 0 0',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                boxShadow: '0 1px 3px var(--shadow-sm)'
               }}
             />
             
@@ -541,8 +544,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             <div style={{
               height: '40px',
               position: 'relative',
-              backgroundColor: '#f8fafc',
-              border: '1px solid #e5e7eb',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
               borderTop: 'none',
               borderRadius: '0 0 8px 8px',
               overflow: 'hidden'
@@ -574,14 +577,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                         left: leftPos,
                         width: Math.max(width, 0),
                         height: '40px',
-                        borderRight: '1px solid #d1d5db',
-                        backgroundColor: isCurrentMonth ? '#eff6ff' : 'transparent',
+                        borderRight: '1px solid var(--border-color-hover)',
+                        backgroundColor: isCurrentMonth ? 'var(--badge-primary-bg)' : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '12px',
                         fontWeight: isCurrentMonth ? '600' : '400',
-                        color: isCurrentMonth ? '#1d4ed8' : '#6b7280',
+                        color: isCurrentMonth ? 'var(--project-selected)' : 'var(--text-tertiary)',
                         overflow: 'hidden',
                         whiteSpace: 'nowrap'
                       }}
@@ -610,7 +613,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                         top: 0,
                         bottom: 0,
                         width: '2px',
-                        backgroundColor: '#ef4444',
+                        backgroundColor: 'var(--danger)',
                         zIndex: 10,
                         opacity: 0.8
                       }}
@@ -627,10 +630,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#f8fafc',
+            backgroundColor: 'var(--bg-secondary)',
             border: '1px solid #e5e7eb',
             borderRadius: '8px',
-            color: '#6b7280',
+            color: 'var(--text-tertiary)',
             fontSize: '14px'
           }}>
             {isLoading ? 'Loading project phases...' : 'No project phases found. Click "Add Phase" to create the first phase.'}
@@ -647,7 +650,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               marginBottom: '16px',
               padding: '0 4px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
                 Phase Dependencies
               </h3>
               <button
@@ -657,8 +660,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                   alignItems: 'center',
                   gap: '8px',
                   padding: '6px 12px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
+                  backgroundColor: 'var(--primary)',
+                  color: 'var(--bg-primary)',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -672,8 +675,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             
             {/* Dependencies List */}
             <div style={{
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
+              backgroundColor: 'var(--bg-primary)',
+              border: '1px solid var(--border-color)',
               borderRadius: '8px',
               overflow: 'hidden'
             }}>
@@ -687,14 +690,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '12px 16px',
-                        borderBottom: '1px solid #f3f4f6'
+                        borderBottom: '1px solid var(--bg-tertiary)'
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {dep.predecessor_phase_name} → {dep.successor_phase_name}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
                           {dep.dependency_type} {dep.lag_days > 0 && `(+${dep.lag_days} days)`}
                         </div>
                       </div>
@@ -704,7 +707,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                           style={{
                             padding: '4px 8px',
                             backgroundColor: 'transparent',
-                            border: '1px solid #d1d5db',
+                            border: '1px solid var(--border-color-hover)',
                             borderRadius: '4px',
                             fontSize: '12px',
                             cursor: 'pointer'
@@ -716,8 +719,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                           onClick={() => handleDeleteDependency(dep.id)}
                           style={{
                             padding: '4px 8px',
-                            backgroundColor: '#ef4444',
-                            color: 'white',
+                            backgroundColor: 'var(--danger)',
+                            color: 'var(--bg-primary)',
                             border: 'none',
                             borderRadius: '4px',
                             fontSize: '12px',
@@ -734,7 +737,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 <div style={{
                   padding: '24px',
                   textAlign: 'center',
-                  color: '#6b7280',
+                  color: 'var(--text-tertiary)',
                   fontSize: '14px'
                 }}>
                   No dependencies defined. Click "Add Dependency" to create phase dependencies.
@@ -761,10 +764,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           border: '1px solid #e5e7eb', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: '#1f2937' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
             {timelineItems.length}
           </div>
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
             Total Phases
           </div>
         </div>
@@ -775,13 +778,13 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           border: '1px solid #e5e7eb', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: '#1f2937' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
             {timelineItems.length > 0 ? Math.ceil(
               (timelineItems[timelineItems.length - 1].endDate.getTime() - 
                timelineItems[0].startDate.getTime()) / (1000 * 60 * 60 * 24)
             ) : 0}
           </div>
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
             Project Duration (Days)
           </div>
         </div>
@@ -792,10 +795,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           border: '1px solid #e5e7eb', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: '#1f2937' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
             {timelineItems.length > 0 ? format(timelineItems[0].startDate, 'MMM yyyy') : '-'}
           </div>
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
             Project Start
           </div>
         </div>
@@ -806,10 +809,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           border: '1px solid #e5e7eb', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: '#1f2937' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
             {timelineItems.length > 0 ? format(timelineItems[timelineItems.length - 1].endDate, 'MMM yyyy') : '-'}
           </div>
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
             Project End
           </div>
         </div>
@@ -824,10 +827,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             position: 'fixed',
             top: contextMenu.y,
             left: contextMenu.x,
-            background: 'white',
+            background: 'var(--bg-primary)',
             border: '1px solid #e5e7eb',
             borderRadius: '6px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0 10px 25px var(--shadow-lg)',
             padding: '4px 0',
             minWidth: '150px',
             zIndex: 1000
@@ -1198,7 +1201,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                   <option value="FF">Finish-to-Finish (FF)</option>
                   <option value="SF">Start-to-Finish (SF)</option>
                 </select>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
                   {dependencyForm.dependency_type === 'FS' && 'Successor starts after predecessor finishes'}
                   {dependencyForm.dependency_type === 'SS' && 'Successor starts when predecessor starts'}
                   {dependencyForm.dependency_type === 'FF' && 'Successor finishes when predecessor finishes'}
@@ -1218,7 +1221,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                   max="365"
                   className="form-input"
                 />
-                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
                   Positive values add delay, negative values create overlap
                 </div>
               </div>

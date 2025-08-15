@@ -45,39 +45,38 @@ const queryClient = new QueryClient({
 const AppContent: React.FC = () => {
   const { isLoggedIn } = useUser();
 
-  if (!isLoggedIn) {
-    return <Login />;
-  }
-
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/projects" element={<ProjectsUnified />} />
-        <Route path="/projects/new" element={<ProjectNew />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/roadmap" element={<Navigate to="/projects?tab=roadmap" replace />} />
-        <Route path="/people" element={<PeopleUnified />} />
-        <Route path="/people/new" element={<PersonNew />} />
-        <Route path="/people/:id" element={<PersonDetails />} />
-        <Route path="/roles" element={<Navigate to="/people" replace />} />
-        <Route path="/roles/:id" element={<RoleDetails />} />
-        <Route path="/resource-templates" element={<Navigate to="/people" replace />} />
-        <Route path="/allocations" element={<Navigate to="/people" replace />} />
-        <Route path="/project-types" element={<Navigate to="/projects" replace />} />
-        <Route path="/project-types/:id" element={<ProjectTypeDetails />} />
-        <Route path="/assignments" element={<Assignments />} />
-        <Route path="/assignments/new" element={<AssignmentNew />} />
-        <Route path="/scenarios" element={<Scenarios />} />
-        <Route path="/availability" element={<Navigate to="/people" replace />} />
-        <Route path="/audit-log" element={<AuditLog />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/import" element={<Import />} />
-        <Route path="/locations" element={<Locations />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </Layout>
+    <>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/projects" element={<ProjectsUnified />} />
+          <Route path="/projects/new" element={<ProjectNew />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/roadmap" element={<Navigate to="/projects?tab=roadmap" replace />} />
+          <Route path="/people" element={<PeopleUnified />} />
+          <Route path="/people/new" element={<PersonNew />} />
+          <Route path="/people/:id" element={<PersonDetails />} />
+          <Route path="/roles" element={<Navigate to="/people" replace />} />
+          <Route path="/roles/:id" element={<RoleDetails />} />
+          <Route path="/resource-templates" element={<Navigate to="/people" replace />} />
+          <Route path="/allocations" element={<Navigate to="/people" replace />} />
+          <Route path="/project-types" element={<Navigate to="/projects" replace />} />
+          <Route path="/project-types/:id" element={<ProjectTypeDetails />} />
+          <Route path="/assignments" element={<Assignments />} />
+          <Route path="/assignments/new" element={<AssignmentNew />} />
+          <Route path="/scenarios" element={<Scenarios />} />
+          <Route path="/availability" element={<Navigate to="/people" replace />} />
+          <Route path="/audit-log" element={<AuditLog />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/import" element={<Import />} />
+          <Route path="/locations" element={<Locations />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </Layout>
+      {!isLoggedIn && <Login />}
+    </>
   );
 };
 

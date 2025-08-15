@@ -1,0 +1,116 @@
+import React from 'react';
+import { Edit2, Trash2, Plus } from 'lucide-react';
+import { Button } from './button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table';
+
+export interface DetailTableColumn<T> {
+  key: string;
+  header: string;
+  render: (item: T) => React.ReactNode;
+  width?: string;
+}
+
+interface DetailTableProps<T> {
+  data: T[];
+  columns: DetailTableColumn<T>[];
+  onAdd?: () => void;
+  onEdit?: (item: T) => void;
+  onDelete?: (item: T) => void;
+  addButtonText?: string;
+  emptyMessage?: string;
+  canEdit?: boolean;
+}
+
+export function DetailTable<T extends { id: string | number }>({
+  data,
+  columns,
+  onAdd,
+  onEdit,
+  onDelete,
+  addButtonText = 'Add New',
+  emptyMessage = 'No data available',
+  canEdit = true
+}: DetailTableProps<T>) {
+  return (
+    <div className="detail-table-container">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column.key} style={{ width: column.width }}>
+                {column.header}
+              </TableHead>
+            ))}
+            {canEdit && (onEdit || onDelete) && (
+              <TableHead style={{ width: '100px' }}>Actions</TableHead>
+            )}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={columns.length + (canEdit ? 1 : 0)} className="text-center">
+                <div className="py-8 text-muted-foreground">
+                  {emptyMessage}
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((item) => (
+              <TableRow key={item.id}>
+                {columns.map((column) => (
+                  <TableCell key={column.key}>
+                    {column.render(item)}
+                  </TableCell>
+                ))}
+                {canEdit && (onEdit || onDelete) && (
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEdit(item)}
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(item)}
+                          title="Delete"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+      
+      {canEdit && onAdd && (
+        <div className="mt-4">
+          <Button onClick={onAdd} variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
+            {addButtonText}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

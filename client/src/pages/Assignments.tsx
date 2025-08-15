@@ -23,10 +23,10 @@ const RecommendationCard = ({ recommendation, onExecute }: {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return '#dc2626';
-      case 'medium': return '#d97706';
-      case 'low': return '#16a34a';
-      default: return '#6b7280';
+      case 'high': return 'var(--danger)';
+      case 'medium': return 'var(--warning)';
+      case 'low': return 'var(--success)';
+      default: return 'var(--text-tertiary)';
     }
   };
 
@@ -82,7 +82,7 @@ const RecommendationCard = ({ recommendation, onExecute }: {
                 {recommendation.priority}
               </span>
               <span style={{
-                backgroundColor: recommendation.type === 'complex' ? '#6366f1' : '#10b981',
+                backgroundColor: recommendation.type === 'complex' ? 'var(--primary)' : 'var(--success)',
                 color: 'white',
                 padding: '0.125rem 0.5rem',
                 borderRadius: '12px',
@@ -183,7 +183,7 @@ const RecommendationCard = ({ recommendation, onExecute }: {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                     <span style={{
-                      backgroundColor: action.type === 'add' ? '#16a34a' : action.type === 'remove' ? '#dc2626' : '#d97706',
+                      backgroundColor: action.type === 'add' ? 'var(--success)' : action.type === 'remove' ? 'var(--danger)' : 'var(--warning)',
                       color: 'white',
                       padding: '0.125rem 0.5rem',
                       borderRadius: '12px',
@@ -238,7 +238,7 @@ const RecommendationCard = ({ recommendation, onExecute }: {
           {/* Benefits and Risks */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <h6 style={{ margin: '0 0 0.5rem 0', color: '#16a34a' }}>Benefits</h6>
+              <h6 style={{ margin: '0 0 0.5rem 0', color: 'var(--success)' }}>Benefits</h6>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 {recommendation.benefits.map((benefit: string, index: number) => (
                   <li key={index}>{benefit}</li>
@@ -246,7 +246,7 @@ const RecommendationCard = ({ recommendation, onExecute }: {
               </ul>
             </div>
             <div>
-              <h6 style={{ margin: '0 0 0.5rem 0', color: '#dc2626' }}>Risks</h6>
+              <h6 style={{ margin: '0 0 0.5rem 0', color: 'var(--danger)' }}>Risks</h6>
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                 {recommendation.risks.map((risk: string, index: number) => (
                   <li key={index}>{risk}</li>
@@ -632,25 +632,25 @@ export default function Assignments() {
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <div className="state-metric">
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: currentState.summary?.overallocated_people > 0 ? '#dc2626' : '#16a34a' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: currentState.summary?.overallocated_people > 0 ? 'var(--danger)' : 'var(--success)' }}>
                   {currentState.summary?.overallocated_people || 0}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Overallocated People</div>
               </div>
               <div className="state-metric">
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: currentState.summary?.underutilized_people > 0 ? '#d97706' : '#16a34a' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: currentState.summary?.underutilized_people > 0 ? 'var(--warning)' : 'var(--success)' }}>
                   {currentState.summary?.underutilized_people || 0}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Underutilized People</div>
               </div>
               <div className="state-metric">
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: currentState.summary?.capacity_gaps > 0 ? '#dc2626' : '#16a34a' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: currentState.summary?.capacity_gaps > 0 ? 'var(--danger)' : 'var(--success)' }}>
                   {currentState.summary?.capacity_gaps || 0}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Capacity Gaps</div>
               </div>
               <div className="state-metric">
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#6366f1' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                   {currentState.summary?.unassigned_projects || 0}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Unassigned Projects</div>

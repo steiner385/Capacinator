@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
-import { PortalModal } from '../ui/PortalModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -118,20 +124,25 @@ export default function PersonRoleModal({
     }));
   };
 
-  return (
-    <PortalModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={editingRole ? 'Edit Role' : 'Add Role'}
-    >
-      <div className="p-6">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {editingRole 
-            ? 'Update the role details for this person.' 
-            : 'Add a new role for this person.'}
-        </p>
+  const handleClose = () => {
+    // Give time for animation before calling onClose
+    setTimeout(() => onClose(), 200);
+  };
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{editingRole ? 'Edit Role' : 'Add Role'}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            {editingRole 
+              ? 'Update the role details for this person.' 
+              : 'Add a new role for this person.'}
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="role_id">Role *</Label>
             <Select 
@@ -213,17 +224,18 @@ export default function PersonRoleModal({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !formData.role_id}>
-              {isSubmitting && <Spinner className="mr-2" size="sm" />}
-              {editingRole ? 'Update Role' : 'Add Role'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </PortalModal>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || !formData.role_id}>
+                {isSubmitting && <Spinner className="mr-2" size="sm" />}
+                {editingRole ? 'Update Role' : 'Add Role'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

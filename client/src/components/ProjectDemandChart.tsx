@@ -123,8 +123,8 @@ const SimpleBrushControl = ({
         style={{
           position: 'relative',
           height: '40px',
-          backgroundColor: '#f1f5f9',
-          border: '1px solid #e2e8f0',
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-primary)',
           borderRadius: '6px',
           margin: '0 20px', // Space for handles that extend beyond
           cursor: 'default',
@@ -138,7 +138,7 @@ const SimpleBrushControl = ({
           left: '0',
           right: '0',
           height: '8px',
-          backgroundColor: '#cbd5e1',
+          backgroundColor: 'var(--bg-tertiary)',
           borderRadius: '4px'
         }} />
         
@@ -150,7 +150,7 @@ const SimpleBrushControl = ({
             left: `${startPercent}%`,
             width: `${rangeWidth}%`,
             height: '8px',
-            backgroundColor: '#3b82f6',
+            backgroundColor: 'var(--primary)',
             borderRadius: '4px',
             cursor: 'grab'
           }}
@@ -165,7 +165,7 @@ const SimpleBrushControl = ({
             left: `calc(${startPercent}% - 8px)`,
             width: '16px',
             height: '28px',
-            backgroundColor: '#1e40af',
+            backgroundColor: 'var(--primary-dark)',
             borderRadius: '8px',
             cursor: 'ew-resize',
             border: '2px solid white',
@@ -191,7 +191,7 @@ const SimpleBrushControl = ({
             left: `calc(${endPercent}% - 8px)`,
             width: '16px',
             height: '28px',
-            backgroundColor: '#1e40af',
+            backgroundColor: 'var(--primary-dark)',
             borderRadius: '8px',
             cursor: 'ew-resize',
             border: '2px solid white',
@@ -221,7 +221,7 @@ const SimpleBrushControl = ({
           top: '5px',
           left: `${startPercent}%`,
           fontSize: '11px',
-          color: '#6b7280',
+          color: 'var(--text-tertiary)',
           transform: 'translateX(-50%)',
           whiteSpace: 'nowrap'
         }}>
@@ -233,7 +233,7 @@ const SimpleBrushControl = ({
           top: '5px',
           left: `${endPercent}%`,
           fontSize: '11px',
-          color: '#6b7280',
+          color: 'var(--text-tertiary)',
           transform: 'translateX(-50%)',
           whiteSpace: 'nowrap'
         }}>
@@ -1124,10 +1124,10 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           <div className="view-toggle" style={{
             display: 'flex',
             gap: '4px',
-            border: '1px solid #e2e8f0',
+            border: '1px solid var(--border-primary)',
             borderRadius: '6px',
             padding: '2px',
-            backgroundColor: '#f8fafc'
+            backgroundColor: 'var(--bg-secondary)'
           }}>
             {(['demand', 'capacity', 'gaps'] as const).map((view) => (
               <button
@@ -1140,8 +1140,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
                   fontSize: '12px',
                   fontWeight: '500',
                   cursor: 'pointer',
-                  backgroundColor: currentView === view ? '#3b82f6' : 'transparent',
-                  color: currentView === view ? 'white' : '#64748b',
+                  backgroundColor: currentView === view ? 'var(--primary)' : 'transparent',
+                  color: currentView === view ? 'white' : 'var(--text-secondary)',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -1206,7 +1206,6 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
               textAnchor="end"
               height={80}
               fontSize={11}
-              interval="preserveStartEnd"
             />
             <YAxis 
               label={{ value: 'FTE (People)', angle: -90, position: 'insideLeft' }}
@@ -1268,7 +1267,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           width: 'calc(100% - 40px)',
           position: 'relative'
         }}>
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
             Drag the timeline range selectors to focus on specific time periods
           </div>
           <SimpleBrushControl

@@ -2,8 +2,10 @@ import type { Project, ProjectType } from '../types';
 
 /**
  * Default project type color when no color is specified
+ * Note: This is a fallback hex value for cases where CSS variables cannot be used
+ * (e.g., when colors need to be manipulated programmatically)
  */
-const DEFAULT_PROJECT_TYPE_COLOR = '#6b7280';
+const DEFAULT_PROJECT_TYPE_COLOR = '#6b7280'; // Matches var(--color-gray)
 
 /**
  * Get the color code for a project based on its project type

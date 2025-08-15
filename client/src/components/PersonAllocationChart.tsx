@@ -98,8 +98,8 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     return points.sort();
   };
 
-  // Process timeline data for chart - MOVED BEFORE CONDITIONAL RETURNS
-  const processedData = React.useMemo(() => {
+  // Process timeline data for full range with base granularity
+  const fullRangeData = React.useMemo(() => {
     if (!timelineData?.timeline || !utilizationData?.timeline) return [];
 
     const { assignments, availability_overrides } = timelineData.timeline;
@@ -112,17 +112,19 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     
     const startMonth = sortedMonths[0];
     const endMonth = sortedMonths[sortedMonths.length - 1];
-    const granularity = getGranularity(startMonth, endMonth);
-    const datePoints = generateDatePoints(startMonth, endMonth, granularity);
+    
+    // For full range, use monthly granularity as base
+    const baseGranularity = 'monthly';
+    const datePoints = generateDatePoints(startMonth, endMonth, baseGranularity);
     
     return datePoints.map(datePoint => {
       let periodStart: Date;
       let periodEnd: Date;
       let displayDate: string;
       
-      if (granularity === 'weekly' || granularity === 'daily') {
+      if (baseGranularity === 'weekly' || baseGranularity === 'daily') {
         const pointDate = new Date(datePoint);
-        if (granularity === 'weekly') {
+        if (baseGranularity === 'weekly') {
           // Week period: from this Sunday to next Saturday
           periodStart = new Date(pointDate);
           periodEnd = new Date(pointDate);
@@ -138,7 +140,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
         // Monthly or quarterly
         const [year, monthNum] = datePoint.split('-').map(Number);
         periodStart = new Date(year, monthNum - 1, 1);
-        if (granularity === 'quarterly') {
+        if (baseGranularity === 'quarterly') {
           periodEnd = new Date(year, monthNum - 1 + 3, 0); // Last day of quarter
         } else {
           periodEnd = new Date(year, monthNum, 0); // Last day of month
@@ -182,7 +184,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
 
       return {
         date: displayDate,
-        granularity,
+        granularity: 'monthly',
         totalAllocation,
         availability,
         capacity: availability,
@@ -191,19 +193,19 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
         ...projectData // Spread individual project allocations as separate keys
       };
     });
-  }, [timelineData, utilizationData, startDate, endDate]);
+  }, [timelineData, utilizationData]);
 
-  // Get unique projects from processed data first
+  // Get unique projects from full range data
   const allProjects = React.useMemo(() => {
-    if (!processedData || processedData.length === 0) return [];
-    return [...new Set(processedData.flatMap(d => Object.keys(d.projectBreakdown || {})))];
-  }, [processedData]);
+    if (!fullRangeData || fullRangeData.length === 0) return [];
+    return [...new Set(fullRangeData.flatMap(d => Object.keys(d.projectBreakdown || {})))];
+  }, [fullRangeData]);
 
-  // Validate data structure and ensure all required fields for Brush - MOVED BEFORE CONDITIONAL RETURNS
+  // Validate data structure and ensure all required fields for Brush
   const validData = React.useMemo(() => {
-    if (!processedData || processedData.length === 0) return [];
+    if (!fullRangeData || fullRangeData.length === 0) return [];
     
-    const filtered = processedData.filter(d => {
+    const filtered = fullRangeData.filter(d => {
       const isValid = d && 
                      d.date && 
                      typeof d.totalAllocation === 'number' &&
@@ -227,7 +229,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
       
       return cleanedData;
     });
-  }, [processedData, allProjects]);
+  }, [fullRangeData, allProjects]);
 
   // Initialize brush range when data loads
   React.useEffect(() => {
@@ -237,13 +239,106 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     }
   }, [validData, brushEnd]);
 
-  // Create filtered data based on brush selection
+  // Process and display data with dynamic granularity based on zoom
   const displayData = React.useMemo(() => {
-    if (validData.length === 0 || brushStart === brushEnd) return validData;
+    if (!timelineData?.timeline || !utilizationData?.timeline || validData.length === 0) return [];
+    
     const start = Math.max(0, Math.min(brushStart, brushEnd));
     const end = Math.min(validData.length - 1, Math.max(brushStart, brushEnd));
-    return validData.slice(start, end + 1);
-  }, [validData, brushStart, brushEnd]);
+    
+    if (start === 0 && end === validData.length - 1) {
+      // Full range - use base data
+      return validData;
+    }
+    
+    // Get the visible date range
+    const visibleMonthlyData = validData.slice(start, end + 1);
+    if (visibleMonthlyData.length === 0) return [];
+    
+    const firstDate = visibleMonthlyData[0].date;
+    const lastDate = visibleMonthlyData[visibleMonthlyData.length - 1].date;
+    
+    // Determine appropriate granularity for the visible range
+    const newGranularity = getGranularity(firstDate, lastDate);
+    
+    // If monthly is still appropriate, use the sliced data
+    if (newGranularity === 'monthly') {
+      return visibleMonthlyData;
+    }
+    
+    // Otherwise, recalculate with new granularity
+    const { assignments, availability_overrides } = timelineData.timeline;
+    const datePoints = generateDatePoints(firstDate, lastDate, newGranularity);
+    
+    return datePoints.map(datePoint => {
+      let periodStart: Date;
+      let periodEnd: Date;
+      let displayDate: string;
+      
+      if (newGranularity === 'weekly' || newGranularity === 'daily') {
+        const pointDate = new Date(datePoint);
+        if (newGranularity === 'weekly') {
+          periodStart = new Date(pointDate);
+          periodEnd = new Date(pointDate);
+          periodEnd.setDate(periodEnd.getDate() + 6);
+          displayDate = datePoint;
+        } else {
+          periodStart = new Date(pointDate);
+          periodEnd = new Date(pointDate);
+          displayDate = datePoint;
+        }
+      } else {
+        const [year, monthNum] = datePoint.split('-').map(Number);
+        periodStart = new Date(year, monthNum - 1, 1);
+        if (newGranularity === 'quarterly') {
+          periodEnd = new Date(year, monthNum - 1 + 3, 0);
+        } else {
+          periodEnd = new Date(year, monthNum, 0);
+        }
+        displayDate = datePoint;
+      }
+      
+      let totalAllocation = 0;
+      const projectBreakdown: { [projectName: string]: number } = {};
+
+      assignments.forEach((assignment: any) => {
+        const assignmentStart = new Date(assignment.start_date);
+        const assignmentEnd = new Date(assignment.end_date);
+        
+        if (assignmentStart <= periodEnd && assignmentEnd >= periodStart) {
+          totalAllocation += assignment.allocation_percentage;
+          projectBreakdown[assignment.project_name] = 
+            (projectBreakdown[assignment.project_name] || 0) + assignment.allocation_percentage;
+        }
+      });
+
+      let availability = 100;
+      availability_overrides.forEach((override: any) => {
+        const overrideStart = new Date(override.start_date);
+        const overrideEnd = new Date(override.end_date);
+        
+        if (overrideStart <= periodEnd && overrideEnd >= periodStart) {
+          availability = override.availability_percentage;
+        }
+      });
+
+      const projectData: { [key: string]: number } = {};
+      Object.entries(projectBreakdown).forEach(([project, allocation]) => {
+        projectData[`project_${project}`] = allocation as number;
+      });
+
+      return {
+        date: displayDate,
+        granularity: newGranularity,
+        totalAllocation,
+        availability,
+        capacity: availability,
+        utilization: availability > 0 ? (totalAllocation / availability) * 100 : 0,
+        projectBreakdown,
+        ...projectData
+      };
+    });
+  }, [timelineData, utilizationData, validData, brushStart, brushEnd]);
 
   if (isLoading) {
     return (
@@ -261,7 +356,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     );
   }
 
-  if (!processedData || processedData.length === 0) {
+  if (!fullRangeData || fullRangeData.length === 0) {
     return (
       <div className="chart-container">
         <div className="chart-empty">No allocation data available</div>
@@ -277,6 +372,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
     );
   }
 
+  // NOTE: Using hex values for chart colors as Recharts may use them in contexts where CSS variables cannot be resolved
   const projectColors = [
     '#3b82f6', // Blue
     '#10b981', // Emerald 
@@ -348,7 +444,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
                 return [`${value.toFixed(1)}%`, name];
               }}
               labelFormatter={(label) => {
-                const dataPoint = zoomedData.find(d => d.date === label);
+                const dataPoint = displayData.find(d => d.date === label);
                 if (!dataPoint) return label;
                 
                 const granularity = dataPoint.granularity;
@@ -498,7 +594,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
       {/* Custom brush control using mini chart */}
       {validData.length > 2 && (
         <div style={{ marginTop: '20px', padding: '0 20px' }}>
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
             Drag handles to zoom into specific time periods
           </div>
           <ResponsiveContainer width="100%" height={80}>

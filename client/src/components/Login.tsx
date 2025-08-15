@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
 import { Person } from '../types';
 import { useUser } from '../contexts/UserContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
@@ -52,74 +52,96 @@ export const Login: React.FC<LoginProps> = ({ onClose }) => {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Select Your Profile</CardTitle>
-            <CardDescription>Choose your profile to personalize your experience</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-muted-foreground">Loading employees...</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Dialog open={true} modal>
+        <DialogContent 
+          className="!w-[350px] !max-w-[350px] [&>button]:hidden" 
+          onPointerDownOutside={(e) => e.preventDefault()} 
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-semibold">Select Your Profile</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Choose your profile to personalize your experience
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-12">
+            <div className="text-muted-foreground">Loading employees...</div>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Error</CardTitle>
-            <CardDescription>Failed to load employee list. Please try again.</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <Dialog open={true} modal>
+        <DialogContent 
+          className="!w-[350px] !max-w-[350px] [&>button]:hidden" 
+          onPointerDownOutside={(e) => e.preventDefault()} 
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-semibold">Error</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Failed to load employee list. Please try again.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-6 border-t border-border/50">
+            <Button onClick={() => window.location.reload()} className="min-w-[100px]">
+              Retry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Select Your Profile</CardTitle>
-          <CardDescription>Choose your profile to personalize your experience</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="person-select">Who are you?</Label>
-              <Select value={selectedPersonId} onValueChange={handlePersonSelect}>
-                <SelectTrigger id="person-select">
-                  <SelectValue placeholder="Select your name..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {people?.map((person) => (
-                    <SelectItem key={person.id} value={person.id}>
-                      {person.name} {person.primary_role_name && `(${person.primary_role_name})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <Dialog open={true} modal>
+      <DialogContent 
+        className="!w-[380px] !max-w-[380px] [&>button]:hidden" 
+        style={{ padding: '24px' }}
+        onPointerDownOutside={(e) => e.preventDefault()} 
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="space-y-1.5 pb-4">
+          <DialogTitle className="text-lg font-semibold">Select Your Profile</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Choose your profile to personalize your experience
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="person-select" className="text-sm font-medium">Who are you?</Label>
+            <Select value={selectedPersonId} onValueChange={handlePersonSelect}>
+              <SelectTrigger id="person-select" className="w-full">
+                <SelectValue placeholder="Select your name..." />
+              </SelectTrigger>
+              <SelectContent>
+                {people?.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.name} {person.primary_role_name && `(${person.primary_role_name})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <Button
-            onClick={handleLogin}
-            disabled={!selectedPersonId}
-            className="w-full"
-          >
-            Continue
-          </Button>
-          <p className="text-sm text-muted-foreground text-center">
-            Your selection will be saved for future visits
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+          <DialogFooter className="pt-6">
+            <div className="w-full space-y-3">
+              <Button
+                type="submit"
+                disabled={!selectedPersonId}
+                className="w-full"
+              >
+                Continue
+              </Button>
+              <p className="text-sm text-muted-foreground text-center">
+                Your selection will be saved for future visits
+              </p>
+            </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };

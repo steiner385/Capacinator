@@ -671,7 +671,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
                   >
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 500 }}>Add Missing Phase</div>
-                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.125rem' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginTop: '0.125rem' }}>
                         Select from standard phases that aren't in this project yet
                       </div>
                     </div>
@@ -686,7 +686,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
                       <div style={{ fontWeight: 500 }}>
                         Duplicate Existing Phase
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.125rem' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginTop: '0.125rem' }}>
                         Copy an existing phase with all its resource allocations
                       </div>
                     </div>
@@ -699,7 +699,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
                   >
                     <div>
                       <div style={{ fontWeight: 500 }}>Create Custom Phase</div>
-                      <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
                         Define a new phase specific to this project
                       </div>
                     </div>
@@ -890,7 +890,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
                       />
                       <div>
                         <div>Automatically adjust overlapping phases</div>
-                        <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
                           Shift subsequent phases to prevent date conflicts
                         </div>
                       </div>

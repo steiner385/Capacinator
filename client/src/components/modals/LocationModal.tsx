@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Save } from 'lucide-react';
 import { Location } from '../../types';
 import { api } from '../../lib/api-client';
-import { PortalModal } from '../ui/PortalModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -75,17 +81,16 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
 
   const handleClose = () => {
     setIsOpen(false);
-    onCancel();
+    // Give time for animation before calling onCancel
+    setTimeout(() => onCancel(), 200);
   };
 
   return (
-    <PortalModal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={location ? 'Edit Location' : 'Add Location'}
-    >
-      <div className="p-6">
-
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{location ? 'Edit Location' : 'Add Location'}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {error && (
@@ -120,7 +125,7 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
@@ -128,9 +133,9 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
               <Save className="w-4 h-4 mr-2" />
               {saving ? 'Saving...' : 'Save Location'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </PortalModal>
+      </DialogContent>
+    </Dialog>
   );
 }

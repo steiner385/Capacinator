@@ -1,3 +1,5 @@
+@import './globals.css';
+
 :root {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
@@ -890,7 +892,7 @@ input:focus, select:focus, textarea:focus {
   --border-color: #e5e7eb;
   --border-color-hover: #d1d5db;
   
-  /* Component Specific */
+  /* Component Specific - Inverse theme for sidebar */
   --sidebar-bg: #1f2937;
   --sidebar-text: rgba(255, 255, 255, 0.9);
   --sidebar-text-hover: #ffffff;
@@ -991,11 +993,11 @@ input:focus, select:focus, textarea:focus {
   --border-color: #374151;
   --border-color-hover: #4b5563;
   
-  /* Component Specific - Dark theme adjustments */
-  --sidebar-bg: #0f172a;
-  --sidebar-text: rgba(255, 255, 255, 0.9);
-  --sidebar-text-hover: #ffffff;
-  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  /* Component Specific - Inverse theme (light sidebar in dark mode) */
+  --sidebar-bg: #f9fafb;
+  --sidebar-text: #374151;
+  --sidebar-text-hover: #111827;
+  --sidebar-active-bg: rgba(79, 70, 229, 0.1);
   --table-header-bg: #1f2937;
   --table-hover-bg: #374151;
   --input-bg: #1f2937;

@@ -49,6 +49,8 @@ const DEPENDENCY_TYPE_LABELS = {
   'SF': 'Start-to-Finish'
 };
 
+// NOTE: Using hex values for phase colors as they may be passed to components
+// that use canvas rendering where CSS variables cannot be resolved
 const PHASE_COLORS: Record<string, string> = {
   'business planning': '#3b82f6',
   'development': '#10b981',
@@ -1018,9 +1020,9 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
       <style>{`
         .phase-timeline {
-          background: #fff;
+          background: var(--bg-primary);
           border-radius: 8px;
-          border: 1px solid #e5e7eb;
+          border: 1px solid var(--border-primary);
         }
 
         .phase-timeline-header {
@@ -1044,14 +1046,14 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .btn-warning {
-          background-color: #f59e0b;
+          background-color: var(--warning);
           color: white;
-          border: 1px solid #d97706;
+          border: 1px solid var(--warning-hover);
         }
 
         .btn-warning:hover {
-          background-color: #d97706;
-          border-color: #b45309;
+          background-color: var(--warning-hover);
+          border-color: var(--warning-hover);
         }
 
 
@@ -1135,7 +1137,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           display: flex;
           align-items: center;
           gap: 6px;
-          color: #9ca3af;
+          color: var(--text-tertiary);
           font-style: italic;
           padding: 4px 0;
         }
@@ -1144,7 +1146,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           display: flex;
           align-items: center;
           gap: 6px;
-          color: #6b7280;
+          color: var(--text-secondary);
           font-size: 12px;
           margin-top: 4px;
           padding: 2px 4px;
@@ -1173,13 +1175,13 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .dependency-type {
-          color: #6b7280;
+          color: var(--text-secondary);
           font-size: 11px;
           font-weight: 600;
         }
 
         .dependency-lag {
-          color: #9ca3af;
+          color: var(--text-tertiary);
           font-size: 11px;
         }
 
@@ -1194,7 +1196,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .text-gray {
-          color: #9ca3af;
+          color: var(--text-tertiary);
           font-style: italic;
         }
 
@@ -1216,7 +1218,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .validation-error {
-          color: #dc2626;
+          color: var(--danger);
           display: flex;
           align-items: center;
         }
@@ -1227,7 +1229,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           left: 0;
           z-index: 1000;
           background: white;
-          border: 1px solid #dc2626;
+          border: 1px solid var(--danger);
           border-radius: 6px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           padding: 16px;
@@ -1239,7 +1241,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           display: flex;
           align-items: center;
           gap: 8px;
-          color: #dc2626;
+          color: var(--danger);
           font-weight: 600;
           margin-bottom: 8px;
         }
@@ -1249,7 +1251,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           padding: 12px;
           border-radius: 4px;
           margin: 12px 0;
-          border-left: 3px solid #3b82f6;
+          border-left: 3px solid var(--primary);
         }
 
         .correction-suggestion p {

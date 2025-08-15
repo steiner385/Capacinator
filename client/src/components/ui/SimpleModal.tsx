@@ -52,7 +52,7 @@ export const SimpleModal: React.FC<SimpleModalProps> = ({
       {/* Backdrop */}
       <div 
         className="fixed inset-0 z-50"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+        style={{ backgroundColor: 'var(--modal-backdrop)' }}
         onClick={(e) => {
           console.log('Backdrop clicked!');
           e.stopPropagation();
