@@ -247,7 +247,47 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       const response = await api.projectPhases.update(phaseId, updates);
       return response.data;
     },
-    onSuccess: () => {
+    onMutate: async ({ phaseId, updates }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['project-phases', projectId] });
+      
+      // Snapshot the previous value
+      const previousPhases = queryClient.getQueryData(['project-phases', projectId]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['project-phases', projectId], (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((phase: ProjectPhaseTimeline) => 
+            phase.id === phaseId 
+              ? { ...phase, ...updates }
+              : phase
+          )
+        };
+      });
+      
+      // Return a context object with the snapshotted value
+      return { previousPhases };
+    },
+    onError: (err: any, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousPhases) {
+        queryClient.setQueryData(['project-phases', projectId], context.previousPhases);
+      }
+      
+      // Show validation errors to user
+      if (err?.response?.data?.validation_errors) {
+        const errors = err.response.data.validation_errors;
+        console.error('Phase update validation failed:', errors);
+        // TODO: Display errors in UI (could use a toast notification or modal)
+        alert('Dependency validation failed:\n' + errors.join('\n'));
+      } else {
+        console.error('Phase update failed:', err);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
       onPhasesChange?.();
     }
@@ -421,14 +461,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           marginBottom: '20px' 
         }}>
           <div>
-            <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
+            <div style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))', marginBottom: '8px' }}>
               <span>Drag phases to move them • Resize by dragging edges • Double-click to edit • Right-click for more options</span>
             </div>
           </div>
           
           {/* Timeline controls */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginRight: '8px' }}>
+            <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginRight: '8px' }}>
               {timelineItems.length} phases
             </div>
             {/* Zoom controls temporarily removed for simplicity */}
@@ -436,14 +476,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               onClick={() => setShowAddModal(true)}
               style={{
                 padding: '6px 16px',
-                border: '1px solid var(--primary)',
+                border: '1px solid hsl(var(--primary))',
                 borderRadius: '6px',
-                backgroundColor: 'var(--primary)',
-                color: 'var(--bg-primary)',
+                backgroundColor: 'hsl(var(--primary))',
+                color: 'hsl(var(--background))',
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: 500,
-                boxShadow: '0 1px 2px var(--shadow-sm)'
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
               }}
             >
               + Add Phase
@@ -459,7 +499,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
           alignItems: 'center', 
           marginBottom: '12px' 
         }}>
-          <h4 style={{ margin: '0', fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h4 style={{ margin: '0', fontSize: '14px', color: 'hsl(var(--muted-foreground))', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={16} />
             Project Phases ({timelineItems.length})
           </h4>
@@ -467,10 +507,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             onClick={() => setShowAddModal(true)}
             style={{
               padding: '4px 12px',
-              border: '1px solid var(--primary)',
+              border: '1px solid hsl(var(--primary))',
               borderRadius: '4px',
-              backgroundColor: 'var(--primary)',
-              color: 'white',
+              backgroundColor: 'hsl(var(--primary))',
+              color: 'hsl(var(--primary-foreground))',
               cursor: 'pointer',
               fontSize: '11px',
               fontWeight: 500
@@ -533,10 +573,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               className="project-phase-timeline"
               chartTimeData={chartTimeData} // Pass chart data for exact time axis alignment
               style={{ 
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-color)',
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '8px 8px 0 0',
-                boxShadow: '0 1px 3px var(--shadow-sm)'
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
             />
             
@@ -544,8 +584,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             <div style={{
               height: '40px',
               position: 'relative',
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
+              backgroundColor: 'hsl(var(--muted))',
+              border: '1px solid hsl(var(--border))',
               borderTop: 'none',
               borderRadius: '0 0 8px 8px',
               overflow: 'hidden'
@@ -577,14 +617,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                         left: leftPos,
                         width: Math.max(width, 0),
                         height: '40px',
-                        borderRight: '1px solid var(--border-color-hover)',
-                        backgroundColor: isCurrentMonth ? 'var(--badge-primary-bg)' : 'transparent',
+                        borderRight: '1px solid hsl(var(--border))',
+                        backgroundColor: isCurrentMonth ? 'hsl(var(--primary) / 0.1)' : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '12px',
                         fontWeight: isCurrentMonth ? '600' : '400',
-                        color: isCurrentMonth ? 'var(--project-selected)' : 'var(--text-tertiary)',
+                        color: isCurrentMonth ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
                         overflow: 'hidden',
                         whiteSpace: 'nowrap'
                       }}
@@ -613,7 +653,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                         top: 0,
                         bottom: 0,
                         width: '2px',
-                        backgroundColor: 'var(--danger)',
+                        backgroundColor: 'hsl(var(--destructive))',
                         zIndex: 10,
                         opacity: 0.8
                       }}
@@ -630,10 +670,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid #e5e7eb',
+            backgroundColor: 'hsl(var(--muted))',
+            border: '1px solid hsl(var(--border))',
             borderRadius: '8px',
-            color: 'var(--text-tertiary)',
+            color: 'hsl(var(--muted-foreground))',
             fontSize: '14px'
           }}>
             {isLoading ? 'Loading project phases...' : 'No project phases found. Click "Add Phase" to create the first phase.'}
@@ -650,7 +690,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               marginBottom: '16px',
               padding: '0 4px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'hsl(var(--foreground))' }}>
                 Phase Dependencies
               </h3>
               <button
@@ -660,8 +700,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                   alignItems: 'center',
                   gap: '8px',
                   padding: '6px 12px',
-                  backgroundColor: 'var(--primary)',
-                  color: 'var(--bg-primary)',
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--background))',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -675,8 +715,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             
             {/* Dependencies List */}
             <div style={{
-              backgroundColor: 'var(--bg-primary)',
-              border: '1px solid var(--border-color)',
+              backgroundColor: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
               borderRadius: '8px',
               overflow: 'hidden'
             }}>
@@ -690,14 +730,14 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '12px 16px',
-                        borderBottom: '1px solid var(--bg-tertiary)'
+                        borderBottom: '1px solid hsl(var(--border))'
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: 'hsl(var(--foreground))', marginBottom: '4px' }}>
                           {dep.predecessor_phase_name} → {dep.successor_phase_name}
                         </div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                        <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))' }}>
                           {dep.dependency_type} {dep.lag_days > 0 && `(+${dep.lag_days} days)`}
                         </div>
                       </div>
@@ -707,7 +747,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                           style={{
                             padding: '4px 8px',
                             backgroundColor: 'transparent',
-                            border: '1px solid var(--border-color-hover)',
+                            border: '1px solid hsl(var(--border))',
                             borderRadius: '4px',
                             fontSize: '12px',
                             cursor: 'pointer'
@@ -719,8 +759,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                           onClick={() => handleDeleteDependency(dep.id)}
                           style={{
                             padding: '4px 8px',
-                            backgroundColor: 'var(--danger)',
-                            color: 'var(--bg-primary)',
+                            backgroundColor: 'hsl(var(--destructive))',
+                            color: 'hsl(var(--background))',
                             border: 'none',
                             borderRadius: '4px',
                             fontSize: '12px',
@@ -737,7 +777,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 <div style={{
                   padding: '24px',
                   textAlign: 'center',
-                  color: 'var(--text-tertiary)',
+                  color: 'hsl(var(--muted-foreground))',
                   fontSize: '14px'
                 }}>
                   No dependencies defined. Click "Add Dependency" to create phase dependencies.
@@ -760,59 +800,59 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         }}>
         <div style={{ 
           padding: '16px', 
-          backgroundColor: 'white', 
-          border: '1px solid #e5e7eb', 
+          backgroundColor: 'hsl(var(--card))', 
+          border: '1px solid hsl(var(--border))', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length}
           </div>
-          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))' }}>
             Total Phases
           </div>
         </div>
         
         <div style={{ 
           padding: '16px', 
-          backgroundColor: 'white', 
-          border: '1px solid #e5e7eb', 
+          backgroundColor: 'hsl(var(--card))', 
+          border: '1px solid hsl(var(--border))', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length > 0 ? Math.ceil(
               (timelineItems[timelineItems.length - 1].endDate.getTime() - 
                timelineItems[0].startDate.getTime()) / (1000 * 60 * 60 * 24)
             ) : 0}
           </div>
-          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))' }}>
             Project Duration (Days)
           </div>
         </div>
         
         <div style={{ 
           padding: '16px', 
-          backgroundColor: 'white', 
-          border: '1px solid #e5e7eb', 
+          backgroundColor: 'hsl(var(--card))', 
+          border: '1px solid hsl(var(--border))', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length > 0 ? format(timelineItems[0].startDate, 'MMM yyyy') : '-'}
           </div>
-          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))' }}>
             Project Start
           </div>
         </div>
         
         <div style={{ 
           padding: '16px', 
-          backgroundColor: 'white', 
-          border: '1px solid #e5e7eb', 
+          backgroundColor: 'hsl(var(--card))', 
+          border: '1px solid hsl(var(--border))', 
           borderRadius: '8px' 
         }}>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length > 0 ? format(timelineItems[timelineItems.length - 1].endDate, 'MMM yyyy') : '-'}
           </div>
-          <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))' }}>
             Project End
           </div>
         </div>
@@ -827,10 +867,10 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             position: 'fixed',
             top: contextMenu.y,
             left: contextMenu.x,
-            background: 'var(--bg-primary)',
-            border: '1px solid #e5e7eb',
+            background: 'hsl(var(--popover))',
+            border: '1px solid hsl(var(--border))',
             borderRadius: '6px',
-            boxShadow: '0 10px 25px var(--shadow-lg)',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
             padding: '4px 0',
             minWidth: '150px',
             zIndex: 1000
@@ -1195,17 +1235,12 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                   value={dependencyForm.dependency_type}
                   onChange={(e) => setDependencyForm(prev => ({ ...prev, dependency_type: e.target.value as 'FS' | 'SS' | 'FF' | 'SF' }))}
                   className="form-select"
+                  disabled
                 >
                   <option value="FS">Finish-to-Start (FS)</option>
-                  <option value="SS">Start-to-Start (SS)</option>
-                  <option value="FF">Finish-to-Finish (FF)</option>
-                  <option value="SF">Start-to-Finish (SF)</option>
                 </select>
-                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                  {dependencyForm.dependency_type === 'FS' && 'Successor starts after predecessor finishes'}
-                  {dependencyForm.dependency_type === 'SS' && 'Successor starts when predecessor starts'}
-                  {dependencyForm.dependency_type === 'FF' && 'Successor finishes when predecessor finishes'}
-                  {dependencyForm.dependency_type === 'SF' && 'Successor finishes before predecessor starts'}
+                <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginTop: '4px' }}>
+                  Successor phase starts after predecessor phase finishes
                 </div>
               </div>
 
@@ -1221,7 +1256,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                   max="365"
                   className="form-input"
                 />
-                <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginTop: '4px' }}>
                   Positive values add delay, negative values create overlap
                 </div>
               </div>

@@ -577,6 +577,27 @@ export default function PersonDetails() {
   };
 
   // Calculate allocation insights (moved before conditional returns to fix React hooks order)
+  // Helper function to get CSS class names based on status color
+  const getStatusClassName = (colorType: string) => {
+    switch (colorType) {
+      case 'danger': return 'text-danger';
+      case 'warning': return 'text-warning';
+      case 'info': return 'text-info';
+      case 'success': return 'text-success';
+      default: return 'text-gray';
+    }
+  };
+
+  const getBadgeClassName = (colorType: string) => {
+    switch (colorType) {
+      case 'danger': return 'badge-danger';
+      case 'warning': return 'badge-warning';
+      case 'info': return 'badge-info';
+      case 'success': return 'badge-success';
+      default: return 'badge-gray';
+    }
+  };
+
   const allocationInsights = useMemo(() => {
     if (!person) return null;
     
@@ -714,12 +735,12 @@ export default function PersonDetails() {
               
               <div className="insight-card">
                 <div className="insight-header">
-                  <div className={`insight-value text-${allocationInsights?.statusColor ?? 'gray'}`}>
+                  <div className={`insight-value ${getStatusClassName(allocationInsights?.statusColor ?? 'gray')}`}>
                     {allocationInsights?.utilizationPercentage.toFixed(0) ?? 0}%
                   </div>
                   <div className="insight-label">Utilization</div>
                 </div>
-                <div className={`insight-status badge badge-${allocationInsights?.statusColor ?? 'gray'}`}>
+                <div className={`insight-status ${getBadgeClassName(allocationInsights?.statusColor ?? 'gray')}`}>
                   {allocationInsights?.status.replace('_', ' ').toUpperCase() ?? 'UNKNOWN'}
                 </div>
               </div>

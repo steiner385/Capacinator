@@ -363,12 +363,9 @@ export async function seed(knex: Knex): Promise<void> {
   const assignmentMap = new Map(); // Track assignments to avoid conflicts
 
   for (const project of comprehensiveProjects) {
-    const projectYear = new Date(project.aspiration_start).getFullYear();
-    const projectDuration = Math.floor(
-      (new Date(project.aspiration_finish).getTime() - new Date(project.aspiration_start).getTime()) / 
-      (1000 * 60 * 60 * 24)
-    );
-
+    // Get project phases for this project
+    const projectPhasesList = projectPhases.filter(pp => pp.project_id === project.id);
+    
     // Determine number of team members based on project priority and duration
     const teamSize = project.priority === 1 ? 
       Math.floor(Math.random() * 3) + 3 : // 3-5 for priority 1
@@ -384,37 +381,33 @@ export async function seed(knex: Knex): Promise<void> {
       const baseAllocation = project.priority === 1 ? 60 : 40;
       const allocation = baseAllocation + Math.floor(Math.random() * 40); // 40-100% for P1, 20-80% for others
       
-      // Create assignment periods (some people join late or leave early)
-      const joinDelay = Math.floor(Math.random() * projectDuration * 0.2); // Up to 20% late start
-      const leaveEarly = Math.floor(Math.random() * projectDuration * 0.2); // Up to 20% early finish
+      // Assign to random phases (not all phases)
+      const assignedPhases = getRandomItems(projectPhasesList, Math.max(1, Math.floor(projectPhasesList.length * 0.6)));
       
-      const assignmentStart = new Date(project.aspiration_start);
-      assignmentStart.setDate(assignmentStart.getDate() + joinDelay);
-      
-      const assignmentEnd = new Date(project.aspiration_finish);
-      assignmentEnd.setDate(assignmentEnd.getDate() - leaveEarly);
-
-      // Check for conflicts
-      const personKey = `${person.id}-${assignmentStart.toISOString().split('T')[0]}`;
-      if (!assignmentMap.has(personKey) || assignmentMap.get(personKey) < 100) {
-        const currentAllocation = assignmentMap.get(personKey) || 0;
-        const finalAllocation = Math.min(allocation, 100 - currentAllocation);
-        
-        if (finalAllocation > 0) {
-          assignments.push({
-            id: uuidv4(),
-            project_id: project.id,
-            person_id: person.id,
-            role_id: role.id,
-            start_date: assignmentStart.toISOString().split('T')[0],
-            end_date: assignmentEnd.toISOString().split('T')[0],
-            allocation_percentage: finalAllocation,
-            assignment_date_mode: 'fixed'
-          });
+      assignedPhases.forEach(phase => {
+        // Check for conflicts using phase dates
+        const personKey = `${person.id}-${phase.start_date}`;
+        if (!assignmentMap.has(personKey) || assignmentMap.get(personKey) < 100) {
+          const currentAllocation = assignmentMap.get(personKey) || 0;
+          const finalAllocation = Math.min(allocation, 100 - currentAllocation);
           
-          assignmentMap.set(personKey, currentAllocation + finalAllocation);
+          if (finalAllocation > 0) {
+            assignments.push({
+              id: uuidv4(),
+              project_id: project.id,
+              person_id: person.id,
+              role_id: role.id,
+              phase_id: phase.phase_id,
+              start_date: null, // Phase-based assignment
+              end_date: null, // Phase-based assignment
+              allocation_percentage: finalAllocation,
+              assignment_date_mode: 'phase' // Use phase-based mode
+            });
+            
+            assignmentMap.set(personKey, currentAllocation + finalAllocation);
+          }
         }
-      }
+      });
     });
   }
 

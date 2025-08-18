@@ -1,16 +1,19 @@
-/* Person Details Page Styles */
+/* Person Details Page Styles - Enhanced */
+@import '../styles/design-system.css';
+
 .person-details {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: var(--space-3);
 }
 
 .person-details .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .person-details .header-left {
@@ -21,9 +24,21 @@
 
 .person-details .header-left h1 {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.person-role-badge {
+  font-size: var(--text-lg);
+  font-weight: var(--font-normal);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
 }
 
 .person-details-content {
@@ -34,38 +49,94 @@
 
 /* Detail Sections */
 .detail-section {
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-section:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
+  padding: var(--space-3);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all var(--transition-base);
+  background: var(--bg-secondary);
+  user-select: none;
 }
 
 .section-header:hover {
   background-color: var(--bg-hover);
 }
 
+/* Dark mode contrast improvements for section headers */
+[data-theme="dark"] .section-header {
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color-hover);
+}
+
+[data-theme="dark"] .section-header:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Fix purple header contrast in dark mode */
+[data-theme="dark"] .insights-section .section-header {
+  background: #2d3748;
+  color: #f7fafc;
+  border-bottom: 1px solid #4a5568;
+}
+
+[data-theme="dark"] .insights-section .section-header h2 {
+  color: #f7fafc;
+}
+
+[data-theme="dark"] .insights-section .section-header svg {
+  color: #a78bfa;
+}
+
 .section-header h2 {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-2);
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
+}
+
+.section-header svg {
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.section-toggle svg {
+  width: 20px;
+  height: 20px;
+  transition: transform var(--transition-base);
+}
+
+.section-header.expanded .section-toggle svg {
+  transform: rotate(180deg);
 }
 
 .section-content {
   padding: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
 }
 
 /* Info Grid */
@@ -150,16 +221,35 @@
 }
 
 .assignment-card {
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 1.25rem;
-  transition: all 0.2s;
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.assignment-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+  transform: scaleY(0);
+  transition: transform var(--transition-base);
 }
 
 .assignment-card:hover {
   border-color: var(--primary);
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.assignment-card:hover::before {
+  transform: scaleY(1);
 }
 
 .assignment-header {
@@ -392,4 +482,274 @@
 .inline-edit-container select {
   width: 100%;
   margin: 0;
+}
+
+/* Insights Section Styles */
+.insights-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.insights-section .section-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Dark mode insights section background fix */
+[data-theme="dark"] .insights-section {
+  background: #1a202c;
+  border-color: #2d3748;
+}
+
+[data-theme="dark"] .insights-section .section-content {
+  background: #1a202c;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.insight-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Dark mode specific contrast improvements */
+[data-theme="dark"] .insight-card {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color-hover);
+}
+
+.insight-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.alert-card {
+  border-color: var(--warning);
+  background: var(--warning-bg);
+}
+
+.insight-header {
+  margin-bottom: 0.5rem;
+}
+
+.insight-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+/* Status-specific insight value colors */
+.insight-value.text-danger {
+  color: var(--danger);
+}
+
+.insight-value.text-warning {
+  color: var(--warning);
+}
+
+.insight-value.text-info {
+  color: var(--primary);
+}
+
+.insight-value.text-success {
+  color: var(--success);
+}
+
+.insight-value.text-gray {
+  color: var(--text-secondary);
+}
+
+/* Dark mode specific text improvements for better contrast */
+[data-theme="dark"] .alert-card .insight-value.text-danger {
+  color: #fbbf24;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .alert-card .insight-label {
+  color: #fef3c7;
+  font-weight: 600;
+}
+
+/* Dark mode improvements for insight cards */
+[data-theme="dark"] .insight-card {
+  background: #2d3748;
+  border-color: #4a5568;
+}
+
+[data-theme="dark"] .insight-card .insight-value {
+  color: #f7fafc;
+}
+
+[data-theme="dark"] .insight-card .insight-label {
+  color: #cbd5e0;
+}
+
+[data-theme="dark"] .insight-card .insight-comparison {
+  color: #a0aec0;
+}
+
+/* Alert card specific dark mode styles */
+[data-theme="dark"] .alert-card {
+  background: #44403c;
+  border-color: #78716c;
+}
+
+[data-theme="dark"] .alert-card .insight-header svg {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .alert-card .insight-label {
+  color: #fef3c7;
+}
+
+[data-theme="dark"] .alert-card .insight-comparison {
+  color: #fde68a;
+}
+
+.insight-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.insight-comparison {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+.insight-status {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.5rem;
+  display: inline-block;
+}
+
+/* Dark mode status badge improvements */
+[data-theme="dark"] .insight-status.badge-danger {
+  background-color: #742a2a;
+  color: #feb2b2;
+  border: 1px solid #c53030;
+}
+
+/* Badge color improvements for dark mode */
+.badge-danger {
+  background-color: var(--badge-danger-bg);
+  color: var(--badge-danger-text);
+}
+
+.badge-warning {
+  background-color: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+}
+
+.badge-info {
+  background-color: var(--badge-primary-bg);
+  color: var(--badge-primary-text);
+}
+
+.badge-success {
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-text);
+}
+
+.badge-gray {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Improve Active status badge visibility in dark mode */
+[data-theme="dark"] .badge-success {
+  background-color: #064e3b;
+  color: #6ee7b7;
+  border: 1px solid #10b981;
+}
+
+/* Quick Actions */
+.quick-actions {
+  margin-top: 1.5rem;
+}
+
+.quick-actions h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Dark mode improvements for recommended actions */
+[data-theme="dark"] .quick-actions h4 {
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+/* Dark mode action button styles */
+[data-theme="dark"] .action-btn {
+  background: #2d3748;
+  color: #e2e8f0;
+  border: 1px solid #4a5568;
+}
+
+[data-theme="dark"] .action-btn:hover {
+  background: #374151;
+  border-color: #6b7280;
+}
+
+[data-theme="dark"] .action-btn.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #b91c1c;
+}
+
+[data-theme="dark"] .action-btn.btn-danger:hover {
+  background: #b91c1c;
+  border-color: #991b1b;
 }

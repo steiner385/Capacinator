@@ -17,6 +17,7 @@ export interface CascadeResult {
   affected_phases: CascadeCalculation[];
   cascade_count: number;
   circular_dependencies: string[]; // Any circular dependency issues found
+  validation_errors?: string[]; // Validation errors that prevent the update
 }
 
 export class ProjectPhaseCascadeService {
@@ -73,6 +74,23 @@ export class ProjectPhaseCascadeService {
     // Build dependency graph for the project
     const dependencyGraph = await this.buildDependencyGraph(projectId);
     
+    // First validate that the change itself doesn't violate dependencies
+    const validationErrors = await this.validatePhaseChange(
+      dependencyGraph,
+      changedPhaseId,
+      newStartDate,
+      newEndDate
+    );
+    
+    if (validationErrors.length > 0) {
+      return {
+        affected_phases: [],
+        cascade_count: 0,
+        circular_dependencies: [],
+        validation_errors: validationErrors
+      };
+    }
+    
     // Find all phases affected by this change
     const affectedPhases = await this.findAffectedPhases(
       dependencyGraph,
@@ -87,7 +105,8 @@ export class ProjectPhaseCascadeService {
     return {
       affected_phases: affectedPhases,
       cascade_count: affectedPhases.length,
-      circular_dependencies: circularDependencies
+      circular_dependencies: circularDependencies,
+      validation_errors: []
     };
   }
 
@@ -297,6 +316,149 @@ export class ProjectPhaseCascadeService {
     const newEnd = this.parseDateSafe(newEndStr);
 
     return { start: newStart, end: newEnd };
+  }
+
+  /**
+   * Validate that a phase change doesn't violate any dependencies
+   */
+  private async validatePhaseChange(
+    graph: Map<string, DependencyNode>,
+    phaseId: string,
+    newStartDate: Date,
+    newEndDate: Date
+  ): Promise<string[]> {
+    const errors: string[] = [];
+    const phase = graph.get(phaseId);
+    
+    if (!phase) return errors;
+    
+    // Check incoming dependencies (phases this one depends on)
+    for (const dep of phase.dependencies) {
+      const predecessor = graph.get(dep.predecessor_id);
+      if (!predecessor) continue;
+      
+      const predecessorEndDate = this.parseDateSafe(predecessor.end_date);
+      const predecessorStartDate = this.parseDateSafe(predecessor.start_date);
+      
+      switch (dep.dependency_type) {
+        case 'FS': // Finish-to-Start: this phase must start on or after predecessor finishes
+          if (newStartDate < predecessorEndDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredStartDate = new Date(predecessorEndDate);
+            requiredStartDate.setDate(requiredStartDate.getDate() + lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot start before "${predecessor.phase_name}" finishes. ` +
+              `Required start date: ${this.formatDateSafe(requiredStartDate)} or later.`
+            );
+          }
+          break;
+          
+        case 'SS': // Start-to-Start: this phase must start on or after predecessor starts
+          if (newStartDate < predecessorStartDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredStartDate = new Date(predecessorStartDate);
+            requiredStartDate.setDate(requiredStartDate.getDate() + lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot start before "${predecessor.phase_name}" starts. ` +
+              `Required start date: ${this.formatDateSafe(requiredStartDate)} or later.`
+            );
+          }
+          break;
+          
+        case 'FF': // Finish-to-Finish: this phase must finish on or after predecessor finishes
+          if (newEndDate < predecessorEndDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredEndDate = new Date(predecessorEndDate);
+            requiredEndDate.setDate(requiredEndDate.getDate() + lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot finish before "${predecessor.phase_name}" finishes. ` +
+              `Required end date: ${this.formatDateSafe(requiredEndDate)} or later.`
+            );
+          }
+          break;
+          
+        case 'SF': // Start-to-Finish: this phase must finish on or after predecessor starts
+          if (newEndDate < predecessorStartDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredEndDate = new Date(predecessorStartDate);
+            requiredEndDate.setDate(requiredEndDate.getDate() + lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot finish before "${predecessor.phase_name}" starts. ` +
+              `Required end date: ${this.formatDateSafe(requiredEndDate)} or later.`
+            );
+          }
+          break;
+      }
+    }
+    
+    // Check outgoing dependencies (phases that depend on this one)
+    for (const dep of phase.dependents) {
+      const successor = graph.get(dep.successor_id);
+      if (!successor) continue;
+      
+      const successorStartDate = this.parseDateSafe(successor.start_date);
+      const successorEndDate = this.parseDateSafe(successor.end_date);
+      
+      switch (dep.dependency_type) {
+        case 'FS': // Finish-to-Start: successor must start on or after this phase finishes
+          if (successorStartDate < newEndDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredEndDate = new Date(successorStartDate);
+            requiredEndDate.setDate(requiredEndDate.getDate() - lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot end after "${successor.phase_name}" starts. ` +
+              `Required end date: ${this.formatDateSafe(requiredEndDate)} or earlier.`
+            );
+          }
+          break;
+          
+        case 'SS': // Start-to-Start: successor must start on or after this phase starts
+          if (successorStartDate < newStartDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredStartDate = new Date(successorStartDate);
+            requiredStartDate.setDate(requiredStartDate.getDate() - lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot start after "${successor.phase_name}" starts. ` +
+              `Required start date: ${this.formatDateSafe(requiredStartDate)} or earlier.`
+            );
+          }
+          break;
+          
+        case 'FF': // Finish-to-Finish: successor must finish on or after this phase finishes
+          if (successorEndDate < newEndDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredEndDate = new Date(successorEndDate);
+            requiredEndDate.setDate(requiredEndDate.getDate() - lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot finish after "${successor.phase_name}" finishes. ` +
+              `Required end date: ${this.formatDateSafe(requiredEndDate)} or earlier.`
+            );
+          }
+          break;
+          
+        case 'SF': // Start-to-Finish: successor must finish on or after this phase starts
+          if (successorEndDate < newStartDate) {
+            const lagDays = dep.lag_days || 0;
+            const requiredStartDate = new Date(successorEndDate);
+            requiredStartDate.setDate(requiredStartDate.getDate() - lagDays);
+            
+            errors.push(
+              `Phase "${phase.phase_name}" cannot start after "${successor.phase_name}" finishes. ` +
+              `Required start date: ${this.formatDateSafe(requiredStartDate)} or earlier.`
+            );
+          }
+          break;
+      }
+    }
+    
+    return errors;
   }
 
   /**

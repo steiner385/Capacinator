@@ -2,14 +2,14 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: hsl(var(--background));
   overflow: hidden; /* Prevent scrollbar on main container */
 }
 
 /* Header */
 .roadmap-header {
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
@@ -23,12 +23,12 @@
   gap: 0.5rem;
   font-size: 1.875rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   margin: 0 0 0.25rem 0;
 }
 
 .subtitle {
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   font-size: 0.875rem;
   margin: 0;
 }
@@ -54,11 +54,11 @@
 
 .timeline-range {
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   font-weight: 500;
   padding: 0.375rem 0.75rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
   white-space: nowrap;
 }
@@ -67,27 +67,27 @@
 .header-date-picker {
   height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--input-border);
+  border: 1px solid hsl(var(--input));
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-primary);
-  background: var(--input-bg);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
   cursor: pointer;
   transition: all 0.15s ease;
   min-width: 140px;
 }
 
 .header-date-picker:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
+  background: hsl(var(--accent));
+  border-color: hsl(var(--border));
 }
 
 .header-date-picker:focus {
   outline: none;
-  border-color: var(--input-focus-border);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-  background: var(--input-bg);
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.1);
+  background: hsl(var(--background));
 }
 
 .header-date-picker::-webkit-calendar-picker-indicator {
@@ -130,58 +130,58 @@
 .search-box svg {
   position: absolute;
   left: 0.75rem;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   pointer-events: none;
 }
 
 .search-box input {
   padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-  border: 1px solid var(--input-border);
+  border: 1px solid hsl(var(--input));
   border-radius: 6px;
   font-size: 0.875rem;
   min-width: 200px;
-  background: var(--input-bg);
-  color: var(--text-primary);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .search-filters select {
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--input-border);
+  border: 1px solid hsl(var(--input));
   border-radius: 6px;
   font-size: 0.875rem;
-  background: var(--input-bg);
+  background: hsl(var(--background));
 }
 
 .zoom-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
-  background: var(--bg-secondary);
+  background: hsl(var(--card));
 }
 
 .zoom-controls button {
   padding: 0.5rem;
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
   display: flex;
   align-items: center;
 }
 
 .zoom-controls button:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
 }
 
 .zoom-level {
   padding: 0 0.75rem;
   font-size: 0.875rem;
-  color: var(--text-primary);
-  border-left: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+  color: hsl(var(--foreground));
+  border-left: 1px solid hsl(var(--border));
+  border-right: 1px solid hsl(var(--border));
 }
 
 /* Content */
@@ -198,6 +198,7 @@
   position: relative;
   overflow-x: auto; /* Only horizontal scrolling for timeline */
   overflow-y: auto; /* Vertical scrolling for project list */
+  background: hsl(var(--background)); /* Light mode: white, Dark mode: dark */
 }
 
 /* Timeline Header */
@@ -205,14 +206,15 @@
   position: sticky;
   top: 0;
   height: 80px; /* Increased to accommodate year bar */
-  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-tertiary));
-  border-bottom: 2px solid var(--border-color);
+  background: linear-gradient(to bottom, hsl(var(--card)), hsl(var(--muted)));
+  border-bottom: 2px solid hsl(var(--border));
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   margin-left: 320px; /* Align with timeline area only */
   display: flex;
   flex-direction: column;
-  min-width: max-content; /* Ensure header extends with content */
+  width: max-content; /* Allow header to expand with content */
+  min-width: 100%; /* Ensure it fills available space */
 }
 
 /* Timeline Navigation Controls */
@@ -224,12 +226,12 @@
   align-items: center;
   gap: 4px;
   z-index: 20;
-  background: var(--bg-secondary);
+  background: hsl(var(--card));
   backdrop-filter: blur(4px);
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  border: 1px solid hsl(var(--border));
 }
 
 .timeline-nav-btn {
@@ -240,7 +242,7 @@
   height: 28px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -249,12 +251,12 @@
 }
 
 .timeline-nav-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
 }
 
 .timeline-nav-btn:active {
-  background: var(--bg-active);
+  background: hsl(var(--muted));
   transform: scale(0.95);
 }
 
@@ -263,24 +265,24 @@
   padding: 0 8px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--primary-color);
+  color: hsl(var(--primary));
 }
 
 .timeline-nav-btn.today-btn:hover {
-  background: var(--bg-active);
-  color: var(--primary-color);
+  background: hsl(var(--accent));
+  color: hsl(var(--primary));
 }
 
 /* Timeline Date Picker */
 .timeline-date-picker {
   height: 28px;
   padding: 0 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid hsl(var(--border));
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--card));
   backdrop-filter: blur(4px);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -288,17 +290,17 @@
 }
 
 .timeline-date-picker:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
+  background: hsl(var(--accent));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
 }
 
 .timeline-date-picker:focus {
   outline: none;
-  border-color: var(--input-focus-border);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-  background: var(--input-bg);
-  color: var(--text-primary);
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.1);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .timeline-date-picker::-webkit-calendar-picker-indicator {
@@ -378,26 +380,26 @@
 .timeline-years {
   position: relative;
   height: 30px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .timeline-header-year {
   position: absolute;
   top: 0;
   height: 100%;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid hsl(var(--border));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary);
-  background: var(--bg-tertiary);
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted));
 }
 
 .year-label {
   font-weight: 700;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
 }
 
 /* Month Header Row */
@@ -411,22 +413,22 @@
   position: absolute;
   top: 0;
   height: 100%;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid hsl(var(--border));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+  color: hsl(var(--foreground));
+  background: hsl(var(--card));
   overflow: hidden;
 }
 
 .month-label {
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
-  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-tertiary));
-  border: 1px solid var(--border-color);
+  background: linear-gradient(to bottom, hsl(var(--card)), hsl(var(--muted)));
+  border: 1px solid hsl(var(--border));
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   font-weight: 600;
   white-space: nowrap;
@@ -452,11 +454,12 @@
 /* Projects Timeline */
 .projects-timeline {
   padding: 0.5rem 0;
+  background: hsl(var(--background)); /* Light mode: white, Dark mode: dark */
 }
 
 .project-row {
   display: flex;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid hsl(var(--border));
   min-height: 60px;
   position: relative;
   transition: min-height 0.2s ease-in-out;
@@ -467,14 +470,14 @@
 }
 
 .project-row:hover {
-  background: var(--bg-hover);
+  background: hsl(var(--accent));
 }
 
 .project-info {
   width: 320px;
   padding: 0.75rem;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  background: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
   flex-shrink: 0;
   position: sticky;
   left: 0;
@@ -500,7 +503,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   padding: 0.25rem;
   border-radius: 4px;
   display: flex;
@@ -509,8 +512,8 @@
 }
 
 .collapse-toggle:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
 }
 
 .project-details {
@@ -558,7 +561,7 @@
 .project-name {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   margin: 0 0 0.125rem 0;
   line-height: 1.2;
 }
@@ -609,23 +612,23 @@
 
 .project-owner {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   margin: 0.125rem 0 0 0;
 }
 
 .owner-label {
   font-weight: 500;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
 }
 
 .date-range {
   font-weight: 500;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
 }
 
 .project-dates {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   margin: 0;
 }
 
@@ -634,7 +637,9 @@
   position: relative;
   min-height: 60px;
   padding: 0.5rem 0;
-  min-width: max-content; /* Ensure timeline extends with content */
+  width: max-content; /* Allow timeline to expand with content */
+  min-width: 100%; /* Ensure it fills available space */
+  background: hsl(var(--background)); /* Light mode: white, Dark mode: dark */
 }
 
 /* Phase Bars */
@@ -734,7 +739,7 @@
 }
 
 .modal-container {
-  background: var(--bg-secondary);
+  background: hsl(var(--card));
   border-radius: 8px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   max-width: 500px;
@@ -753,22 +758,22 @@
 .modal-header h3 {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   margin: 0;
 }
 
 .modal-header button {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
 }
 
 .modal-header button:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
 }
 
 .modal-content {
@@ -783,23 +788,23 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   margin-bottom: 0.5rem;
 }
 
 .form-group input {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--input-border);
+  border: 1px solid hsl(var(--input));
   border-radius: 6px;
   font-size: 0.875rem;
-  background: var(--input-bg);
-  color: var(--text-primary);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--input-focus-border);
+  border-color: hsl(var(--ring));
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -837,14 +842,14 @@
 }
 
 .btn-secondary {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
 }
 
 .btn-secondary:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
+  background: hsl(var(--accent));
+  border-color: hsl(var(--border));
 }
 
 /* Responsive Design */
@@ -959,13 +964,13 @@ body.dragging * {
 .project-detail-section {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .project-detail-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   margin: 0 0 0.75rem 0;
   line-height: 1.3;
 }
@@ -995,13 +1000,13 @@ body.dragging * {
 .project-detail-item label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   margin: 0;
 }
 
 .project-detail-item p {
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   margin: 0;
   line-height: 1.5;
 }
@@ -1018,26 +1023,26 @@ body.dragging * {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
   transition: all 0.15s ease;
 }
 
 .phase-item:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
+  background: hsl(var(--accent));
+  border-color: hsl(var(--border));
 }
 
 .phase-item .phase-name {
   font-weight: 500;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
   font-size: 0.875rem;
 }
 
 .phase-item .phase-dates {
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: hsl(var(--muted-foreground));
   font-weight: 400;
 }
 
@@ -1053,8 +1058,8 @@ body.dragging * {
     to right,
     transparent,
     transparent var(--grid-spacing, 90px),
-    #e5e7eb var(--grid-spacing, 90px),
-    #e5e7eb calc(var(--grid-spacing, 90px) + 1px)
+    hsl(var(--border)) var(--grid-spacing, 90px),
+    hsl(var(--border)) calc(var(--grid-spacing, 90px) + 1px)
   );
   pointer-events: none;
   z-index: 1;

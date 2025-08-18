@@ -10,6 +10,13 @@ import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
 import { Spinner } from '../ui/spinner';
 import { AlertCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../ui/dialog';
 
 interface ProjectFormData {
   name: string;
@@ -182,6 +189,23 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleClose = () => {
+    setFormData({
+      name: '',
+      project_type_id: '',
+      location_id: '',
+      priority: 1,
+      description: '',
+      data_restrictions: '',
+      include_in_demand: true,
+      external_id: '',
+      owner_id: '',
+      current_phase_id: ''
+    });
+    setErrors({});
+    onClose();
   };
 
   // Filter project types to only show project sub-types (not main project types)

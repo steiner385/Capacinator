@@ -1,10 +1,13 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd())
+  
+  return {
   root: '.',
   publicDir: 'client/public',
   plugins: [
@@ -29,14 +32,14 @@ export default defineConfig({
     }
   },
   server: {
-    port: parseInt(process.env.VITE_PORT || '3121'),
+    port: parseInt(env.VITE_PORT || '3120'),
     https: false, // We'll use nginx for HTTPS
     allowedHosts: ['devlocal.capacinator.com', 'local.capacinator.com'],
     hmr: {
       overlay: true,
       clientPort: 443, // Tell HMR to use the nginx proxy
       protocol: 'wss',
-      host: 'devlocal.capacinator.com',
+      host: 'local.capacinator.com',
     },
     watch: {
       usePolling: true,
@@ -69,4 +72,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom'],
   },
+  }
 })

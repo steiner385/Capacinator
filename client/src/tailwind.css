@@ -5,3 +5,6 @@
 
 /* Import index.css for theme variables */
 @import "./index.css";
+
+/* Import design system for consistent spacing and components */
+@import "./styles/design-system.css";

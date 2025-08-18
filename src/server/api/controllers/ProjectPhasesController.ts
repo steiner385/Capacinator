@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { AssignmentRecalculationService } from '../../services/AssignmentRecalculationService.js';
+import { ProjectPhaseCascadeService } from '../../services/ProjectPhaseCascadeService.js';
 
 export class ProjectPhasesController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -152,6 +153,29 @@ export class ProjectPhasesController extends BaseController {
         })
         .returning('*');
 
+      // Auto-create FS dependency for serial phase enforcement
+      // Every phase (except the first) must have exactly one FS dependency
+      const existingPhases = await this.db('project_phases_timeline')
+        .where('project_id', phaseData.project_id)
+        .whereNot('id', projectPhase.id) // Exclude the phase we just created
+        .orderBy('start_date', 'desc'); // Get phases in reverse chronological order
+
+      if (existingPhases.length > 0) {
+        // This is not the first phase, so create an FS dependency to the previous phase
+        const previousPhase = existingPhases[0]; // Latest phase by start_date
+        
+        // Create the FS dependency
+        await this.db('project_phase_dependencies').insert({
+          project_id: phaseData.project_id,
+          predecessor_phase_timeline_id: previousPhase.id,
+          successor_phase_timeline_id: projectPhase.id,
+          dependency_type: 'FS',
+          lag_days: 0,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+      }
+
       return { data: projectPhase };
     }, res, 'Failed to create project phase');
 
@@ -220,6 +244,46 @@ export class ProjectPhasesController extends BaseController {
         return null;
       }
 
+      // Check for dependency conflicts and calculate cascade if dates are changing
+      let cascadeResult = null;
+      if (timelineUpdateData.start_date || timelineUpdateData.end_date) {
+        const cascadeService = new ProjectPhaseCascadeService(this.db);
+        
+        // Get the new dates (use current if not provided)
+        const newStartDate = timelineUpdateData.start_date ? 
+          new Date(timelineUpdateData.start_date) : 
+          new Date(currentPhase.start_date);
+        const newEndDate = timelineUpdateData.end_date ? 
+          new Date(timelineUpdateData.end_date) : 
+          new Date(currentPhase.end_date);
+        
+        // Calculate cascade effects
+        cascadeResult = await cascadeService.calculateCascade(
+          currentPhase.project_id,
+          id,
+          newStartDate,
+          newEndDate
+        );
+        
+        // Check if there are validation errors
+        if (cascadeResult.validation_errors && cascadeResult.validation_errors.length > 0) {
+          res.status(400).json({
+            error: 'Dependency validation failed',
+            validation_errors: cascadeResult.validation_errors
+          });
+          return null;
+        }
+        
+        // Check if there are circular dependencies
+        if (cascadeResult.circular_dependencies.length > 0) {
+          res.status(400).json({
+            error: 'Circular dependencies detected',
+            circular_dependencies: cascadeResult.circular_dependencies
+          });
+          return null;
+        }
+      }
+
       // Update timeline data
       if (Object.keys(timelineUpdateData).length > 0) {
         await this.db('project_phases_timeline')
@@ -228,6 +292,12 @@ export class ProjectPhasesController extends BaseController {
             ...timelineUpdateData,
             updated_at: new Date()
           });
+        
+        // Apply cascade changes if any
+        if (cascadeResult && cascadeResult.affected_phases.length > 0) {
+          const cascadeService = new ProjectPhaseCascadeService(this.db);
+          await cascadeService.applyCascade(currentPhase.project_id, cascadeResult);
+        }
       }
 
       // Update phase name if it's a custom phase
@@ -273,7 +343,11 @@ export class ProjectPhasesController extends BaseController {
           conflicts_count: assignmentResult.conflicts.length,
           updated_assignments: assignmentResult.updated_assignments,
           conflicts: assignmentResult.conflicts
-        }
+        },
+        cascade_updates: cascadeResult ? {
+          affected_phases_count: cascadeResult.affected_phases.length,
+          affected_phases: cascadeResult.affected_phases
+        } : null
       };
     }, res, 'Failed to update project phase');
 
@@ -432,6 +506,29 @@ export class ProjectPhasesController extends BaseController {
           })
           .returning('*');
 
+        // Auto-create FS dependency for serial phase enforcement
+        // Every phase (except the first) must have exactly one FS dependency
+        const existingPhases = await trx('project_phases_timeline')
+          .where('project_id', project_id)
+          .whereNot('id', newPhaseTimeline.id) // Exclude the phase we just created
+          .orderBy('start_date', 'desc'); // Get phases in reverse chronological order
+
+        if (existingPhases.length > 0) {
+          // This is not the first phase, so create an FS dependency to the previous phase
+          const previousPhase = existingPhases[0]; // Latest phase by start_date
+          
+          // Create the FS dependency
+          await trx('project_phase_dependencies').insert({
+            project_id: project_id,
+            predecessor_phase_timeline_id: previousPhase.id,
+            successor_phase_timeline_id: newPhaseTimeline.id,
+            dependency_type: 'FS',
+            lag_days: 0,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+        }
+
         // Copy resource allocations from source phase
         const sourceAllocations = await trx('project_allocation_overrides')
           .where({
@@ -504,6 +601,110 @@ export class ProjectPhasesController extends BaseController {
   }
 
   /**
+   * Apply bulk corrections to fix validation issues across all phases
+   * This method validates all changes together to handle cascading dependencies
+   */
+  async applyBulkCorrections(req: Request, res: Response) {
+    const { projectId, corrections } = req.body;
+
+    const result = await this.executeQuery(async () => {
+      // Sort corrections by start date to apply them in chronological order
+      const sortedCorrections = corrections.sort((a: any, b: any) => 
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      );
+
+      // Validate that all corrections maintain dependency constraints
+      const cascadeService = new ProjectPhaseCascadeService(this.db);
+      
+      // Build a temporary state with all proposed changes
+      const proposedPhases = new Map<string, { start_date: string; end_date: string }>();
+      for (const correction of sortedCorrections) {
+        proposedPhases.set(correction.id, {
+          start_date: correction.start_date,
+          end_date: correction.end_date
+        });
+      }
+
+      // Get all dependencies for the project
+      const dependencies = await this.db('project_phase_dependencies')
+        .where('project_id', projectId);
+
+      // Validate all proposed changes together
+      const validationErrors: string[] = [];
+      for (const correction of sortedCorrections) {
+        // Check dependencies with other corrections in mind
+        for (const dep of dependencies) {
+          if (dep.successor_phase_timeline_id === correction.id) {
+            // This phase depends on another
+            const predStart = proposedPhases.get(dep.predecessor_phase_timeline_id)?.start_date;
+            const predEnd = proposedPhases.get(dep.predecessor_phase_timeline_id)?.end_date;
+            
+            if (predEnd && dep.dependency_type === 'FS') {
+              const requiredStart = new Date(predEnd);
+              requiredStart.setDate(requiredStart.getDate() + (dep.lag_days || 0));
+              
+              if (new Date(correction.start_date) < requiredStart) {
+                validationErrors.push(
+                  `Phase ${correction.id} cannot start before its predecessor ends`
+                );
+              }
+            }
+          }
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        res.status(400).json({
+          error: 'Bulk correction validation failed',
+          validation_errors: validationErrors
+        });
+        return null;
+      }
+
+      // Apply all corrections in a transaction
+      const results = {
+        updated: [] as any[],
+        failed: [] as any[]
+      };
+
+      await this.db.transaction(async (trx) => {
+        for (const correction of sortedCorrections) {
+          try {
+            const [updated] = await trx('project_phases_timeline')
+              .where('id', correction.id)
+              .update({
+                start_date: correction.start_date,
+                end_date: correction.end_date,
+                updated_at: new Date()
+              })
+              .returning('*');
+            
+            if (updated) {
+              results.updated.push(updated);
+            } else {
+              results.failed.push({
+                id: correction.id,
+                error: 'Phase not found'
+              });
+            }
+          } catch (error) {
+            results.failed.push({
+              id: correction.id,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
+        }
+      });
+
+      return results;
+    }, res, 'Failed to apply bulk corrections');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  /**
    * Create a new custom phase that doesn't exist in the master phases list
    */
   async createCustomPhase(req: Request, res: Response) {
@@ -566,6 +767,29 @@ export class ProjectPhasesController extends BaseController {
             updated_at: new Date()
           })
           .returning('*');
+
+        // Auto-create FS dependency for serial phase enforcement
+        // Every phase (except the first) must have exactly one FS dependency
+        const existingPhases = await trx('project_phases_timeline')
+          .where('project_id', project_id)
+          .whereNot('id', newPhaseTimeline.id) // Exclude the phase we just created
+          .orderBy('start_date', 'desc'); // Get phases in reverse chronological order
+
+        if (existingPhases.length > 0) {
+          // This is not the first phase, so create an FS dependency to the previous phase
+          const previousPhase = existingPhases[0]; // Latest phase by start_date
+          
+          // Create the FS dependency
+          await trx('project_phase_dependencies').insert({
+            project_id: project_id,
+            predecessor_phase_timeline_id: previousPhase.id,
+            successor_phase_timeline_id: newPhaseTimeline.id,
+            dependency_type: 'FS',
+            lag_days: 0,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+        }
 
         return {
           phase: newPhase,

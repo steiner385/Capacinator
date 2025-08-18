@@ -962,8 +962,9 @@ export async function seed(knex: Knex): Promise<void> {
           person_id: assignedPerson.id,
           role_id: pmRole.id,
           phase_id: developmentPhase.phase_id,
-          start_date: developmentPhase.start_date,
-          end_date: developmentPhase.end_date,
+          assignment_date_mode: 'phase', // Use phase-based dates
+          start_date: null, // Will be computed from phase
+          end_date: null, // Will be computed from phase
           allocation_percentage: 40, // Reduced to 40% to allow for multiple assignments
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -986,8 +987,9 @@ export async function seed(knex: Knex): Promise<void> {
           person_id: createdPeople[2].id, // Third person as QA
           role_id: qaRole.id,
           phase_id: qaPhase.phase_id,
-          start_date: qaPhase.start_date,
-          end_date: qaPhase.end_date,
+          assignment_date_mode: 'phase', // Use phase-based dates
+          start_date: null, // Will be computed from phase
+          end_date: null, // Will be computed from phase
           allocation_percentage: 30, // Low allocation for QA testing
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

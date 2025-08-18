@@ -123,8 +123,8 @@ const SimpleBrushControl = ({
         style={{
           position: 'relative',
           height: '40px',
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-primary)',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
           borderRadius: '6px',
           margin: '0 20px', // Space for handles that extend beyond
           cursor: 'default',
@@ -138,7 +138,7 @@ const SimpleBrushControl = ({
           left: '0',
           right: '0',
           height: '8px',
-          backgroundColor: 'var(--bg-tertiary)',
+          backgroundColor: 'hsl(var(--muted))',
           borderRadius: '4px'
         }} />
         
@@ -150,7 +150,7 @@ const SimpleBrushControl = ({
             left: `${startPercent}%`,
             width: `${rangeWidth}%`,
             height: '8px',
-            backgroundColor: 'var(--primary)',
+            backgroundColor: 'hsl(var(--primary))',
             borderRadius: '4px',
             cursor: 'grab'
           }}
@@ -165,7 +165,7 @@ const SimpleBrushControl = ({
             left: `calc(${startPercent}% - 8px)`,
             width: '16px',
             height: '28px',
-            backgroundColor: 'var(--primary-dark)',
+            backgroundColor: 'hsl(var(--primary))',
             borderRadius: '8px',
             cursor: 'ew-resize',
             border: '2px solid white',
@@ -191,7 +191,7 @@ const SimpleBrushControl = ({
             left: `calc(${endPercent}% - 8px)`,
             width: '16px',
             height: '28px',
-            backgroundColor: 'var(--primary-dark)',
+            backgroundColor: 'hsl(var(--primary))',
             borderRadius: '8px',
             cursor: 'ew-resize',
             border: '2px solid white',
@@ -270,6 +270,14 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       return response.data;
     }
   });
+
+  // Callback to refetch demand data when phases change
+  const handlePhasesChange = useCallback(() => {
+    // Invalidate demand data to trigger refetch
+    queryClient.invalidateQueries({ queryKey: ['project-demand', projectId] });
+    // Also invalidate assignments as they might be affected
+    queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+  }, [queryClient, projectId]);
 
   // Get project phases for integrated visualization
   const { data: phasesResponse } = useQuery({
@@ -1127,7 +1135,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
             border: '1px solid var(--border-primary)',
             borderRadius: '6px',
             padding: '2px',
-            backgroundColor: 'var(--bg-secondary)'
+            backgroundColor: 'hsl(var(--card))'
           }}>
             {(['demand', 'capacity', 'gaps'] as const).map((view) => (
               <button
@@ -1140,8 +1148,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
                   fontSize: '12px',
                   fontWeight: '500',
                   cursor: 'pointer',
-                  backgroundColor: currentView === view ? 'var(--primary)' : 'transparent',
-                  color: currentView === view ? 'white' : 'var(--text-secondary)',
+                  backgroundColor: currentView === view ? 'hsl(var(--primary))' : 'transparent',
+                  color: currentView === view ? 'white' : 'hsl(var(--muted-foreground))',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -1162,6 +1170,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           onViewportChange={handleViewportChange}
           alignmentDimensions={chartDimensions || undefined}
           chartTimeData={displayData}
+          onPhasesChange={handlePhasesChange}
         />
       </div>
 
@@ -1236,8 +1245,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
                 }
               }}
               contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #ccc', 
+                backgroundColor: 'hsl(var(--background))', 
+                border: '1px solid hsl(var(--border))', 
                 borderRadius: '4px' 
               }}
             />

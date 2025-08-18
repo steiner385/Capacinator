@@ -54,7 +54,7 @@
     --secondary-foreground: 210 20% 98%; /* #f9fafb */
     
     --muted: 215 25% 27%; /* #374151 */
-    --muted-foreground: 213 13% 64%; /* #9ca3af */
+    --muted-foreground: 214 13% 70%; /* #b3b8c1 - Better contrast ratio 7.2:1 */
     
     --accent: 215 25% 27%; /* #374151 */
     --accent-foreground: 210 20% 98%; /* #f9fafb */

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, AlertTriangle, CheckCircle, Info, Calendar, Users, Clock, TrendingDown } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, Info, Calendar, Users, Clock, TrendingDown, ChartBar, Target } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Brush } from 'recharts';
 import {
   Dialog,
@@ -13,7 +13,9 @@ import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { api } from '../../lib/api-client';
 import { formatDate } from '../../utils/date';
+import { cn } from '../../lib/utils';
 import type { ProjectAssignment } from '../../types';
+import './WorkloadAdjustmentModal.css';
 
 interface WorkloadAdjustmentModalProps {
   isOpen: boolean;
@@ -753,74 +755,79 @@ export function WorkloadAdjustmentModal({
 
           {/* Scrollable Recommendations Section */}
           <div className="flex-1 overflow-y-auto p-6">
-            <h3 className="text-base font-semibold mb-4">
-              Select Recommendations to Apply
-            </h3>
+            <div className="modal-section-header">
+              <Target className="modal-section-icon" />
+              <h3>Select Recommendations to Apply</h3>
+            </div>
             
             {isLoading ? (
-              <div className="loading">Analyzing workload...</div>
+              <div className="loading-container">
+                <div className="loading-spinner" />
+                <p>Analyzing workload...</p>
+              </div>
             ) : recommendations && recommendations.length > 0 ? (
               <div className="recommendations-list">
                 {recommendations.map(rec => (
                   <div
                     key={rec.id}
-                    className={`recommendation-item ${selectedRecommendations.has(rec.id) ? 'selected' : ''}`}
+                    className={cn(
+                      "recommendation-card",
+                      selectedRecommendations.has(rec.id) && "selected"
+                    )}
                     onClick={() => toggleRecommendation(rec.id)}
                     onMouseEnter={() => setHoveredRecommendation(rec.id)}
                     onMouseLeave={() => setHoveredRecommendation(null)}
                   >
-                    <Checkbox
-                      checked={selectedRecommendations.has(rec.id)}
-                      onCheckedChange={() => toggleRecommendation(rec.id)}
-                    />
+                    <div className="recommendation-checkbox-wrapper">
+                      <Checkbox
+                        checked={selectedRecommendations.has(rec.id)}
+                        onCheckedChange={() => toggleRecommendation(rec.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
                     <div className="recommendation-content">
                       <div className="recommendation-header">
-                        <h4>{rec.title}</h4>
-                        <span className="impact-badge">
-                          {rec.type === 'reduce_allocation' && <TrendingDown size={14} />}
-                          {rec.type === 'extend_timeline' && <Calendar size={14} />}
-                          {rec.type === 'reassign' && <Users size={14} />}
-                          {rec.type === 'add_resource' && <Clock size={14} />}
-                          {rec.impact}
-                        </span>
+                        <h4 className="recommendation-title">{rec.title}</h4>
                       </div>
                       <p className="recommendation-description">{rec.description}</p>
-                      <div className="recommendation-dates" style={{ 
-                        fontSize: '12px', 
-                        color: 'var(--text-tertiary)', 
-                        marginTop: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <Calendar size={12} />
-                        <span>
-                          {(() => {
-                            // Determine effective date based on recommendation type
-                            if (rec.suggestedStartDate) {
-                              const startDate = new Date(rec.suggestedStartDate);
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              
-                              // Check if it's today
-                              if (startDate.toDateString() === today.toDateString()) {
-                                if (rec.type === 'extend_timeline' && rec.suggestedEndDate) {
-                                  return `New end date: ${formatDate(rec.suggestedEndDate)}`;
+                      <div className="recommendation-impact">
+                        {rec.type === 'reduce_allocation' && <TrendingDown className="recommendation-impact-icon" />}
+                        {rec.type === 'extend_timeline' && <Calendar className="recommendation-impact-icon" />}
+                        {rec.type === 'reassign' && <Users className="recommendation-impact-icon" />}
+                        {rec.type === 'add_resource' && <Clock className="recommendation-impact-icon" />}
+                        <span>{rec.impact}</span>
+                      </div>
+                      <div className="recommendation-meta">
+                        <div className="recommendation-meta-item">
+                          <Calendar className="recommendation-meta-icon" />
+                          <span className="effective-date-badge">
+                            {(() => {
+                              // Determine effective date based on recommendation type
+                              if (rec.suggestedStartDate) {
+                                const startDate = new Date(rec.suggestedStartDate);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                
+                                // Check if it's today
+                                if (startDate.toDateString() === today.toDateString()) {
+                                  if (rec.type === 'extend_timeline' && rec.suggestedEndDate) {
+                                    return `New end date: ${formatDate(rec.suggestedEndDate)}`;
+                                  }
+                                  return 'Effective today';
+                                } else {
+                                  return `Effective from: ${formatDate(rec.suggestedStartDate)}`;
                                 }
-                                return 'Effective today';
-                              } else {
-                                return `Effective from: ${formatDate(rec.suggestedStartDate)}`;
+                              } else if (rec.type === 'extend_timeline' && rec.suggestedEndDate) {
+                                return `New end date: ${formatDate(rec.suggestedEndDate)}`;
+                              } else if (rec.type === 'add_resource') {
+                                return 'Starting today';
+                              } else if (rec.assignment) {
+                                return `${formatDate(rec.assignment.start_date)} - ${formatDate(rec.assignment.end_date)}`;
                               }
-                            } else if (rec.type === 'extend_timeline' && rec.suggestedEndDate) {
-                              return `New end date: ${formatDate(rec.suggestedEndDate)}`;
-                            } else if (rec.type === 'add_resource') {
-                              return 'Starting today';
-                            } else if (rec.assignment) {
-                              return `Current dates: ${formatDate(rec.assignment.start_date)} - ${formatDate(rec.assignment.end_date)}`;
-                            }
-                            return 'Effective today';
-                          })()}
-                        </span>
+                              return 'Effective today';
+                            })()}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -828,23 +835,35 @@ export function WorkloadAdjustmentModal({
               </div>
             ) : (
               <div className="empty-state">
-                <Info size={48} />
-                <p>No recommendations available at this time.</p>
+                <Info className="empty-state-icon" />
+                <h3 className="empty-state-title">No Recommendations Available</h3>
+                <p className="empty-state-description">
+                  We couldn't find any optimization opportunities for {personName}'s current workload.
+                </p>
               </div>
             )}
           </div>
         </div>
 
         <DialogFooter className="px-6 py-4 border-t">
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleApply}
-            disabled={selectedRecommendations.size === 0 || applying}
-          >
-            {applying ? 'Applying...' : `Apply ${selectedRecommendations.size} Recommendation${selectedRecommendations.size !== 1 ? 's' : ''}`}
-          </Button>
+          <div className="modal-actions">
+            <div className="selected-count">
+              {selectedRecommendations.size > 0 && (
+                <span>{selectedRecommendations.size} recommendation{selectedRecommendations.size !== 1 ? 's' : ''} selected</span>
+              )}
+            </div>
+            <div className="action-buttons">
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleApply}
+                disabled={selectedRecommendations.size === 0 || applying}
+              >
+                {applying ? 'Applying...' : `Apply Changes`}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -78,7 +78,11 @@ const calculateItemPosition = (item: TimelineItem, viewport: TimelineViewport) =
 
 const dateFromPixelPosition = (pixelX: number, viewport: TimelineViewport): Date => {
   const days = Math.round(pixelX / viewport.pixelsPerDay);
-  return addDays(viewport.startDate, days);
+  // Snap to day boundaries since phases are stored with day precision
+  const result = new Date(viewport.startDate);
+  result.setDate(result.getDate() + days);
+  result.setHours(0, 0, 0, 0);
+  return result;
 };
 
 // Calculate dependency line connection points based on dependency type
@@ -165,6 +169,16 @@ export function InteractiveTimeline({
     originalEnd?: Date;
     previewStart?: Date;
     previewEnd?: Date;
+    adjacentPhases?: {
+      previous?: {
+        id: string;
+        newEndDate: Date;
+      };
+      next?: {
+        id: string;
+        newStartDate: Date;
+      };
+    };
     boundaryData?: {
       leftPhaseId: string;
       rightPhaseId: string;
@@ -511,12 +525,38 @@ export function InteractiveTimeline({
       // Start item manipulation
       const item = items.find(i => i.id === itemId);
       if (item) {
+        // Initialize adjacent phases for gap maintenance
+        const adjacentPhases: any = {};
+        if (action === 'resize-start' || action === 'resize-end') {
+          const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+          const currentIndex = sortedItems.findIndex(i => i.id === itemId);
+          
+          if (action === 'resize-start' && currentIndex > 0) {
+            const prevPhase = sortedItems[currentIndex - 1];
+            adjacentPhases.previousPhase = {
+              id: prevPhase.id,
+              originalEndDate: new Date(prevPhase.endDate),
+              gap: Math.round((item.startDate.getTime() - prevPhase.endDate.getTime()) / (1000 * 60 * 60 * 24))
+            };
+          }
+          
+          if (action === 'resize-end' && currentIndex < sortedItems.length - 1) {
+            const nextPhase = sortedItems[currentIndex + 1];
+            adjacentPhases.nextPhase = {
+              id: nextPhase.id,
+              originalStartDate: new Date(nextPhase.startDate),
+              gap: Math.round((nextPhase.startDate.getTime() - item.endDate.getTime()) / (1000 * 60 * 60 * 24))
+            };
+          }
+        }
+        
         setDragState({
           type: action || 'move',
           itemId,
           startX,
           originalStart: new Date(item.startDate),
-          originalEnd: new Date(item.endDate)
+          originalEnd: new Date(item.endDate),
+          adjacentPhases
         });
       }
     }
@@ -575,19 +615,102 @@ export function InteractiveTimeline({
       let newEndDate = new Date(dragState.originalEnd);
       
       if (dragState.type === 'move') {
-        newStartDate = addDays(dragState.originalStart, deltaDays);
-        newEndDate = addDays(dragState.originalEnd, deltaDays);
+        // For move, calculate based on pixel position to maintain exact visual position
+        newStartDate = dateFromPixelPosition(currentX - (dragState.startX || 0) + 
+          calculateItemPosition({ ...items.find(i => i.id === dragState.itemId)!, startDate: dragState.originalStart, endDate: dragState.originalEnd }, viewport).left, viewport);
+        const duration = dragState.originalEnd.getTime() - dragState.originalStart.getTime();
+        newEndDate = new Date(newStartDate.getTime() + duration);
       } else if (dragState.type === 'resize-start') {
-        newStartDate = addDays(dragState.originalStart, deltaDays);
+        // For resize start, calculate new start date
+        const deltaDaysRounded = Math.round(deltaDays);
+        newStartDate = new Date(dragState.originalStart);
+        newStartDate.setDate(newStartDate.getDate() + deltaDaysRounded);
+        newStartDate.setHours(0, 0, 0, 0);
+        newEndDate = new Date(dragState.originalEnd);
+        newEndDate.setHours(0, 0, 0, 0);
+        
         // Ensure minimum duration
-        if ((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24) < minItemDuration) {
-          newStartDate = addDays(newEndDate, -minItemDuration);
+        const durationDays = Math.round((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (durationDays < minItemDuration) {
+          newStartDate = new Date(newEndDate);
+          newStartDate.setDate(newStartDate.getDate() - minItemDuration);
+          newStartDate.setHours(0, 0, 0, 0);
+        }
+        
+        // When dragging start edge, shift all previous phases by the same amount
+        const shiftAmount = deltaDaysRounded;
+        if (shiftAmount !== 0) {
+          const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+          const currentIndex = sortedItems.findIndex(item => item.id === dragState.itemId);
+          
+          if (!dragState.adjacentPhases.updates) {
+            dragState.adjacentPhases.updates = {};
+          }
+          dragState.adjacentPhases.shiftedPhases = [];
+          
+          // Shift all phases to the left of the current phase
+          for (let i = 0; i < currentIndex; i++) {
+            const phase = sortedItems[i];
+            const newPhaseStartDate = new Date(phase.startDate);
+            newPhaseStartDate.setDate(newPhaseStartDate.getDate() + shiftAmount);
+            newPhaseStartDate.setHours(0, 0, 0, 0);
+            
+            const newPhaseEndDate = new Date(phase.endDate);
+            newPhaseEndDate.setDate(newPhaseEndDate.getDate() + shiftAmount);
+            newPhaseEndDate.setHours(0, 0, 0, 0);
+            
+            dragState.adjacentPhases.shiftedPhases.push({
+              id: phase.id,
+              newStartDate: newPhaseStartDate,
+              newEndDate: newPhaseEndDate
+            });
+          }
         }
       } else if (dragState.type === 'resize-end') {
-        newEndDate = addDays(dragState.originalEnd, deltaDays);
+        // For resize end, calculate new end date
+        const deltaDaysRounded = Math.round(deltaDays);
+        newStartDate = new Date(dragState.originalStart);
+        newStartDate.setHours(0, 0, 0, 0);
+        newEndDate = new Date(dragState.originalEnd);
+        newEndDate.setDate(newEndDate.getDate() + deltaDaysRounded);
+        newEndDate.setHours(0, 0, 0, 0);
+        
         // Ensure minimum duration
-        if ((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24) < minItemDuration) {
-          newEndDate = addDays(newStartDate, minItemDuration);
+        const durationDays = Math.round((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (durationDays < minItemDuration) {
+          newEndDate = new Date(newStartDate);
+          newEndDate.setDate(newEndDate.getDate() + minItemDuration);
+          newEndDate.setHours(0, 0, 0, 0);
+        }
+        
+        // When dragging end edge, shift all subsequent phases by the same amount
+        const shiftAmount = deltaDaysRounded;
+        if (shiftAmount !== 0) {
+          const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+          const currentIndex = sortedItems.findIndex(item => item.id === dragState.itemId);
+          
+          if (!dragState.adjacentPhases.updates) {
+            dragState.adjacentPhases.updates = {};
+          }
+          dragState.adjacentPhases.shiftedPhases = [];
+          
+          // Shift all phases to the right of the current phase
+          for (let i = currentIndex + 1; i < sortedItems.length; i++) {
+            const phase = sortedItems[i];
+            const newPhaseStartDate = new Date(phase.startDate);
+            newPhaseStartDate.setDate(newPhaseStartDate.getDate() + shiftAmount);
+            newPhaseStartDate.setHours(0, 0, 0, 0);
+            
+            const newPhaseEndDate = new Date(phase.endDate);
+            newPhaseEndDate.setDate(newPhaseEndDate.getDate() + shiftAmount);
+            newPhaseEndDate.setHours(0, 0, 0, 0);
+            
+            dragState.adjacentPhases.shiftedPhases.push({
+              id: phase.id,
+              newStartDate: newPhaseStartDate,
+              newEndDate: newPhaseEndDate
+            });
+          }
         }
       }
       
@@ -604,39 +727,87 @@ export function InteractiveTimeline({
         // TODO: Implement overlap prevention logic
       }
       
-      // Trigger appropriate callback
-      if (dragState.type === 'move' && onItemMove) {
-        onItemMove(dragState.itemId, newStartDate, newEndDate);
-      } else if ((dragState.type === 'resize-start' || dragState.type === 'resize-end') && onItemResize) {
-        onItemResize(dragState.itemId, newStartDate, newEndDate);
-      }
+      // Don't trigger callbacks during drag - wait for mouse up
     } else if (dragState.type === 'boundary' && dragState.boundaryData) {
-      // Handle boundary drag - adjust both adjacent phases
-      const { leftPhaseId, rightPhaseId, originalLeftEnd, originalRightStart } = dragState.boundaryData;
-      
-      // Calculate new boundary date based on drag position
-      const newBoundaryDate = dateFromPixelPosition(currentX, viewport);
-      
-      // Update both phases to meet at the new boundary
-      if (onItemResize) {
-        // Extend/shrink left phase to end at new boundary
-        const leftPhase = items.find(item => item.id === leftPhaseId);
-        if (leftPhase) {
-          onItemResize(leftPhaseId, leftPhase.startDate, newBoundaryDate);
-        }
-        
-        // Extend/shrink right phase to start at new boundary  
-        const rightPhase = items.find(item => item.id === rightPhaseId);
-        if (rightPhase) {
-          onItemResize(rightPhaseId, newBoundaryDate, rightPhase.endDate);
-        }
-      }
+      // Handle boundary drag - just update the drag state for visual feedback
+      setDragState(prev => ({
+        ...prev,
+        currentX: currentX
+      }));
     }
   }, [dragState, viewport, onBrushChange, onItemMove, onItemResize, minItemDuration, allowOverlap, mode, phaseHandles, items]);
 
   const handleMouseUp = useCallback(() => {
+    // Trigger callbacks with final positions before clearing drag state
+    if (dragState.type && dragState.itemId && dragState.previewStart && dragState.previewEnd) {
+      if (dragState.type === 'move' && onItemMove) {
+        onItemMove(dragState.itemId, dragState.previewStart, dragState.previewEnd);
+      } else if ((dragState.type === 'resize-start' || dragState.type === 'resize-end') && onItemResize) {
+        // Update the main phase
+        onItemResize(dragState.itemId, dragState.previewStart, dragState.previewEnd);
+        
+        // Update adjacent phases to maintain gaps
+        if (dragState.adjacentPhases?.updates) {
+          if (dragState.adjacentPhases.updates.previous) {
+            const { id, newEndDate } = dragState.adjacentPhases.updates.previous;
+            const prevPhase = items.find(item => item.id === id);
+            if (prevPhase) {
+              onItemResize(id, prevPhase.startDate, newEndDate);
+            }
+          }
+          if (dragState.adjacentPhases.updates.next) {
+            const { id, newStartDate } = dragState.adjacentPhases.updates.next;
+            const nextPhase = items.find(item => item.id === id);
+            if (nextPhase) {
+              // Calculate new end date maintaining duration
+              const duration = nextPhase.endDate.getTime() - nextPhase.startDate.getTime();
+              const newEndDate = new Date(newStartDate.getTime() + duration);
+              onItemResize(id, newStartDate, newEndDate);
+            }
+          }
+        }
+        
+        // Apply cascading updates to all shifted phases
+        if (dragState.adjacentPhases?.shiftedPhases) {
+          console.log('🔄 Applying cascading updates to', dragState.adjacentPhases.shiftedPhases.length, 'phases');
+          
+          // Sort phases by their position to apply updates in order
+          const sortedShiftedPhases = [...dragState.adjacentPhases.shiftedPhases].sort((a, b) => {
+            const phaseA = items.find(item => item.id === a.id);
+            const phaseB = items.find(item => item.id === b.id);
+            if (!phaseA || !phaseB) return 0;
+            return phaseA.startDate.getTime() - phaseB.startDate.getTime();
+          });
+          
+          // Apply updates to all shifted phases
+          sortedShiftedPhases.forEach(shiftedPhase => {
+            console.log(`📅 Updating phase ${shiftedPhase.id}:`, {
+              newStart: shiftedPhase.newStartDate.toISOString().split('T')[0],
+              newEnd: shiftedPhase.newEndDate.toISOString().split('T')[0]
+            });
+            onItemResize(shiftedPhase.id, shiftedPhase.newStartDate, shiftedPhase.newEndDate);
+          });
+        }
+      }
+    } else if (dragState.type === 'boundary' && dragState.boundaryData && onItemResize) {
+      // For boundary drag, trigger the final resize callbacks
+      const currentX = dragState.currentX || dragState.startX || 0;
+      const newBoundaryDate = dateFromPixelPosition(currentX, viewport);
+      
+      const { leftPhaseId, rightPhaseId } = dragState.boundaryData;
+      const leftPhase = items.find(item => item.id === leftPhaseId);
+      const rightPhase = items.find(item => item.id === rightPhaseId);
+      
+      if (leftPhase) {
+        onItemResize(leftPhaseId, leftPhase.startDate, newBoundaryDate);
+      }
+      if (rightPhase) {
+        onItemResize(rightPhaseId, newBoundaryDate, rightPhase.endDate);
+      }
+    }
+    
     setDragState({ type: null });
-  }, []);
+  }, [dragState, onItemMove, onItemResize, viewport, items]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent, itemId?: string) => {
     e.preventDefault();
@@ -859,7 +1030,7 @@ export function InteractiveTimeline({
           width: '100%',
           maxWidth: '100%', // Ensure it doesn't exceed container
           height: height,
-          backgroundColor: '#f8fafc',
+          backgroundColor: 'transparent',
           border: '1px solid #e2e8f0',
           borderRadius: '6px',
           overflow: 'visible', // Allow handles to show above
@@ -880,7 +1051,7 @@ export function InteractiveTimeline({
                 top: 0,
                 bottom: 0,
                 width: '1px',
-                backgroundColor: line.type === 'major' ? '#cbd5e1' : '#e2e8f0',
+                backgroundColor: line.type === 'major' ? 'hsl(var(--muted))' : 'hsl(var(--muted) / 0.8)',
                 opacity: line.type === 'major' ? 0.8 : 0.5
               }}
             >
@@ -919,7 +1090,7 @@ export function InteractiveTimeline({
                     top: 0,
                     bottom: 0,
                     width: '2px',
-                    backgroundColor: '#ef4444',
+                    backgroundColor: 'hsl(var(--destructive))',
                     opacity: 0.8,
                     zIndex: 10
                   }}
@@ -1016,14 +1187,64 @@ export function InteractiveTimeline({
           const isHovered = hoverItemId === item.id;
           const isBeingDragged = dragState.itemId === item.id;
           
-          // Calculate actual position - if being dragged, show at dragged position
+          // Check if this is an adjacent phase being affected by drag
+          const isAdjacentPhase = dragState.adjacentPhases?.updates && (
+            (dragState.adjacentPhases.updates.previous?.id === item.id) ||
+            (dragState.adjacentPhases.updates.next?.id === item.id)
+          );
+          
+          // Check if this phase is part of the cascading shift
+          const shiftedPhaseInfo = dragState.adjacentPhases?.shiftedPhases?.find(sp => sp.id === item.id);
+          const isShiftedPhase = !!shiftedPhaseInfo;
+          
+          // Calculate actual position - if being dragged or affected, show at new position
           let position = basePosition;
           if (isBeingDragged && dragState.currentX !== undefined && dragState.startX !== undefined) {
-            const deltaX = dragState.currentX - dragState.startX;
-            position = {
-              ...basePosition,
-              left: basePosition.left + deltaX
-            };
+            if (dragState.type === 'move') {
+              // For move, shift the entire item
+              const deltaX = dragState.currentX - dragState.startX;
+              position = {
+                ...basePosition,
+                left: basePosition.left + deltaX,
+                width: basePosition.width
+              };
+            } else if ((dragState.type === 'resize-start' || dragState.type === 'resize-end') && dragState.previewStart && dragState.previewEnd) {
+              // For resize, use the preview dates to calculate new position
+              const previewPosition = calculateItemPosition({
+                ...item,
+                startDate: dragState.previewStart,
+                endDate: dragState.previewEnd
+              }, viewport);
+              position = previewPosition;
+            }
+          } else if (isAdjacentPhase && dragState.adjacentPhases?.updates) {
+            // Show adjacent phases in their new positions during drag
+            if (dragState.adjacentPhases.updates.previous?.id === item.id) {
+              const { newEndDate } = dragState.adjacentPhases.updates.previous;
+              const previewPosition = calculateItemPosition({
+                ...item,
+                endDate: newEndDate
+              }, viewport);
+              position = previewPosition;
+            } else if (dragState.adjacentPhases.updates.next?.id === item.id) {
+              const { newStartDate } = dragState.adjacentPhases.updates.next;
+              const duration = item.endDate.getTime() - item.startDate.getTime();
+              const newEndDate = new Date(newStartDate.getTime() + duration);
+              const previewPosition = calculateItemPosition({
+                ...item,
+                startDate: newStartDate,
+                endDate: newEndDate
+              }, viewport);
+              position = previewPosition;
+            }
+          } else if (isShiftedPhase && shiftedPhaseInfo) {
+            // Show shifted phases in their new positions during drag
+            const previewPosition = calculateItemPosition({
+              ...item,
+              startDate: shiftedPhaseInfo.newStartDate,
+              endDate: shiftedPhaseInfo.newEndDate
+            }, viewport);
+            position = previewPosition;
           }
           
           return (
@@ -1035,15 +1256,15 @@ export function InteractiveTimeline({
                 width: position.width,
                 top: 8,
                 height: height - 16,
-                backgroundColor: item.color || '#3b82f6',
-                border: '1px solid rgba(0,0,0,0.1)',
+                backgroundColor: item.color || 'hsl(var(--primary))',
+                border: (isAdjacentPhase || isShiftedPhase) ? '2px dashed rgba(0,0,0,0.3)' : '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '4px',
                 cursor: mode === 'brush' ? 'crosshair' : 'pointer',
-                opacity: isBeingDragged ? 0.9 : 1,
+                opacity: isBeingDragged ? 0.9 : ((isAdjacentPhase || isShiftedPhase) ? 0.7 : 1),
                 transform: isBeingDragged ? 'translateY(-2px) scale(1.02)' : (isHovered ? 'translateY(-1px)' : 'none'),
                 boxShadow: isBeingDragged ? '0 8px 24px rgba(0,0,0,0.2)' : (isHovered ? '0 4px 8px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)'),
-                transition: isBeingDragged ? 'none' : 'all 0.2s ease',
-                zIndex: isHovered || isBeingDragged ? 5 : 1,
+                transition: (isBeingDragged || isAdjacentPhase || isShiftedPhase) ? 'none' : 'all 0.2s ease',
+                zIndex: isHovered || isBeingDragged || isAdjacentPhase || isShiftedPhase ? 5 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1235,7 +1456,7 @@ export function InteractiveTimeline({
             if (handle.handleType === 'extend-left') {
               return {
                 ...baseStyle,
-                backgroundColor: isHovered ? '#10b981' : '#34d399',
+                backgroundColor: isHovered ? 'hsl(142 71% 45%)' : 'hsl(142 71% 55%)',
                 color: 'white',
                 border: 'none',
                 boxShadow: isHovered ? '0 2px 8px rgba(16, 185, 129, 0.4)' : '0 1px 4px rgba(16, 185, 129, 0.3)',
@@ -1244,7 +1465,7 @@ export function InteractiveTimeline({
             } else if (handle.handleType === 'extend-right') {
               return {
                 ...baseStyle,
-                backgroundColor: isHovered ? '#3b82f6' : '#60a5fa',
+                backgroundColor: isHovered ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.9)',
                 color: 'white',
                 border: 'none',
                 boxShadow: isHovered ? '0 2px 8px rgba(59, 130, 246, 0.4)' : '0 1px 4px rgba(59, 130, 246, 0.3)',
@@ -1253,7 +1474,7 @@ export function InteractiveTimeline({
             } else { // adjust-both
               return {
                 ...baseStyle,
-                backgroundColor: isHovered ? '#a855f7' : '#c084fc',
+                backgroundColor: isHovered ? 'hsl(262 83% 58%)' : 'hsl(262 83% 68%)',
                 color: 'white',
                 border: 'none',
                 boxShadow: isHovered ? '0 2px 8px rgba(168, 85, 247, 0.4)' : '0 1px 4px rgba(168, 85, 247, 0.3)',

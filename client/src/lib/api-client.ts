@@ -233,6 +233,7 @@ export const api = {
     bulkUpdate: (data: any) => apiClient.post('/project-phases/bulk', data),
     duplicatePhase: (data: any) => apiClient.post('/project-phases/duplicate', data),
     createCustomPhase: (data: any) => apiClient.post('/project-phases/create-custom', data),
+    applyBulkCorrections: (data: any) => apiClient.post('/project-phases/bulk-corrections', data),
   },
 
   // Project Phase Dependencies

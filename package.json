@@ -13,7 +13,7 @@
     "dev:logs": "./scripts/dev-logs.sh",
     "dev:no-bg": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cross-env NODE_ENV=development tsx src/server/index.ts",
-    "dev:client": "cross-env NODE_ENV=development vite --port 3121 --config client-vite.config.ts",
+    "dev:client": "cross-env NODE_ENV=development vite --config client-vite.config.ts",
     "dev:electron": "wait-on http://localhost:3110 && electron .",
     "prod:start": "./scripts/start-prod.sh",
     "prod:stop": "./scripts/stop-prod.sh",

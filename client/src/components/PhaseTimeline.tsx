@@ -43,10 +43,7 @@ interface Dependency {
 }
 
 const DEPENDENCY_TYPE_LABELS = {
-  'FS': 'Finish-to-Start',
-  'SS': 'Start-to-Start', 
-  'FF': 'Finish-to-Finish',
-  'SF': 'Start-to-Finish'
+  'FS': 'Finish-to-Start'
 };
 
 // NOTE: Using hex values for phase colors as they may be passed to components
@@ -128,6 +125,17 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
       setEditingPhase(null);
+    },
+    onError: (err: any, variables, context) => {
+      // Show validation errors to user
+      if (err?.response?.data?.validation_errors) {
+        const errors = err.response.data.validation_errors;
+        console.error('Phase update validation failed:', errors);
+        // TODO: Display errors in UI (could use a toast notification or modal)
+        alert('Dependency validation failed:\n' + errors.join('\n'));
+      } else {
+        console.error('Phase update failed:', err);
+      }
     }
   });
 
@@ -280,10 +288,11 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
       const predEnd = predecessor.end_date;
       const predStart = predecessor.start_date;
-      const lagDays = dep.lag_days || 0;
+      // Enforce minimum 1 day gap for FS dependencies
+      const lagDays = dep.dependency_type === 'FS' ? Math.max(1, dep.lag_days || 1) : (dep.lag_days || 0);
 
       switch (dep.dependency_type) {
-        case 'FS': // Finish-to-Start (allow same-day transitions)
+        case 'FS': // Finish-to-Start (enforce minimum 1 day gap)
           const earliestStartFS = addDaysSafe(predEnd, lagDays);
           console.log(`🔗 FS Check: ${phase.phase_name} depends on ${predecessor.phase_name}`, {
             predecessorEnds: predEnd,
@@ -294,10 +303,8 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
             needsDelay: isBeforeSafe(newStartDate, earliestStartFS)
           });
           
-          if (isBeforeSafe(newStartDate, predEnd)) {
-            errors.push(`Cannot start before ${formatDateDisplaySafe(predEnd)} - ${predecessor.phase_name} must finish first (FS dependency)`);
-          } else if (lagDays > 0 && isBeforeSafe(newStartDate, earliestStartFS)) {
-            errors.push(`Cannot start before ${formatDateDisplaySafe(earliestStartFS)} (${predecessor.phase_name} finishes ${formatDateDisplaySafe(predEnd)} + ${lagDays} lag days)`);
+          if (isBeforeSafe(newStartDate, earliestStartFS)) {
+            errors.push(`Phase "${phase.phase_name}" cannot start before "${predecessor.phase_name}" finishes. Required start date: ${formatDateDisplaySafe(earliestStartFS)} or later.`);
           }
           break;
         case 'SS': // Start-to-Start
@@ -644,44 +651,126 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
                 console.log('🔧 Fix All button clicked!', { validationErrors, phases: phases.length });
                 
                 try {
-                  for (const [phaseId, errors] of Object.entries(validationErrors)) {
-                    if (errors.length > 0) {
-                      const phase = phases.find(p => p.id === phaseId);
-                      if (phase) {
-                        console.log(`🔧 Fixing phase ${phase.phase_name}:`, {
-                          currentStart: phase.start_date,
-                          currentEnd: phase.end_date,
-                          errors
-                        });
-                        
-                        const correction = calculateCorrectedDates(phaseId, phase.start_date, phase.end_date);
-                        console.log('💡 Correction calculated:', correction);
-                        console.log('🔍 Detailed correction analysis:', {
-                          phaseId,
-                          phaseName: phase.phase_name,
-                          originalDates: { start: phase.start_date, end: phase.end_date },
-                          correctedDates: { start: correction.startDate, end: correction.endDate },
-                          isValid: correction.isValid,
-                          needsCorrection: !correction.isValid
-                        });
-                        
-                        if (correction.isValid) {
-                          console.log(`✅ ${phase.phase_name} is already valid`);
-                        } else {
-                          console.log(`🚀 Applying correction for ${phase.phase_name}`, {
-                            from: { start: phase.start_date, end: phase.end_date },
-                            to: { start: correction.startDate, end: correction.endDate }
-                          });
-                          await updatePhaseMutation.mutateAsync({
-                            phaseId,
-                            updates: {
-                              start_date: correction.startDate,
-                              end_date: correction.endDate
-                            }
-                          });
+                  // First, collect all phases that need correction and calculate their fixes
+                  const corrections: Array<{
+                    phase: Phase;
+                    correction: { startDate: string; endDate: string; isValid: boolean };
+                  }> = [];
+                  
+                  // Sort phases by start date to process them in chronological order
+                  const sortedPhases = [...phases].sort((a, b) => 
+                    new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+                  );
+                  
+                  // Build a map of corrections that accounts for cascade effects
+                  const phaseCorrections = new Map<string, { start: string; end: string }>();
+                  
+                  for (const phase of sortedPhases) {
+                    const phaseErrors = validationErrors[phase.id];
+                    
+                    // Use previously calculated corrections for dependency calculations
+                    const currentStart = phaseCorrections.get(phase.id)?.start || phase.start_date;
+                    const currentEnd = phaseCorrections.get(phase.id)?.end || phase.end_date;
+                    
+                    if (phaseErrors && phaseErrors.length > 0) {
+                      console.log(`📐 Calculating correction for ${phase.phase_name}:`, {
+                        currentStart,
+                        currentEnd,
+                        errors: phaseErrors
+                      });
+                      
+                      // Calculate correction based on dependencies
+                      const duration = Math.ceil(
+                        (new Date(phase.end_date).getTime() - new Date(phase.start_date).getTime()) / 
+                        (1000 * 60 * 60 * 24)
+                      );
+                      
+                      let correctedStart = currentStart;
+                      let correctedEnd = currentEnd;
+                      
+                      // Find the predecessor phase
+                      const predecessorDep = dependencies.find(d => d.successor_phase_timeline_id === phase.id);
+                      if (predecessorDep) {
+                        const predecessor = sortedPhases.find(p => p.id === predecessorDep.predecessor_phase_timeline_id);
+                        if (predecessor) {
+                          // Use the corrected end date of predecessor if available
+                          const predEnd = phaseCorrections.get(predecessor.id)?.end || predecessor.end_date;
+                          const predEndDate = new Date(predEnd);
+                          const requiredStart = new Date(predEndDate);
+                          // Enforce minimum 1 day gap between phases
+                          const lagDays = Math.max(1, predecessorDep.lag_days || 1);
+                          requiredStart.setDate(requiredStart.getDate() + lagDays);
+                          
+                          if (new Date(correctedStart) < requiredStart) {
+                            correctedStart = requiredStart.toISOString().split('T')[0];
+                            // Adjust end date to maintain duration
+                            const newEnd = new Date(correctedStart);
+                            newEnd.setDate(newEnd.getDate() + duration);
+                            correctedEnd = newEnd.toISOString().split('T')[0];
+                            console.log(`✅ Applied FS correction for ${phase.phase_name}:`, {
+                              newStart: correctedStart,
+                              newEnd: correctedEnd
+                            });
+                          }
+                        }
+                      }
+                      
+                      phaseCorrections.set(phase.id, { start: correctedStart, end: correctedEnd });
+                      
+                      // Check if this phase's new dates affect successors
+                      const successorDeps = dependencies.filter(d => d.predecessor_phase_timeline_id === phase.id);
+                      for (const sucDep of successorDeps) {
+                        const successor = sortedPhases.find(p => p.id === sucDep.successor_phase_timeline_id);
+                        if (successor) {
+                          const sucStart = phaseCorrections.get(successor.id)?.start || successor.start_date;
+                          const requiredSuccessorStart = new Date(correctedEnd);
+                          // Enforce minimum 1 day gap between phases
+                          const sucLagDays = Math.max(1, sucDep.lag_days || 1);
+                          requiredSuccessorStart.setDate(requiredSuccessorStart.getDate() + sucLagDays);
+                          
+                          if (new Date(sucStart) < requiredSuccessorStart) {
+                            // Update successor's dates
+                            const sucDuration = Math.ceil(
+                              (new Date(successor.end_date).getTime() - new Date(successor.start_date).getTime()) / 
+                              (1000 * 60 * 60 * 24)
+                            );
+                            const newSuccessorEnd = new Date(requiredSuccessorStart);
+                            newSuccessorEnd.setDate(newSuccessorEnd.getDate() + sucDuration);
+                            
+                            phaseCorrections.set(successor.id, {
+                              start: requiredSuccessorStart.toISOString().split('T')[0],
+                              end: newSuccessorEnd.toISOString().split('T')[0]
+                            });
+                            console.log(`🔄 Cascaded correction to ${successor.phase_name}`);
+                          }
                         }
                       }
                     }
+                  }
+                  
+                  // Prepare bulk corrections data
+                  const bulkCorrections = [];
+                  for (const phase of sortedPhases) {
+                    const correction = phaseCorrections.get(phase.id);
+                    if (correction && (correction.start !== phase.start_date || correction.end !== phase.end_date)) {
+                      bulkCorrections.push({
+                        id: phase.id,
+                        start_date: correction.start,
+                        end_date: correction.end
+                      });
+                    }
+                  }
+                  
+                  if (bulkCorrections.length > 0) {
+                    console.log(`🚀 Applying ${bulkCorrections.length} corrections via bulk update...`);
+                    
+                    // Use the new bulk corrections API endpoint
+                    const result = await api.projectPhases.applyBulkCorrections({
+                      projectId: projectId,
+                      corrections: bulkCorrections
+                    });
+                    
+                    console.log('✅ Bulk corrections applied:', result.data);
                   }
                   
                   // Force re-validation and refresh after all corrections are applied
@@ -984,6 +1073,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
                         dependency_type: e.target.value as 'FS' | 'SS' | 'FF' | 'SF'
                       }))}
                       className="form-select"
+                      disabled
                     >
                       {Object.entries(DEPENDENCY_TYPE_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>{label}</option>
@@ -1020,9 +1110,52 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
       <style>{`
         .phase-timeline {
-          background: var(--bg-primary);
+          background: hsl(var(--background));
           border-radius: 8px;
-          border: 1px solid var(--border-primary);
+          border: 1px solid hsl(var(--border));
+        }
+
+        .modal-content {
+          background: hsl(var(--card));
+          border-radius: 8px;
+          max-width: 500px;
+          width: 90%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-body {
+          padding: 1.5rem;
+          background: hsl(var(--card));
+        }
+
+        .form-group {
+          margin-bottom: 1rem;
+        }
+
+        .form-group label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: hsl(var(--foreground));
+          margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select {
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid hsl(var(--input));
+          border-radius: 6px;
+          font-size: 0.875rem;
+          background: hsl(var(--background));
+          color: hsl(var(--foreground));
+        }
+
+        .form-input:focus, .form-select:focus {
+          outline: none;
+          border-color: hsl(var(--ring));
+          box-shadow: 0 0 0 2px hsl(var(--ring) / 0.1);
         }
 
         .phase-timeline-header {
@@ -1059,31 +1192,34 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
         .table-container {
           overflow-x: auto;
+          background: hsl(var(--background));
         }
 
         .data-table {
           width: 100%;
           border-collapse: collapse;
+          background: hsl(var(--background));
         }
 
         .data-table th {
-          background: #f9fafb;
+          background: hsl(var(--card));
           padding: 12px 16px;
           text-align: left;
           font-weight: 600;
           font-size: 14px;
-          color: #374151;
-          border-bottom: 1px solid #e5e7eb;
+          color: hsl(var(--foreground));
+          border-bottom: 1px solid hsl(var(--border));
         }
 
         .data-table td {
           padding: 12px 16px;
-          border-bottom: 1px solid #f3f4f6;
+          border-bottom: 1px solid hsl(var(--border));
           vertical-align: top;
+          background: hsl(var(--background));
         }
 
         .data-table tr:hover {
-          background: #f9fafb;
+          background: hsl(var(--accent));
         }
 
         .inline-editable {
@@ -1096,7 +1232,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .inline-editable:hover {
-          background: #f3f4f6;
+          background: hsl(var(--accent));
         }
 
         .inline-editable .edit-icon {
@@ -1123,7 +1259,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .clickable-dependencies:hover {
-          background-color: #f3f4f6;
+          background-color: hsl(var(--accent));
         }
 
         .dependencies-list {
@@ -1165,12 +1301,12 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           gap: 6px;
           font-size: 13px;
           padding: 2px 6px;
-          background: #f3f4f6;
+          background: hsl(var(--muted));
           border-radius: 4px;
         }
 
         .dependency-phase {
-          color: #374151;
+          color: hsl(var(--foreground));
           font-weight: 500;
         }
 
@@ -1228,7 +1364,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           top: 100%;
           left: 0;
           z-index: 1000;
-          background: white;
+          background: hsl(var(--background));
           border: 1px solid var(--danger);
           border-radius: 6px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1247,7 +1383,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         }
 
         .correction-suggestion {
-          background: #f9fafb;
+          background: hsl(var(--card));
           padding: 12px;
           border-radius: 4px;
           margin: 12px 0;
