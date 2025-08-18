@@ -10,6 +10,7 @@ import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
 import PhaseTimeline from '../components/PhaseTimeline';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table';
 import type { Project } from '../types';
 import './PersonDetails.css'; // Reuse existing styles
 import '../components/Charts.css';
@@ -523,44 +524,57 @@ export function ProjectDetail() {
           {expandedSections.assignments && (
             <div className="section-content">
               {project.assignments.length > 0 ? (
-                <div className="assignments-grid">
-                  {project.assignments.map((assignment) => (
-                    <div 
-                      key={assignment.id} 
-                      className="assignment-card"
-                      onClick={() => handleAssignmentClick(assignment)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div className="assignment-header">
-                        <Link 
-                          to={`/people/${assignment.person_id}`} 
-                          className="assignment-person"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {assignment.person_name}
-                        </Link>
-                        {canEdit && (
-                          <button
-                            className="btn btn-icon btn-danger"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteAssignmentMutation.mutate(assignment.id);
-                            }}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Allocation</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      {canEdit && <TableHead className="text-right text-muted-foreground">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {project.assignments.map((assignment) => (
+                      <TableRow
+                        key={assignment.id}
+                        onClick={() => handleAssignmentClick(assignment)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell>
+                          <Link 
+                            to={`/people/${assignment.person_id}`} 
+                            className="text-primary hover:text-primary/80"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Trash2 size={16} />
-                          </button>
+                            {assignment.person_name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{assignment.role_name}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">{assignment.allocation_percentage}%</span>
+                        </TableCell>
+                        <TableCell>{formatDate(new Date(assignment.start_date).toISOString())}</TableCell>
+                        <TableCell>{formatDate(new Date(assignment.end_date).toISOString())}</TableCell>
+                        {canEdit && (
+                          <TableCell className="text-right text-muted-foreground">
+                            <button
+                              className="inline-flex items-center justify-center rounded-md p-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteAssignmentMutation.mutate(assignment.id);
+                              }}
+                              title="Delete assignment"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </TableCell>
                         )}
-                      </div>
-                      <div className="assignment-details">
-                        <span className="assignment-role">{assignment.role_name}</span>
-                        <span className="assignment-allocation">{assignment.allocation_percentage}%</span>
-                      </div>
-                      <div className="assignment-period">
-                        {formatDate(new Date(assignment.start_date).toISOString())} - {formatDate(new Date(assignment.end_date).toISOString())}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <div className="empty-state">
                   <Users size={48} />
