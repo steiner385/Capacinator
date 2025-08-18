@@ -47,32 +47,53 @@ export class AssignmentRecalculationService {
         'roles.name as role_name'
       );
 
+    // Batch fetch all phase timelines to reduce queries
+    const phaseTimelines = await this.db('project_phases_timeline')
+      .where('project_id', projectId)
+      .whereIn('phase_id', affectedPhaseIds)
+      .select('phase_id', 'start_date', 'end_date');
+    
+    const phaseTimelineMap = new Map(
+      phaseTimelines.map(pt => [pt.phase_id, pt])
+    );
+
     const trx = await this.db.transaction();
 
     try {
+      // Batch update preparations
+      const updates: Array<{
+        id: string;
+        computed_start_date: string;
+        computed_end_date: string;
+      }> = [];
+
       for (const assignment of phaseAssignments) {
         // Get the current computed dates
         const oldComputedStartDate = assignment.computed_start_date;
         const oldComputedEndDate = assignment.computed_end_date;
 
-        // Recalculate dates based on updated phase timeline
-        const newDates = await this.computePhaseAssignmentDates(
-          assignment.project_id,
-          assignment.phase_id
-        );
+        // Get new dates from pre-fetched phase timeline
+        const phaseTimeline = phaseTimelineMap.get(assignment.phase_id);
+        if (!phaseTimeline) {
+          console.warn(`No timeline found for phase ${assignment.phase_id}`);
+          continue;
+        }
+
+        const newDates = {
+          computed_start_date: phaseTimeline.start_date,
+          computed_end_date: phaseTimeline.end_date
+        };
 
         // Update the assignment if dates changed
         if (
           oldComputedStartDate !== newDates.computed_start_date ||
           oldComputedEndDate !== newDates.computed_end_date
         ) {
-          await trx('project_assignments')
-            .where('id', assignment.id)
-            .update({
-              computed_start_date: newDates.computed_start_date,
-              computed_end_date: newDates.computed_end_date,
-              updated_at: new Date().toISOString()
-            });
+          updates.push({
+            id: assignment.id,
+            computed_start_date: newDates.computed_start_date,
+            computed_end_date: newDates.computed_end_date
+          });
 
           updatedAssignments.push({
             assignment_id: assignment.id,
@@ -84,21 +105,54 @@ export class AssignmentRecalculationService {
             project_name: assignment.project_name,
             role_name: assignment.role_name
           });
+        }
+      }
 
-          // Check for conflicts with the new dates
-          const personConflicts = await this.checkAssignmentConflicts(
-            assignment.person_id,
-            newDates.computed_start_date!,
-            newDates.computed_end_date!,
-            assignment.allocation_percentage,
-            assignment.id
-          );
-
-          conflicts.push(...personConflicts);
+      // Batch update assignments to reduce transaction time
+      if (updates.length > 0) {
+        // Process updates in batches of 100 to avoid query size limits
+        const batchSize = 100;
+        for (let i = 0; i < updates.length; i += batchSize) {
+          const batch = updates.slice(i, i + batchSize);
+          
+          // Use raw SQL for efficient batch update
+          await trx.raw(`
+            UPDATE project_assignments
+            SET computed_start_date = updates.computed_start_date,
+                computed_end_date = updates.computed_end_date,
+                updated_at = NOW()
+            FROM (VALUES ${
+              batch.map((_, idx) => `($${idx * 3 + 1}, $${idx * 3 + 2}, $${idx * 3 + 3})`).join(', ')
+            }) AS updates(id, computed_start_date, computed_end_date)
+            WHERE project_assignments.id = updates.id::uuid
+          `, batch.flatMap(u => [u.id, u.computed_start_date, u.computed_end_date]));
         }
       }
 
       await trx.commit();
+
+      // Check conflicts after transaction to avoid holding locks
+      // Only check for updated assignments to reduce processing time
+      const conflictCheckPromises = updatedAssignments.map(async (ua) => {
+        const assignment = phaseAssignments.find(a => a.id === ua.assignment_id);
+        if (assignment && ua.new_computed_start_date && ua.new_computed_end_date) {
+          return this.checkAssignmentConflicts(
+            assignment.person_id,
+            ua.new_computed_start_date,
+            ua.new_computed_end_date,
+            assignment.allocation_percentage,
+            assignment.id
+          );
+        }
+        return [];
+      });
+
+      // Process conflict checks in parallel for better performance
+      const conflictResults = await Promise.all(conflictCheckPromises);
+      conflictResults.forEach(personConflicts => {
+        conflicts.push(...personConflicts);
+      });
+
     } catch (error) {
       await trx.rollback();
       throw error;

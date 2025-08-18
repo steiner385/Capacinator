@@ -798,7 +798,38 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const handleBrushChange = React.useCallback((start: number, end: number) => {
     setBrushStart(start);
     setBrushEnd(end);
-  }, []);
+    
+    // Update the shared viewport to sync with phase diagram
+    const currentDailyData = (
+      currentView === 'demand' ? demandData :
+      currentView === 'capacity' ? capacityData :
+      gapsData
+    );
+    
+    if (currentDailyData.length > 0 && start >= 0 && end < currentDailyData.length) {
+      const startDate = new Date(currentDailyData[start].date);
+      const endDate = new Date(currentDailyData[end].date);
+      
+      // Calculate pixels per day based on the selected range
+      const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const availableWidth = chartDimensions?.width || 800;
+      const pixelsPerDay = Math.max(0.5, Math.min(10, availableWidth / totalDays));
+      
+      const newViewport: TimelineViewport = {
+        startDate,
+        endDate,
+        pixelsPerDay
+      };
+      
+      console.log('🔄 Brush change updating viewport:', {
+        brushIndices: { start, end },
+        dateRange: { start: startDate.toISOString().split('T')[0], end: endDate.toISOString().split('T')[0] },
+        pixelsPerDay
+      });
+      
+      setSharedViewport(newViewport);
+    }
+  }, [currentView, demandData, capacityData, gapsData, chartDimensions]);
 
   // Handle viewport changes from phase diagram
   const handleViewportChange = React.useCallback((viewport: TimelineViewport) => {
@@ -1065,7 +1096,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
 
   // Simplified: No complex chart measurement needed with integrated approach
   
-  const roleColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0', '#ff8c00', '#9932cc'];
+  // Bold colors for each role (cycled if more than 8) - matching phase diagram style
+  const roleColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4', '#84cc16'];
 
   // Phase colors matching the roadmap component
   const phaseColors: Record<string, string> = {
@@ -1276,7 +1308,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
           width: 'calc(100% - 40px)',
           position: 'relative'
         }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginBottom: '8px' }}>
             Drag the timeline range selectors to focus on specific time periods
           </div>
           <SimpleBrushControl

@@ -29,7 +29,7 @@ const config: Knex.Config = {
     filename: path.join(dataPath, process.env.DB_FILENAME || 'capacinator.db')
   },
   useNullAsDefault: true,
-  acquireConnectionTimeout: 10000,
+  acquireConnectionTimeout: 30000, // Increased to 30 seconds for bulk operations
   migrations: {
     directory: './src/server/database/migrations'
   },
@@ -41,9 +41,11 @@ const config: Knex.Config = {
     min: 0,
     max: 1,
     afterCreate: (conn: any, cb: any) => {
-      conn.pragma('journal_mode = DELETE');
-      conn.pragma('synchronous = FULL');
+      // Keep existing journal mode to avoid conflicts
+      conn.pragma('synchronous = NORMAL'); // Better performance while maintaining durability
       conn.pragma('foreign_keys = ON');
+      conn.pragma('busy_timeout = 30000'); // 30 second timeout for busy database
+      conn.pragma('cache_size = -64000'); // 64MB cache
       cb();
     }
   }

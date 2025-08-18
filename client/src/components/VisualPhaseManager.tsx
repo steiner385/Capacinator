@@ -527,19 +527,21 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         minHeight: compact ? '160px' : '220px', 
         position: 'relative', 
         width: '100%',
-        overflowX: compact ? 'hidden' : 'auto', // Hidden in compact mode for alignment
-        overflowY: 'visible' // Allow handles to show above phases
+        overflow: 'hidden', // Always clip content to container bounds
       }}>
         {/* Timeline container with precise alignment */}
         <div style={{
           position: 'relative',
-          width: '100%',
           // Apply exact chart alignment when in compact mode
           ...(alignmentDimensions && compact ? {
             marginLeft: `${alignmentDimensions.left}px`,
             width: `${alignmentDimensions.width}px`,
-            maxWidth: `${alignmentDimensions.width}px`
-          } : {})
+            maxWidth: `${alignmentDimensions.width}px`,
+            overflow: 'hidden' // Ensure content stays within bounds
+          } : {
+            width: '100%',
+            overflow: 'hidden' // Also clip in non-compact mode
+          })
         }}>
         {timelineItems.length > 0 ? (
           <div>

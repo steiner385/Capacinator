@@ -664,8 +664,12 @@ export class ProjectPhasesController extends BaseController {
       // Apply all corrections in a transaction
       const results = {
         updated: [] as any[],
-        failed: [] as any[]
+        failed: [] as any[],
+        assignment_updates: { updated_assignments: [], conflicts: [] } as any
       };
+
+      // Collect all affected phase IDs
+      const affectedPhaseIds: string[] = [];
 
       await this.db.transaction(async (trx) => {
         for (const correction of sortedCorrections) {
@@ -681,6 +685,7 @@ export class ProjectPhasesController extends BaseController {
             
             if (updated) {
               results.updated.push(updated);
+              affectedPhaseIds.push(updated.phase_id);
             } else {
               results.failed.push({
                 id: correction.id,
@@ -695,6 +700,22 @@ export class ProjectPhasesController extends BaseController {
           }
         }
       });
+
+      // Recalculate assignments for all affected phases after all phase updates are complete
+      // This avoids multiple recalculations and potential timeouts
+      if (affectedPhaseIds.length > 0 && results.updated.length > 0) {
+        try {
+          const assignmentService = new AssignmentRecalculationService(this.db);
+          results.assignment_updates = await assignmentService.recalculateAssignmentsForPhaseChanges(
+            projectId,
+            affectedPhaseIds
+          );
+        } catch (error) {
+          console.error('Failed to recalculate assignments:', error);
+          // Don't fail the entire operation if assignment recalculation fails
+          // Just log the error and continue
+        }
+      }
 
       return results;
     }, res, 'Failed to apply bulk corrections');
