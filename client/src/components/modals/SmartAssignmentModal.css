@@ -1,0 +1,547 @@
+/* Smart Assignment Modal Styles */
+
+.smart-assignment-modal {
+  --space-0-5: 0.25rem;
+  --space-1: 0.5rem;
+  --space-1-5: 0.75rem;
+  --space-2: 1rem;
+  --space-2-5: 1.25rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: 2.5rem;
+  --space-6: 3rem;
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-full: 9999px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+}
+
+/* Dialog theme variables are now properly inherited through PortalThemeProvider */
+.smart-assignment-modal {
+  max-height: fit-content;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  gap: var(--space-3);
+  position: relative;
+}
+
+/* Adjust close button position for new padding */
+.smart-assignment-modal .absolute.right-4.top-4 {
+  right: var(--space-3);
+  top: var(--space-3);
+}
+
+/* Form container - no scrolling needed */
+.smart-assignment-modal .assignment-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* DialogTitle styling handled by component classes */
+
+/* Status Bar */
+.status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background-color: hsl(var(--muted));
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  border: 1px solid hsl(var(--border));
+}
+
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.status-item svg {
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+/* Form Layout - removed duplicate, see above */
+
+/* Tabs Styling */
+.smart-assignment-modal [role="tablist"] {
+  background-color: hsl(var(--muted));
+  padding: 4px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+
+.smart-assignment-modal [role="tab"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1-5);
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  color: hsl(var(--muted-foreground));
+  flex: 1;
+}
+
+.smart-assignment-modal [role="tab"][data-state="active"] {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  box-shadow: var(--shadow-sm);
+}
+
+/* Recommendations Tab */
+.recommendations-tab {
+  padding-top: 0;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.recommendation-card {
+  padding: var(--space-3);
+  border: 2px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background-color: hsl(var(--card));
+  position: relative;
+}
+
+.recommendation-card:hover {
+  border-color: hsl(var(--primary));
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.recommendation-card.selected {
+  border-color: hsl(var(--primary));
+  background-color: hsl(var(--primary) / 0.05);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+}
+
+.recommendation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.recommendation-header h4 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.fit-badge {
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.fit-badge.excellent {
+  background-color: hsl(var(--success-background));
+  color: hsl(var(--success));
+  border: 1px solid hsl(var(--success));
+}
+
+.fit-badge.good {
+  background-color: hsl(var(--info-background));
+  color: hsl(var(--info));
+  border: 1px solid hsl(var(--info));
+}
+
+.fit-badge.partial {
+  background-color: hsl(var(--warning-background));
+  color: hsl(var(--warning));
+  border: 1px solid hsl(var(--warning));
+}
+
+.recommendation-reason {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.recommendation-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.empty-recommendations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-recommendations svg {
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.empty-recommendations p {
+  margin: var(--space-1) 0;
+}
+
+/* Manual Tab */
+.manual-tab {
+  padding-top: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.form-group:has(.allocation-slider) {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  display: block;
+  margin-bottom: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.form-select,
+.form-input {
+  padding: var(--space-2) var(--space-2-5);
+  font-size: var(--text-base);
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  color: hsl(var(--foreground));
+  transition: all var(--transition-fast);
+  width: 100%;
+  height: 40px;
+}
+
+
+/* Ensure select options are visible in both themes */
+.form-select option {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.form-select:hover,
+.form-input:hover {
+  border-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.form-select:focus,
+.form-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+}
+
+/* Allocation Slider */
+.allocation-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: hsl(var(--muted));
+  outline: none;
+  -webkit-appearance: none;
+  margin: var(--space-3) 0 var(--space-1) 0;
+  cursor: pointer;
+  position: relative;
+}
+
+
+/* Slider track fill effect */
+.allocation-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: hsl(var(--muted));
+}
+
+.allocation-slider::-moz-range-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: hsl(var(--muted));
+}
+
+.allocation-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+  border: 2px solid hsl(var(--background));
+}
+
+.allocation-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-md);
+}
+
+.allocation-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+  border: 2px solid hsl(var(--background));
+}
+
+.allocation-guide {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-sm);
+  color: hsl(var(--muted-foreground));
+  margin-top: 0;
+  padding: 0 var(--space-1);
+}
+
+.allocation-available {
+  text-align: center;
+  margin-top: var(--space-1);
+}
+
+.allocation-available .guide-text {
+  color: hsl(var(--success));
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.guide-text {
+  font-size: var(--text-xs);
+}
+
+
+/* Impact Preview */
+.impact-preview {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-4);
+  border: 2px solid;
+}
+
+.impact-preview.success {
+  background-color: hsl(var(--success-background));
+  border-color: hsl(var(--success));
+  color: hsl(var(--foreground));
+}
+
+.impact-preview.warning {
+  background-color: hsl(var(--danger-background));
+  border-color: hsl(var(--danger));
+  color: hsl(var(--foreground));
+}
+
+
+.impact-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.impact-header h4 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: 0;
+}
+
+.impact-preview p {
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+}
+
+.impact-details {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  opacity: 0.8;
+}
+
+/* Dialog Footer */
+.smart-assignment-modal .dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid hsl(var(--border));
+  margin-top: var(--space-4);
+  flex-shrink: 0; /* Prevent footer from being compressed */
+}
+
+/* Button Styling */
+.smart-assignment-modal button {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  min-width: 100px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smart-assignment-modal button[type="submit"] {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+}
+
+.smart-assignment-modal button[type="submit"]:hover:not(:disabled) {
+  background-color: hsl(var(--primary) / 0.9);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.smart-assignment-modal button[type="submit"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.smart-assignment-modal button[type="button"] {
+  background: none;
+  color: hsl(var(--foreground));
+  border: none;
+  text-decoration: none;
+  font-weight: 400;
+  opacity: 0.8;
+  padding: var(--space-2) var(--space-3);
+}
+
+
+.smart-assignment-modal button[type="button"]:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Scrollbar Styling */
+.recommendations-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recommendations-list::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.recommendations-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.recommendations-list::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+
+/* Additional spacing for better visual hierarchy */
+.smart-assignment-modal [role="tabpanel"] {
+  padding: 0;
+}
+
+/* Empty recommendations styling */
+.empty-recommendations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  background-color: hsl(var(--muted) / 0.3);
+  border-radius: var(--radius-md);
+  border: 2px dashed hsl(var(--border));
+  min-height: 300px;
+}
+
+/* Selected recommendation info */
+.selected-recommendation-info {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background-color: hsl(var(--primary) / 0.05);
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: var(--radius-md);
+}
+
+.selected-recommendation-info h4 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin: 0 0 var(--space-2) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.assignment-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+
+.summary-label {
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+.summary-value {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}

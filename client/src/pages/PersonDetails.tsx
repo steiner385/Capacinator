@@ -12,7 +12,7 @@ import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { PersonAllocationChart } from '../components/PersonAllocationChart';
 import PersonRoleModal from '../components/modals/PersonRoleModal';
-import { WorkloadAdjustmentModal } from '../components/modals/WorkloadAdjustmentModal';
+import { SmartAssignmentModal } from '../components/modals/SmartAssignmentModal';
 import { DetailTable, DetailTableColumn } from '../components/ui/DetailTable';
 import { Badge } from '../components/ui/badge';
 import './PersonDetails.css';
@@ -108,9 +108,10 @@ export default function PersonDetails() {
   const [isCreatingTimeOff, setIsCreatingTimeOff] = useState<boolean>(false);
   const [newTimeOffData, setNewTimeOffData] = useState<any>(null);
 
-  // Workload adjustment modal state
-  const [workloadModalOpen, setWorkloadModalOpen] = useState(false);
-  const [workloadActionType, setWorkloadActionType] = useState('');
+  // Smart assignment modal state
+  const [smartAssignmentModalOpen, setSmartAssignmentModalOpen] = useState(false);
+  const [assignmentTriggerContext, setAssignmentTriggerContext] = useState<'workload_action' | 'manual_add' | 'quick_assign'>('manual_add');
+  const [assignmentActionType, setAssignmentActionType] = useState('');
 
   // TODO: Replace with proper auth context when authentication is implemented
   // For now, check localStorage or default to allowing edits
@@ -567,7 +568,9 @@ export default function PersonDetails() {
 
   // Assignment handlers
   const handleAddAssignment = () => {
-    navigate(`/assignments/new?person=${person.id}`);
+    setAssignmentTriggerContext('manual_add');
+    setAssignmentActionType('');
+    setSmartAssignmentModalOpen(true);
   };
 
   const handleDeleteAssignment = (assignment: any) => {
@@ -675,10 +678,16 @@ export default function PersonDetails() {
       case 'reduce_workload':
       case 'find_coverage':
       case 'extend_timeline':
+        // These actions still use WorkloadAdjustmentModal features (to be integrated later)
+        setAssignmentTriggerContext('workload_action');
+        setAssignmentActionType(action);
+        setSmartAssignmentModalOpen(true);
+        break;
       case 'assign_more':
       case 'assign_project':
-        setWorkloadActionType(action);
-        setWorkloadModalOpen(true);
+        setAssignmentTriggerContext('workload_action');
+        setAssignmentActionType(action);
+        setSmartAssignmentModalOpen(true);
         break;
       case 'find_projects':
       case 'view_opportunities':
@@ -1168,15 +1177,14 @@ export default function PersonDetails() {
         editingRole={editingRole}
       />
       
-      {/* Workload Adjustment Modal */}
-      <WorkloadAdjustmentModal
-        isOpen={workloadModalOpen}
-        onClose={() => setWorkloadModalOpen(false)}
+      {/* Smart Assignment Modal */}
+      <SmartAssignmentModal
+        isOpen={smartAssignmentModalOpen}
+        onClose={() => setSmartAssignmentModalOpen(false)}
         personId={person.id}
         personName={person.name}
-        actionType={workloadActionType}
-        currentAllocation={allocationInsights?.totalAllocation || 0}
-        availability={allocationInsights?.availability || 100}
+        triggerContext={assignmentTriggerContext}
+        actionType={assignmentActionType}
       />
     </div>
   );

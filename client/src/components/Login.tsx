@@ -22,17 +22,17 @@ export const Login: React.FC<LoginProps> = ({ onClose }) => {
     queryFn: async () => {
       console.log('🔄 Fetching people data...');
       const response = await api.people.list();
-      console.log('✅ People data received:', response.data.data?.length, 'people');
+      // console.log('✅ People data received:', response.data.data?.length, 'people');
       return response.data.data as Person[];
     },
   });
 
-  console.log('👥 Login component state:', { 
-    peopleCount: people?.length, 
-    isLoading, 
-    hasError: !!error,
-    selectedPersonId 
-  });
+  // console.log('👥 Login component state:', { 
+  //   peopleCount: people?.length, 
+  //   isLoading, 
+  //   hasError: !!error,
+  //   selectedPersonId 
+  // });
 
   const handleLogin = () => {
     if (!selectedPersonId || !people) return;

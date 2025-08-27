@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Eye, Calendar, AlertTriangle, Lightbulb, CheckCircle, Play, Users, User, TrendingUp } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, Calendar, AlertTriangle, Lightbulb, Play, Users, TrendingUp } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
@@ -9,271 +9,14 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
 import { TestModal } from '../components/modals/TestModal';
+import { InlineEdit } from '../components/ui/InlineEdit';
 import { useModal } from '../hooks/useModal';
 import type { ProjectAssignment, Project, Person, Role } from '../types';
 import './Assignments.css';
 
-// RecommendationCard Component
-const RecommendationCard = ({ recommendation, onExecute }: { 
-  recommendation: any; 
-  onExecute: (actions: any) => void; 
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'var(--danger)';
-      case 'medium': return 'var(--warning)';
-      case 'low': return 'var(--success)';
-      default: return 'var(--text-tertiary)';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    return type === 'complex' ? <Users size={16} /> : <User size={16} />;
-  };
-
-  const handleExecute = async () => {
-    if (isExecuting) return;
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to execute "${recommendation.title}"?\n\n` +
-      `This will make ${recommendation.actions.length} changes to assignments. This action cannot be undone.`
-    );
-    
-    if (confirmed) {
-      setIsExecuting(true);
-      try {
-        await onExecute(recommendation.actions);
-      } finally {
-        setIsExecuting(false);
-      }
-    }
-  };
-
-  return (
-    <div className="recommendation-card" style={{
-      border: '1px solid var(--border-color)',
-      borderRadius: '8px',
-      backgroundColor: 'var(--bg-primary)',
-      marginBottom: '1rem',
-      overflow: 'hidden'
-    }}>
-      {/* Card Header */}
-      <div className="recommendation-header" style={{
-        padding: '1rem',
-        borderBottom: isExpanded ? '1px solid var(--border-color)' : 'none',
-        cursor: 'pointer'
-      }} onClick={() => setIsExpanded(!isExpanded)}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              {getTypeIcon(recommendation.type)}
-              <span style={{
-                backgroundColor: getPriorityColor(recommendation.priority),
-                color: 'white',
-                padding: '0.125rem 0.5rem',
-                borderRadius: '12px',
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                textTransform: 'uppercase'
-              }}>
-                {recommendation.priority}
-              </span>
-              <span style={{
-                backgroundColor: recommendation.type === 'complex' ? 'var(--primary)' : 'var(--success)',
-                color: 'white',
-                padding: '0.125rem 0.5rem',
-                borderRadius: '12px',
-                fontSize: '0.75rem',
-                fontWeight: '500',
-                textTransform: 'uppercase'
-              }}>
-                {recommendation.type}
-              </span>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {recommendation.confidence_score}% confidence
-              </span>
-            </div>
-            <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>
-              {recommendation.title}
-            </h4>
-            <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              {recommendation.description}
-            </p>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: '500' }}>
-              {recommendation.impact_summary}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleExecute();
-              }}
-              disabled={isExecuting}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: 'var(--primary-color)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: isExecuting ? 'not-allowed' : 'pointer',
-                opacity: isExecuting ? 0.6 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.875rem'
-              }}
-            >
-              {isExecuting ? (
-                <>
-                  <div className="spinner" style={{
-                    width: '14px',
-                    height: '14px',
-                    border: '2px solid transparent',
-                    borderTop: '2px solid currentColor',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }} />
-                  Executing...
-                </>
-              ) : (
-                <>
-                  <Play size={14} />
-                  Execute
-                </>
-              )}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-              style={{
-                padding: '0.5rem',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <Eye size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="recommendation-details" style={{ padding: '1rem' }}>
-          {/* Actions */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h5 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-primary)' }}>Actions ({recommendation.actions.length})</h5>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {recommendation.actions.map((action: any, index: number) => (
-                <div key={index} style={{
-                  padding: '0.75rem',
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-color)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <span style={{
-                      backgroundColor: action.type === 'add' ? 'var(--success)' : action.type === 'remove' ? 'var(--danger)' : 'var(--warning)',
-                      color: 'white',
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '12px',
-                      fontSize: '0.625rem',
-                      fontWeight: '500',
-                      textTransform: 'uppercase'
-                    }}>
-                      {action.type}
-                    </span>
-                    <strong>{action.person_name}</strong>
-                    <span>→</span>
-                    <span>{action.project_name}</span>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>({action.role_name})</span>
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                    {action.type === 'modify' ? (
-                      <span>{action.current_allocation}% → {action.new_allocation}%</span>
-                    ) : action.type === 'add' ? (
-                      <span>Add {action.new_allocation}% allocation</span>
-                    ) : (
-                      <span>Remove {action.current_allocation}% allocation</span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>
-                    {action.rationale}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Impact Analysis */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <h6 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>Current State</h6>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                <div>• Overallocated: {recommendation.current_state.overallocated_people}</div>
-                <div>• Underutilized: {recommendation.current_state.underutilized_people}</div>
-                <div>• Capacity gaps: {recommendation.current_state.capacity_gaps}</div>
-              </div>
-            </div>
-            <div>
-              <h6 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>Projected State</h6>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                <div>• Overallocated: {recommendation.projected_state.overallocated_people}</div>
-                <div>• Underutilized: {recommendation.projected_state.underutilized_people}</div>
-                <div>• Capacity gaps: {recommendation.projected_state.capacity_gaps}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Benefits and Risks */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <h6 style={{ margin: '0 0 0.5rem 0', color: 'var(--success)' }}>Benefits</h6>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {recommendation.benefits.map((benefit: string, index: number) => (
-                  <li key={index}>{benefit}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h6 style={{ margin: '0 0 0.5rem 0', color: 'var(--danger)' }}>Risks</h6>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {recommendation.risks.map((risk: string, index: number) => (
-                  <li key={index}>{risk}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Effort and Timeline */}
-          <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong>Effort:</strong> <span style={{ textTransform: 'capitalize' }}>{recommendation.effort_estimate}</span>
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {recommendation.timeline_impact}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default function Assignments() {
-  console.log('Assignments component rendering');
+  // console.log('Assignments component rendering');
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -339,7 +82,7 @@ export default function Assignments() {
     queryKey: ['projects'],
     queryFn: async () => {
       const response = await api.projects.list();
-      return response.data.data as Project[];
+      return response.data;
     }
   });
 
@@ -348,7 +91,7 @@ export default function Assignments() {
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      return response.data.data as Person[];
+      return response.data;
     }
   });
 
@@ -386,6 +129,20 @@ export default function Assignments() {
     }
   });
 
+  // Update assignment mutation for inline editing
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<ProjectAssignment> }) => {
+      await api.assignments.update(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+    },
+    onError: (error) => {
+      console.error('Failed to update assignment:', error);
+      alert('Failed to update assignment. Please try again.');
+    }
+  });
+
   const handleDeleteAssignment = (assignmentId: string, assignmentInfo: string) => {
     if (confirm(`Are you sure you want to delete the assignment "${assignmentInfo}"? This action cannot be undone.`)) {
       deleteAssignmentMutation.mutate(assignmentId);
@@ -394,7 +151,7 @@ export default function Assignments() {
 
   const handleEditAssignment = (assignment: ProjectAssignment) => {
     setEditingAssignment(assignment);
-    editAssignmentModal.open();
+    setIsEditModalOpen(true);
   };
 
   const handleAssignmentSuccess = () => {
@@ -461,18 +218,49 @@ export default function Assignments() {
     {
       key: 'role_name',
       header: 'Role',
-      sortable: true
+      sortable: true,
+      render: (value, row) => (
+        <InlineEdit
+          value={row.role_id}
+          onSave={(newRoleId) => {
+            updateAssignmentMutation.mutate({
+              id: row.id,
+              data: { role_id: newRoleId as string }
+            });
+          }}
+          type="select"
+          options={roles?.map((role: Role) => ({
+            value: role.id,
+            label: role.name
+          })) || []}
+          renderValue={() => value}
+        />
+      )
     },
     {
       key: 'allocation_percentage',
       header: 'Allocation',
       sortable: true,
-      render: (value) => (
+      render: (value, row) => (
         <div className="allocation-cell">
           {getUtilizationIcon(value)}
-          <span className={getUtilizationColor(value)}>
-            {value}%
-          </span>
+          <InlineEdit
+            value={value}
+            onSave={(newValue) => {
+              updateAssignmentMutation.mutate({
+                id: row.id,
+                data: { allocation_percentage: Number(newValue) }
+              });
+            }}
+            type="number"
+            min={0}
+            max={100}
+            renderValue={(val) => (
+              <span className={getUtilizationColor(Number(val))}>
+                {val}%
+              </span>
+            )}
+          />
         </div>
       )
     },
@@ -480,13 +268,37 @@ export default function Assignments() {
       key: 'start_date',
       header: 'Start Date',
       sortable: true,
-      render: (value, row) => formatDate(row.computed_start_date || value)
+      render: (value, row) => (
+        <InlineEdit
+          value={row.computed_start_date || value}
+          onSave={(newDate) => {
+            updateAssignmentMutation.mutate({
+              id: row.id,
+              data: { start_date: newDate as string }
+            });
+          }}
+          type="date"
+          renderValue={(date) => formatDate(date as string)}
+        />
+      )
     },
     {
       key: 'end_date',
       header: 'End Date',
       sortable: true,
-      render: (value, row) => formatDate(row.computed_end_date || value)
+      render: (value, row) => (
+        <InlineEdit
+          value={row.computed_end_date || value}
+          onSave={(newDate) => {
+            updateAssignmentMutation.mutate({
+              id: row.id,
+              data: { end_date: newDate as string }
+            });
+          }}
+          type="date"
+          renderValue={(date) => formatDate(date as string)}
+        />
+      )
     },
     {
       key: 'duration',
@@ -511,9 +323,9 @@ export default function Assignments() {
             className="btn btn-icon btn-sm"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/assignments/${row.id}`);
+              navigate(`/projects/${row.project_id}`);
             }}
-            title="View Details"
+            title="View Project"
           >
             <Eye size={16} />
           </button>
@@ -553,13 +365,13 @@ export default function Assignments() {
       name: 'project_id',
       label: 'Project',
       type: 'select' as const,
-      options: projects?.map(project => ({ value: project.id, label: project.name })) || []
+      options: projects?.data?.map(project => ({ value: project.id, label: project.name })) || []
     },
     {
       name: 'person_id',
       label: 'Person',
       type: 'select' as const,
-      options: people?.map(person => ({ value: person.id, label: person.name })) || []
+      options: people?.data?.map(person => ({ value: person.id, label: person.name })) || []
     },
     {
       name: 'role_id',
@@ -667,23 +479,108 @@ export default function Assignments() {
             <p>Your team allocation is already optimized, or there are no actionable recommendations at this time.</p>
           </div>
         ) : (
-          <div className="recommendations-list">
-            {recommendations.map((rec, index) => (
-              <RecommendationCard
-                key={rec.id}
-                recommendation={rec}
-                onExecute={async (actions) => {
-                  try {
-                    await api.recommendations.execute(rec.id, actions);
-                    queryClient.invalidateQueries({ queryKey: ['assignments'] });
-                    refetchRecommendations();
-                  } catch (error) {
-                    console.error('Failed to execute recommendation:', error);
-                    alert('Failed to execute recommendation. Please try again.');
-                  }
-                }}
-              />
-            ))}
+          <div className="table-container">
+            <table className="data-table recommendations-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '6%', minWidth: '80px' }}>Priority</th>
+                  <th style={{ width: '12%', minWidth: '150px' }}>Person</th>
+                  <th style={{ width: '20%', minWidth: '250px' }}>Project</th>
+                  <th style={{ width: '10%', minWidth: '120px' }}>Role</th>
+                  <th style={{ width: '8%', minWidth: '80px' }}>Allocation</th>
+                  <th style={{ width: '12%', minWidth: '140px' }}>Period</th>
+                  <th style={{ width: '8%', minWidth: '80px' }}>Confidence</th>
+                  <th style={{ width: '18%' }}>Impact</th>
+                  <th style={{ width: '6%', minWidth: '100px' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recommendations.map((rec) => {
+                  // For simple recommendations, extract the first action details
+                  const primaryAction = rec.actions[0];
+                  const startDate = primaryAction?.start_date ? new Date(primaryAction.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+                  const endDate = primaryAction?.end_date ? new Date(primaryAction.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+                  
+                  return (
+                    <tr key={rec.id}>
+                      <td>
+                        <span className={`priority-badge ${rec.priority}`}>
+                          {rec.priority}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="person-info">
+                          <strong>{primaryAction?.person_name || 'Multiple'}</strong>
+                          {rec.type === 'complex' && (
+                            <span className="text-secondary text-sm"> +{rec.actions.length - 1} more</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="project-info">
+                          <span title={primaryAction?.project_name}>
+                            {primaryAction?.project_name || 'Multiple Projects'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="role-badge">
+                          {primaryAction?.role_name || 'Various'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="allocation-info">
+                          <strong>{primaryAction?.new_allocation || '-'}%</strong>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="period-info text-sm">
+                          {startDate && endDate ? `${startDate} - ${endDate}` : 'TBD'}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="confidence-badge">
+                          {Math.round(rec.confidence_score)}%
+                        </span>
+                      </td>
+                      <td>
+                        <div className="impact-info text-sm">
+                          {rec.impact_summary}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={async () => {
+                              const confirmed = window.confirm(
+                                `Are you sure you want to execute "${rec.title}"?\n\n` +
+                                `This will make ${rec.actions.length} changes to assignments.`
+                              );
+                              
+                              if (confirmed) {
+                                try {
+                                  await api.recommendations.execute(rec.id, rec.actions);
+                                  queryClient.invalidateQueries({ queryKey: ['assignments'] });
+                                  refetchRecommendations();
+                                } catch (error) {
+                                  console.error('Failed to execute recommendation:', error);
+                                  alert('Failed to execute recommendation. Please try again.');
+                                }
+                              }
+                            }}
+                            title={rec.title}
+                          >
+                            <Play size={14} />
+                            Execute
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -788,7 +685,7 @@ export default function Assignments() {
       <AssignmentModalNew
         isOpen={isAddModalOpen}
         onClose={() => {
-          console.log('Modal close called');
+          // console.log('Modal close called');
           setIsAddModalOpen(false);
         }}
         onSuccess={handleAssignmentSuccess}

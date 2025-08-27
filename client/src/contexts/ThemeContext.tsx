@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-type Theme = 'light' | 'dark';
+import { applyTheme, Theme } from '../lib/theme-config';
 
 interface ThemeContextType {
   theme: Theme;
@@ -22,10 +21,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const root = document.documentElement;
     const body = document.body;
     
-    console.log('Theme Context: Applying theme:', theme);
+    // console.log('Theme Context: Applying theme:', theme);
     root.setAttribute('data-theme', theme);
     body.setAttribute('data-theme', theme);
-    console.log('Theme Context: data-theme attribute set to:', root.getAttribute('data-theme'));
+    
+    // Apply CSS variables from theme config
+    applyTheme(theme);
     
     // Also set classes for CSS that might need it
     if (theme === 'dark') {
@@ -39,9 +40,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       body.classList.add('light');
       body.classList.remove('dark');
     }
-    
-    // Update the color-scheme CSS property
-    root.style.colorScheme = theme;
   }, [theme]);
 
   // Listen for system theme changes

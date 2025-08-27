@@ -14,8 +14,8 @@ async function runSeed() {
     await seedComprehensiveData(db);
     // await seedExpandedPortfolioData(db);
     await seedComprehensivePortfolio2023_2027(db);
-    // Skip scenarios and enhanced diversity for baseline - not essential for core functionality
-    // await seedScenariosData(db);
+    // Seed scenarios - needed for assignments
+    await seedScenariosData(db);
     // await seedEnhancedDiversityData(db);
     console.log('✅ Seed completed successfully!');
   } catch (error) {

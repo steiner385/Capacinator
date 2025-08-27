@@ -70,7 +70,7 @@ export function AssignmentNew() {
     queryKey: ['projects'],
     queryFn: async () => {
       const response = await api.projects.list();
-      return response.data.data;
+      return response.data;
     }
   });
 
@@ -78,7 +78,7 @@ export function AssignmentNew() {
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      return response.data.data;
+      return response.data;
     }
   });
 
@@ -306,7 +306,8 @@ export function AssignmentNew() {
   }, [people, formData.role_id]);
 
   const filteredPhases = useMemo(() => {
-    if (!phases) return [];
+    // Ensure phases is an array
+    if (!phases || !Array.isArray(phases)) return [];
     
     // If project is selected, filter phases to only those in the project
     if (formData.project_id && selectedProject?.phases) {
@@ -400,7 +401,7 @@ export function AssignmentNew() {
                     className={`form-select ${errors.project_id ? 'error' : ''}`}
                   >
                     <option value="">Select project</option>
-                    {projects?.map((project: any) => (
+                    {projects?.data?.map((project: any) => (
                       <option key={project.id} value={project.id}>{project.name}</option>
                     ))}
                   </select>
@@ -458,7 +459,7 @@ export function AssignmentNew() {
                       <option key={phase.id} value={phase.id}>{phase.name}</option>
                     ))}
                   </select>
-                  {formData.project_id && filteredPhases.length === 0 && (
+                  {formData.project_id && filteredPhases && filteredPhases.length === 0 && (
                     <span className="info-text">Selected project has no phases defined</span>
                   )}
                 </div>

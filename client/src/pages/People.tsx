@@ -8,6 +8,7 @@ import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import PersonModal from '../components/modals/PersonModal';
+import { SmartAssignmentModal } from '../components/modals/SmartAssignmentModal';
 import { useModal } from '../hooks/useModal';
 import type { Person, Role, Location } from '../types';
 import './People.css';
@@ -25,6 +26,12 @@ export default function People() {
   const addPersonModal = useModal();
   const editPersonModal = useModal();
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  
+  // Smart assignment modal state
+  const [smartAssignmentModalOpen, setSmartAssignmentModalOpen] = useState(false);
+  const [assignmentPersonId, setAssignmentPersonId] = useState<string | undefined>();
+  const [assignmentTriggerContext, setAssignmentTriggerContext] = useState<'workload_action' | 'manual_add' | 'quick_assign'>('quick_assign');
+  const [assignmentActionType, setAssignmentActionType] = useState('');
 
   // Fetch people
   const { data: people, isLoading: peopleLoading, error: peopleError } = useQuery({
@@ -185,7 +192,10 @@ export default function People() {
         break;
       case 'assign_more':
       case 'assign_project':
-        navigate(`/assignments/new?person=${personId}`);
+        setAssignmentPersonId(personId);
+        setAssignmentTriggerContext('quick_assign');
+        setAssignmentActionType(actionType);
+        setSmartAssignmentModalOpen(true);
         break;
       case 'monitor':
         navigate(`/reports?type=utilization&person=${personId}`);
@@ -442,6 +452,18 @@ export default function People() {
         }}
         onSuccess={handlePersonSuccess}
         editingPerson={editingPerson}
+      />
+
+      {/* Smart Assignment Modal */}
+      <SmartAssignmentModal
+        isOpen={smartAssignmentModalOpen}
+        onClose={() => {
+          setSmartAssignmentModalOpen(false);
+          setAssignmentPersonId(undefined);
+        }}
+        personId={assignmentPersonId || ''}
+        triggerContext={assignmentTriggerContext}
+        actionType={assignmentActionType}
       />
     </div>
   );

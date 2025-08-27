@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -67,7 +68,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
     queryKey: ['projects'],
     queryFn: async () => {
       const response = await api.projects.list();
-      return response.data.data;
+      return response.data;
     }
   });
 
@@ -75,7 +76,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      return response.data.data;
+      return response.data;
     }
   });
 
@@ -100,7 +101,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
     queryFn: async () => {
       if (!formData.project_id) return [];
       const response = await api.projects.get(formData.project_id);
-      return response.data.data.phases || [];
+      return response.data.phases || [];
     },
     enabled: !!formData.project_id
   });
@@ -191,7 +192,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
 
   // Get phases for the selected project
   const availablePhases = useMemo(() => {
-    if (!projectPhases || !phases) return [];
+    if (!projectPhases || !phases || !Array.isArray(projectPhases)) return [];
     
     return projectPhases.map((pp: any) => {
       const phaseDetail = phases.find((p: any) => p.id === pp.phase_id);
@@ -217,13 +218,13 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          <DialogDescription>
             {isEditing 
               ? 'Update the assignment details below.' 
               : 'Fill in the information to create a new assignment.'}
-          </p>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
 
           {hasErrors && (
             <Alert variant="destructive" className="mb-4">
@@ -243,7 +244,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects?.map((project: any) => (
+                  {projects?.data?.map((project: any) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
@@ -260,7 +261,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select person" />
                 </SelectTrigger>
                 <SelectContent>
-                  {people?.map((person: any) => (
+                  {people?.data?.map((person: any) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name}
                     </SelectItem>

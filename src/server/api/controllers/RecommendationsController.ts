@@ -51,19 +51,25 @@ export class RecommendationsController extends BaseController {
 
     const result = await this.executeQuery(async () => {
       console.log('🤖 Generating assignment recommendations...');
+      console.log('🔍 Request params:', { startDate, endDate, focus, maxRecommendations });
       
       // Get current state data
       const currentState = await this.getCurrentSystemState(startDate as string, endDate as string);
+      console.log('📊 Current state summary:', currentState.summary);
       
       // Generate different types of recommendations
       const recommendations: Recommendation[] = [];
       
       // 1. Simple recommendations (single actions)
+      console.log('🔄 Calling generateSimpleRecommendations...');
       const simpleRecs = await this.generateSimpleRecommendations(currentState, startDate as string, endDate as string);
+      console.log(`📋 Simple recommendations generated: ${simpleRecs.length}`);
       recommendations.push(...simpleRecs);
       
       // 2. Complex recommendations (multi-action)
+      console.log('🔄 Calling generateComplexRecommendations...');
       const complexRecs = await this.generateComplexRecommendations(currentState, startDate as string, endDate as string);
+      console.log(`📋 Complex recommendations generated: ${complexRecs.length}`);
       recommendations.push(...complexRecs);
       
       // Sort by priority and confidence score
@@ -216,6 +222,7 @@ export class RecommendationsController extends BaseController {
   }
 
   private async generateSimpleRecommendations(currentState: any, startDate: string, endDate: string): Promise<Recommendation[]> {
+    console.log('🚀 generateSimpleRecommendations called');
     const recommendations: Recommendation[] = [];
 
     // Get a default role to use as fallback when both project and person roles are null
@@ -225,17 +232,27 @@ export class RecommendationsController extends BaseController {
     const availablePeople = currentState.people.filter(p => p.total_allocation === 0);
     const unassignedProjects = currentState.unassigned_projects;
 
+    console.log(`🔍 Generating simple recommendations: ${availablePeople.length} available people, ${unassignedProjects.length} unassigned projects`);
+    
+    if (availablePeople.length === 0) {
+      console.log('⚠️  No available people found');
+    }
+    if (unassignedProjects.length === 0) {
+      console.log('⚠️  No unassigned projects found');
+    }
+
     for (const person of availablePeople.slice(0, 3)) { // Limit to top 3
       for (const project of unassignedProjects.slice(0, 2)) { // Limit to top 2 projects per person
         const matchScore = await this.calculatePersonProjectMatch(person, project);
+        console.log(`   - ${person.person_name} <-> ${project.name}: score = ${matchScore}`);
         
-        if (matchScore > 60) { // Only recommend good matches
+        if (matchScore >= 50) { // Recommend reasonable matches
           const allocation = this.calculateOptimalAllocation(person, project);
           
           recommendations.push({
             id: `assign_${person.person_id}_${project.id}`,
             type: 'simple',
-            priority: project.priority === 'High' ? 'high' : project.priority === 'Medium' ? 'medium' : 'low',
+            priority: project.priority === 1 ? 'high' : project.priority === 2 ? 'medium' : 'low',
             title: `Assign ${person.person_name} to ${project.name}`,
             description: `${person.person_name} is currently available and would be a good fit for ${project.name} (${matchScore}% match)`,
             impact_summary: `Utilizes available capacity and advances project progress`,
@@ -343,6 +360,7 @@ export class RecommendationsController extends BaseController {
   }
 
   private async generateComplexRecommendations(currentState: any, startDate: string, endDate: string): Promise<Recommendation[]> {
+    console.log('🚀 generateComplexRecommendations called');
     const recommendations: Recommendation[] = [];
 
     // Get a default role to use as fallback when both project and person roles are null
@@ -459,12 +477,12 @@ export class RecommendationsController extends BaseController {
 
     // Note: Projects don't have assigned roles, so we skip role matching for now
 
-    // Priority boost
-    if (project.priority === 'High') score += 20;
-    else if (project.priority === 'Medium') score += 10;
+    // Priority boost (1=High, 2=Medium, 3=Low)
+    if (project.priority === 1) score += 20;
+    else if (project.priority === 2) score += 10;
 
     // Location match (if available)
-    if (person.location_id === project.location_id) {
+    if (person.location_id && project.location_id && person.location_id === project.location_id) {
       score += 15;
     }
 
@@ -477,10 +495,10 @@ export class RecommendationsController extends BaseController {
   private calculateOptimalAllocation(person: any, project: any): number {
     const availableCapacity = (person.capacity || 100) - person.total_allocation;
     
-    // Conservative allocation based on project priority
-    if (project.priority === 'High') {
+    // Conservative allocation based on project priority (1=High, 2=Medium, 3=Low)
+    if (project.priority === 1) {
       return Math.min(availableCapacity, 40);
-    } else if (project.priority === 'Medium') {
+    } else if (project.priority === 2) {
       return Math.min(availableCapacity, 30);
     } else {
       return Math.min(availableCapacity, 20);
