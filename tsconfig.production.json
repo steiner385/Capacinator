@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@server/*": ["server/*"],
+      "@client/*": ["client/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "client", "**/*.test.ts", "**/*.spec.ts", "**/__tests__/**", "**/tests/**", "src/scripts/**", "**/*.e2e.*", "src/server/database/knexfile.e2e.ts", "src/server/database/init-e2e.ts"]
+}

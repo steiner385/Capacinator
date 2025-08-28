@@ -650,8 +650,8 @@ export class ReportingController extends BaseController {
       });
 
       // Calculate time-weighted average allocation for each person
-      const periodStart = startDate ? new Date(startDate) : new Date();
-      const periodEnd = endDate ? new Date(endDate) : new Date();
+      const periodStart = startDate ? new Date(String(startDate)) : new Date();
+      const periodEnd = endDate ? new Date(String(endDate)) : new Date();
       const periodDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
       
       // Track daily allocations for each person

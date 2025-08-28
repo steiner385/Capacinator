@@ -131,7 +131,7 @@ export class RecommendationsController extends BaseController {
             results.push({
               action_id: action.id || `${action.type}_${action.person_id}_${action.project_id}`,
               status: 'failed',
-              error: error.message
+              error: error instanceof Error ? error.message : String(error)
             });
             throw error; // This will trigger rollback
           }
@@ -202,9 +202,9 @@ export class RecommendationsController extends BaseController {
       AND (p.aspiration_finish IS NULL OR p.aspiration_finish >= '${effectiveStartDate}')
     `);
 
-    const overallocated = utilizationData.filter(p => p.total_allocation > (p.capacity || 100));
-    const underutilized = utilizationData.filter(p => p.total_allocation < 70);
-    const available = utilizationData.filter(p => p.total_allocation === 0);
+    const overallocated = utilizationData.filter((p: any) => p.total_allocation > (p.capacity || 100));
+    const underutilized = utilizationData.filter((p: any) => p.total_allocation < 70);
+    const available = utilizationData.filter((p: any) => p.total_allocation === 0);
 
     return {
       people: utilizationData,
@@ -229,7 +229,7 @@ export class RecommendationsController extends BaseController {
     const defaultRole = await this.db('roles').select('id', 'name').first();
     
     // 1. Assign available people to projects
-    const availablePeople = currentState.people.filter(p => p.total_allocation === 0);
+    const availablePeople = currentState.people.filter((p: any) => p.total_allocation === 0);
     const unassignedProjects = currentState.unassigned_projects;
 
     console.log(`🔍 Generating simple recommendations: ${availablePeople.length} available people, ${unassignedProjects.length} unassigned projects`);
@@ -296,7 +296,7 @@ export class RecommendationsController extends BaseController {
     }
 
     // 2. Reduce overallocation
-    const overallocated = currentState.people.filter(p => p.total_allocation > (p.capacity || 100));
+    const overallocated = currentState.people.filter((p: any) => p.total_allocation > (p.capacity || 100));
     
     for (const person of overallocated.slice(0, 3)) {
       const assignments = await this.getPersonAssignments(person.person_id, startDate, endDate);
@@ -367,8 +367,8 @@ export class RecommendationsController extends BaseController {
     const defaultRole = await this.db('roles').select('id', 'name').first();
 
     // Complex recommendation: Capacity rebalancing
-    const overallocated = currentState.people.filter(p => p.total_allocation > (p.capacity || 100));
-    const underutilized = currentState.people.filter(p => p.total_allocation < 70 && p.total_allocation > 0);
+    const overallocated = currentState.people.filter((p: any) => p.total_allocation > (p.capacity || 100));
+    const underutilized = currentState.people.filter((p: any) => p.total_allocation < 70 && p.total_allocation > 0);
 
     if (overallocated.length > 0 && underutilized.length > 0) {
       // Find opportunities to move work from overallocated to underutilized people

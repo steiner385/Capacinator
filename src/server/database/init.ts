@@ -41,8 +41,9 @@ async function initDb() {
 }
 
 // Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  initDb();
-}
+// Disabled for CommonJS build
+// if (import.meta.url === `file://${process.argv[1]}`) {
+//   initDb();
+// }
 
 export { initDb };

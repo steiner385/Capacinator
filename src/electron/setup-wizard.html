@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capacinator Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 30px 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step {
+            padding: 15px 20px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step.active {
+            background: #34495e;
+        }
+        
+        .step.completed {
+            opacity: 0.7;
+        }
+        
+        .step-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #7f8c8d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .step.active .step-number {
+            background: #3498db;
+        }
+        
+        .step.completed .step-number {
+            background: #27ae60;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .step-content {
+            display: none;
+            flex: 1;
+            animation: fadeIn 0.3s;
+        }
+        
+        .step-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+        
+        .btn-secondary:hover {
+            background: #bdc3c7;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 30px;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .config-preview {
+            background: #ecf0f1;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #27ae60;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <span>🚀</span>
+            <span>Capacinator Setup</span>
+        </div>
+        
+        <div class="step active" data-step="welcome">
+            <div class="step-number">1</div>
+            <div>Welcome</div>
+        </div>
+        
+        <div class="step" data-step="database">
+            <div class="step-number">2</div>
+            <div>Database</div>
+        </div>
+        
+        <div class="step" data-step="server">
+            <div class="step-number">3</div>
+            <div>Server Settings</div>
+        </div>
+        
+        <div class="step" data-step="advanced">
+            <div class="step-number">4</div>
+            <div>Advanced</div>
+        </div>
+        
+        <div class="step" data-step="review">
+            <div class="step-number">5</div>
+            <div>Review & Install</div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <!-- Welcome Step -->
+        <div class="step-content active" id="welcome">
+            <h1>Welcome to Capacinator</h1>
+            <p class="subtitle">Let's configure your installation</p>
+            
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                <h2 style="margin-bottom: 20px;">🎯 Project Capacity Planning Made Simple</h2>
+                <p style="line-height: 1.6; margin-bottom: 15px;">
+                    Capacinator helps you manage project resources, track assignments, 
+                    and optimize team capacity across your organization.
+                </p>
+                
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">This setup wizard will help you:</h3>
+                <ul style="line-height: 1.8; margin-left: 20px;">
+                    <li>✅ Configure your database location</li>
+                    <li>✅ Set up server ports</li>
+                    <li>✅ Choose security settings</li>
+                    <li>✅ Configure automatic backups</li>
+                </ul>
+                
+                <p style="margin-top: 30px; color: #7f8c8d;">
+                    The setup process takes just a few minutes. You can change these settings later.
+                </p>
+            </div>
+            
+            <div class="button-group">
+                <div></div>
+                <button class="btn btn-primary" onclick="nextStep()">Get Started →</button>
+            </div>
+        </div>
+        
+        <!-- Database Step -->
+        <div class="step-content" id="database">
+            <h1>Database Configuration</h1>
+            <p class="subtitle">Choose where to store your data</p>
+            
+            <div class="form-group">
+                <label for="dbLocation">Database Location</label>
+                <div class="input-group">
+                    <input type="text" id="dbLocation" placeholder="Default: User data directory">
+                    <button class="btn btn-secondary" onclick="browseFolder()">Browse...</button>
+                </div>
+                <p class="help-text">Leave empty to use the default location in your user data folder</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="dbName">Database Name</label>
+                <input type="text" id="dbName" value="capacinator.db">
+                <p class="help-text">The filename for your SQLite database</p>
+            </div>
+            
+            <div class="form-group">
+                <label>Backup Settings</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="autoBackup" checked>
+                    <label for="autoBackup" style="margin: 0;">Enable automatic backups</label>
+                </div>
+                
+                <div id="backupOptions">
+                    <label for="backupInterval">Backup Interval</label>
+                    <select id="backupInterval">
+                        <option value="daily" selected>Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="backupRetention">Backup Retention (days)</label>
+                        <input type="number" id="backupRetention" value="30" min="1" max="365">
+                        <p class="help-text">Number of days to keep backup files</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+            </div>
+        </div>
+        
+        <!-- Server Step -->
+        <div class="step-content" id="server">
+            <h1>Server Configuration</h1>
+            <p class="subtitle">Configure network settings</p>
+            
+            <div class="form-group">
+                <label for="serverPort">Server Port</label>
+                <input type="number" id="serverPort" value="3456" min="1024" max="65535">
+                <p class="help-text">The port for the internal server (1024-65535)</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="serverHost">Server Host</label>
+                <select id="serverHost">
+                    <option value="localhost" selected>Localhost only (recommended)</option>
+                    <option value="0.0.0.0">All network interfaces</option>
+                </select>
+                <p class="help-text">Localhost is more secure for single-user installations</p>
+            </div>
+            
+            <div class="form-group">
+                <label>Security</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="requireAuth" checked>
+                    <label for="requireAuth" style="margin: 0;">Require authentication</label>
+                </div>
+                <p class="help-text">Recommended for multi-user or network-accessible installations</p>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+            </div>
+        </div>
+        
+        <!-- Advanced Step -->
+        <div class="step-content" id="advanced">
+            <h1>Advanced Settings</h1>
+            <p class="subtitle">Optional configuration</p>
+            
+            <div class="form-group">
+                <label for="logLevel">Log Level</label>
+                <select id="logLevel">
+                    <option value="error">Error</option>
+                    <option value="warn">Warning</option>
+                    <option value="info" selected>Info</option>
+                    <option value="debug">Debug</option>
+                </select>
+                <p class="help-text">Controls the verbosity of application logs</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="maxConnections">Maximum Database Connections</label>
+                <input type="number" id="maxConnections" value="10" min="1" max="100">
+                <p class="help-text">Number of concurrent database connections</p>
+            </div>
+            
+            <div class="form-group">
+                <label>Performance</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enableCache" checked>
+                    <label for="enableCache" style="margin: 0;">Enable caching</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="compressResponses" checked>
+                    <label for="compressResponses" style="margin: 0;">Compress HTTP responses</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Developer Options</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="devTools">
+                    <label for="devTools" style="margin: 0;">Enable Developer Tools</label>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
+                <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+            </div>
+        </div>
+        
+        <!-- Review Step -->
+        <div class="step-content" id="review">
+            <h1>Review Configuration</h1>
+            <p class="subtitle">Please review your settings before installation</p>
+            
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+            
+            <div class="config-preview" id="configPreview">
+                Loading configuration...
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
+                <button class="btn btn-primary" onclick="saveAndFinish()" id="finishBtn">
+                    Save Configuration
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="setup-wizard.js"></script>
+</body>
+</html>

@@ -290,7 +290,12 @@ export class AssignmentRecalculationService {
     conflict_type: 'over_allocation' | 'availability_override';
     details: string;
   }>> {
-    const conflicts = [];
+    const conflicts: Array<{
+      person_id: string;
+      person_name: string;
+      conflict_type: 'over_allocation' | 'availability_override';
+      details: string;
+    }> = [];
 
     // Get person's default availability
     const person = await this.db('people')

@@ -75,16 +75,17 @@ async function migrateProjectTypeData() {
 }
 
 // Run the migration if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  migrateProjectTypeData()
-    .then(() => {
-      console.log('🎉 Data migration completed successfully!');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('💥 Data migration failed:', error);
-      process.exit(1);
-    });
-}
+// Disabled for CommonJS build
+// if (import.meta.url === `file://${process.argv[1]}`) {
+//   migrateProjectTypeData()
+//     .then(() => {
+//       console.log('🎉 Data migration completed successfully!');
+//       process.exit(0);
+//     })
+//     .catch((error) => {
+//       console.error('💥 Data migration failed:', error);
+//       process.exit(1);
+//     });
+// }
 
 export { migrateProjectTypeData };

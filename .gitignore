@@ -64,5 +64,10 @@ uploads/
 # Production builds
 build/
 
+# Electron builds
+dist-electron/
+dist-client/
+release/
+
 # Server logs
 server.log

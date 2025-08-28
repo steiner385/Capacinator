@@ -210,7 +210,7 @@ export function optionalPermission(permissionName: string) {
         
         // Check permission but don't block if not granted
         const hasPermission = await permissionsController.hasPermission(userId, permissionName);
-        req.user.hasPermission = hasPermission;
+        (req.user as any).hasPermission = hasPermission;
       }
       
       next();

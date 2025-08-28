@@ -184,14 +184,14 @@ export const createProjectSubType = async (req: Request, res: Response) => {
 
     // Audit log
     const auditService = getAuditService();
-    await auditService.logChange(
-      'project_sub_types',
-      created.id,
-      'INSERT',
-      null,
-      created,
-      req.user?.id || 'system'
-    );
+    await auditService.logChange({
+      tableName: 'project_sub_types',
+      recordId: created.id,
+      action: 'CREATE',
+      oldValues: null,
+      newValues: created,
+      changedBy: req.user?.id || 'system'
+    });
 
     res.status(201).json({
       success: true,
@@ -254,14 +254,14 @@ export const updateProjectSubType = async (req: Request, res: Response) => {
 
     // Audit log
     const auditService = getAuditService();
-    await auditService.logChange(
-      'project_sub_types',
-      id,
-      'UPDATE',
-      existingSubType,
-      updated,
-      req.user?.id || 'system'
-    );
+    await auditService.logChange({
+      tableName: 'project_sub_types',
+      recordId: id,
+      action: 'UPDATE',
+      oldValues: existingSubType,
+      newValues: updated,
+      changedBy: req.user?.id || 'system'
+    });
 
     res.json({
       success: true,
@@ -323,14 +323,14 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
 
     // Audit log
     const auditService = getAuditService();
-    await auditService.logChange(
-      'project_sub_types',
-      id,
-      'DELETE',
-      existingSubType,
-      null,
-      req.user?.id || 'system'
-    );
+    await auditService.logChange({
+      tableName: 'project_sub_types',
+      recordId: id,
+      action: 'DELETE',
+      oldValues: existingSubType,
+      newValues: null,
+      changedBy: req.user?.id || 'system'
+    });
 
     res.json({
       success: true,

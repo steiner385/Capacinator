@@ -2,11 +2,8 @@
   "name": "capacinator",
   "version": "1.0.0",
   "description": "Web-based project capacity planning system",
-  "main": "src/electron/main.js",
+  "main": "src/electron/main-with-setup.cjs",
   "type": "module",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
     "dev": "./scripts/start-dev.sh",
     "dev:stop": "./scripts/stop-dev.sh",
@@ -30,8 +27,8 @@
     "e2e:reset": "./scripts/stop-e2e-server.sh --cleanup-db && ./scripts/start-e2e-server.sh",
     "e2e:logs": "./scripts/e2e-logs.sh",
     "build": "npm run build:server && npm run build:client && npm run build:electron",
-    "build:server": "tsc",
-    "build:client": "tsc -b tsconfig.app.json && vite build --config client-vite.config.ts",
+    "build:server": "tsc -p tsconfig.production.json",
+    "build:client": "vite build --config client-vite.config.ts",
     "build:electron": "electron-builder",
     "test": "jest",
     "test:client": "jest --config jest.config.client.js",
@@ -121,21 +118,28 @@
   "build": {
     "appId": "com.capacinator.app",
     "productName": "Capacinator",
+    "copyright": "Copyright © 2024 Capacinator",
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-electron",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
-      "src/electron/**/*",
+      "src/electron/*.cjs",
+      "src/electron/*.html",
+      "src/electron/*.js",
+      "package.json",
       "node_modules/**/*",
-      "package.json"
+      "!**/*.ts",
+      "!**/tsconfig.json",
+      "!**/*.map",
+      "!**/*.spec.js",
+      "!**/*.test.js",
+      "!node_modules/**/test/**",
+      "!node_modules/**/*.md"
     ],
-    "extraResources": [
-      {
-        "from": "assets",
-        "to": "assets"
-      }
-    ],
+    "asar": true,
+    "compression": "store",
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico"
@@ -144,15 +148,13 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "include": "build/installer.nsh",
+      "warningsAsErrors": false,
+      "perMachine": false
     },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+    "extraMetadata": {
+      "main": "src/electron/main-with-setup.cjs"
     }
   },
   "devDependencies": {
