@@ -63,8 +63,8 @@ export function DetailTable<T extends { id: string | number }>({
               </TableCell>
             </TableRow>
           ) : (
-            data.map((item) => (
-              <TableRow key={item.id}>
+            data.map((item, index) => (
+              <TableRow key={item.id || `row-${index}`}>
                 {columns.map((column) => (
                   <TableCell key={column.key}>
                     {column.render(item)}

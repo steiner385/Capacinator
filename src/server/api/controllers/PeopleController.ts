@@ -92,14 +92,23 @@ export class PeopleController extends BaseController {
       const assignments = await this.db('project_assignments')
         .join('projects', 'project_assignments.project_id', 'projects.id')
         .join('roles', 'project_assignments.role_id', 'roles.id')
+        .leftJoin('project_phases', 'project_assignments.phase_id', 'project_phases.id')
         .select(
           'project_assignments.*',
           'projects.name as project_name',
-          'roles.name as role_name'
+          'roles.name as role_name',
+          'project_phases.name as phase_name'
         )
         .where('project_assignments.person_id', id)
-        .where('project_assignments.end_date', '>=', new Date())
-        .orderBy('project_assignments.start_date');
+        .where(function() {
+          // Use computed_end_date if available, otherwise use end_date
+          this.where('project_assignments.computed_end_date', '>=', new Date())
+            .orWhere(function() {
+              this.whereNull('project_assignments.computed_end_date')
+                .andWhere('project_assignments.end_date', '>=', new Date());
+            });
+        })
+        .orderBy(this.db.raw('COALESCE(project_assignments.computed_start_date, project_assignments.start_date)'));
 
       // Get availability overrides
       const availabilityOverrides = await this.db('person_availability_overrides')
