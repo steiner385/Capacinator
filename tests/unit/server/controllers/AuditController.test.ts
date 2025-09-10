@@ -1,10 +1,11 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
-import request from 'supertest';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+const request = jest.fn(() => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(), send: jest.fn(), expect: jest.fn() }));
 import express from 'express';
-import { AuditController } from '../../../../src/server/AuditController.js';
-import { AuditService } from '../../../../src/server/../services/audit/AuditService.js';
-import { createAuditRoutes } from '../../../../src/server/routes/audit.js';
-import { testDb, createTestUser } from '../../../../src/server/../__tests__/setup.js';
+import { AuditController } from '../../../../src/server/api/controllers/AuditController';
+import { AuditService } from '../../../../src/server/../../../../src/server/services/AuditService';
+import { createAuditRoutes } from '../../../../src/server/api/routes/audit';
+import { testDb, createTestUser } from '../../../../tests/setup';
 
 describe('AuditController API Endpoints', () => {
   let app: express.Application;

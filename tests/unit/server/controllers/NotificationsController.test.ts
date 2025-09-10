@@ -1,6 +1,7 @@
-import { NotificationsController } from '../../../../src/server/api/controllers/NotificationsController.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { NotificationsController } from '../../../../src/server/api/controllers/NotificationsController';
 import { Request, Response } from 'express';
-import { jest } from '@jest/globals';
 
 // Mock email service
 const mockEmailService = {

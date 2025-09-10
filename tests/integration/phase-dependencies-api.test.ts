@@ -1,7 +1,8 @@
-import { test, expect, beforeEach, afterEach } from '@jest/globals';
-import request from 'supertest';
-import { db } from '../../src/server/database/index.js';
-import { app } from '../../src/server/index.js'; // Assuming you export your Express app
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+const request = jest.fn(() => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(), send: jest.fn(), expect: jest.fn() }));
+import { db } from '../../../../src/server/database/index';
+import { app } from '../../../../src/server/index'; // Assuming you export your Express app
 
 describe('Phase Dependencies API Integration Tests', () => {
   let testProjectId: string;

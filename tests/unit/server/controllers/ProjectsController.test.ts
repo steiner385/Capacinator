@@ -1,6 +1,7 @@
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
 import { Request, Response } from 'express';
-import { ProjectsController } from '../../../../src/server/ProjectsController.js';
+import { ProjectsController } from '../../../../src/server/api/controllers/ProjectsController';
 
 // Create chainable mock methods with proper typing
 const createChainableMock = (): any => {

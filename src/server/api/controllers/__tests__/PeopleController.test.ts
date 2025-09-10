@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { Request, Response } from 'express';
-import { PeopleController } from '../PeopleController.js';
+import { PeopleController } from '../PeopleController';
 
 // Mock the audit middleware
 jest.mock('../../middleware/auditMiddleware.js', () => ({

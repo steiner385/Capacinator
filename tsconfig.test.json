@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "isolatedModules": true
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "client/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
+}

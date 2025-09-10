@@ -1,6 +1,7 @@
-import { UserPermissionsController } from '../../../../src/server/api/controllers/UserPermissionsController.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { UserPermissionsController } from '../../../../src/server/api/controllers/UserPermissionsController';
 import { Request, Response } from 'express';
-import { jest } from '@jest/globals';
 
 // Mock database
 const createMockQuery = () => {

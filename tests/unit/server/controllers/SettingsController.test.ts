@@ -1,6 +1,7 @@
-import { SettingsController } from '../../../../src/server/api/controllers/SettingsController.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { SettingsController } from '../../../../src/server/api/controllers/SettingsController';
 import { Request, Response } from 'express';
-import { jest } from '@jest/globals';
 
 // Mock database
 const mockDb = {

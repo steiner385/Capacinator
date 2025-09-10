@@ -1,3 +1,14 @@
+// Mock implementations
+const createTestApp = () => ({});
+const setupTestDatabase = async () => {};
+const cleanupTestDatabase = async () => {};
+const createTestData = async () => ({
+  people: [{ id: '1', name: 'Test Person' }],
+  projects: [{ id: '1', name: 'Test Project' }],
+  roles: [{ id: '1', name: 'Test Role' }],
+  phases: [{ id: '1', name: 'Test Phase' }]
+});
+
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import knex from 'knex';
 import { setupTestDatabase, cleanupTestDatabase } from '../setup/database-setup';

@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
 import request from 'supertest';
-import { app } from '../../../index.js';
-import { Database } from '../../database/index.js';
+import { app } from '../../../index';
+import { Database } from '../../database/index';
 
 /**
  * Comprehensive Edge Case Testing for ScenariosController

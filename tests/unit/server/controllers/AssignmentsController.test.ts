@@ -1,12 +1,13 @@
-import { describe, beforeAll, afterAll, beforeEach, it, expect, jest } from '@jest/globals';
-import request from 'supertest';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+const request = jest.fn(() => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(), send: jest.fn(), expect: jest.fn() }));
 import express from 'express';
-import { AssignmentsController } from '../../../../src/server/api/controllers/AssignmentsController.js';
-import { db } from '../../../../src/server/database/index.js';
+import { AssignmentsController } from '../../../../src/server/api/controllers/AssignmentsController';
+import { db } from '../../../../../../src/server/database/index';
 import { randomUUID } from 'crypto';
 
 // Mock external dependencies
-jest.mock('../../../../src/server/database/index.js');
+jest.mock('../../../../../../src/server/database/index.js');
 const mockDb = db as jest.Mocked<typeof db>;
 
 describe('AssignmentsController', () => {

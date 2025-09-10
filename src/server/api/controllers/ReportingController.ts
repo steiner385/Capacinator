@@ -730,10 +730,16 @@ export class ReportingController extends BaseController {
         const totalAllocation = totalUtilizationMap.get(person.person_id) || 0;
         const totalAllocHours = filteredAllocation * person.default_hours_per_day / 100.0;
         
+        // Calculate available capacity and hours based on current allocation
+        const availableCapacityPercentage = Math.max(0, 100 - filteredAllocation);
+        const availableHoursRemaining = (availableCapacityPercentage / 100.0) * person.default_hours_per_day;
+        
         return {
           ...person,
           total_allocated_hours: totalAllocHours,
           available_hours: person.default_hours_per_day,
+          available_capacity_percentage: availableCapacityPercentage,
+          available_hours_remaining: availableHoursRemaining,
           // Keep the filtered allocation as the main display value
           total_allocation_percentage: filteredAllocation,
           // Add total allocation across all assignments

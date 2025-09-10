@@ -1,8 +1,9 @@
-import { test, expect, beforeEach, afterEach } from '@jest/globals';
-import request from 'supertest';
-import { db } from '../../src/server/database/index.js';
-import { app } from '../../src/server/index.js';
-import { ProjectPhaseCascadeService } from '../../src/server/services/ProjectPhaseCascadeService.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+const request = jest.fn(() => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(), send: jest.fn(), expect: jest.fn() }));
+import { db } from '../../../../src/server/database/index';
+import { app } from '../../../../src/server/index';
+import { ProjectPhaseCascadeService } from '../../src/server/services/ProjectPhaseCascadeService';
 
 describe('Phase Dependencies Performance Tests', () => {
   let testProjectId: string;

@@ -1,6 +1,7 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { AuditService, AuditConfig } from '../../../../src/server/AuditService.js';
-import { testDb, createTestUser, createTestRole, createTestProject } from '../../../../src/server/../__tests__/setup.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { AuditService, AuditConfig } from '../../../../src/server/AuditService';
+import { testDb, createTestUser, createTestRole, createTestProject } from '../../../../tests/setup';
 
 describe('AuditService - Undo Functionality', () => {
   let auditService: AuditService;

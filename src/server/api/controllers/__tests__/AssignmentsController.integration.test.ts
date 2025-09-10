@@ -1,6 +1,6 @@
 import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
-import { AssignmentsController } from '../AssignmentsController.js';
-import { db } from '../../../database/index.js';
+import { AssignmentsController } from '../AssignmentsController';
+import { db } from '../../../database/index';
 import { randomUUID } from 'crypto';
 
 /**

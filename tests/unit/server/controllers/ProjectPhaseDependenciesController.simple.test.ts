@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { ProjectPhaseDependenciesController } from '../../../../src/server/api/controllers/ProjectPhaseDependenciesController.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { ProjectPhaseDependenciesController } from '../../../../src/server/api/controllers/ProjectPhaseDependenciesController';
 
 // Simple test focusing on basic functionality without complex mocks
 describe('ProjectPhaseDependenciesController - Simple Tests', () => {

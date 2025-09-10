@@ -1,6 +1,7 @@
-import { describe, beforeAll, afterAll, beforeEach, it, expect, jest } from '@jest/globals';
-import { testDb, createTestUser, createTestProject, createTestRole } from '../setup.js';
-import { ScenariosController } from '../../../src/server/api/controllers/ScenariosController.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { testDb, createTestUser, createTestProject, createTestRole } from '../setup';
+import { ScenariosController } from '../../../src/server/api/controllers/ScenariosController';
 import { randomUUID } from 'crypto';
 
 describe('Scenario Conflict Detection and Merge Operations', () => {

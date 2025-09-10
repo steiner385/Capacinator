@@ -1,5 +1,5 @@
 import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
-import { db } from '../../../database/index.js';
+import { db } from '../../../database/index';
 import { randomUUID } from 'crypto';
 
 /**

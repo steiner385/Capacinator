@@ -1,6 +1,7 @@
-import { jest } from '@jest/globals';
-import { ProjectPhaseCascadeService } from '../../../../src/server/services/ProjectPhaseCascadeService.js';
-import type { DependencyType } from '../../../../client/src/types/index.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { ProjectPhaseCascadeService } from '../../../../src/server/services/ProjectPhaseCascadeService';
+import type { DependencyType } from '../../../../client/src/types/index';
 
 // Mock database
 const mockDb = {

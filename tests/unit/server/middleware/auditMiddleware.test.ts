@@ -1,11 +1,12 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
 import { Request, Response, NextFunction } from 'express';
 import { 
   createAuditMiddleware, 
   auditModelChanges, 
   auditableController 
-} from '../../../../src/server/middleware/auditMiddleware.js';
-import { AuditService } from '../../../../src/server/services/audit/AuditService.js';
+} from '../../../../src/server/middleware/auditMiddleware';
+import { AuditService } from '../../../../src/server/services/audit/AuditService';
 
 describe('Audit Middleware', () => {
   let mockAuditService: jest.Mocked<AuditService>;

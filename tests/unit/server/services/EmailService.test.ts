@@ -1,5 +1,6 @@
-import { EmailService } from '../../../../src/server/services/EmailService.js';
-import { jest } from '@jest/globals';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { EmailService } from '../../../../src/server/services/EmailService';
 
 // Mock nodemailer
 const mockTransporter = {
@@ -51,7 +52,7 @@ describe('EmailService', () => {
     };
 
     // Mock the database
-    jest.doMock('../../../../src/server/database/index.js', () => ({
+    jest.doMock('../../../../../../src/server/database/index.js', () => ({
       db: mockDb
     }));
 

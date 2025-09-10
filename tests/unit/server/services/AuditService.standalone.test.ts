@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import { AuditService, AuditConfig } from '../../../../src/server/services/audit/AuditService.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { AuditService, AuditConfig } from '../../../../src/server/services/audit/AuditService';
 import knex, { Knex } from 'knex';
 
 // No setup file interference here

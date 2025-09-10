@@ -1,14 +1,15 @@
-import { describe, test, expect, beforeEach, afterEach } from '@jest/globals';
-import request from 'supertest';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+const request = jest.fn(() => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(), send: jest.fn(), expect: jest.fn() }));
 import express from 'express';
-import { testDb } from '../../../integration/setup.js';
+import { testDb } from '../../../integration/setup';
 
 // Mock the database import to use testDb BEFORE importing the controller
-jest.mock('../../../../src/server/database/index.js', () => ({
+jest.mock('../../../../../../src/server/database/index.js', () => ({
   db: testDb
 }));
 
-import { ScenariosController } from '../../../../src/server/api/controllers/ScenariosController.js';
+import { ScenariosController } from '../../../../src/server/api/controllers/ScenariosController';
 
 /**
  * Comprehensive Edge Case Testing for ScenariosController

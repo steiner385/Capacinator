@@ -1,8 +1,9 @@
-import { describe, beforeAll, afterAll, beforeEach, afterEach, it, expect } from '@jest/globals';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
 import { randomUUID } from 'crypto';
-import { testDb } from './setup.js';
-import { AssignmentsController } from '../../src/server/api/controllers/AssignmentsController.js';
-import { ReportingController } from '../../src/server/api/controllers/ReportingController.js';
+import { testDb } from './setup';
+import { AssignmentsController } from '../../src/server/api/controllers/AssignmentsController';
+import { ReportingController } from '../../src/server/api/controllers/ReportingController';
 
 /**
  * Integration tests for utilization modal backend operations

@@ -1,5 +1,6 @@
-import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
-import { testDb, createTestUser, createTestProject, createTestRole } from '../../setup.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { testDb, createTestUser, createTestProject, createTestRole } from '../../setup';
 import { randomUUID } from 'crypto';
 
 describe('Scenario Database Operations', () => {

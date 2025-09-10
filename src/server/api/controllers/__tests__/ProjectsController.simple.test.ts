@@ -29,7 +29,7 @@ class MockProjectsController {
       throw new Error('Project sub-type is required for all projects');
     }
 
-    if (projectTypeId === 'invalid-type') {
+    if (!projectTypeId || projectTypeId === 'invalid-type') {
       throw new Error(`Project type with ID ${projectTypeId} not found`);
     }
 
@@ -373,6 +373,16 @@ describe('ProjectsController Business Logic', () => {
         project_type_id: '',
         project_sub_type_id: 'some-subtype'
       };
+
+      // Mock the executeQuery to handle the error properly
+      mockExecuteQuery.mockImplementationOnce(async (callback, res, errorMessage) => {
+        try {
+          await callback();
+        } catch (error: any) {
+          res.status(400).json({ error: error.message });
+          return null;
+        }
+      });
 
       await controller.create(req as Request, res as Response);
 

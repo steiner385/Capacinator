@@ -1,8 +1,8 @@
 import { describe, beforeAll, afterAll, beforeEach, it, expect, jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
-import { AssignmentsController } from '../AssignmentsController.js';
-import { db } from '../../../database/index.js';
+import { AssignmentsController } from '../AssignmentsController';
+import { db } from '../../../database/index';
 import { randomUUID } from 'crypto';
 
 // Mock external dependencies

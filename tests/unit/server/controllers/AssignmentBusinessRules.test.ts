@@ -1,5 +1,6 @@
-import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
-import { db } from '../../../../src/server/../database/index.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { db } from '../../../../src/server/../database/index';
 import { randomUUID } from 'crypto';
 
 /**

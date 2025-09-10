@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { getAuditConfig, isAuditEnabled, isTableAudited } from '../../../../src/server/config/auditConfig.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { getAuditConfig, isAuditEnabled, isTableAudited } from '../../../../src/server/config/auditConfig';
 
 describe('Audit Configuration', () => {
   const originalEnv = process.env;

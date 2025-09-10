@@ -1,6 +1,7 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
-import { AuditService, AuditConfig } from '../../../../src/server/AuditService.js';
-import { testDb, createTestUser } from '../../../../src/server/../__tests__/setup.js';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
+import { AuditService, AuditConfig } from '../../../../src/server/AuditService';
+import { testDb, createTestUser } from '../../../../tests/setup';
 
 describe('AuditService', () => {
   let auditService: AuditService;

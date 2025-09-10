@@ -134,6 +134,8 @@ export default function Reports() {
           availableHours: person.available_hours || person.default_hours_per_day || 8,
           allocatedHours: person.total_allocated_hours || 0,
           availabilityPercentage: person.default_availability_percentage || 100,
+          availableCapacityPercentage: person.available_capacity_percentage || 0,
+          availableHoursRemaining: person.available_hours_remaining || 0,
           projectCount: person.project_count || 0,
           projectNames: person.project_names,
           utilization: Math.round(person.total_allocation_percentage || 0),
@@ -882,6 +884,52 @@ export default function Reports() {
             </p>
           </div>
         )}
+
+        {/* Simple Utilization Table */}
+        <div className="table-container" style={{ marginBottom: '2rem' }}>
+          <h3>Team Utilization Details</h3>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Utilization (%)</th>
+                <th>Available Capacity (%)</th>
+                <th>Available Hours (Daily)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(utilizationReport.peopleUtilization || []).map((person: any) => (
+                <tr key={person.id}>
+                  <td>{person.name}</td>
+                  <td>{person.role || 'No Role'}</td>
+                  <td>
+                    <span className={`text-${
+                      person.utilization > 100 ? 'danger' :
+                      person.utilization >= 80 ? 'success' :
+                      person.utilization >= 50 ? 'warning' : 'muted'
+                    }`}>
+                      {person.utilization}%
+                    </span>
+                  </td>
+                  <td>{person.availableCapacityPercentage?.toFixed(1) || '0.0'}%</td>
+                  <td>{person.availableHoursRemaining?.toFixed(1) || '0.0'}</td>
+                  <td>
+                    <div className="table-actions">
+                      <Link 
+                        to={`/people/${person.id}`} 
+                        className="btn btn-sm btn-outline"
+                      >
+                        View Details
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="charts-grid">
           <div className="chart-container">

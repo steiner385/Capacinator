@@ -1,6 +1,7 @@
-import { jest } from '@jest/globals';
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+
 import { Request, Response } from 'express';
-import { ProjectPhaseDependenciesController } from '../../../../src/server/api/controllers/ProjectPhaseDependenciesController.js';
+import { ProjectPhaseDependenciesController } from '../../../../src/server/api/controllers/ProjectPhaseDependenciesController';
 
 // Mock dependencies - Create a proper Knex-like mock
 const createQueryMock = () => {
