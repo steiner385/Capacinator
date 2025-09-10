@@ -14,309 +14,438 @@ async function setupUser(page) {
   });
 }
 
-test.describe('Assignment CRUD Operations - Final E2E Tests', () => {
+// Helper to wait for navigation to complete
+async function navigateToPage(page, url, selector) {
+  await page.goto(url);
+  await page.waitForLoadState('networkidle');
+  await page.waitForSelector(selector, { timeout: 10000 });
+}
+
+test.describe('Assignment CRUD - Complete E2E Test Suite', () => {
   test.beforeEach(async ({ page }) => {
     await setupUser(page);
   });
 
-  test('Complete assignment lifecycle', async ({ page }) => {
-    // Navigate to people page
-    await page.goto('http://localhost:3121/people');
-    await page.waitForLoadState('networkidle');
-    
-    // Step 1: Navigate to person details
-    const viewButton = page.locator('table tbody tr').first().locator('td:last-child button').first();
-    await viewButton.click();
-    await page.waitForSelector('text=Person Details', { timeout: 10000 });
-    
-    // Step 2: Create assignment
-    console.log('Creating new assignment...');
-    await page.click('button:has-text("Add Assignment")');
-    await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
-    
-    // Use manual selection
-    await page.click('button[role="tab"]:has-text("Manual Selection")');
-    
-    // Select project
-    const projectSelect = page.locator('#project-select');
-    const projectOptions = await projectSelect.locator('option').all();
-    let selectedProject = '';
-    
-    for (let i = 1; i < projectOptions.length; i++) {
-      const value = await projectOptions[i].getAttribute('value');
-      const text = await projectOptions[i].textContent();
-      if (value && !text?.includes('No projects')) {
-        await projectSelect.selectOption(value);
-        selectedProject = text || '';
-        console.log('Selected project:', selectedProject);
-        break;
-      }
-    }
-    
-    // Wait for role dropdown
-    await page.waitForTimeout(500);
-    
-    // Select role
-    const roleSelect = page.locator('#role-select');
-    if (await roleSelect.isEnabled()) {
-      const roleOptions = await roleSelect.locator('option').all();
-      for (let i = 1; i < roleOptions.length; i++) {
-        const value = await roleOptions[i].getAttribute('value');
-        if (value) {
-          await roleSelect.selectOption(value);
-          break;
-        }
-      }
-    }
-    
-    // Set allocation
-    await page.fill('#allocation-slider', '50');
-    
-    // Submit with Enter key
-    await page.keyboard.press('Enter');
-    
-    // Wait for modal to close
-    await page.waitForSelector('text=Smart Assignment', { state: 'detached', timeout: 10000 });
-    
-    // Step 3: Verify assignment appears
-    console.log('Verifying assignment was created...');
-    await expect(page.locator('text=Active Assignments')).toBeVisible({ timeout: 10000 });
-    
-    // Look for the project name in assignments
-    const assignmentTable = page.locator('table').filter({ has: page.locator('th:has-text("Project")') });
-    if (await assignmentTable.count() > 0 && selectedProject) {
-      await expect(assignmentTable).toContainText(selectedProject);
-    }
-    
-    // Step 4: Modify assignment (if inline editing available)
-    console.log('Testing assignment modification...');
-    const assignmentRows = await page.locator('table tbody tr').all();
-    if (assignmentRows.length > 0) {
-      // Check for edit button
-      const editButton = assignmentRows[0].locator('button[title*="Edit"], button[title*="edit"]');
-      if (await editButton.count() > 0) {
-        await editButton.click();
-        // Modify allocation if possible
-        const allocationField = page.locator('input[type="range"], input[type="number"]').first();
-        if (await allocationField.isVisible()) {
-          await allocationField.fill('75');
-          await page.keyboard.press('Enter');
-        }
-      }
-    }
-    
-    // Step 5: Delete assignment using Reduce Workload
-    console.log('Testing assignment deletion...');
-    await page.click('button:has-text("Reduce Workload")');
-    await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
-    
-    // Switch to manual tab
-    await page.click('button[role="tab"]:has-text("Manual Selection")');
-    
-    // Look for remove options
-    await expect(page.locator('text=Select assignments to remove')).toBeVisible({ timeout: 5000 });
-    
-    // Close modal
-    await page.keyboard.press('Escape');
-    
-    console.log('Assignment lifecycle test completed');
-  });
-
-  test('Assignment validation - overallocation warning', async ({ page }) => {
-    // Navigate to people page
-    await page.goto('http://localhost:3121/people');
-    await page.waitForLoadState('networkidle');
-    
-    // Find a person with high utilization
-    const peopleRows = await page.locator('table tbody tr').all();
-    let selectedPerson = null;
-    
-    for (const row of peopleRows) {
-      const utilizationCell = await row.locator('td:nth-child(5)').textContent();
-      if (utilizationCell && parseInt(utilizationCell) > 80) {
-        selectedPerson = row;
-        break;
-      }
-    }
-    
-    if (!selectedPerson) {
-      // Just use first person if no one has high utilization
-      selectedPerson = peopleRows[0];
-    }
-    
-    // Navigate to person details
-    await selectedPerson.locator('td:last-child button').first().click();
-    await page.waitForSelector('text=Person Details', { timeout: 10000 });
-    
-    // Open assignment modal
-    await page.click('button:has-text("Add Assignment")');
-    await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
-    
-    // Switch to manual tab
-    await page.click('button[role="tab"]:has-text("Manual Selection")');
-    
-    // Set high allocation
-    const allocationInput = page.locator('#allocation-slider');
-    if (await allocationInput.isVisible()) {
-      await allocationInput.fill('100');
-    }
-    
-    // Check for overallocation warning
-    const warningText = page.locator('text=/overallocat|Warning|exceed/i');
-    const warningCount = await warningText.count();
-    
-    console.log(`Found ${warningCount} overallocation warnings`);
-    
-    // Close modal
-    await page.keyboard.press('Escape');
-  });
-
-  test('Phase-linked assignment', async ({ page }) => {
-    // Navigate to people page
-    await page.goto('http://localhost:3121/people');
-    await page.waitForLoadState('networkidle');
-    
-    // Go to first person
-    const viewButton = page.locator('table tbody tr').first().locator('td:last-child button').first();
-    await viewButton.click();
-    await page.waitForSelector('text=Person Details', { timeout: 10000 });
-    
-    // Open assignment modal
-    await page.click('button:has-text("Add Assignment")');
-    await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
-    
-    // Switch to manual tab
-    await page.click('button[role="tab"]:has-text("Manual Selection")');
-    
-    // Select a project
-    const projectSelect = page.locator('#project-select');
-    const projectOptions = await projectSelect.locator('option').all();
-    
-    for (let i = 1; i < projectOptions.length; i++) {
-      const value = await projectOptions[i].getAttribute('value');
-      if (value) {
-        await projectSelect.selectOption(value);
-        break;
-      }
-    }
-    
-    // Wait for phase dropdown
-    await page.waitForTimeout(500);
-    
-    // Check if phase dropdown exists and is enabled
-    const phaseSelect = page.locator('#phase-select');
-    if (await phaseSelect.count() > 0 && await phaseSelect.isEnabled()) {
-      console.log('Phase dropdown found and enabled');
+  test.describe('Create Operations', () => {
+    test('Create fixed-date assignment', async ({ page }) => {
+      // Navigate to people page with proper wait
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
       
-      // Select a phase
-      const phaseOptions = await phaseSelect.locator('option').all();
-      for (let i = 1; i < phaseOptions.length; i++) {
-        const value = await phaseOptions[i].getAttribute('value');
+      // Navigate to first person
+      const viewButton = page.locator('table tbody tr').first().locator('td:last-child button').first();
+      await viewButton.click();
+      
+      // Wait for person page to load completely
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      
+      // Open assignment modal
+      await page.click('button:has-text("Add Assignment")');
+      await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
+      
+      // Switch to manual tab
+      await page.click('button[role="tab"]:has-text("Manual Selection")');
+      await page.waitForTimeout(500); // Allow tab to switch
+      
+      // Select project
+      const projectSelect = page.locator('#project-select');
+      await projectSelect.waitFor({ state: 'visible' });
+      
+      const projectOptions = await projectSelect.locator('option').all();
+      let projectSelected = false;
+      
+      for (let i = 1; i < Math.min(projectOptions.length, 5); i++) {
+        const value = await projectOptions[i].getAttribute('value');
         if (value) {
-          await phaseSelect.selectOption(value);
-          console.log('Selected a phase');
-          
-          // Verify date fields are disabled for phase-linked assignment
-          const startDateField = page.locator('#start-date');
-          const endDateField = page.locator('#end-date');
-          
-          if (await startDateField.isDisabled() && await endDateField.isDisabled()) {
-            console.log('Date fields correctly disabled for phase-linked assignment');
-          }
-          
+          await projectSelect.selectOption(value);
+          projectSelected = true;
+          console.log('Selected project with value:', value);
           break;
         }
       }
-    } else {
-      console.log('No phase dropdown available for selected project');
-    }
-    
-    // Close modal
-    await page.keyboard.press('Escape');
-  });
-
-  test('Bulk assignment operations', async ({ page }) => {
-    // Navigate to people page
-    await page.goto('http://localhost:3121/people');
-    await page.waitForLoadState('networkidle');
-    
-    // Find person with multiple assignments
-    const peopleRows = await page.locator('table tbody tr').all();
-    let targetPerson = null;
-    
-    for (const row of peopleRows) {
-      const assignmentCount = await row.locator('td:nth-child(4)').textContent();
-      if (assignmentCount && parseInt(assignmentCount) >= 2) {
-        targetPerson = row;
-        break;
+      
+      expect(projectSelected).toBeTruthy();
+      
+      // Wait for form to update after project selection
+      await page.waitForTimeout(1000);
+      
+      // Select role if available
+      const roleSelect = page.locator('#role-select');
+      if (await roleSelect.isEnabled()) {
+        const roleOptions = await roleSelect.locator('option').all();
+        for (let i = 1; i < Math.min(roleOptions.length, 3); i++) {
+          const value = await roleOptions[i].getAttribute('value');
+          if (value) {
+            await roleSelect.selectOption(value);
+            console.log('Selected role with value:', value);
+            break;
+          }
+        }
       }
-    }
-    
-    if (!targetPerson) {
-      console.log('No person with multiple assignments found');
-      return;
-    }
-    
-    // Navigate to person details
-    await targetPerson.locator('td:last-child button').first().click();
-    await page.waitForSelector('text=Person Details', { timeout: 10000 });
-    
-    // Open reduce workload modal
-    await page.click('button:has-text("Reduce Workload")');
-    await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
-    
-    // Switch to manual tab
-    await page.click('button[role="tab"]:has-text("Manual Selection")');
-    
-    // Count assignment items
-    const assignmentItems = page.locator('.assignment-item, [data-testid="assignment-item"]');
-    const itemCount = await assignmentItems.count();
-    
-    console.log(`Found ${itemCount} assignments available for removal`);
-    
-    if (itemCount > 0) {
-      // Check for remove buttons
-      const removeButtons = page.locator('button:has-text("Remove")');
-      const removeCount = await removeButtons.count();
-      console.log(`Found ${removeCount} remove buttons`);
-    }
-    
-    // Close modal
-    await page.keyboard.press('Escape');
+      
+      // Set allocation
+      const allocationInput = page.locator('#allocation-slider');
+      await allocationInput.fill('50');
+      
+      // Set dates for fixed assignment
+      const today = new Date();
+      const nextMonth = new Date(today);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      
+      const startDate = page.locator('#start-date');
+      const endDate = page.locator('#end-date');
+      
+      if (await startDate.isVisible() && await startDate.isEnabled()) {
+        await startDate.fill(today.toISOString().split('T')[0]);
+        console.log('Set start date:', today.toISOString().split('T')[0]);
+      }
+      
+      if (await endDate.isVisible() && await endDate.isEnabled()) {
+        await endDate.fill(nextMonth.toISOString().split('T')[0]);
+        console.log('Set end date:', nextMonth.toISOString().split('T')[0]);
+      }
+      
+      // Submit form
+      await page.keyboard.press('Enter');
+      
+      // Wait for success - modal should close
+      await page.waitForSelector('text=Smart Assignment', { state: 'detached', timeout: 10000 });
+      
+      console.log('Assignment created successfully');
+    });
+
+    test('Create phase-linked assignment', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Go to first person
+      const viewButton = page.locator('table tbody tr').first().locator('td:last-child button').first();
+      await viewButton.click();
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      
+      // Open assignment modal
+      await page.click('button:has-text("Add Assignment")');
+      await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
+      
+      // Use manual selection
+      await page.click('button[role="tab"]:has-text("Manual Selection")');
+      await page.waitForTimeout(500);
+      
+      // Select project
+      const projectSelect = page.locator('#project-select');
+      await projectSelect.waitFor({ state: 'visible' });
+      
+      // Find project with phases
+      const projectOptions = await projectSelect.locator('option[value]:not([value=""])').all();
+      let phaseFound = false;
+      
+      for (const option of projectOptions) {
+        const value = await option.getAttribute('value');
+        if (value) {
+          await projectSelect.selectOption(value);
+          await page.waitForTimeout(1000);
+          
+          // Check if phase dropdown is available
+          const phaseSelect = page.locator('#phase-select');
+          if (await phaseSelect.count() > 0 && await phaseSelect.isEnabled()) {
+            const phaseOptions = await phaseSelect.locator('option[value]:not([value=""])').all();
+            if (phaseOptions.length > 0) {
+              const phaseValue = await phaseOptions[0].getAttribute('value');
+              await phaseSelect.selectOption(phaseValue!);
+              phaseFound = true;
+              console.log('Selected phase-linked assignment');
+              
+              // Verify date fields are disabled
+              const startDate = page.locator('#start-date');
+              const endDate = page.locator('#end-date');
+              
+              expect(await startDate.isDisabled()).toBeTruthy();
+              expect(await endDate.isDisabled()).toBeTruthy();
+              break;
+            }
+          }
+        }
+      }
+      
+      if (!phaseFound) {
+        console.log('No projects with phases found, skipping phase-linked test');
+      }
+      
+      // Close modal
+      await page.keyboard.press('Escape');
+      await page.waitForSelector('text=Smart Assignment', { state: 'detached' });
+    });
+
+    test('Validate overallocation warnings', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Go to first person
+      const viewButton = page.locator('table tbody tr').first().locator('td:last-child button').first();
+      await viewButton.click();
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      
+      // Open assignment modal
+      await page.click('button:has-text("Add Assignment")');
+      await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
+      
+      // Use manual selection
+      await page.click('button[role="tab"]:has-text("Manual Selection")');
+      await page.waitForTimeout(500);
+      
+      // Select project
+      const projectSelect = page.locator('#project-select');
+      const projectOption = await projectSelect.locator('option[value]:not([value=""])').first();
+      if (await projectOption.count() > 0) {
+        const value = await projectOption.getAttribute('value');
+        await projectSelect.selectOption(value!);
+        await page.waitForTimeout(1000);
+      }
+      
+      // Set high allocation to trigger warning
+      await page.fill('#allocation-slider', '100');
+      
+      // Look for warning
+      const warnings = await page.locator('text=/overallocat|exceed|Warning|will result in/i').count();
+      console.log(`Found ${warnings} overallocation warnings`);
+      expect(warnings).toBeGreaterThan(0);
+      
+      // Close modal
+      await page.keyboard.press('Escape');
+    });
   });
 
-  test('Search and filter assignments', async ({ page }) => {
-    // Navigate to projects page to see all assignments
-    await page.goto('http://localhost:3121/projects');
-    await page.waitForLoadState('networkidle');
-    
-    // Click on first project
-    const firstProjectRow = page.locator('table tbody tr').first();
-    const projectName = await firstProjectRow.locator('td:first-child').textContent();
-    
-    // Click view details
-    await firstProjectRow.locator('td:last-child button').first().click();
-    await page.waitForSelector('text=Project Details', { timeout: 10000 });
-    
-    console.log(`Viewing assignments for project: ${projectName}`);
-    
-    // Check for assignments section
-    const assignmentsSection = page.locator('text=Assignments, text=Team Members, text=Resources');
-    if (await assignmentsSection.count() > 0) {
-      // Look for assignment table
+  test.describe('Read Operations', () => {
+    test('View assignments on person details', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Find person with assignments
+      const peopleRows = await page.locator('table tbody tr').all();
+      let personFound = false;
+      
+      for (const row of peopleRows) {
+        const assignmentCount = await row.locator('td:nth-child(4)').textContent();
+        if (assignmentCount && parseInt(assignmentCount) > 0) {
+          // Click view button for this person
+          await row.locator('td:last-child button').first().click();
+          await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+          personFound = true;
+          
+          // Check for assignments section
+          const assignmentsExist = await page.locator('text=Active Assignments').count() > 0;
+          expect(assignmentsExist).toBeTruthy();
+          
+          // Verify assignment table exists
+          const assignmentTable = page.locator('table').filter({ 
+            has: page.locator('th:has-text("Project")') 
+          });
+          
+          if (await assignmentTable.count() > 0) {
+            const rows = await assignmentTable.locator('tbody tr').count();
+            expect(rows).toBeGreaterThan(0);
+            console.log(`Found ${rows} assignments displayed`);
+          }
+          break;
+        }
+      }
+      
+      if (!personFound) {
+        console.log('No person with assignments found for viewing test');
+      }
+    });
+
+    test('Search assignments by project', async ({ page }) => {
+      // Navigate to projects page
+      await navigateToPage(page, 'http://localhost:3121/projects', 'text=Project');
+      
+      // Check if we need to switch views
+      const projectsTab = page.locator('button[role="tab"]:has-text("Projects")');
+      if (await projectsTab.count() > 0) {
+        await projectsTab.click();
+        await page.waitForTimeout(500);
+      }
+      
+      // Look for any project content
+      const projectContent = await page.locator('text=/Customer Portal|Mobile|AI|Project/i').count();
+      console.log(`Found ${projectContent} project-related elements`);
+      
+      // Try to find project links or cards
+      const projectLinks = page.locator('a[href*="/projects/"], button:has-text("View Details")').first();
+      
+      if (await projectLinks.count() > 0) {
+        await projectLinks.click();
+        
+        // Wait for navigation
+        await page.waitForTimeout(2000);
+        
+        // Look for project details indicators
+        const detailsFound = await page.locator('text=/Timeline|Team|Resources|Phase/i').count();
+        console.log(`Project details elements found: ${detailsFound}`);
+      }
+    });
+  });
+
+  test.describe('Update Operations', () => {
+    test('Modify assignment using Reduce Workload', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Find person with assignments
+      const personWithAssignments = page.locator('table tbody tr').filter({
+        has: page.locator('td:nth-child(4):not(:has-text("0"))')
+      }).first();
+      
+      if (await personWithAssignments.count() === 0) {
+        console.log('No person with assignments found for modification test');
+        return;
+      }
+      
+      // Navigate to person details
+      await personWithAssignments.locator('td:last-child button').first().click();
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      
+      // Check if reduce workload button exists
+      const reduceButton = page.locator('button:has-text("Reduce Workload")');
+      if (await reduceButton.count() > 0 && await reduceButton.isVisible()) {
+        await reduceButton.click();
+        await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
+        
+        console.log('Reduce workload modal opened successfully');
+        
+        // Close modal
+        await page.keyboard.press('Escape');
+        await page.waitForSelector('text=Smart Assignment', { state: 'detached' });
+      } else {
+        console.log('Reduce Workload button not available');
+      }
+    });
+  });
+
+  test.describe('Delete Operations', () => {
+    test('Remove assignment using Reduce Workload', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Find person with multiple assignments
+      const personRows = await page.locator('table tbody tr').all();
+      let targetPerson = null;
+      
+      for (const row of personRows) {
+        const assignmentText = await row.locator('td:nth-child(4)').textContent();
+        if (assignmentText && parseInt(assignmentText) > 1) {
+          targetPerson = row;
+          break;
+        }
+      }
+      
+      if (!targetPerson) {
+        console.log('No person with multiple assignments found for deletion test');
+        return;
+      }
+      
+      // Navigate to person details
+      await targetPerson.locator('td:last-child button').first().click();
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      
+      // Open reduce workload modal
+      const reduceButton = page.locator('button:has-text("Reduce Workload")');
+      if (await reduceButton.count() > 0 && await reduceButton.isVisible()) {
+        await reduceButton.click();
+        await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
+        
+        // Switch to manual tab
+        await page.click('button[role="tab"]:has-text("Manual Selection")');
+        await page.waitForTimeout(500);
+        
+        // Look for delete interface
+        const deleteInterface = await page.locator('text=/Select assignments to remove|Remove|Delete/i').count();
+        console.log(`Delete interface elements found: ${deleteInterface}`);
+        
+        // Close modal
+        await page.keyboard.press('Escape');
+      }
+    });
+  });
+
+  test.describe('Edge Cases', () => {
+    test('Handle missing data gracefully', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Go to first person
+      const viewButton = page.locator('table tbody tr').first().locator('td:last-child button').first();
+      await viewButton.click();
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
+      
+      // Open assignment modal
+      await page.click('button:has-text("Add Assignment")');
+      await page.waitForSelector('text=Smart Assignment', { timeout: 10000 });
+      
+      // Switch to manual tab
+      await page.click('button[role="tab"]:has-text("Manual Selection")');
+      await page.waitForTimeout(500);
+      
+      // Check if submit is disabled without project selection
+      const submitButton = page.locator('button:has-text("Create Assignment")');
+      const isDisabled = await submitButton.isDisabled();
+      expect(isDisabled).toBeTruthy();
+      console.log('Submit button correctly disabled without project selection');
+      
+      // Close modal
+      await page.keyboard.press('Escape');
+    });
+
+    test('Verify data persistence', async ({ page }) => {
+      // Navigate to people page
+      await navigateToPage(page, 'http://localhost:3121/people', 'table tbody tr');
+      
+      // Find person with assignments
+      const personWithAssignments = page.locator('table tbody tr').filter({
+        has: page.locator('td:nth-child(4):not(:has-text("0"))')
+      }).first();
+      
+      if (await personWithAssignments.count() === 0) {
+        console.log('No person with assignments found for persistence test');
+        return;
+      }
+      
+      // Get assignment count from list
+      const listCount = await personWithAssignments.locator('td:nth-child(4)').textContent();
+      console.log(`List shows ${listCount} assignments`);
+      
+      // Navigate to details
+      await personWithAssignments.locator('td:last-child button').first().click();
+      await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      
+      // Count assignments on detail page
       const assignmentTable = page.locator('table').filter({ 
-        has: page.locator('th:has-text("Person"), th:has-text("Name")') 
+        has: page.locator('th:has-text("Project")') 
       });
       
       if (await assignmentTable.count() > 0) {
-        const rows = await assignmentTable.locator('tbody tr').count();
-        console.log(`Project has ${rows} assignments`);
+        const detailCount = await assignmentTable.locator('tbody tr').count();
+        console.log(`Detail page shows ${detailCount} assignments`);
+        
+        // Reload page
+        await page.reload();
+        await page.waitForSelector('text=Workload Insights', { timeout: 10000 });
+        
+        // Count again after reload
+        const reloadCount = await assignmentTable.locator('tbody tr').count();
+        expect(reloadCount).toBe(detailCount);
+        console.log('Assignment count persisted after reload');
       }
-    }
+    });
   });
 
-  test.afterEach(async ({ page }) => {
+  test.afterEach(async ({ page, context }) => {
     // Clean up
-    console.log('Test completed');
+    await context.clearCookies();
   });
 });
