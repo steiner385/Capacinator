@@ -1,8 +1,18 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+import { db } from './setup.js';
+import supertest from 'supertest';
+import express from 'express';
+import { createProjectPhaseDependenciesRouter } from './helpers/test-routes.js';
 
-const request = jest.fn(() => ({ get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn(), send: jest.fn(), expect: jest.fn() }));
-import { db } from '../../../../src/server/database/index';
-import { app } from '../../../../src/server/index'; // Assuming you export your Express app
+// Create test app with injected test database
+const app = express();
+app.use(express.json());
+
+// Use the factory function to create routes with test database
+const dependenciesRouter = createProjectPhaseDependenciesRouter(db);
+app.use('/api/project-phase-dependencies', dependenciesRouter);
+
+const request = supertest(app);
 
 describe('Phase Dependencies API Integration Tests', () => {
   let testProjectId: string;
@@ -30,24 +40,24 @@ describe('Phase Dependencies API Integration Tests', () => {
         name: 'Analysis',
         description: 'Requirements analysis phase',
         order_index: 1,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
       {
         id: 'test-phase-2', 
         name: 'Development',
         description: 'Development phase',
         order_index: 2,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
       {
         id: 'test-phase-3',
         name: 'Testing',
         description: 'Testing phase',
         order_index: 3,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     ]).returning('*');
 
@@ -57,28 +67,28 @@ describe('Phase Dependencies API Integration Tests', () => {
         id: 'test-phase-timeline-1',
         project_id: testProjectId,
         phase_id: 'test-phase-1',
-        start_date: new Date('2024-01-01'),
-        end_date: new Date('2024-01-31'),
-        created_at: new Date(),
-        updated_at: new Date()
+        start_date: '2024-01-01',
+        end_date: '2024-01-31',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
       {
         id: 'test-phase-timeline-2',
         project_id: testProjectId,
         phase_id: 'test-phase-2', 
-        start_date: new Date('2024-02-01'),
-        end_date: new Date('2024-03-31'),
-        created_at: new Date(),
-        updated_at: new Date()
+        start_date: '2024-02-01',
+        end_date: '2024-03-31',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
       {
         id: 'test-phase-timeline-3',
         project_id: testProjectId,
         phase_id: 'test-phase-3',
-        start_date: new Date('2024-04-01'),
-        end_date: new Date('2024-04-30'),
-        created_at: new Date(),
-        updated_at: new Date()
+        start_date: '2024-04-01',
+        end_date: '2024-04-30',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     ]).returning('*');
 
@@ -105,14 +115,14 @@ describe('Phase Dependencies API Integration Tests', () => {
         successor_phase_timeline_id: testPhaseTimelineId2,
         dependency_type: 'FS',
         lag_days: 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }).returning('*');
       testDependencyId = dependency.id;
     });
 
     test('should retrieve dependencies for a project', async () => {
-      const response = await request(app)
+      const response = await request
         .get('/api/project-phase-dependencies')
         .query({ project_id: testProjectId })
         .expect(200);
@@ -137,11 +147,11 @@ describe('Phase Dependencies API Integration Tests', () => {
         successor_phase_timeline_id: testPhaseTimelineId3,
         dependency_type: 'FS',
         lag_days: 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
 
-      const response = await request(app)
+      const response = await request
         .get('/api/project-phase-dependencies')
         .query({ 
           project_id: testProjectId,
@@ -166,11 +176,11 @@ describe('Phase Dependencies API Integration Tests', () => {
         name: 'Project without dependencies',
         priority: 1,
         include_in_demand: 1,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }).returning('*');
 
-      const response = await request(app)
+      const response = await request
         .get('/api/project-phase-dependencies')
         .query({ project_id: project2.id })
         .expect(200);
@@ -191,14 +201,14 @@ describe('Phase Dependencies API Integration Tests', () => {
         successor_phase_timeline_id: testPhaseTimelineId2,
         dependency_type: 'FS',
         lag_days: 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }).returning('*');
       testDependencyId = dependency.id;
     });
 
     test('should retrieve a specific dependency', async () => {
-      const response = await request(app)
+      const response = await request
         .get(`/api/project-phase-dependencies/${testDependencyId}`)
         .expect(200);
 
@@ -212,7 +222,7 @@ describe('Phase Dependencies API Integration Tests', () => {
     });
 
     test('should return 404 for non-existent dependency', async () => {
-      await request(app)
+      await request
         .get('/api/project-phase-dependencies/nonexistent-id')
         .expect(500); // BaseController returns 500 for not found
     });
@@ -228,7 +238,7 @@ describe('Phase Dependencies API Integration Tests', () => {
         lag_days: 0
       };
 
-      const response = await request(app)
+      const response = await request
         .post('/api/project-phase-dependencies')
         .send(dependencyData)
         .expect(200);
@@ -256,7 +266,7 @@ describe('Phase Dependencies API Integration Tests', () => {
         dependency_type: 'FS'
       };
 
-      await request(app)
+      await request
         .post('/api/project-phase-dependencies')
         .send(dependencyData)
         .expect(500);
@@ -271,8 +281,8 @@ describe('Phase Dependencies API Integration Tests', () => {
         successor_phase_timeline_id: testPhaseTimelineId2,
         dependency_type: 'FS',
         lag_days: 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
 
       // Try to create dependency B -> A (circular)
@@ -283,7 +293,7 @@ describe('Phase Dependencies API Integration Tests', () => {
         dependency_type: 'FS'
       };
 
-      await request(app)
+      await request
         .post('/api/project-phase-dependencies')
         .send(dependencyData)
         .expect(500);
@@ -296,7 +306,7 @@ describe('Phase Dependencies API Integration Tests', () => {
         // Missing successor_phase_timeline_id
       };
 
-      await request(app)
+      await request
         .post('/api/project-phase-dependencies')
         .send(incompleteData)
         .expect(500);
@@ -312,8 +322,8 @@ describe('Phase Dependencies API Integration Tests', () => {
         successor_phase_timeline_id: testPhaseTimelineId2,
         dependency_type: 'FS',
         lag_days: 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }).returning('*');
       testDependencyId = dependency.id;
     });
@@ -324,7 +334,7 @@ describe('Phase Dependencies API Integration Tests', () => {
         lag_days: 5
       };
 
-      const response = await request(app)
+      const response = await request
         .put(`/api/project-phase-dependencies/${testDependencyId}`)
         .send(updateData)
         .expect(200);
@@ -353,14 +363,14 @@ describe('Phase Dependencies API Integration Tests', () => {
         successor_phase_timeline_id: testPhaseTimelineId2,
         dependency_type: 'FS',
         lag_days: 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }).returning('*');
       testDependencyId = dependency.id;
     });
 
     test('should delete dependency', async () => {
-      const response = await request(app)
+      const response = await request
         .delete(`/api/project-phase-dependencies/${testDependencyId}`)
         .expect(200);
 
@@ -402,21 +412,26 @@ describe('Phase Dependencies API Integration Tests', () => {
     });
 
     test('should calculate cascade effects', async () => {
+      // Change Phase 1 to end later, which should push Phase 2 and Phase 3
       const cascadeData = {
         project_id: testProjectId,
         phase_timeline_id: testPhaseTimelineId1,
-        new_start_date: '2024-02-01T00:00:00.000Z',
-        new_end_date: '2024-02-29T00:00:00.000Z'
+        new_start_date: '2024-01-15',  // Start a bit later
+        new_end_date: '2024-02-15'      // End later than original 2024-01-31
       };
 
-      const response = await request(app)
+      const response = await request
         .post('/api/project-phase-dependencies/calculate-cascade')
         .send(cascadeData)
         .expect(200);
 
-      expect(response.body.data).toHaveProperty('affectedPhases');
-      expect(response.body.data).toHaveProperty('conflicts');
-      expect(response.body.data.affectedPhases.length).toBeGreaterThan(0);
+      expect(response.body.data).toHaveProperty('affected_phases');
+      expect(response.body.data).toHaveProperty('cascade_count');
+      expect(response.body.data).toHaveProperty('circular_dependencies');
+      
+      // Since Phase 1 -> Phase 2 -> Phase 3, moving Phase 1 should affect Phase 2 and Phase 3
+      expect(response.body.data.affected_phases.length).toBe(2);
+      expect(response.body.data.cascade_count).toBe(2);
     });
 
     test('should validate required fields', async () => {
@@ -426,7 +441,7 @@ describe('Phase Dependencies API Integration Tests', () => {
         // Missing new dates
       };
 
-      await request(app)
+      await request
         .post('/api/project-phase-dependencies/calculate-cascade')
         .send(incompleteData)
         .expect(500);
@@ -434,25 +449,53 @@ describe('Phase Dependencies API Integration Tests', () => {
   });
 
   describe('POST /api/project-phase-dependencies/apply-cascade', () => {
+    beforeEach(async () => {
+      // Ensure we have the phase timeline records that will be updated
+      const exists = await db('project_phases_timeline').where('id', testPhaseTimelineId2).first();
+      if (!exists) {
+        await db('project_phases_timeline').insert({
+          id: testPhaseTimelineId2,
+          project_id: testProjectId,
+          phase_id: 'test-phase-2',
+          start_date: '2024-02-01',
+          end_date: '2024-03-31',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    });
+
     test('should apply cascade changes', async () => {
       const cascadeData = {
         project_id: testProjectId,
         cascade_data: {
-          affectedPhases: [
+          affected_phases: [
             {
-              phaseId: testPhaseTimelineId2,
-              newStartDate: new Date('2024-03-01'),
-              newEndDate: new Date('2024-04-30')
+              phase_timeline_id: testPhaseTimelineId2,
+              phase_name: 'Development',
+              current_start_date: '2024-02-01',
+              current_end_date: '2024-03-31',
+              new_start_date: '2024-03-01',
+              new_end_date: '2024-04-30',
+              dependency_type: 'FS',
+              lag_days: 0,
+              affects_count: 1
             }
           ],
-          conflicts: []
+          cascade_count: 1,
+          circular_dependencies: []
         }
       };
 
-      const response = await request(app)
+      const response = await request
         .post('/api/project-phase-dependencies/apply-cascade')
-        .send(cascadeData)
-        .expect(200);
+        .send(cascadeData);
+      
+      if (response.status !== 200) {
+        console.log('Apply cascade error:', response.body);
+      }
+      
+      expect(response.status).toBe(200);
 
       expect(response.body.message).toBe('Cascade changes applied successfully');
 

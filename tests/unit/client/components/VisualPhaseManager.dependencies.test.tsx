@@ -1,13 +1,4 @@
-import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import VisualPhaseManager from '../../../../client/src/components/VisualPhaseManager';
-import { api } from '../../../../client/src/lib/api-client';
 
 // Mock the API client
 jest.mock('../../../../client/src/lib/api-client', () => ({
@@ -21,7 +12,6 @@ jest.mock('../../../../client/src/lib/api-client', () => ({
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-      calculateCascade: jest.fn(),
     },
     phases: {
       list: jest.fn(),
@@ -29,24 +19,37 @@ jest.mock('../../../../client/src/lib/api-client', () => ({
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
-
 // Mock InteractiveTimeline component
 jest.mock('../../../../client/src/components/InteractiveTimeline', () => {
+  const React = require('react');
   return function MockInteractiveTimeline({ items, onItemMove, onItemResize }: any) {
+    // Use useEffect to call handlers after render to better simulate async behavior
+    React.useEffect(() => {
+      // Store handlers globally for tests to trigger them
+      (window as any).__timelineHandlers = { onItemMove, onItemResize };
+    }, [onItemMove, onItemResize]);
+    
     return (
       <div data-testid="interactive-timeline">
         {items.map((item: any) => (
           <div key={item.id} data-testid={`timeline-item-${item.id}`}>
             <span>{item.name}</span>
             <button
-              onClick={() => onItemMove(item.id, new Date('2024-02-01'), new Date('2024-02-28'))}
+              onClick={() => {
+                if (onItemMove) {
+                  onItemMove(item.id, new Date('2024-02-01'), new Date('2024-02-28'));
+                }
+              }}
               data-testid={`move-${item.id}`}
             >
               Move
             </button>
             <button
-              onClick={() => onItemResize(item.id, new Date('2024-01-01'), new Date('2024-03-01'))}
+              onClick={() => {
+                if (onItemResize) {
+                  onItemResize(item.id, new Date('2024-01-01'), new Date('2024-03-01'));
+                }
+              }}
               data-testid={`resize-${item.id}`}
             >
               Resize
@@ -58,458 +61,449 @@ jest.mock('../../../../client/src/components/InteractiveTimeline', () => {
   };
 });
 
+// Mock UI components that might be used
+jest.mock('../../../../client/src/components/ui/dialog', () => ({
+  Dialog: ({ children, open }: any) => open ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children }: any) => <div>{children}</div>,
+  DialogHeader: ({ children }: any) => <div>{children}</div>,
+  DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+  DialogFooter: ({ children }: any) => <div>{children}</div>,
+}));
+
+jest.mock('../../../../client/src/components/ui/button', () => ({
+  Button: ({ children, onClick, ...props }: any) => <button onClick={onClick} {...props}>{children}</button>,
+}));
+
+// Mock PortalThemeProvider
+jest.mock('../../../../client/src/components/PortalThemeProvider', () => ({
+  PortalThemeProvider: ({ children }: any) => <>{children}</>,
+}));
+
+// Mock UserContext
+jest.mock('../../../../client/src/contexts/UserContext', () => ({
+  useUser: () => ({
+    currentUser: { id: 'user-1', name: 'Test User' },
+    isLoggedIn: true,
+    setCurrentUser: jest.fn(),
+    logout: jest.fn(),
+  }),
+  UserProvider: ({ children }: any) => <>{children}</>,
+}));
+
+// Mock ThemeContext  
+jest.mock('../../../../client/src/contexts/ThemeContext', () => ({
+  ThemeProvider: ({ children }: any) => <>{children}</>,
+  useTheme: () => ({ theme: 'light', toggleTheme: jest.fn() }),
+}));
+
+// Now import everything else
+import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../test-utils';
+import '@testing-library/jest-dom';
+import VisualPhaseManager from '../../../../client/src/components/VisualPhaseManager';
+import { api } from '../../../../client/src/lib/api-client';
+
+const mockApi = api as jest.Mocked<typeof api>;
+
+// Mock data
+const mockProjectPhases = [
+  {
+    id: '1',
+    project_id: 'project-1',
+    phase_id: 'phase-1',
+    phase_name: 'Design',
+    start_date: '2024-01-01',
+    end_date: '2024-01-31',
+    phase_order: 1,
+  },
+  {
+    id: '2', 
+    project_id: 'project-1',
+    phase_id: 'phase-2',
+    phase_name: 'Development',
+    start_date: '2024-02-01',
+    end_date: '2024-03-31',
+    phase_order: 2,
+  },
+  {
+    id: '3',
+    project_id: 'project-1',
+    phase_id: 'phase-3',
+    phase_name: 'Testing',
+    start_date: '2024-04-01',
+    end_date: '2024-04-30',
+    phase_order: 3,
+  },
+];
+
+const mockDependencies = [
+  {
+    id: 'dep-1',
+    predecessor_phase_timeline_id: '1',
+    successor_phase_timeline_id: '2',
+    dependency_type: 'FS',
+    lag_days: 0,
+    predecessor_phase_name: 'Design',
+    successor_phase_name: 'Development',
+  },
+  {
+    id: 'dep-2',
+    predecessor_phase_timeline_id: '2',
+    successor_phase_timeline_id: '3',
+    dependency_type: 'FS',
+    lag_days: 0,
+    predecessor_phase_name: 'Development',
+    successor_phase_name: 'Testing',
+  },
+];
+
+
 describe('VisualPhaseManager - Dependencies', () => {
-  let queryClient: QueryClient;
-
-  beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-    jest.clearAllMocks();
-  });
-
-  const renderComponent = (props = {}) => {
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <VisualPhaseManager projectId="test-project-1" projectName="Test Project" {...props} />
-      </QueryClientProvider>
-    );
+  const defaultProps = {
+    projectId: 'project-1',
+    projectName: 'Test Project',
+    onPhasesChange: jest.fn(),
   };
 
-  const mockProjectPhases = [
-    {
-      id: 'phase-timeline-1',
-      project_id: 'test-project-1',
-      phase_id: 'phase-1',
-      phase_name: 'Analysis',
-      start_date: new Date('2024-01-01').getTime(),
-      end_date: new Date('2024-01-31').getTime(),
-    },
-    {
-      id: 'phase-timeline-2',
-      project_id: 'test-project-1',
-      phase_id: 'phase-2',
-      phase_name: 'Development',
-      start_date: new Date('2024-02-01').getTime(),
-      end_date: new Date('2024-03-31').getTime(),
-    },
-  ];
-
-  const mockDependencies = [
-    {
-      id: 'dep-1',
-      project_id: 'test-project-1',
-      predecessor_phase_timeline_id: 'phase-timeline-1',
-      successor_phase_timeline_id: 'phase-timeline-2',
-      dependency_type: 'FS',
-      lag_days: 0,
-      predecessor_phase_name: 'Analysis',
-      successor_phase_name: 'Development',
-    },
-  ];
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockApi.projectPhases.list.mockResolvedValue({ data: { data: mockProjectPhases } });
+    mockApi.projectPhaseDependencies.list.mockResolvedValue({ data: { data: mockDependencies } });
+    mockApi.phases.list.mockResolvedValue({ data: { data: [] } });
+  });
 
   describe('dependency loading and display', () => {
-    it('should load and display project phases with dependencies', async () => {
-      mockApi.projectPhases.list.mockResolvedValue({
-        data: { data: mockProjectPhases },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhaseDependencies.list.mockResolvedValue({
-        data: { data: mockDependencies },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.phases.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+    test('should load and display project phases with dependencies', async () => {
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('interactive-timeline')).toBeInTheDocument();
+        expect(screen.getByText('Design')).toBeInTheDocument();
+        expect(screen.getByText('Development')).toBeInTheDocument();
+        expect(screen.getByText('Testing')).toBeInTheDocument();
       });
 
-      expect(mockApi.projectPhases.list).toHaveBeenCalledWith({
-        project_id: 'test-project-1',
-      });
-      expect(mockApi.projectPhaseDependencies.list).toHaveBeenCalledWith({
-        project_id: 'test-project-1',
-      });
+      expect(mockApi.projectPhases.list).toHaveBeenCalledWith({ project_id: 'project-1' });
+      expect(mockApi.projectPhaseDependencies.list).toHaveBeenCalledWith({ project_id: 'project-1' });
     });
 
-    it('should display dependency information in timeline', async () => {
-      mockApi.projectPhases.list.mockResolvedValue({
-        data: { data: mockProjectPhases },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhaseDependencies.list.mockResolvedValue({
-        data: { data: mockDependencies },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.phases.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+    test('should display dependency information in timeline', async () => {
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Analysis')).toBeInTheDocument();
-        expect(screen.getByText('Development')).toBeInTheDocument();
+        // Wait for timeline to be rendered
+        expect(screen.getByTestId('interactive-timeline')).toBeInTheDocument();
       });
+
+      // Check that dependencies are loaded
+      expect(mockApi.projectPhaseDependencies.list).toHaveBeenCalledWith({ project_id: 'project-1' });
     });
   });
 
-  describe('cascade calculation', () => {
-    beforeEach(() => {
-      mockApi.projectPhases.list.mockResolvedValue({
-        data: { data: mockProjectPhases },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhaseDependencies.list.mockResolvedValue({
-        data: { data: mockDependencies },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.phases.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-    });
-
-    it('should calculate cascade when moving a phase', async () => {
-      const cascadeResult = {
-        affectedPhases: [
-          {
-            phaseId: 'phase-timeline-2',
-            newStartDate: new Date('2024-03-01'),
-            newEndDate: new Date('2024-04-30'),
-          },
-        ],
-        conflicts: [],
-      };
-
-      mockApi.projectPhaseDependencies.calculateCascade.mockResolvedValue({
-        data: { data: cascadeResult },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhases.update.mockResolvedValue({
-        data: { data: mockProjectPhases[0] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+  describe('phase movement and updates', () => {
+    test('should update phase when moving it', async () => {
+      mockApi.projectPhases.update.mockResolvedValue({ data: { id: '1' } });
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('move-phase-timeline-1')).toBeInTheDocument();
+        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('move-phase-timeline-1'));
+      // Move the first phase
+      const moveButton = screen.getByTestId('move-1');
+      fireEvent.click(moveButton);
+
+      // Wait a bit for the mutation to be triggered
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       await waitFor(() => {
-        expect(mockApi.projectPhaseDependencies.calculateCascade).toHaveBeenCalledWith({
-          project_id: 'test-project-1',
-          phase_timeline_id: 'phase-timeline-1',
-          new_start_date: '2024-02-01T00:00:00.000Z',
-          new_end_date: '2024-02-28T00:00:00.000Z',
-        });
+        expect(mockApi.projectPhases.update).toHaveBeenCalled();
+        const calls = mockApi.projectPhases.update.mock.calls;
+        expect(calls.length).toBeGreaterThan(0);
+        expect(calls[0][0]).toBe('1'); // First arg is phase ID
+        expect(calls[0][1]).toHaveProperty('start_date');
+        expect(calls[0][1]).toHaveProperty('end_date');
       });
     });
 
-    it('should handle cascade conflicts', async () => {
-      const cascadeResult = {
-        affectedPhases: [
-          {
-            phaseId: 'phase-timeline-2',
-            newStartDate: new Date('2024-03-01'),
-            newEndDate: new Date('2024-04-30'),
-          },
-        ],
-        conflicts: [
-          {
-            type: 'resource_conflict',
-            phaseId: 'phase-timeline-2',
-            message: 'Resource not available during new dates',
-          },
-        ],
-      };
-
-      mockApi.projectPhaseDependencies.calculateCascade.mockResolvedValue({
-        data: { data: cascadeResult },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+    test('should update phase when resizing it', async () => {
+      mockApi.projectPhases.update.mockResolvedValue({ data: { id: '1' } });
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('move-phase-timeline-1')).toBeInTheDocument();
+        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('move-phase-timeline-1'));
+      // Resize the first phase
+      const resizeButton = screen.getByTestId('resize-1');
+      fireEvent.click(resizeButton);
+
+      // Wait a bit for the mutation to be triggered
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       await waitFor(() => {
-        // Should show conflict warning or dialog
-        expect(screen.getByText(/conflict/i)).toBeInTheDocument();
+        expect(mockApi.projectPhases.update).toHaveBeenCalled();
+        const calls = mockApi.projectPhases.update.mock.calls;
+        expect(calls.length).toBeGreaterThan(0);
+        expect(calls[0][0]).toBe('1'); // First arg is phase ID
+        expect(calls[0][1]).toHaveProperty('start_date');
+        expect(calls[0][1]).toHaveProperty('end_date');
       });
     });
 
-    it('should apply cascade changes when confirmed', async () => {
-      const cascadeResult = {
-        affectedPhases: [
-          {
-            phaseId: 'phase-timeline-2',
-            newStartDate: new Date('2024-03-01'),
-            newEndDate: new Date('2024-04-30'),
-          },
-        ],
-        conflicts: [],
-      };
-
-      mockApi.projectPhaseDependencies.calculateCascade.mockResolvedValue({
-        data: { data: cascadeResult },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhases.update.mockResolvedValue({
-        data: { data: {} },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('move-phase-timeline-1')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('move-phase-timeline-1'));
-
-      await waitFor(() => {
-        // Should apply cascade changes
-        expect(mockApi.projectPhases.update).toHaveBeenCalledWith(
-          'phase-timeline-2',
-          {
-            start_date: new Date('2024-03-01').getTime(),
-            end_date: new Date('2024-04-30').getTime(),
+    test('should show alert on validation error', async () => {
+      const error = {
+        response: {
+          data: {
+            validation_errors: ['Dependency validation failed: Phase cannot start before predecessor ends']
           }
+        }
+      };
+      mockApi.projectPhases.update.mockRejectedValue(error);
+      
+      // Mock window.alert
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
+      });
+
+      const moveButton = screen.getByTestId('move-1');
+      fireEvent.click(moveButton);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(
+          'Dependency validation failed:\nDependency validation failed: Phase cannot start before predecessor ends'
         );
       });
+      
+      alertSpy.mockRestore();
     });
   });
 
   describe('dependency management', () => {
-    beforeEach(() => {
-      mockApi.projectPhases.list.mockResolvedValue({
-        data: { data: mockProjectPhases },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhaseDependencies.list.mockResolvedValue({
-        data: { data: mockDependencies },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.phases.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-    });
-
-    it('should create new dependency', async () => {
-      mockApi.projectPhaseDependencies.create.mockResolvedValue({
-        data: { data: { id: 'new-dep' } },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+    test('should show dependencies section with Add Dependency button', async () => {
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('interactive-timeline')).toBeInTheDocument();
+        expect(screen.getByText('Phase Dependencies')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Add Dependency/i })).toBeInTheDocument();
       });
 
-      // Simulate creating a dependency through UI
-      const createDependencyButton = screen.getByTestId('create-dependency');
-      fireEvent.click(createDependencyButton);
+      // Should show existing dependencies
+      expect(screen.getByText('Design → Development')).toBeInTheDocument();
+      expect(screen.getByText('Development → Testing')).toBeInTheDocument();
+    });
+
+    test('should open dependency modal when clicking Add Dependency', async () => {
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Add Dependency/i })).toBeInTheDocument();
+      });
+
+      const addButton = screen.getByRole('button', { name: /Add Dependency/i });
+      fireEvent.click(addButton);
+
+      // Check modal appears
+      await waitFor(() => {
+        expect(screen.getByText('Add Phase Dependency')).toBeInTheDocument();
+        expect(screen.getByText('Predecessor Phase (must complete first)')).toBeInTheDocument();
+        expect(screen.getByText('Successor Phase (depends on predecessor)')).toBeInTheDocument();
+      });
+    });
+
+    test('should create new dependency', async () => {
+      mockApi.projectPhaseDependencies.create.mockResolvedValue({ data: { id: 'new-dep' } });
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Add Dependency/i })).toBeInTheDocument();
+      });
+
+      // Click Add Dependency button
+      const addButton = screen.getByRole('button', { name: /Add Dependency/i });
+      fireEvent.click(addButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Add Phase Dependency')).toBeInTheDocument();
+      });
+
+      // Select phases - the selects are right after their label texts
+      const selects = screen.getAllByRole('combobox');
+      const predecessorSelect = selects[0]; // First select is predecessor
+      const successorSelect = selects[1];   // Second select is successor
+      
+      fireEvent.change(predecessorSelect, { target: { value: '1' } });
+      fireEvent.change(successorSelect, { target: { value: '3' } });
+
+      // Submit form
+      const createButton = screen.getByRole('button', { name: /Create Dependency/i });
+      fireEvent.click(createButton);
 
       await waitFor(() => {
         expect(mockApi.projectPhaseDependencies.create).toHaveBeenCalledWith({
-          project_id: 'test-project-1',
-          predecessor_phase_timeline_id: expect.any(String),
-          successor_phase_timeline_id: expect.any(String),
+          project_id: 'project-1',
+          predecessor_phase_timeline_id: '1',
+          successor_phase_timeline_id: '3',
           dependency_type: 'FS',
           lag_days: 0,
         });
       });
     });
 
-    it('should update existing dependency', async () => {
-      mockApi.projectPhaseDependencies.update.mockResolvedValue({
-        data: { data: { ...mockDependencies[0], dependency_type: 'SS' } },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+    test('should edit existing dependency', async () => {
+      mockApi.projectPhaseDependencies.update.mockResolvedValue({ data: { id: 'dep-1' } });
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('interactive-timeline')).toBeInTheDocument();
+        expect(screen.getByText('Design → Development')).toBeInTheDocument();
       });
 
-      // Simulate updating a dependency
-      const updateDependencyButton = screen.getByTestId('update-dependency-dep-1');
-      fireEvent.click(updateDependencyButton);
+      // Click edit button for first dependency
+      const editButtons = screen.getAllByRole('button', { name: /Edit/i });
+      fireEvent.click(editButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.projectPhaseDependencies.update).toHaveBeenCalledWith(
-          'dep-1',
-          expect.objectContaining({
-            dependency_type: 'SS',
-          })
-        );
+        expect(screen.getByText('Edit Phase Dependency')).toBeInTheDocument();
+      });
+
+      // Change lag days - find input by type number
+      const lagInput = screen.getByRole('spinbutton');
+      fireEvent.change(lagInput, { target: { value: '5' } });
+
+      // Submit form
+      const updateButton = screen.getByRole('button', { name: /Update Dependency/i });
+      fireEvent.click(updateButton);
+
+      await waitFor(() => {
+        expect(mockApi.projectPhaseDependencies.update).toHaveBeenCalledWith('dep-1', {
+          project_id: 'project-1',
+          predecessor_phase_timeline_id: '1',
+          successor_phase_timeline_id: '2',
+          dependency_type: 'FS',
+          lag_days: 5,
+        });
       });
     });
 
-    it('should delete dependency', async () => {
-      mockApi.projectPhaseDependencies.delete.mockResolvedValue({
-        data: { message: 'Dependency deleted successfully' },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-
-      renderComponent();
+    test('should delete dependency with confirmation', async () => {
+      mockApi.projectPhaseDependencies.delete.mockResolvedValue({});
+      
+      // Mock window.confirm
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('interactive-timeline')).toBeInTheDocument();
+        expect(screen.getByText('Design → Development')).toBeInTheDocument();
       });
 
-      // Simulate deleting a dependency
-      const deleteDependencyButton = screen.getByTestId('delete-dependency-dep-1');
-      fireEvent.click(deleteDependencyButton);
+      // Click delete button for first dependency
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete/i });
+      fireEvent.click(deleteButtons[0]);
 
       await waitFor(() => {
+        expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to delete this dependency?');
         expect(mockApi.projectPhaseDependencies.delete).toHaveBeenCalledWith('dep-1');
       });
+      
+      confirmSpy.mockRestore();
     });
   });
 
   describe('error handling', () => {
-    it('should handle API errors gracefully', async () => {
-      mockApi.projectPhases.list.mockRejectedValue(new Error('API Error'));
-      mockApi.projectPhaseDependencies.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.phases.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
+    test('should show loading state while fetching phases', async () => {
+      // Keep the API call pending
+      let resolvePhases: any;
+      const phasesPromise = new Promise((resolve) => {
+        resolvePhases = resolve;
+      });
+      mockApi.projectPhases.list.mockReturnValue(phasesPromise);
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
-      renderComponent();
-
+      expect(screen.getByText('Loading project phases...')).toBeInTheDocument();
+      
+      // Resolve the promise
+      resolvePhases({ data: { data: mockProjectPhases } });
+      
       await waitFor(() => {
-        expect(screen.getByText(/error/i)).toBeInTheDocument();
+        expect(screen.queryByText('Loading project phases...')).not.toBeInTheDocument();
       });
     });
 
-    it('should handle cascade calculation errors', async () => {
-      mockApi.projectPhases.list.mockResolvedValue({
-        data: { data: mockProjectPhases },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhaseDependencies.list.mockResolvedValue({
-        data: { data: mockDependencies },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.phases.list.mockResolvedValue({
-        data: { data: [] },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      } as any);
-      mockApi.projectPhaseDependencies.calculateCascade.mockRejectedValue(
-        new Error('Cascade calculation failed')
-      );
-
-      renderComponent();
+    test('should handle dependency creation errors', async () => {
+      const error = new Error('Failed to create dependency');
+      mockApi.projectPhaseDependencies.create.mockRejectedValue(error);
+      
+      // Spy on console.error
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('move-phase-timeline-1')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Add Dependency/i })).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('move-phase-timeline-1'));
+      // Open modal and try to create dependency
+      const addButton = screen.getByRole('button', { name: /Add Dependency/i });
+      fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/calculation failed/i)).toBeInTheDocument();
+        expect(screen.getByText('Add Phase Dependency')).toBeInTheDocument();
       });
+
+      // Select phases - the selects are right after their label texts
+      const selects = screen.getAllByRole('combobox');
+      const predecessorSelect = selects[0]; // First select is predecessor
+      const successorSelect = selects[1];   // Second select is successor
+      
+      fireEvent.change(predecessorSelect, { target: { value: '1' } });
+      fireEvent.change(successorSelect, { target: { value: '3' } });
+
+      // Submit form
+      const createButton = screen.getByRole('button', { name: /Create Dependency/i });
+      fireEvent.click(createButton);
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to save dependency:', error);
+      });
+      
+      consoleErrorSpy.mockRestore();
+    });
+
+    test('should handle dependency deletion errors', async () => {
+      const error = new Error('Failed to delete dependency');
+      mockApi.projectPhaseDependencies.delete.mockRejectedValue(error);
+      
+      // Mock window.confirm and console.error
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      renderWithProviders(<VisualPhaseManager {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Design → Development')).toBeInTheDocument();
+      });
+
+      // Click delete button
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete/i });
+      fireEvent.click(deleteButtons[0]);
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to delete dependency:', error);
+      });
+      
+      confirmSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     });
   });
 });

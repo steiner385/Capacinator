@@ -1,10 +1,6 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
@@ -101,8 +97,8 @@ function renderAssignmentNew(queryParams = '') {
   mockSearchParams = new URLSearchParams(queryParams);
   
   // Mock API responses
-  api.projects.list.mockResolvedValue({ data: { data: mockProjects } });
-  api.people.list.mockResolvedValue({ data: { data: mockPeople } });
+  api.projects.list.mockResolvedValue({ data: mockProjects });
+  api.people.list.mockResolvedValue({ data: mockPeople });
   api.roles.list.mockResolvedValue({ data: mockRoles });
   api.phases.list.mockResolvedValue({ data: mockPhases });
   api.assignments.getConflicts.mockResolvedValue({ data: [] });
@@ -276,18 +272,16 @@ describe('AssignmentNew Contextual Form Pre-filling', () => {
     it('should handle person with no primary role gracefully', async () => {
       const { api } = require('../../../client/src/lib/api-client');
       api.people.list.mockResolvedValue({
-        data: {
-          data: [
-            {
-              id: 'person-1',
-              name: 'John Doe',
-              primary_person_role_id: null, // No primary role
-              roles: [
-                { role_id: 'dev-role-id', role_name: 'Developer' }
-              ]
-            },
-          ],
-        },
+        data: [
+          {
+            id: 'person-1',
+            name: 'John Doe',
+            primary_person_role_id: null, // No primary role
+            roles: [
+              { role_id: 'dev-role-id', role_name: 'Developer' }
+            ]
+          },
+        ],
       });
 
       renderAssignmentNew('?person=John Doe&action=assign');
@@ -382,7 +376,7 @@ describe('AssignmentNew Contextual Form Pre-filling', () => {
 
     it('should handle missing API data gracefully', async () => {
       const { api } = require('../../../client/src/lib/api-client');
-      api.people.list.mockResolvedValue({ data: { data: [] } });
+      api.people.list.mockResolvedValue({ data: [] });
       api.roles.list.mockResolvedValue({ data: [] });
 
       renderAssignmentNew('?person=John Doe&role=Developer&action=assign');

@@ -39,5 +39,6 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   
   // Setup files
+  setupFiles: ['<rootDir>/tests/setup.client.js'],
   setupFilesAfterEnv: ['@testing-library/jest-dom']
 };

@@ -1,9 +1,6 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
-import { NotificationsController } from '../../../../src/server/api/controllers/NotificationsController';
-import { Request, Response } from 'express';
-
-// Mock email service
+// Mock email service before imports
 const mockEmailService = {
   sendNotificationEmail: jest.fn(),
   sendTestEmail: jest.fn(),
@@ -13,9 +10,13 @@ const mockEmailService = {
   getUserNotificationPreferences: jest.fn()
 };
 
+jest.mock('../../../../src/server/services/EmailService.js', () => ({
+  emailService: mockEmailService
+}));
+
 // Mock database
 const createMockQuery = () => {
-  const query = {
+  const query: any = {
     select: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -26,10 +27,28 @@ const createMockQuery = () => {
     first: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     offset: jest.fn().mockReturnThis(),
-    clone: jest.fn().mockReturnThis()
+    clone: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    returning: jest.fn().mockReturnThis(),
+    del: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis()
   };
+  // Default then implementation that resolves to empty array
+  query.then = jest.fn((resolve) => {
+    resolve([]);
+    return Promise.resolve([]);
+  });
   return query;
 };
+
+const mockDb = jest.fn(() => createMockQuery()) as any;
+
+jest.mock('../../../../src/server/database/index.js', () => ({
+  db: mockDb
+}));
+
+import { NotificationsController } from '../../../../src/server/api/controllers/NotificationsController';
+import { Request, Response } from 'express';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;
@@ -38,9 +57,10 @@ describe('NotificationsController', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDb.mockReset();
+    mockDb.mockImplementation(() => createMockQuery());
     
-    controller = new NotificationsController();
-    (controller as any).db = jest.fn(() => createMockQuery());
+    controller = new NotificationsController(mockDb);
 
     mockReq = {
       body: {},
@@ -52,11 +72,6 @@ describe('NotificationsController', () => {
       json: jest.fn(),
       status: jest.fn().mockReturnThis()
     };
-
-    // Mock the email service
-    jest.doMock('../../../../src/server/services/EmailService.js', () => ({
-      emailService: mockEmailService
-    }));
   });
 
   describe('sendNotification', () => {
@@ -124,7 +139,7 @@ describe('NotificationsController', () => {
 
       const mockQuery = createMockQuery();
       mockQuery.orderBy.mockResolvedValue(mockPreferences);
-      (controller as any).db = jest.fn(() => mockQuery);
+      mockDb.mockReturnValue(mockQuery);
 
       await controller.getUserNotificationPreferences(mockReq as Request, mockRes as Response);
 
@@ -147,7 +162,7 @@ describe('NotificationsController', () => {
 
       const mockQuery = createMockQuery();
       mockQuery.update.mockResolvedValue(1);
-      (controller as any).db = jest.fn(() => mockQuery);
+      mockDb.mockReturnValue(mockQuery);
 
       await controller.updateUserNotificationPreferences(mockReq as Request, mockRes as Response);
 
@@ -185,8 +200,15 @@ describe('NotificationsController', () => {
       ];
 
       const mockQuery = createMockQuery();
-      mockQuery.orderBy.mockResolvedValue(mockTemplates);
-      (controller as any).db = jest.fn(() => mockQuery);
+      // Mock the chain: where().orderBy().orderBy()
+      mockQuery.where.mockReturnThis();
+      mockQuery.orderBy.mockReturnThis();
+      // Make the final promise resolve with templates
+      mockQuery.then = jest.fn((resolve) => {
+        resolve(mockTemplates);
+        return Promise.resolve(mockTemplates);
+      });
+      mockDb.mockReturnValue(mockQuery);
 
       await controller.getEmailTemplates(mockReq as Request, mockRes as Response);
 
@@ -221,10 +243,22 @@ describe('NotificationsController', () => {
       ];
 
       const mockQuery = createMockQuery();
+      
+      // Create a chain that includes all the required methods
+      mockQuery.select.mockReturnThis();
+      mockQuery.join.mockReturnThis();
+      mockQuery.where.mockReturnThis();
+      mockQuery.orderBy.mockReturnThis();
       mockQuery.limit.mockReturnThis();
       mockQuery.offset.mockReturnThis();
-      mockQuery.orderBy.mockResolvedValue(mockHistory);
-      (controller as any).db = jest.fn(() => mockQuery);
+      
+      // Override then to return the mock history
+      mockQuery.then = jest.fn((resolve) => {
+        resolve(mockHistory);
+        return Promise.resolve(mockHistory);
+      });
+      
+      mockDb.mockReturnValue(mockQuery);
 
       await controller.getNotificationHistory(mockReq as Request, mockRes as Response);
 
@@ -239,8 +273,14 @@ describe('NotificationsController', () => {
       mockReq.query = { type: 'assignment' };
 
       const mockQuery = createMockQuery();
-      mockQuery.orderBy.mockResolvedValue([]);
-      (controller as any).db = jest.fn(() => mockQuery);
+      mockQuery.where.mockReturnThis();
+      mockQuery.orderBy.mockReturnThis();
+      // Make the final promise resolve with empty array
+      mockQuery.then = jest.fn((resolve) => {
+        resolve([]);
+        return Promise.resolve([]);
+      });
+      mockDb.mockReturnValue(mockQuery);
 
       await controller.getNotificationHistory(mockReq as Request, mockRes as Response);
 
@@ -350,14 +390,31 @@ describe('NotificationsController', () => {
       const mockQuery = createMockQuery();
       
       // Mock the Promise.all results
-      mockQuery.first.mockResolvedValue({ count: 10 });
+      // First call returns totalSent, second returns totalFailed
+      mockQuery.first
+        .mockResolvedValueOnce({ count: 10 })  // totalSent
+        .mockResolvedValueOnce({ count: 2 });  // totalFailed
+      
       mockQuery.clone.mockReturnThis();
-      mockQuery.groupBy.mockResolvedValue([
+      mockQuery.where.mockReturnThis();
+      mockQuery.count.mockReturnThis();
+      mockQuery.select.mockReturnThis();
+      
+      // groupBy results for byType and byStatus
+      const byTypeResults = [
         { type: 'assignment', count: 5 },
         { type: 'approval', count: 3 }
-      ]);
+      ];
+      const byStatusResults = [
+        { status: 'sent', count: 8 },
+        { status: 'failed', count: 2 }
+      ];
+      
+      mockQuery.groupBy
+        .mockResolvedValueOnce(byTypeResults)   // byType
+        .mockResolvedValueOnce(byStatusResults); // byStatus
 
-      (controller as any).db = jest.fn(() => mockQuery);
+      mockDb.mockReturnValue(mockQuery);
 
       await controller.getNotificationStats(mockReq as Request, mockRes as Response);
 
@@ -365,14 +422,14 @@ describe('NotificationsController', () => {
         success: true,
         data: {
           totalSent: 10,
-          totalFailed: 10,
+          totalFailed: 2,
           byType: [
             { type: 'assignment', count: 5 },
             { type: 'approval', count: 3 }
           ],
           byStatus: [
-            { type: 'assignment', count: 5 },
-            { type: 'approval', count: 3 }
+            { status: 'sent', count: 8 },
+            { status: 'failed', count: 2 }
           ],
           period: '30 days'
         }

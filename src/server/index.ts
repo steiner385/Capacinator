@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { createExpressApp } from './app.js';
 import { initializeDatabase } from './database/index.js';
-// import { initializeE2EDatabase } from './database/init-e2e.js';
+import { initializeE2EDatabase } from './database/init-e2e.js';
 
 // Load environment variables
 let envFile = '.env';
@@ -29,11 +29,11 @@ async function startServer() {
     
     // Initialize database
     console.log('📊 Initializing database...');
-    // if (isE2E) {
-    //   await initializeE2EDatabase();
-    // } else {
+    if (isE2E) {
+      await initializeE2EDatabase();
+    } else {
       await initializeDatabase();
-    // }
+    }
     console.log('✅ Database ready');
     
     // Create Express app

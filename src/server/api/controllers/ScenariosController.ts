@@ -190,9 +190,20 @@ export class ScenariosController extends BaseController {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
-      const assignments = await this.db('scenario_assignments_view')
-        .where('scenario_id', id)
-        .orderBy(['project_name', 'person_name']);
+      const assignments = await this.db('scenario_project_assignments')
+        .leftJoin('projects', 'scenario_project_assignments.project_id', 'projects.id')
+        .leftJoin('people', 'scenario_project_assignments.person_id', 'people.id')
+        .leftJoin('roles', 'scenario_project_assignments.role_id', 'roles.id')
+        .leftJoin('project_phases', 'scenario_project_assignments.phase_id', 'project_phases.id')
+        .where('scenario_project_assignments.scenario_id', id)
+        .select(
+          'scenario_project_assignments.*',
+          'projects.name as project_name',
+          'people.name as person_name',
+          'roles.name as role_name',
+          'project_phases.name as phase_name'
+        )
+        .orderBy(['projects.name', 'people.name']);
 
       return assignments;
     }, res, 'Failed to fetch scenario assignments');
@@ -222,6 +233,13 @@ export class ScenariosController extends BaseController {
     if (!project_id || !person_id || !role_id || allocation_percentage === undefined) {
       return res.status(400).json({ 
         error: 'project_id, person_id, role_id, and allocation_percentage are required' 
+      });
+    }
+
+    // Validate allocation percentage
+    if (allocation_percentage <= 0 || allocation_percentage > 100) {
+      return res.status(400).json({ 
+        error: 'allocation_percentage must be between 1 and 100' 
       });
     }
 
@@ -326,8 +344,28 @@ export class ScenariosController extends BaseController {
 
       // Get assignments for both scenarios
       const [assignments1, assignments2] = await Promise.all([
-        this.db('scenario_assignments_view').where('scenario_id', id),
-        this.db('scenario_assignments_view').where('scenario_id', compare_to)
+        this.db('scenario_project_assignments')
+          .leftJoin('projects', 'scenario_project_assignments.project_id', 'projects.id')
+          .leftJoin('people', 'scenario_project_assignments.person_id', 'people.id')
+          .leftJoin('roles', 'scenario_project_assignments.role_id', 'roles.id')
+          .where('scenario_project_assignments.scenario_id', id)
+          .select(
+            'scenario_project_assignments.*',
+            'projects.name as project_name',
+            'people.name as person_name',
+            'roles.name as role_name'
+          ),
+        this.db('scenario_project_assignments')
+          .leftJoin('projects', 'scenario_project_assignments.project_id', 'projects.id')
+          .leftJoin('people', 'scenario_project_assignments.person_id', 'people.id')
+          .leftJoin('roles', 'scenario_project_assignments.role_id', 'roles.id')
+          .where('scenario_project_assignments.scenario_id', compare_to)
+          .select(
+            'scenario_project_assignments.*',
+            'projects.name as project_name',
+            'people.name as person_name',
+            'roles.name as role_name'
+          )
       ]);
 
       // TODO: Implement detailed comparison logic

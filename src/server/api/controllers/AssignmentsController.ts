@@ -671,13 +671,9 @@ export class AssignmentsController extends BaseController {
     score += availableCapacity * 0.5;
 
     // Higher score for higher proficiency
-    const proficiencyScores: Record<string, number> = {
-      'Expert': 40,
-      'Senior': 30,
-      'Intermediate': 20,
-      'Junior': 10
-    };
-    score += proficiencyScores[person.proficiency_level] || 0;
+    // proficiency_level is numeric (1-5) in the database
+    const proficiencyBonus = (person.proficiency_level || 0) * 10;
+    score += proficiencyBonus;
 
     // Could add years of experience if it was in the schema
     // score += Math.min(person.years_experience * 2, 20);

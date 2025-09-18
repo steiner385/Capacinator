@@ -27,7 +27,7 @@ export function createAuditMiddleware(auditService: AuditService) {
     const userId = (req as any).user?.id;
     
     // Get client info
-    const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
+    const ipAddress = req.ip || req.connection?.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     
     // Attach audit context to request
@@ -89,9 +89,9 @@ export function auditableController<T = any>(
       const result = await controllerFn(req, res, next);
       return result;
     } catch (error) {
-      // Log error in audit trail
+      // Log error in audit trail (fire-and-forget)
       if (req.audit) {
-        await req.audit.auditService.logChange({
+        req.audit.auditService.logChange({
           tableName: 'system_errors',
           recordId: req.audit.requestId,
           action: 'CREATE',
@@ -109,6 +109,8 @@ export function auditableController<T = any>(
           ipAddress: req.audit.ipAddress,
           userAgent: req.audit.userAgent,
           comment: 'System error occurred'
+        }).catch(() => {
+          // Ignore audit logging errors - we still want to throw the original error
         });
       }
       throw error;

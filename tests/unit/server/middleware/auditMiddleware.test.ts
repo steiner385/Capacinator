@@ -23,7 +23,8 @@ describe('Audit Middleware', () => {
       ip: '192.168.1.1',
       connection: { remoteAddress: '192.168.1.100' },
       headers: { 'user-agent': 'Test Browser/1.0' },
-      user: { id: 'user-123' }
+      user: { id: 'user-123' },
+      get: jest.fn()
     } as any;
 
     mockResponse = {
@@ -110,7 +111,7 @@ describe('Audit Middleware', () => {
         requestId: 'req-123',
         userId: 'user-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         auditService: mockAuditService
       };
     });
@@ -139,7 +140,7 @@ describe('Audit Middleware', () => {
         newValues,
         requestId: 'req-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         comment: 'Updated user name'
       });
     });
@@ -166,7 +167,7 @@ describe('Audit Middleware', () => {
         newValues,
         requestId: 'req-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         comment: 'Created new user'
       });
     });
@@ -193,7 +194,7 @@ describe('Audit Middleware', () => {
         newValues: undefined,
         requestId: 'req-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         comment: 'Deleted user'
       });
     });
@@ -260,7 +261,7 @@ describe('Audit Middleware', () => {
         newValues: undefined,
         requestId: 'req-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         comment: undefined
       });
     });
@@ -272,7 +273,7 @@ describe('Audit Middleware', () => {
         requestId: 'req-123',
         userId: 'user-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         auditService: mockAuditService
       };
 
@@ -323,7 +324,7 @@ describe('Audit Middleware', () => {
         },
         requestId: 'req-123',
         ipAddress: '192.168.1.1',
-        userAgent: 'Test Browser',
+        userAgent: 'Test Browser/1.0',
         comment: 'System error occurred'
       });
     });

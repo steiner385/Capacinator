@@ -18,6 +18,14 @@ export default defineConfig({
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'list',
   
+  /* Global timeout for each test */
+  timeout: 60000,
+  
+  /* Global timeout for expect assertions */
+  expect: {
+    timeout: 10000
+  },
+  
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -33,8 +41,8 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     
     /* Increase timeouts for slower loading and prevent premature page closure */
-    actionTimeout: 45000,
-    navigationTimeout: 45000,
+    actionTimeout: 30000,
+    navigationTimeout: 30000,
     
     /* Add video recording for debugging page closure issues */
     video: 'retain-on-failure',

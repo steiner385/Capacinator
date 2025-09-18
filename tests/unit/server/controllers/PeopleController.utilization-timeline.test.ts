@@ -31,10 +31,8 @@ describe('PeopleController.getPersonUtilizationTimeline', () => {
   let statusSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    controller = new PeopleController();
-    
-    // Mock the database property
-    (controller as any).db = mockDb;
+    // Create controller with mocked database
+    controller = new PeopleController(mockDb as any);
     
     jsonSpy = jest.fn();
     statusSpy = jest.fn().mockReturnValue({ json: jsonSpy });

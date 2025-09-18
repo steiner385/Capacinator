@@ -1,66 +1,168 @@
-import { chromium, FullConfig } from '@playwright/test';
+/**
+ * Global Teardown for E2E Tests
+ * Ensures proper cleanup of test environment after all tests complete
+ */
+
+import { FullConfig, chromium } from '@playwright/test';
+import { cleanupE2EDatabase } from '../../../src/server/database/init-e2e.js';
+import { ChildProcess } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 async function globalTeardown(config: FullConfig) {
-  console.log('🧹 Starting global teardown for e2e tests...');
+  console.log('🧹 Starting E2E global teardown...');
   
-  // Create a browser instance for teardown
-  const browser = await chromium.launch();
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  const baseURL = config.projects[0]?.use?.baseURL || 'http://localhost:3120';
+  const testRunId = process.env.TEST_RUN_ID;
   
   try {
-    // Navigate to the application
-    await page.goto(config.projects[0].use.baseURL || 'http://localhost:5175');
+    // Step 1: Clean up test data if we have a test run ID
+    if (testRunId) {
+      console.log(`🗑️ Cleaning up test data for run: ${testRunId}`);
+      await cleanupTestData(baseURL, testRunId);
+    }
     
-    // Clean up any persistent test data
-    await cleanupGlobalTestData(page);
+    // Step 2: Clean up E2E database
+    console.log('🗄️ Cleaning up E2E database...');
+    await cleanupE2EDatabase();
     
-    console.log('✅ Global teardown complete');
+    // Step 3: Stop development server if we started it
+    const serverProcess = (global as any).__SERVER_PROCESS__ as ChildProcess | undefined;
+    if (serverProcess && !serverProcess.killed) {
+      console.log('🛑 Stopping development server...');
+      
+      // Try graceful shutdown first
+      serverProcess.kill('SIGTERM');
+      
+      // Wait up to 5 seconds for graceful shutdown
+      let shutdownComplete = false;
+      const shutdownTimeout = setTimeout(() => {
+        if (!shutdownComplete) {
+          console.log('⚠️ Server did not shut down gracefully, forcing...');
+          serverProcess.kill('SIGKILL');
+        }
+      }, 5000);
+      
+      await new Promise<void>((resolve) => {
+        serverProcess.on('exit', () => {
+          shutdownComplete = true;
+          clearTimeout(shutdownTimeout);
+          console.log('✅ Server stopped');
+          resolve();
+        });
+      });
+      
+      // Clear the global reference
+      delete (global as any).__SERVER_PROCESS__;
+    }
+    
+    // Step 4: Clean up authentication state
+    const authPath = path.resolve('test-results/e2e-auth.json');
+    if (fs.existsSync(authPath)) {
+      console.log('🗑️ Cleaning up authentication state...');
+      fs.unlinkSync(authPath);
+    }
+    
+    // Step 5: Clear environment variables
+    delete process.env.TEST_BASE_URL;
+    delete process.env.TEST_RUN_ID;
+    delete process.env.TEST_SETUP_COMPLETE;
+    delete process.env.NODE_ENV;
+    delete process.env.DATABASE_URL;
+    
+    console.log('✅ E2E global teardown completed successfully');
     
   } catch (error) {
-    console.error('❌ Global teardown failed:', error);
-    // Don't fail the entire teardown process
-  } finally {
-    await context.close();
-    await browser.close();
+    console.error('❌ Error during E2E global teardown:', error);
+    // Don't fail the test run due to cleanup issues
   }
 }
 
-async function cleanupGlobalTestData(page: any) {
-  console.log('🗑️ Cleaning up global test data...');
+async function cleanupTestData(baseURL: string, testRunId: string) {
+  let browser;
+  let context;
+  let page;
   
   try {
-    // Clean up any test data that might persist between test runs
-    // This is a placeholder for actual cleanup logic
+    // Launch browser for API cleanup
+    browser = await chromium.launch({ headless: true });
+    context = await browser.newContext();
+    page = await context.newPage();
     
-    // Example: Remove test projects
-    await page.goto('/projects');
-    const testProjects = await page.locator('.project-card:has-text("Test_"), .project-card:has-text("EMERGENCY")').count();
-    if (testProjects > 0) {
-      console.log(`🗑️ Found ${testProjects} test projects to clean up`);
-      // Add cleanup logic here if needed
+    // Define test data patterns to clean up
+    const testPatterns = [
+      'Test_',
+      'E2E_',
+      'e2e-',
+      'test-',
+      testRunId,
+    ];
+    
+    // Clean up in reverse order of dependencies
+    const endpoints = [
+      { path: '/api/assignments', name: 'assignments' },
+      { path: '/api/scenario-assignments', name: 'scenario assignments' },
+      { path: '/api/projects', name: 'projects' },
+      { path: '/api/people', name: 'people' },
+      { path: '/api/scenarios', name: 'scenarios' },
+    ];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const response = await page.request.get(`${baseURL}${endpoint.path}`);
+        if (!response.ok()) {
+          console.log(`⚠️ ${endpoint.name} endpoint not available, skipping cleanup`);
+          continue;
+        }
+        
+        const data = await response.json();
+        const items = Array.isArray(data) ? data : (data.data || []);
+        
+        // Find items that match test patterns
+        const testItems = items.filter((item: any) => {
+          const searchableText = [
+            item.name,
+            item.project_name,
+            item.person_name,
+            item.title,
+            item.description
+          ].filter(Boolean).join(' ');
+          
+          return testPatterns.some(pattern => 
+            searchableText.toLowerCase().includes(pattern.toLowerCase())
+          );
+        });
+        
+        if (testItems.length > 0) {
+          console.log(`🗑️ Cleaning ${testItems.length} test ${endpoint.name}`);
+          
+          // Delete each test item
+          for (const item of testItems) {
+            try {
+              const deleteResponse = await page.request.delete(
+                `${baseURL}${endpoint.path}/${item.id}`
+              );
+              
+              if (!deleteResponse.ok()) {
+                console.warn(`⚠️ Failed to delete ${endpoint.name} ${item.id}: ${deleteResponse.status()}`);
+              }
+            } catch (error) {
+              console.warn(`⚠️ Error deleting ${endpoint.name} ${item.id}:`, error.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️ Failed to clean ${endpoint.name}:`, error.message);
+      }
     }
     
-    // Example: Remove test people
-    await page.goto('/people');
-    const testPeople = await page.locator('.person-card:has-text("Test_")').count();
-    if (testPeople > 0) {
-      console.log(`🗑️ Found ${testPeople} test people to clean up`);
-      // Add cleanup logic here if needed
-    }
-    
-    // Example: Remove test assignments
-    await page.goto('/assignments');
-    const testAssignments = await page.locator('.assignment-row:has-text("Test_")').count();
-    if (testAssignments > 0) {
-      console.log(`🗑️ Found ${testAssignments} test assignments to clean up`);
-      // Add cleanup logic here if needed
-    }
-    
-    console.log('✅ Global test data cleanup complete');
   } catch (error) {
-    console.warn('⚠️ Global test data cleanup encountered issues:', error);
-    // Don't fail the entire teardown if cleanup has issues
+    console.warn('⚠️ Test data cleanup encountered issues:', error);
+  } finally {
+    // Clean up browser resources
+    if (page) await page.close();
+    if (context) await context.close();
+    if (browser) await browser.close();
   }
 }
 

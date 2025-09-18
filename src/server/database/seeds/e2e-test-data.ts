@@ -15,7 +15,7 @@ export async function seed(knex: Knex): Promise<void> {
     'project_assignments',
     'project_phases_timeline',
     'project_demands',
-    'person_availability',
+    'person_availability_overrides',
     'person_roles',
     'resource_templates',
     'projects',
@@ -150,14 +150,16 @@ export async function seed(knex: Knex): Promise<void> {
     }
   ]);
   
-  // Seed people
+  // Seed people (without primary_person_role_id first)
   await knex('people').insert([
     {
       id: 'person-e2e-001',
       name: 'E2E Test User 1',
       email: 'e2e-user1@example.com',
-      primary_role_id: 'role-e2e-001',
       worker_type: 'FTE',
+      location_id: 'loc-e2e-001',
+      default_availability_percentage: 100,
+      default_hours_per_day: 8,
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -165,8 +167,10 @@ export async function seed(knex: Knex): Promise<void> {
       id: 'person-e2e-002',
       name: 'E2E Test User 2',
       email: 'e2e-user2@example.com',
-      primary_role_id: 'role-e2e-002',
       worker_type: 'FTE',
+      location_id: 'loc-e2e-001',
+      default_availability_percentage: 100,
+      default_hours_per_day: 8,
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -174,12 +178,44 @@ export async function seed(knex: Knex): Promise<void> {
       id: 'person-e2e-003',
       name: 'E2E Test Manager',
       email: 'e2e-manager@example.com',
-      primary_role_id: 'role-e2e-003',
       worker_type: 'FTE',
+      location_id: 'loc-e2e-001',
+      default_availability_percentage: 100,
+      default_hours_per_day: 8,
       created_at: new Date(),
       updated_at: new Date()
     }
   ]);
+  
+  // Seed person_roles
+  await knex('person_roles').insert([
+    {
+      id: 'person-role-e2e-001',
+      person_id: 'person-e2e-001',
+      role_id: 'role-e2e-001',
+      proficiency_level: 3,
+      is_primary: true
+    },
+    {
+      id: 'person-role-e2e-002',
+      person_id: 'person-e2e-002',
+      role_id: 'role-e2e-002',
+      proficiency_level: 3,
+      is_primary: true
+    },
+    {
+      id: 'person-role-e2e-003',
+      person_id: 'person-e2e-003',
+      role_id: 'role-e2e-003',
+      proficiency_level: 3,
+      is_primary: true
+    }
+  ]);
+  
+  // Update people with primary_person_role_id
+  await knex('people').where('id', 'person-e2e-001').update({ primary_person_role_id: 'person-role-e2e-001' });
+  await knex('people').where('id', 'person-e2e-002').update({ primary_person_role_id: 'person-role-e2e-002' });
+  await knex('people').where('id', 'person-e2e-003').update({ primary_person_role_id: 'person-role-e2e-003' });
   
   // Seed projects
   await knex('projects').insert([
@@ -200,6 +236,104 @@ export async function seed(knex: Knex): Promise<void> {
       location_id: 'loc-e2e-002',
       priority: 2,
       description: 'Second E2E test project',
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+  ]);
+  
+  // Set up dates for timeline
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const nextTwoWeeks = new Date(today);
+  nextTwoWeeks.setDate(nextTwoWeeks.getDate() + 14);
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  
+  // Seed project phases timeline
+  await knex('project_phases_timeline').insert([
+    {
+      id: 'timeline-e2e-001',
+      project_id: 'project-e2e-001',
+      phase_id: 'phase-e2e-001',
+      start_date: today,
+      end_date: nextWeek,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'timeline-e2e-002',
+      project_id: 'project-e2e-001',
+      phase_id: 'phase-e2e-002',
+      start_date: nextWeek,
+      end_date: nextTwoWeeks,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'timeline-e2e-003',
+      project_id: 'project-e2e-002',
+      phase_id: 'phase-e2e-001',
+      start_date: today,
+      end_date: nextMonth,
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+  ]);
+  
+  // Seed person availability overrides
+  
+  await knex('person_availability_overrides').insert([
+    {
+      id: 'avail-e2e-001',
+      person_id: 'person-e2e-001',
+      start_date: today,
+      end_date: nextMonth,
+      availability_percentage: 100,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'avail-e2e-002',
+      person_id: 'person-e2e-002',
+      start_date: today,
+      end_date: nextMonth,
+      availability_percentage: 100,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'avail-e2e-003',
+      person_id: 'person-e2e-003',
+      start_date: today,
+      end_date: nextMonth,
+      availability_percentage: 100,
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+  ]);
+  
+  // Seed project assignments
+  await knex('project_assignments').insert([
+    {
+      id: 'assign-e2e-001',
+      project_id: 'project-e2e-001',
+      person_id: 'person-e2e-001',
+      role_id: 'role-e2e-001',
+      start_date: today,
+      end_date: nextMonth,
+      allocation_percentage: 80,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'assign-e2e-002',
+      project_id: 'project-e2e-002',
+      person_id: 'person-e2e-002',
+      role_id: 'role-e2e-002',
+      start_date: today,
+      end_date: nextMonth,
+      allocation_percentage: 60,
       created_at: new Date(),
       updated_at: new Date()
     }

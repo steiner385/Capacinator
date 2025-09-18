@@ -23,7 +23,7 @@ const createMockQuery = () => {
     first: jest.fn() as jest.Mock,
     insert: jest.fn().mockReturnThis(),
     onConflict: jest.fn().mockReturnThis(),
-    merge: jest.fn().mockReturnThis(),
+    merge: jest.fn().mockResolvedValue(undefined),
   };
   return query;
 };
@@ -39,8 +39,28 @@ describe('SettingsController', () => {
     
     // Setup controller with mocked database
     controller = new SettingsController();
-    (controller as any).db = jest.fn(() => createMockQuery());
-    (controller as any).db.fn = { now: jest.fn() };
+    const mockDbFn = jest.fn(() => createMockQuery()) as any;
+    mockDbFn.fn = { now: jest.fn().mockReturnValue(new Date()) };
+    (controller as any).db = mockDbFn;
+    
+    // Mock executeQuery to directly call the callback
+    (controller as any).executeQuery = jest.fn(async (callback: any, res: any) => {
+      try {
+        return await callback();
+      } catch (error) {
+        console.error('executeQuery error:', error);
+        if ((controller as any).handleError) {
+          (controller as any).handleError(error, res);
+        } else {
+          // Default error handling
+          res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          });
+        }
+        return undefined;
+      }
+    });
 
     // Setup request and response mocks
     mockReq = {
@@ -111,9 +131,6 @@ describe('SettingsController', () => {
       };
 
       mockReq.body = validSettings;
-
-      const mockQuery = createMockQuery();
-      (controller as any).db = jest.fn(() => mockQuery);
 
       await controller.saveSystemSettings(mockReq as Request, mockRes as Response);
 
@@ -260,9 +277,6 @@ describe('SettingsController', () => {
       };
 
       mockReq.body = validSettings;
-
-      const mockQuery = createMockQuery();
-      (controller as any).db = jest.fn(() => mockQuery);
 
       await controller.saveImportSettings(mockReq as Request, mockRes as Response);
 

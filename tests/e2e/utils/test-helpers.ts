@@ -54,8 +54,23 @@ export class TestHelpers {
    * Navigate to a specific page and wait for it to load
    */
   async navigateTo(path: string) {
-    await this.page.goto(path);
-    await this.page.waitForLoadState('networkidle');
+    // If we're not on the base URL yet, go to base first
+    const currentUrl = this.page.url();
+    if (!currentUrl.includes('localhost:3120') || currentUrl === 'about:blank') {
+      await this.page.goto('/');
+      await this.page.waitForLoadState('networkidle');
+      // Handle profile selection if it appears
+      await this.handleProfileSelection();
+    }
+    
+    // Now navigate to the specific path
+    if (path !== '/') {
+      await this.page.goto(path);
+      await this.page.waitForLoadState('networkidle');
+    }
+    
+    // Wait for content to be ready
+    await this.waitForPageContent();
   }
 
   /**
@@ -144,130 +159,69 @@ export class TestHelpers {
       
       console.log('📋 Profile modal detected, proceeding with selection...');
       
-      // Wait for modal to be fully loaded - handle both native select and shadcn Select
-      try {
-        // First try native select
-        await this.page.waitForSelector('select', { timeout: 5000, state: 'visible' });
-        console.log('📝 Native select dropdown found');
-      } catch {
-        // If no native select, look for shadcn Select trigger
-        await this.page.waitForSelector('[role="combobox"], button:has-text("Select your name")', { timeout: 10000, state: 'visible' });
-        console.log('📝 Shadcn Select component found');
-      }
+      // Wait for the shadcn Select trigger to be ready
+      await this.page.waitForSelector('#person-select', { timeout: 10000, state: 'visible' });
+      console.log('📝 Profile select component found');
       
-      // Wait for options to populate
-      await this.page.waitForTimeout(2000);
+      // Wait a moment for data to populate
+      await this.page.waitForTimeout(1000);
       
       // Use multiple approaches to select an option
       console.log('🎯 Attempting to select profile...');
       
-      // Check if it's a native select or shadcn Select
-      const isNativeSelect = await this.page.locator('select').count() > 0;
+      // Handle shadcn Select component
       let selectionSucceeded = false;
       
-      if (isNativeSelect) {
-        // Handle native select
-        try {
-          const selectElement = this.page.locator('select').first();
-          // Get available options
-          const options = await selectElement.locator('option').all();
-          
-          // Find first non-empty option (skip the placeholder)
-          for (let i = 1; i < options.length; i++) {
-            const value = await options[i].getAttribute('value');
-            if (value && value.trim() !== '') {
-              await selectElement.selectOption(value);
-              console.log(`✅ Profile selected: option ${i} with value "${value}"`);
-              selectionSucceeded = true;
-              break;
-            }
-          }
-        } catch (selectError) {
-          console.log(`⚠️ Native select failed: ${selectError.message}`);
+      try {
+        // Click the Select trigger using id
+        const selectTrigger = this.page.locator('#person-select');
+        await selectTrigger.click();
+        console.log('📂 Opened shadcn Select dropdown');
+        
+        // Wait for dropdown options to appear
+        await this.page.waitForTimeout(500); // Give dropdown time to render
+        await this.page.waitForSelector('[role="option"], [data-radix-collection-item]', { timeout: 5000 });
+        
+        // Click the first valid option
+        const options = this.page.locator('[role="option"], [data-radix-collection-item]');
+        const optionCount = await options.count();
+        if (optionCount > 0) {
+          const firstOption = options.first();
+          const optionText = await firstOption.textContent();
+          console.log(`Selecting profile: ${optionText}`);
+          await firstOption.click();
+          console.log('✅ Profile selected using shadcn Select');
+          selectionSucceeded = true;
         }
-      } else {
-        // Handle shadcn Select component
-        try {
-          // Click the Select trigger
-          const selectTrigger = this.page.locator('[role="combobox"], button:has-text("Select your name")').first();
-          await selectTrigger.click();
-          console.log('📂 Opened shadcn Select dropdown');
-          
-          // Wait for dropdown options to appear
-          await this.page.waitForSelector('[role="option"]', { timeout: 5000 });
-          
-          // Click the first valid option
-          const options = await this.page.locator('[role="option"]').all();
-          if (options.length > 0) {
-            await options[0].click();
-            console.log('✅ Profile selected using shadcn Select');
-            selectionSucceeded = true;
-          }
-        } catch (shadcnError) {
-          console.log(`⚠️ Shadcn Select failed: ${shadcnError.message}`);
-        }
+      } catch (shadcnError) {
+        console.log(`⚠️ Shadcn Select failed: ${shadcnError.message}`);
       }
       
-      // Method 3: Enhanced DOM manipulation as fallback
       if (!selectionSucceeded) {
-        await this.page.evaluate((option) => {
-          const select = document.querySelector('select');
-          if (!select || select.options.length <= option.index) {
-            throw new Error('Select element not ready or option not available');
-          }
-          
-          // Select the target option
-          select.selectedIndex = option.index;
-          select.value = option.value;
-          
-          // Trigger all events React might be listening for
-          const eventTypes = ['mousedown', 'focus', 'input', 'change', 'click', 'blur'];
-          eventTypes.forEach(eventType => {
-            const event = new Event(eventType, { 
-              bubbles: true, 
-              cancelable: true,
-              composed: true 
-            });
-            
-            // Add custom properties for React
-            Object.defineProperty(event, 'target', { 
-              value: select, 
-              enumerable: true 
-            });
-            Object.defineProperty(event, 'currentTarget', { 
-              value: select, 
-              enumerable: true 
-            });
-            
-            select.dispatchEvent(event);
-          });
-          
-          // Additional React-specific synthetic event
-          const syntheticChange = new Event('change', { bubbles: true });
-          Object.defineProperty(syntheticChange, 'target', { 
-            value: select, 
-            enumerable: true,
-            configurable: true,
-            writable: true
-          });
-          select.dispatchEvent(syntheticChange);
-          
-          console.log(`DOM: Selected ${option.text} (${option.value})`);
-          return { selectedIndex: select.selectedIndex, selectedValue: select.value };
-        }, selectableOption);
-        
-        console.log('✅ Profile selected using enhanced DOM manipulation');
+        throw new Error('Failed to select profile from dropdown');
       }
       
       // Give React time to process the selection
-      await this.page.waitForTimeout(1500);
+      await this.page.waitForTimeout(1000);
       
       // Wait for Continue button to be enabled
       console.log('⏳ Waiting for Continue button to become enabled...');
       
       // Use a more flexible selector for the continue button
       const continueButtonSelector = 'button:has-text("Continue")';
-      await this.page.waitForSelector(continueButtonSelector, { timeout: 10000, state: 'visible' });
+      
+      try {
+        await this.page.waitForSelector(continueButtonSelector, { timeout: 10000, state: 'visible' });
+      } catch (error) {
+        console.log('⚠️ Continue button not found, checking if already on main page...');
+        // Check if we're already past the profile selection
+        const isOnMainPage = await this.page.locator('.sidebar, nav, h1').count() > 0;
+        if (isOnMainPage) {
+          console.log('✅ Already on main page, skipping profile selection');
+          return;
+        }
+        throw error;
+      }
       
       // Wait for it to become enabled
       let continueEnabled = false;
@@ -291,15 +245,23 @@ export class TestHelpers {
       console.log('👆 Clicking Continue button...');
       
       try {
-        // Force click to overcome any overlay issues
-        await this.page.locator(continueButtonSelector).click({ force: true });
+        // First wait for any overlays to disappear
+        const overlaySelector = '.fixed.inset-0.z-50.bg-black';
+        try {
+          await this.page.waitForSelector(overlaySelector, { state: 'detached', timeout: 2000 });
+        } catch {
+          // Overlay might not exist or already gone
+        }
+        
+        // Try normal click first
+        await this.page.locator(continueButtonSelector).click({ timeout: 5000 });
         console.log('✅ Continue button clicked successfully');
       } catch (clickError) {
-        console.log(`⚠️ Force click failed: ${clickError.message}`);
+        console.log(`⚠️ Normal click failed: ${clickError.message}`);
         
-        // Try using page.click as fallback
-        await this.page.click(continueButtonSelector, { force: true });
-        console.log('✅ Continue clicked using page.click fallback');
+        // Try force click as fallback
+        await this.page.locator(continueButtonSelector).click({ force: true });
+        console.log('✅ Continue clicked using force option');
       }
       
       // Wait for modal to disappear
@@ -361,8 +323,16 @@ export class TestHelpers {
         throw new Error('Page is closed - cannot setup');
       }
       
-      await this.waitForReactApp();
+      // Only wait for React app if we haven't navigated yet
+      const currentUrl = this.page.url();
+      if (currentUrl === 'about:blank' || !currentUrl.includes('localhost')) {
+        await this.waitForReactApp();
+      }
+      
+      // Handle profile selection if needed
       await this.handleProfileSelection();
+      
+      // Wait for navigation to complete
       await this.waitForNavigation();
       
       // After profile selection, wait for the actual content to appear
@@ -779,9 +749,24 @@ export class TestHelpers {
   async waitForPageContent() {
     console.log('Waiting for page content to load...');
     
+    // Check if the page is still open
+    if (this.page.isClosed()) {
+      throw new Error('Page closed while waiting for content');
+    }
+    
+    // Wait for any loading indicators to disappear first
+    try {
+      await this.page.waitForSelector('.loading-spinner, .loading, [data-loading="true"]', { 
+        state: 'detached', 
+        timeout: 5000 
+      });
+    } catch {
+      // No loading indicators, which is fine
+    }
+    
     // First, specifically wait for the layout to be ready
     try {
-      await this.page.waitForSelector('.layout', { timeout: 10000 });
+      await this.page.waitForSelector('.layout, .app-layout, #app, #root', { timeout: 10000 });
       console.log('✅ Layout container found');
     } catch {
       console.log('⚠️ Layout container not found');
@@ -789,7 +774,7 @@ export class TestHelpers {
     
     // Wait for navigation specifically
     try {
-      await this.page.waitForSelector('.sidebar', { timeout: 10000 });
+      await this.page.waitForSelector('.sidebar, nav, .navigation', { timeout: 5000 });
       console.log('✅ Sidebar found');
     } catch {
       console.log('⚠️ Sidebar not found');
@@ -797,7 +782,7 @@ export class TestHelpers {
     
     // Wait for navigation links
     try {
-      await this.page.waitForSelector('.nav-link', { timeout: 10000 });
+      await this.page.waitForSelector('.nav-link, a[href*="/"], nav a', { timeout: 5000 });
       console.log('✅ Navigation links found');
     } catch {
       console.log('⚠️ Navigation links not found');
@@ -805,7 +790,7 @@ export class TestHelpers {
     
     // Wait for main content area
     try {
-      await this.page.waitForSelector('.main-content', { timeout: 10000 });
+      await this.page.waitForSelector('.main-content, main, [role="main"]', { timeout: 5000 });
       console.log('✅ Main content area found');
     } catch {
       console.log('⚠️ Main content area not found');
@@ -865,6 +850,33 @@ export class TestHelpers {
       localStorage.clear();
       sessionStorage.clear();
     });
+  }
+
+  /**
+   * Clear any notifications or toasts
+   */
+  async clearNotifications() {
+    try {
+      // Close any notifications
+      const notifications = await this.page.locator('.notification, .toast, [role="alert"]').all();
+      for (const notification of notifications) {
+        const closeButton = notification.locator('.close, button[aria-label="Close"]');
+        if (await closeButton.isVisible()) {
+          await closeButton.click();
+        }
+      }
+      
+      // Close any open modals
+      const modals = await this.page.locator('[role="dialog"], .modal').all();
+      for (const modal of modals) {
+        const closeButton = modal.locator('.close, button[aria-label="Close"]');
+        if (await closeButton.isVisible()) {
+          await closeButton.click();
+        }
+      }
+    } catch {
+      // Ignore errors - notifications might not exist
+    }
   }
 
   /**

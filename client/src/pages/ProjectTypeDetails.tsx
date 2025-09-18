@@ -377,17 +377,27 @@ export default function ProjectTypeDetails() {
               </p>
             </div>
             {projectTypePhases && projectTypePhases.length > 0 ? (
-              <div className="phases-grid">
-                {projectTypePhases.map((phase: any) => (
-                  <div key={phase.id} className="phase-card">
-                    <h4>{phase.name}</h4>
-                    <p>{phase.description}</p>
-                    <div className="phase-meta">
-                      <span className="duration">{phase.duration_weeks} weeks</span>
-                      <span className="order">Order: {phase.order_index}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="table-container">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Phase Name</th>
+                      <th>Description</th>
+                      <th>Duration</th>
+                      <th>Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projectTypePhases.map((phase: any) => (
+                      <tr key={phase.id}>
+                        <td>{phase.name}</td>
+                        <td>{phase.description || '-'}</td>
+                        <td>{phase.duration_weeks} weeks</td>
+                        <td>{phase.order_index}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="empty-state">
