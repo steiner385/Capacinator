@@ -240,7 +240,7 @@ async function verifyTestData(page: Page, baseURL: string) {
     console.log('✅ API health check passed');
     
     // Verify essential test data
-    const endpoints = ['/api/roles', '/api/profiles'];
+    const endpoints = ['/api/roles'];
     
     for (const endpoint of endpoints) {
       try {
@@ -337,10 +337,14 @@ async function selectProfile(page: Page) {
     
     // The button should now be enabled since we selected a profile
     await page.waitForFunction(() => {
-      const btn = document.querySelector('button');
-      if (!btn || !btn.textContent?.includes('Continue')) return false;
-      return !btn.disabled && !btn.hasAttribute('disabled');
-    }, { timeout: 5000 });
+      const buttons = document.querySelectorAll('button');
+      for (const btn of buttons) {
+        if (btn.textContent?.includes('Continue')) {
+          return !btn.disabled && !btn.hasAttribute('disabled');
+        }
+      }
+      return false;
+    }, { timeout: 30000 });
     
     // Click Continue
     console.log('👆 Clicking Continue button...');

@@ -79,6 +79,7 @@ export class TestDataHelpers {
       });
       
       const user = await response.json();
+      
       if (user.id) {
         context.createdIds.people.push(user.id);
       }
@@ -104,46 +105,79 @@ export class TestDataHelpers {
     const uniqueName = options?.name || `${context.prefix}-Project`;
     
     try {
-      // Get available project types and locations
-      const [typesResponse, locationsResponse] = await Promise.all([
+      // Get available project types, sub-types, and locations
+      const [typesResponse, subTypesResponse, locationsResponse] = await Promise.all([
         this.apiContext.get(`${this.baseURL}/api/project-types`),
+        this.apiContext.get(`${this.baseURL}/api/project-sub-types`),
         this.apiContext.get(`${this.baseURL}/api/locations`)
       ]);
       
       const types = await typesResponse.json();
+      const subTypes = await subTypesResponse.json();
       const locations = await locationsResponse.json();
       
       // Find or use first available
-      const projectType = types.data?.[0] || types[0];
-      const location = locations.data?.[0] || locations[0];
+      const typesArray = types.data || types;
+      const subTypesArray = subTypes.data || subTypes;
+      const locationsArray = locations.data || locations;
       
-      if (!projectType || !location) {
-        throw new Error('No project types or locations available');
+      // Get the first available project type
+      const projectType = typesArray[0];
+      
+      // Find subtypes for this project type
+      let projectSubType;
+      const typeSubTypes = subTypesArray.find(st => st.project_type_id === projectType.id);
+      if (typeSubTypes && typeSubTypes.sub_types && typeSubTypes.sub_types.length > 0) {
+        // Use the default subtype if available, otherwise use the first one
+        projectSubType = typeSubTypes.sub_types.find(st => st.is_default === 1) || typeSubTypes.sub_types[0];
       }
+      
+      const location = locationsArray[0];
+      
+      if (!projectType || !location || !projectSubType) {
+        throw new Error('No project types, subtypes, or locations available');
+      }
+      
+      console.log('Using project type:', projectType.id, projectType.name);
+      console.log('Using project sub-type:', projectSubType.id, projectSubType.name);
+      console.log('Using location:', location.id, location.name);
       
       // Create owner if not provided
       const owner = options?.owner || await this.createTestUser(context, {
         name: `${uniqueName}-Owner`
       });
       
+      const requestData = {
+        name: uniqueName,
+        project_type_id: projectType.id,
+        project_sub_type_id: projectSubType.id,
+        location_id: location.id,
+        priority: options?.priority || 3,
+        description: `Test project for ${context.prefix}`,
+        include_in_demand: true,
+        owner_id: owner.id
+      };
+      
+      console.log('Project creation request:', JSON.stringify(requestData, null, 2));
+      
       const response = await this.apiContext.post(`${this.baseURL}/api/projects`, {
-        data: {
-          name: uniqueName,
-          project_type_id: projectType.id,
-          project_sub_type_id: projectType.sub_types?.[0]?.id || projectType.id,
-          location_id: location.id,
-          priority: options?.priority || 3,
-          description: `Test project for ${context.prefix}`,
-          include_in_demand: true,
-          owner_id: owner.id
-        }
+        data: requestData
       });
       
-      const project = await response.json();
-      if (project.id) {
-        context.createdIds.projects.push(project.id);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create project: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
+      const project = await response.json();
+      console.log('Project creation response:', JSON.stringify(project, null, 2));
+      
+      if (!project || !project.id) {
+        console.error('Project response structure:', project);
+        throw new Error('Project creation did not return a valid project with ID');
+      }
+      
+      context.createdIds.projects.push(project.id);
       console.log(`✅ Created test project: ${uniqueName} (id: ${project.id})`);
       return project;
     } catch (error) {
@@ -174,6 +208,7 @@ export class TestDataHelpers {
       });
       
       const scenario = await response.json();
+      
       if (scenario.id) {
         context.createdIds.scenarios.push(scenario.id);
       }
@@ -227,6 +262,7 @@ export class TestDataHelpers {
       });
       
       const assignment = await response.json();
+      
       if (assignment.id) {
         context.createdIds.assignments.push(assignment.id);
       }

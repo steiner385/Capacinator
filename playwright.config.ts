@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['**/archived/**/*.spec.ts'],
   
   /* Fail the build on CI if test.only is committed */
   forbidOnly: !!process.env.CI,

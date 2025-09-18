@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AssignmentConflict {
   person_id: string;
@@ -107,6 +108,7 @@ export class AssignmentsController extends BaseController {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
+      try {
       // Validate assignment data based on date mode
       await this.validateAssignmentData(assignmentData);
 
@@ -135,14 +137,32 @@ export class AssignmentsController extends BaseController {
         });
       }
 
-      const [assignment] = await this.db('project_assignments')
-        .insert({
-          ...assignmentData,
-          ...computedDates,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('*');
+      // Generate a UUID for the assignment
+      const assignmentId = uuidv4();
+      
+      const insertData = {
+        id: assignmentId,
+        ...assignmentData,
+        ...computedDates,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      
+      console.log('[AssignmentsController] Inserting assignment with data:', JSON.stringify(insertData, null, 2));
+      
+      await this.db('project_assignments')
+        .insert(insertData);
+        
+      // Fetch the inserted assignment
+      const assignment = await this.db('project_assignments')
+        .where('id', assignmentId)
+        .first();
+        
+      console.log('[AssignmentsController] Fetched assignment:', JSON.stringify(assignment, null, 2));
+        
+      if (!assignment) {
+        throw new Error(`Failed to fetch assignment with ID ${assignmentId}`);
+      }
 
       // Send notification for assignment creation (don't await to avoid circular refs)
       // Pass only the necessary data to avoid circular references
@@ -178,11 +198,17 @@ export class AssignmentsController extends BaseController {
         updated_at: assignment.updated_at
       };
       
+      console.log('[AssignmentsController] Clean response:', JSON.stringify(cleanResponse, null, 2));
+      
       return transformDates(cleanResponse, [
         ...COMMON_DATE_FIELDS,
         'computed_start_date',
         'computed_end_date'
       ]);
+      } catch (error) {
+        console.error('[AssignmentsController] Error in create:', error);
+        throw error;
+      }
     }, res, 'Failed to create assignment');
 
     if (result) {
@@ -253,13 +279,17 @@ export class AssignmentsController extends BaseController {
       }
 
       // Update assignment
-      const [updated] = await this.db('project_assignments')
+      await this.db('project_assignments')
         .where('id', id)
         .update({
           ...updateData,
           updated_at: new Date()
-        })
-        .returning('*');
+        });
+        
+      // Fetch the updated assignment
+      const updated = await this.db('project_assignments')
+        .where('id', id)
+        .first();
 
       // Send notification for assignment update
       try {
@@ -342,8 +372,10 @@ export class AssignmentsController extends BaseController {
           }
 
           // Create assignment
-          const [created] = await this.db('project_assignments')
+          const assignmentId = uuidv4();
+          await this.db('project_assignments')
             .insert({
+              id: assignmentId,
               project_id,
               person_id: assignment.person_id,
               role_id: assignment.role_id,
@@ -353,8 +385,12 @@ export class AssignmentsController extends BaseController {
               notes: assignment.notes,
               created_at: new Date(),
               updated_at: new Date()
-            })
-            .returning('*');
+            });
+            
+          // Fetch the created assignment
+          const created = await this.db('project_assignments')
+            .where('id', assignmentId)
+            .first();
 
           results.successful.push(transformDates(created, COMMON_DATE_FIELDS));
 

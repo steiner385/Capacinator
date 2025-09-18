@@ -389,9 +389,9 @@ test.describe('People Management', () => {
         );
         
         // Check action buttons have proper labels
-        const viewButton = firstRow.locator('button:has-text("View")');
-        const editButton = firstRow.locator('button:has-text("Edit")');
-        const deleteButton = firstRow.locator('button[title*="Delete"]');
+        const viewButton = personRow.locator('button:has-text("View")');
+        const editButton = personRow.locator('button:has-text("Edit")');
+        const deleteButton = personRow.locator('button[title*="Delete"]');
         
         // Buttons should have accessible text or aria-label
         await expect(viewButton).toBeVisible();
