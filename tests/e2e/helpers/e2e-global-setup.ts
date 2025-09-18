@@ -117,14 +117,17 @@ async function startDevServer(): Promise<void> {
       DATABASE_URL: ':memory:', // Use in-memory database for tests
       PORT: '3110',
       CLIENT_PORT: '3120',
-      FORCE_COLOR: '0'
+      FORCE_COLOR: '0',
+      // Force the server to re-read the database config
+      DB_FILENAME: ':memory:'
     };
     
-    // Start the dev server
-    serverProcess = spawn('npm', ['run', 'dev'], {
+    // Start the dev server directly with tsx
+    serverProcess = spawn('npx', ['tsx', 'src/server/index.ts'], {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
-      detached: false
+      detached: false,
+      cwd: process.cwd()
     });
     
     // Capture server output for debugging

@@ -129,12 +129,12 @@ export default defineConfig({
   outputDir: 'test-results/',
 
   /* Configure web server */
-  webServer: process.env.CI ? undefined : {
-    command: 'npm run dev',
-    url: 'http://localhost:3120/api/health',
-    timeout: 120 * 1000,
-    reuseExistingServer: true,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  },
+  // webServer: process.env.CI ? undefined : {
+  //   command: 'npm run dev',
+  //   url: 'http://localhost:3120/api/health',
+  //   timeout: 120 * 1000,
+  //   reuseExistingServer: true,
+  //   stdout: 'pipe',
+  //   stderr: 'pipe',
+  // },
 });

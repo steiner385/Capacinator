@@ -29,11 +29,13 @@ export async function initializeDatabase(): Promise<void> {
     // Initialize audit service after migrations
     initializeAuditService(db);
     
-    // Seed initial data if needed
-    const hasData = await db('roles').count('* as count').first();
-    if (hasData?.count === 0) {
-      await db.seed.run();
-      console.log('Database seeded with initial data');
+    // Seed initial data if needed (skip for E2E)
+    if (process.env.NODE_ENV !== 'e2e') {
+      const hasData = await db('roles').count('* as count').first();
+      if (hasData?.count === 0) {
+        await db.seed.run();
+        console.log('Database seeded with initial data');
+      }
     }
   } catch (error) {
     console.error('Database initialization failed:', error);

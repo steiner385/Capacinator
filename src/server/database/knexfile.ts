@@ -17,9 +17,9 @@ const getDataPath = () => {
   }
 };
 
-// Ensure data directory exists
+// Ensure data directory exists (skip for in-memory database)
 const dataPath = getDataPath();
-if (!fs.existsSync(dataPath)) {
+if (!process.env.DATABASE_URL && !fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true });
 }
 

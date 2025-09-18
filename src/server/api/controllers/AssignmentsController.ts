@@ -108,7 +108,6 @@ export class AssignmentsController extends BaseController {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
-      try {
       // Validate assignment data based on date mode
       await this.validateAssignmentData(assignmentData);
 
@@ -140,25 +139,19 @@ export class AssignmentsController extends BaseController {
       // Generate a UUID for the assignment
       const assignmentId = uuidv4();
       
-      const insertData = {
-        id: assignmentId,
-        ...assignmentData,
-        ...computedDates,
-        created_at: new Date(),
-        updated_at: new Date()
-      };
-      
-      console.log('[AssignmentsController] Inserting assignment with data:', JSON.stringify(insertData, null, 2));
-      
       await this.db('project_assignments')
-        .insert(insertData);
+        .insert({
+          id: assignmentId,
+          ...assignmentData,
+          ...computedDates,
+          created_at: new Date(),
+          updated_at: new Date()
+        });
         
       // Fetch the inserted assignment
       const assignment = await this.db('project_assignments')
         .where('id', assignmentId)
         .first();
-        
-      console.log('[AssignmentsController] Fetched assignment:', JSON.stringify(assignment, null, 2));
         
       if (!assignment) {
         throw new Error(`Failed to fetch assignment with ID ${assignmentId}`);
@@ -198,17 +191,11 @@ export class AssignmentsController extends BaseController {
         updated_at: assignment.updated_at
       };
       
-      console.log('[AssignmentsController] Clean response:', JSON.stringify(cleanResponse, null, 2));
-      
       return transformDates(cleanResponse, [
         ...COMMON_DATE_FIELDS,
         'computed_start_date',
         'computed_end_date'
       ]);
-      } catch (error) {
-        console.error('[AssignmentsController] Error in create:', error);
-        throw error;
-      }
     }, res, 'Failed to create assignment');
 
     if (result) {

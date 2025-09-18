@@ -39,7 +39,7 @@ export async function initializeE2EDatabase(): Promise<Knex> {
     console.log('🔧 Running E2E database migrations...');
     await e2eDb.migrate.latest();
     
-    // Run E2E specific seeds
+    // Run E2E specific seeds only - it includes all necessary data
     console.log('🌱 Seeding E2E test data...');
     await e2eDb.seed.run({ specific: 'e2e-test-data.ts' });
     

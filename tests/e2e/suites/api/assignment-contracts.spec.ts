@@ -73,7 +73,6 @@ test.describe('Assignment API Contract Tests', () => {
       
       // Verify ID is returned
       expect(assignment.id).toBeTruthy();
-      console.log('Assignment created with ID:', assignment.id);
       
       // Cleanup - delete the created assignment if it has an ID
       // Note: The assignment ID might be returned as null in the creation response

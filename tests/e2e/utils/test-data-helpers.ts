@@ -121,15 +121,25 @@ export class TestDataHelpers {
       const subTypesArray = subTypes.data || subTypes;
       const locationsArray = locations.data || locations;
       
+      // Ensure they are arrays
+      if (!Array.isArray(subTypesArray)) {
+        console.error('SubTypes response is not an array:', subTypesArray);
+        throw new Error('Invalid subtypes response format');
+      }
+      
       // Get the first available project type
       const projectType = typesArray[0];
       
       // Find subtypes for this project type
       let projectSubType;
-      const typeSubTypes = subTypesArray.find(st => st.project_type_id === projectType.id);
-      if (typeSubTypes && typeSubTypes.sub_types && typeSubTypes.sub_types.length > 0) {
-        // Use the default subtype if available, otherwise use the first one
-        projectSubType = typeSubTypes.sub_types.find(st => st.is_default === 1) || typeSubTypes.sub_types[0];
+      // The API returns a flat array of subtypes, not grouped by type
+      const matchingSubTypes = subTypesArray.filter(st => st.project_type_id === projectType.id);
+      if (matchingSubTypes.length > 0) {
+        // Use the first matching subtype
+        projectSubType = matchingSubTypes[0];
+      } else {
+        // Fallback to any subtype if none match
+        projectSubType = subTypesArray[0];
       }
       
       const location = locationsArray[0];

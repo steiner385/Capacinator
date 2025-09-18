@@ -38,7 +38,6 @@ export abstract class BaseController {
     try {
       return await queryFn();
     } catch (error) {
-      console.error('[BaseController.executeQuery] Error:', error);
       this.handleError(error, res, errorMessage);
       return undefined;
     }
