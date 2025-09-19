@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { TestUtils } from './helpers/test-utils';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 /**
  * Comprehensive E2E Tests for Utilization Report Modals
@@ -23,10 +23,10 @@ test.describe('Utilization Report Modals', () => {
     testHelpers = new TestHelpers(page);
     
     // Navigate to reports page first
-    await page.goto('/reports');
+    await setupPageWithAuth(page, '/reports');
     
     // Wait for page to fully load before handling modal
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await page.waitForTimeout(2000);
     
     // Handle profile modal if present using the helper

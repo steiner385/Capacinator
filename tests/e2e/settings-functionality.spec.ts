@@ -1,9 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Settings Functionality', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the settings page
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await page.click('nav a[href="/settings"]');
     await expect(page).toHaveURL('/settings');
   });

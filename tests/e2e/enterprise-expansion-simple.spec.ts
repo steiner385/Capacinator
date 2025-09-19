@@ -1,41 +1,42 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Enterprise Expansion Scenario - Simplified', () => {
   test('should navigate through enterprise workflow', async ({ page }) => {
     // Test 1: Navigate to the main dashboard
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await expect(page.locator('h1')).toContainText('Dashboard');
     
     // Test 2: Check roles page
-    await page.goto('/roles');
+    await setupPageWithAuth(page, '/roles');
     await expect(page.locator('h1')).toContainText('Roles');
     
     // Test 3: Check people management
-    await page.goto('/people');
+    await setupPageWithAuth(page, '/people');
     await expect(page.locator('h1')).toContainText('People');
     
     // Test 4: Check projects page
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await expect(page.locator('h1')).toContainText('Projects');
     
     // Test 5: Check assignments
-    await page.goto('/assignments');
+    await setupPageWithAuth(page, '/assignments');
     await expect(page.locator('h1')).toContainText('Assignments');
     
     // Test 6: Check reports
-    await page.goto('/reports');
+    await setupPageWithAuth(page, '/reports');
     await expect(page.locator('h1')).toContainText('Reports');
     
     // Test 7: Check allocations (redirects to roles)
-    await page.goto('/allocations');
+    await setupPageWithAuth(page, '/allocations');
     await expect(page.locator('h1')).toContainText('Roles');
     
     // Test 8: Check availability
-    await page.goto('/availability');
+    await setupPageWithAuth(page, '/availability');
     await expect(page.locator('h1')).toContainText('Availability');
     
     // Test 9: Check settings
-    await page.goto('/settings');
+    await setupPageWithAuth(page, '/settings');
     await expect(page.locator('h1')).toContainText('Settings');
     
     console.log('✅ Enterprise expansion navigation test completed');
@@ -43,8 +44,8 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
   
   test('should test project detail page features', async ({ page }) => {
     // Navigate to projects
-    await page.goto('/projects');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/projects');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Look for any existing project to click on
     const projectCards = page.locator('.project-card');
@@ -53,7 +54,7 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
     if (projectCount > 0) {
       // Click on the first project
       await projectCards.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should be on project detail page
       await expect(page.locator('h1')).toBeVisible();
@@ -73,8 +74,8 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
   
   test('should test person detail page features', async ({ page }) => {
     // Navigate to people
-    await page.goto('/people');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/people');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Look for any existing person to click on
     const personCards = page.locator('.person-card');
@@ -83,7 +84,7 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
     if (personCount > 0) {
       // Click on the first person
       await personCards.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should be on person detail page
       await expect(page.locator('h1')).toBeVisible();
@@ -103,14 +104,14 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
   
   test('should test capacity planning features', async ({ page }) => {
     // Navigate to reports
-    await page.goto('/reports');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/reports');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Look for capacity report functionality
     const capacityReportButton = page.locator('button:has-text("Capacity"), button:has-text("Generate"), .report-button');
     if (await capacityReportButton.count() > 0) {
       await capacityReportButton.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should show some kind of report content
       await expect(page.locator('body')).toBeVisible();
@@ -122,14 +123,14 @@ test.describe('Enterprise Expansion Scenario - Simplified', () => {
   
   test('should test assignment management', async ({ page }) => {
     // Navigate to assignments
-    await page.goto('/assignments');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/assignments');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Look for assignment creation button
     const newAssignmentButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")');
     if (await newAssignmentButton.count() > 0) {
       await newAssignmentButton.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should show assignment form or modal
       await expect(page.locator('body')).toBeVisible();

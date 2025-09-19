@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Actionable Insights Workflow', () => {
   let helpers: TestHelpers;
@@ -8,20 +8,20 @@ test.describe('Actionable Insights Workflow', () => {
     helpers = new TestHelpers(page);
     
     // Navigate to main page
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     
     // Handle profile selection using robust helper
     await helpers.handleProfileSelection();
     
     // Wait for dashboard to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await expect(page.locator('h1')).toContainText('Dashboard');
   });
 
   test('should complete full workflow from PersonDetails insights to assignment creation', async ({ page }) => {
     // Step 1: Navigate to People page
     await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await expect(page.locator('h1')).toContainText('People');
 
     // Step 2: Check for team insights summary
@@ -76,13 +76,13 @@ test.describe('Actionable Insights Workflow', () => {
   test('should show correct workload insights on PersonDetails page', async ({ page }) => {
     // Step 1: Navigate to People page
     await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Step 2: Click on a person's name to go to details
     const personLinks = page.locator('table tbody tr td a');
     if (await personLinks.count() > 0) {
       await personLinks.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Step 3: Verify PersonDetails page loads
       await expect(page.locator('h1')).not.toContainText('People'); // Should have person's name
@@ -125,7 +125,7 @@ test.describe('Actionable Insights Workflow', () => {
   test('should handle Reports page actionable insights correctly', async ({ page }) => {
     // Step 1: Navigate to Reports page
     await page.click('nav a[href="/reports"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await expect(page.locator('h1')).toContainText('Reports');
 
     // Step 2: Ensure we're on the capacity report tab
@@ -154,7 +154,7 @@ test.describe('Actionable Insights Workflow', () => {
         await page.waitForURL('**/assignments?**action=assign**');
         await expect(page.locator('h1')).toContainText('Assignments');
         await page.goBack();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 30000 });
       }
 
       // Test Reduce Load button
@@ -163,7 +163,7 @@ test.describe('Actionable Insights Workflow', () => {
         await page.waitForURL('**/assignments?**action=reduce**');
         await expect(page.locator('h1')).toContainText('Assignments');
         await page.goBack();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 30000 });
       }
     }
 
@@ -183,7 +183,7 @@ test.describe('Actionable Insights Workflow', () => {
         await page.waitForURL('**/people?**role=**');
         await expect(page.locator('h1')).toContainText('People');
         await page.goBack();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 30000 });
       }
     }
   });
@@ -192,7 +192,7 @@ test.describe('Actionable Insights Workflow', () => {
     // Step 1: Navigate directly with query parameters to simulate action button click
     const testParams = '?person=Test Person&action=assign&from=capacity-report&status=AVAILABLE';
     await page.goto(`/assignments/new${testParams}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Step 2: Verify page loads correctly
     await expect(page.locator('h1')).toContainText('New Assignment');
@@ -214,7 +214,7 @@ test.describe('Actionable Insights Workflow', () => {
     // Step 6: Test different action contexts
     const reduceParams = '?person=Test Person&action=reduce&from=people-page';
     await page.goto(`/assignments/new${reduceParams}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     await expect(page.locator('.context-alert')).toContainText('Reducing workload');
   });
@@ -223,7 +223,7 @@ test.describe('Actionable Insights Workflow', () => {
     // Step 1: Navigate with filtering context
     const filterParams = '?person=Test Person&action=view&from=capacity-report';
     await page.goto(`/assignments${filterParams}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Step 2: Verify page loads correctly
     await expect(page.locator('h1')).toContainText('Assignments');
@@ -237,7 +237,7 @@ test.describe('Actionable Insights Workflow', () => {
     // Step 5: Test different filtering contexts
     const roleFilterParams = '?role=Developer&action=assign&from=reports';
     await page.goto(`/assignments${roleFilterParams}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     await expect(page.locator('.context-message')).toContainText('Developer');
   });
@@ -245,7 +245,7 @@ test.describe('Actionable Insights Workflow', () => {
   test('should maintain workflow context across page transitions', async ({ page }) => {
     // Step 1: Start from People page
     await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Step 2: Click a quick action button (simulate workflow start)
     const quickActionButtons = page.locator('.quick-action-btn');
@@ -277,8 +277,8 @@ test.describe('Actionable Insights Workflow', () => {
 
   test('should handle error states gracefully in actionable insights', async ({ page }) => {
     // Step 1: Test with invalid query parameters
-    await page.goto('/assignments/new?person=NonExistentPerson&action=assign');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/assignments/new?person=NonExistentPerson&action=assign');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Should still show page without crashing
     await expect(page.locator('h1')).toContainText('New Assignment');
@@ -286,7 +286,7 @@ test.describe('Actionable Insights Workflow', () => {
 
     // Step 2: Test People page without utilization data
     await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Should still show people table
     await expect(page.locator('h1')).toContainText('People');
@@ -296,7 +296,7 @@ test.describe('Actionable Insights Workflow', () => {
   test('should provide accessible actionable insights', async ({ page }) => {
     // Step 1: Navigate to People page
     await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Step 2: Check for proper ARIA labels and accessibility
     const quickActionButtons = page.locator('.quick-action-btn');
@@ -316,7 +316,7 @@ test.describe('Actionable Insights Workflow', () => {
     const personLinks = page.locator('table tbody tr td a');
     if (await personLinks.count() > 0) {
       await personLinks.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
 
       // Check insights section accessibility
       const actionButtons = page.locator('.action-btn');
@@ -331,7 +331,7 @@ test.describe('Actionable Insights Workflow', () => {
   test('should display correct status indicators and colors', async ({ page }) => {
     // Step 1: Navigate to People page
     await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
     // Step 2: Check for workload status indicators
     const statusIndicators = page.locator('.status-indicator');
@@ -354,7 +354,7 @@ test.describe('Actionable Insights Workflow', () => {
     const personLinks = page.locator('table tbody tr td a');
     if (await personLinks.count() > 0) {
       await personLinks.first().click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
 
       // Verify insight cards have proper styling
       const insightCards = page.locator('.insight-card');

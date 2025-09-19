@@ -30,7 +30,9 @@ async function startServer() {
     // Initialize database
     console.log('📊 Initializing database...');
     if (isE2E) {
-      await initializeE2EDatabase();
+      const e2eDb = await initializeE2EDatabase();
+      // Set global reference for E2E database
+      global.__E2E_DB__ = e2eDb;
     } else {
       await initializeDatabase();
     }

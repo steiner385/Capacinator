@@ -240,7 +240,7 @@ test.describe('Phase Boundary Control System', () => {
     
     // Reload to see dependencies
     await authenticatedPage.reload();
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Find boundary between first two phases
     const timeline = authenticatedPage.locator('.interactive-timeline');

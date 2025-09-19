@@ -23,7 +23,7 @@ test.describe('Capacity Report Accuracy', () => {
     });
     
     await testHelpers.navigateTo('/reports');
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Switch to Capacity Report tab
     const capacityTab = authenticatedPage.locator('button:has-text("Capacity Report"), button:has-text("Capacity")').first();
@@ -334,7 +334,7 @@ test.describe('Capacity Report Accuracy', () => {
       const applyButton = authenticatedPage.locator('button:has-text("Apply"), button:has-text("Filter")').first();
       if (await applyButton.isVisible()) {
         await applyButton.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         await authenticatedPage.waitForTimeout(1000);
         
         // Get updated capacity

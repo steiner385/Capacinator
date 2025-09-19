@@ -302,7 +302,7 @@ test.describe('People Availability Table', () => {
         const personName = await personLink.textContent();
         
         await personLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Should be on person detail page
         expect(authenticatedPage.url()).toMatch(/\/people\/[a-f0-9-]+$/);

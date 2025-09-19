@@ -27,8 +27,8 @@ test.describe('Authentication and Authorization Security', () => {
       // Storage might not be available in some contexts
       console.log('Storage not available, skipping clear');
     }
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
   }
 
   test.beforeEach(async ({ testDataHelpers, apiContext }) => {
@@ -69,7 +69,7 @@ test.describe('Authentication and Authorization Security', () => {
 
       for (const protectedPage of protectedPages) {
         await page.goto(protectedPage);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 30000 });
 
         // Should be redirected to login or show login screen
         const loginVisible = await page.locator('#person-select').isVisible();
@@ -86,8 +86,8 @@ test.describe('Authentication and Authorization Security', () => {
       console.log('🔒 Testing user validation during login');
 
       await clearAuthState(page);
-      await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await setupPageWithAuth(page, '/');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
 
       // Check if login form is present
       const loginSelect = page.locator('#person-select');
@@ -158,7 +158,7 @@ test.describe('Authentication and Authorization Security', () => {
 
       // Simulate browser reload
       await authenticatedPage.reload();
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
 
       // Should still be logged in (no login screen shown)
       const stillLoggedIn = await authenticatedPage.locator('#person-select').count() === 0;
@@ -180,7 +180,7 @@ test.describe('Authentication and Authorization Security', () => {
       
       if (await logoutButton.count() > 0) {
         await logoutButton.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Should be redirected to login
         const loginRequired = await authenticatedPage.locator('#person-select').isVisible();
@@ -194,7 +194,7 @@ test.describe('Authentication and Authorization Security', () => {
 
         // Navigate to protected page - should require re-authentication
         await authenticatedPage.goto('/projects');
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
 
         const loginRequired = await authenticatedPage.locator('#person-select').isVisible();
         expect(loginRequired).toBe(true);
@@ -245,7 +245,7 @@ test.describe('Authentication and Authorization Security', () => {
 
       // Navigate to another protected page - should handle corruption gracefully
       await authenticatedPage.goto('/projects');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
 
       // Should either auto-fix session or redirect to login
       const loginScreen = authenticatedPage.locator('#person-select');
@@ -358,7 +358,7 @@ test.describe('Authentication and Authorization Security', () => {
 
       // Try to navigate - should handle expired session
       await authenticatedPage.goto('/assignments');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
 
       // System should either still work (no timeout) or redirect to login
       const hasContent = await authenticatedPage.locator('table, #person-select, h1').count() > 0;

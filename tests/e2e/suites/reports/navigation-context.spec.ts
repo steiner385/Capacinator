@@ -38,7 +38,7 @@ test.describe('Report Navigation Context', () => {
       await authenticatedPage.click('button:has-text("Capacity Report")');
       
       // Wait for report to load
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       await authenticatedPage.waitForTimeout(1000);
       
       // Find one of our test people who might be underutilized
@@ -99,7 +99,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Demand Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Apply filters using test data values if possible
       const locationSelect = authenticatedPage.locator('select[name="location"]');
@@ -164,7 +164,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Gaps Analysis"), button:has-text("Gaps")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Find a gap for a role that matches our test data
       const testRoles = [...new Set(testData.people.map((p: any) => p.role))];
@@ -224,7 +224,7 @@ test.describe('Report Navigation Context', () => {
       
       // Select Utilization tab
       await authenticatedPage.click('button:has-text("Utilization Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Find a test person link
       let personLink = null;
@@ -264,7 +264,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Capacity Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Scroll to middle of report
       await authenticatedPage.evaluate(() => window.scrollTo(0, 500));
@@ -272,9 +272,9 @@ test.describe('Report Navigation Context', () => {
       
       // Navigate away and back
       await authenticatedPage.click('a:has-text("Projects")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       await authenticatedPage.goBack();
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Check scroll position is preserved (with tolerance)
       const scrollAfter = await authenticatedPage.evaluate(() => window.scrollY);
@@ -287,7 +287,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Demand Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Find expandable sections
       const detailsButton = authenticatedPage.locator('button[aria-label="Expand details"], button:has-text("Show Details")').first();
@@ -313,9 +313,9 @@ test.describe('Report Navigation Context', () => {
       
       // Navigate away and back
       await authenticatedPage.click('a:has-text("Dashboard")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       await authenticatedPage.click('a:has-text("Reports")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Verify states preserved (if sections exist)
       if (await detailsButton.count() > 0) {
@@ -334,7 +334,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Capacity Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Test "Underutilized" card link if it exists
       const underutilizedCard = authenticatedPage.locator('[data-testid="summary-card"]:has-text("Underutilized"), .summary-card:has-text("Underutilized")').first();
@@ -363,7 +363,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Gaps Analysis"), button:has-text("Gaps")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Click on critical gaps metric if it exists
       const criticalGapsCard = authenticatedPage.locator('[data-testid="metric-card"]:has-text("Critical Gaps"), .metric-card:has-text("Critical")').first();
@@ -385,7 +385,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Demand Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Click "High Demand Projects" link if it exists
       const highDemandLink = authenticatedPage.locator('a:has-text("High Demand Projects")').first();
@@ -456,7 +456,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Utilization Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Set date range using available controls
       const quarterSelect = authenticatedPage.locator('select[name="quarter"]').first();
@@ -487,7 +487,7 @@ test.describe('Report Navigation Context', () => {
     }) => {
       await testHelpers.navigateTo('/reports');
       await authenticatedPage.click('button:has-text("Utilization Report")');
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Apply team filter if available
       const teamSelect = authenticatedPage.locator('select[name="team"]').first();

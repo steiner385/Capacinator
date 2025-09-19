@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 /**
  * Enhanced E2E Tests for Utilization Report Modals
@@ -19,13 +19,13 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
 
   test.beforeEach(async ({ page }) => {
     testHelpers = new TestHelpers(page);
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await testHelpers.handleProfileSelection();
     
     // Navigate to utilization report
     await page.click('button:has-text("Utilization Report")');
     await page.waitForSelector('h2:has-text("Team Utilization Overview")');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await page.waitForTimeout(2000);
   });
 

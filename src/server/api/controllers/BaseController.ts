@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from '../../database/index.js';
+import { getDb } from '../../database/index.js';
 import { Knex } from 'knex';
 
 export abstract class BaseController {
-  protected db: Knex;
+  protected get db(): Knex {
+    return getDb();
+  }
 
   constructor(database?: Knex) {
-    this.db = database || db;
+    // Database is now accessed via getter
   }
 
   protected handleError(error: any, res: Response, message = 'Internal server error') {

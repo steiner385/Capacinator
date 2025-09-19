@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 import { TestDataGenerator } from './helpers/test-data-generator';
 
 test.describe('Project Roadmap', () => {
@@ -12,7 +13,7 @@ test.describe('Project Roadmap', () => {
     testData = await testDataGenerator.generateProjectRoadmapData();
     
     // Navigate to roadmap page
-    await page.goto('/roadmap');
+    await setupPageWithAuth(page, '/roadmap');
   });
 
   test.afterEach(async () => {
@@ -222,7 +223,7 @@ test.describe('Project Roadmap', () => {
       const searchInput = page.locator('.search-box input');
       
       // Wait for initial load
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       const initialCount = await page.locator('.project-row').count();
       
       // Enter search term
@@ -441,7 +442,7 @@ test.describe('Project Roadmap', () => {
   test.describe('Data Loading and Error Handling', () => {
     test('should show loading state initially', async ({ page }) => {
       // Navigate to roadmap and check for loading state very quickly
-      await page.goto('/roadmap');
+      await setupPageWithAuth(page, '/roadmap');
       
       // Check if loading spinner appears (may be very brief)
       const loadingSpinner = page.locator('svg[class*="animate-spin"], .loading-container');
@@ -729,7 +730,7 @@ test.describe('Project Roadmap', () => {
       // Measure page performance with multiple projects
       const startTime = Date.now();
       
-      await page.goto('/roadmap');
+      await setupPageWithAuth(page, '/roadmap');
       await expect(page.locator('.timeline-container')).toBeVisible();
       
       const loadTime = Date.now() - startTime;
@@ -746,11 +747,11 @@ test.describe('Project Roadmap', () => {
       await page.locator('select').first().selectOption('active');
       
       // Navigate away
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await expect(page.locator('h1')).toBeVisible();
       
       // Navigate back
-      await page.goto('/roadmap');
+      await setupPageWithAuth(page, '/roadmap');
       await expect(page.locator('.roadmap-header')).toBeVisible();
       
       // Note: Depending on implementation, state may or may not persist

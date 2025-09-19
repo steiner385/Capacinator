@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 import { TestDataGenerator } from './helpers/test-data-generator';
 
 test.describe('Enterprise Expansion Scenario', () => {
@@ -14,7 +15,7 @@ test.describe('Enterprise Expansion Scenario', () => {
 
   test('should handle complex enterprise expansion with multi-location resource allocation', async ({ page }) => {
     // Navigate to the main dashboard
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     
     // Verify dashboard loads with enterprise data
     await expect(page.locator('h1')).toContainText('Dashboard');
@@ -217,7 +218,7 @@ test.describe('Enterprise Expansion Scenario', () => {
   });
 
   test('should handle complex resource reallocation scenarios', async ({ page }) => {
-    await page.goto('/assignments');
+    await setupPageWithAuth(page, '/assignments');
     
     // Test resource reallocation when project priorities change
     await page.click('nav [href="/projects"]');
@@ -243,7 +244,7 @@ test.describe('Enterprise Expansion Scenario', () => {
   });
 
   test('should validate data integrity across all operations', async ({ page }) => {
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     
     // Test data consistency across different views
     await page.click('nav [href="/people"]');

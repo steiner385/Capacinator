@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
     host: '0.0.0.0', // Allow external connections
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.NODE_ENV === 'e2e' ? '3111' : '3110'}`,
+        target: `http://localhost:${process.env.PORT || '3110'}`,
         changeOrigin: true,
         secure: false,
         timeout: 10000,

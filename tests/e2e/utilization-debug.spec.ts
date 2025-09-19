@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test('Debug utilization report page structure', async ({ page }) => {
   const testHelpers = new TestHelpers(page);
-  await page.goto('/');
+  await setupPageWithAuth(page, '/');
   await testHelpers.handleProfileSelection();
   
   // Navigate to reports page first
-  await page.goto('/reports');
-  await page.waitForLoadState('networkidle');
+  await setupPageWithAuth(page, '/reports');
+  await page.waitForLoadState('networkidle', { timeout: 30000 });
   
   // Navigate to utilization report
   console.log('Looking for Utilization Report button...');

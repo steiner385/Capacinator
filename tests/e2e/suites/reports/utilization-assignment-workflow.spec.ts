@@ -77,7 +77,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
     const utilizationTab = authenticatedPage.locator('button').filter({ hasText: 'Utilization Report' });
     if (await utilizationTab.isVisible()) {
       await utilizationTab.click();
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     }
     
     // Wait for utilization data to load
@@ -280,7 +280,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
       // Verify utilization updated (refresh may be needed)
       console.log('🔄 Checking if utilization updated...');
       await authenticatedPage.reload();
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Re-navigate to utilization report
       const utilizationTabAfter = authenticatedPage.locator('button').filter({ hasText: 'Utilization Report' });
@@ -363,7 +363,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
       await utilizationTab.click();
     }
     
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Find one of our test people
     let testPersonRow = null;

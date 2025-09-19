@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test('Debug React Query behavior with console monitoring', async ({ page }) => {
   // Enable comprehensive console logging

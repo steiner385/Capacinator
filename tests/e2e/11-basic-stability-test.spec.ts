@@ -1,18 +1,18 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Basic Stability Test', () => {
   let helpers: TestHelpers;
 
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await helpers.waitForReactHydration();
   });
 
   test('should load the home page with basic content', async ({ page }) => {
     // Wait for the page to be fully loaded
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Should have some content
     const bodyText = await page.textContent('body');
@@ -25,26 +25,26 @@ test.describe('Basic Stability Test', () => {
 
   test('should have working page navigation', async ({ page }) => {
     // Test direct URL navigation instead of clicking
-    await page.goto('/dashboard');
+    await setupPageWithAuth(page, '/dashboard');
     await helpers.waitForReactHydration();
     
     expect(page.url()).toContain('/dashboard');
     
     // Should load content
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     const bodyText = await page.textContent('body');
     expect(bodyText).toBeTruthy();
   });
 
   test('should handle projects page navigation', async ({ page }) => {
     // Test direct URL navigation
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await helpers.waitForReactHydration();
     
     expect(page.url()).toContain('/projects');
     
     // Should load content without errors
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     const bodyText = await page.textContent('body');
     expect(bodyText).toBeTruthy();
   });

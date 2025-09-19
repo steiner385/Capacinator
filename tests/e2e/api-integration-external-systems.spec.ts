@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('API Integration and External Systems E2E Tests', () => {
   let helpers: TestHelpers;
@@ -11,7 +11,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('Third-Party API Integration Tests', () => {
     test('should validate SMTP email service configuration', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
       
       // Navigate to Email Notifications tab
@@ -34,7 +34,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should handle email notification service integration', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
       
       // Navigate to Email Notifications tab
@@ -63,7 +63,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should validate Excel processing service integration', async ({ page }) => {
-      await page.goto('/import');
+      await setupPageWithAuth(page, '/import');
       await helpers.setupPage();
       
       // Test Excel import template generation
@@ -110,7 +110,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test PDF generation service integration', async ({ page }) => {
-      await page.goto('/reports');
+      await setupPageWithAuth(page, '/reports');
       await helpers.setupPage();
       
       // Look for PDF export functionality
@@ -136,7 +136,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('External Service Connectivity Tests', () => {
     test('should test database connectivity and resilience', async ({ page }) => {
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
       
       // Test multiple API endpoints to verify database connectivity
@@ -166,7 +166,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test file system operations', async ({ page }) => {
-      await page.goto('/import');
+      await setupPageWithAuth(page, '/import');
       await helpers.setupPage();
       
       // Test file upload capability
@@ -200,7 +200,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test scheduled task system connectivity', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
       
       // Check for notification scheduling features
@@ -226,7 +226,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('Data Synchronization Workflow Tests', () => {
     test('should test Excel import data synchronization', async ({ page }) => {
-      await page.goto('/import');
+      await setupPageWithAuth(page, '/import');
       await helpers.setupPage();
       
       // Test import settings synchronization
@@ -262,7 +262,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test scenario data synchronization', async ({ page }) => {
-      await page.goto('/scenarios');
+      await setupPageWithAuth(page, '/scenarios');
       await helpers.setupPage();
       
       // Test scenario creation and data sync
@@ -296,7 +296,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test assignment data synchronization', async ({ page }) => {
-      await page.goto('/assignments');
+      await setupPageWithAuth(page, '/assignments');
       await helpers.setupPage();
       
       // Test assignment creation and cross-page sync
@@ -326,7 +326,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
             await page.waitForTimeout(2000);
             
             // Navigate to projects page to verify sync
-            await page.goto('/projects');
+            await setupPageWithAuth(page, '/projects');
             await helpers.setupPage();
             
             // Check if assignment appears in project view
@@ -342,7 +342,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('API Authentication Flow Tests', () => {
     test('should test user authentication workflow', async ({ page }) => {
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
       
       // Test user selection (current auth mechanism)
@@ -379,7 +379,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test permission-based API access', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
       
       // Navigate to User Permissions tab
@@ -403,7 +403,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test API session management', async ({ page }) => {
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
       
       // Test session persistence across page navigation
@@ -412,10 +412,10 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       });
       
       // Navigate to different pages
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
       
-      await page.goto('/people');
+      await setupPageWithAuth(page, '/people');
       await helpers.setupPage();
       
       // Check if session is maintained
@@ -433,7 +433,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('Integration Error Handling Tests', () => {
     test('should test API error handling and recovery', async ({ page }) => {
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
       
       // Test API error handling by accessing non-existent resource
@@ -470,7 +470,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test file upload error handling', async ({ page }) => {
-      await page.goto('/import');
+      await setupPageWithAuth(page, '/import');
       await helpers.setupPage();
       
       // Test invalid file format handling
@@ -500,7 +500,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test email service error handling', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
       
       // Navigate to Email Notifications tab
@@ -527,7 +527,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('Service Failover Scenarios', () => {
     test('should test database connection failover', async ({ page }) => {
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
       
       // Test health check endpoint
@@ -563,7 +563,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test file system failover', async ({ page }) => {
-      await page.goto('/import');
+      await setupPageWithAuth(page, '/import');
       await helpers.setupPage();
       
       // Test template download availability
@@ -582,7 +582,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test notification service failover', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
       
       // Navigate to Email Notifications tab
@@ -612,7 +612,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
 
   test.describe('Performance and Load Testing', () => {
     test('should test API response times under load', async ({ page }) => {
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
       
       // Test multiple concurrent API calls
@@ -660,7 +660,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
     });
 
     test('should test large data set handling', async ({ page }) => {
-      await page.goto('/people');
+      await setupPageWithAuth(page, '/people');
       await helpers.setupPage();
       
       // Test large data set loading

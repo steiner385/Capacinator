@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Basic Color Contrast', () => {
   test('check basic text contrast', async ({ page }) => {
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     
     // Get computed styles of body and text
     const styles = await page.evaluate(() => {
@@ -31,7 +32,7 @@ test.describe('Basic Color Contrast', () => {
   });
   
   test('check table contrast', async ({ page }) => {
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await page.waitForSelector('.table', { timeout: 30000 });
     
     const tableStyles = await page.evaluate(() => {
@@ -84,7 +85,7 @@ test.describe('Basic Color Contrast', () => {
   });
 
   test('check hover states', async ({ page }) => {
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await page.waitForSelector('.table tbody tr', { timeout: 30000 });
     
     // Get normal state

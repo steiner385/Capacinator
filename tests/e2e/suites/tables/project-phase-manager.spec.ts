@@ -32,7 +32,7 @@ test.describe('Project Phase Manager Table', () => {
     
     // Navigate to project detail page
     await testHelpers.navigateTo(`/projects/${projectId}`);
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand phases section
     const phaseSection = authenticatedPage.locator('text=Project Phases, text=Phases & Timeline, text=Timeline');

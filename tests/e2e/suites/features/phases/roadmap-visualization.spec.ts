@@ -325,7 +325,7 @@ test.describe('Project Roadmap Phase Visualization', () => {
     
     // Reload page to see new project
     await authenticatedPage.reload();
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Find the empty project row
     const projectRow = await testDataHelpers.findByTestData(

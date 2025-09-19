@@ -1,10 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Cascading Filters in Forms', () => {
   
   test.describe('Assignment New Form', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/assignments/new');
+      await setupPageWithAuth(page, '/assignments/new');
       await page.waitForTimeout(2000);
     });
 
@@ -159,7 +160,7 @@ test.describe('Cascading Filters in Forms', () => {
 
   test.describe('Person New Form', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/people/new');
+      await setupPageWithAuth(page, '/people/new');
       await page.waitForTimeout(2000);
     });
 
@@ -210,7 +211,7 @@ test.describe('Cascading Filters in Forms', () => {
 
   test.describe('Project New Form', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto('/projects/new');
+      await setupPageWithAuth(page, '/projects/new');
       await page.waitForTimeout(2000);
     });
 
@@ -281,13 +282,13 @@ test.describe('Cascading Filters in Forms', () => {
   test.describe('Cross-Form Consistency', () => {
     test('should maintain consistent data across different forms', async ({ page }) => {
       // Go to assignments form and note available people
-      await page.goto('/assignments/new');
+      await setupPageWithAuth(page, '/assignments/new');
       await page.waitForTimeout(2000);
       
       const assignmentPeople = await page.locator('select[name="person_id"] option').allTextContents();
       
       // Go to projects form and note available owners
-      await page.goto('/projects/new');
+      await setupPageWithAuth(page, '/projects/new');
       await page.waitForTimeout(2000);
       
       const projectOwners = await page.locator('select[name="owner_id"] option').allTextContents();
@@ -306,7 +307,7 @@ test.describe('Cascading Filters in Forms', () => {
         });
       });
       
-      await page.goto('/assignments/new');
+      await setupPageWithAuth(page, '/assignments/new');
       await page.waitForTimeout(2000);
       
       // Form should still be usable even with API failures

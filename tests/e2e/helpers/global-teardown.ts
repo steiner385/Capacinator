@@ -26,8 +26,38 @@ async function globalTeardown(config: FullConfig) {
     console.log('🗄️ Cleaning up E2E database...');
     await cleanupE2EDatabase();
     
-    // Step 3: Stop development server if we started it
+    // Step 3: Stop development servers if we started them
     const serverProcess = (global as any).__SERVER_PROCESS__ as ChildProcess | undefined;
+    const clientProcess = (global as any).__CLIENT_PROCESS__ as ChildProcess | undefined;
+    
+    // Stop client process first
+    if (clientProcess && !clientProcess.killed) {
+      console.log('🛑 Stopping development client...');
+      
+      clientProcess.kill('SIGTERM');
+      
+      // Wait up to 3 seconds for client shutdown
+      let clientShutdown = false;
+      const clientTimeout = setTimeout(() => {
+        if (!clientShutdown) {
+          console.log('⚠️ Client did not shut down gracefully, forcing...');
+          clientProcess.kill('SIGKILL');
+        }
+      }, 3000);
+      
+      await new Promise<void>((resolve) => {
+        clientProcess.on('exit', () => {
+          clientShutdown = true;
+          clearTimeout(clientTimeout);
+          console.log('✅ Client stopped');
+          resolve();
+        });
+      });
+      
+      delete (global as any).__CLIENT_PROCESS__;
+    }
+    
+    // Then stop server process
     if (serverProcess && !serverProcess.killed) {
       console.log('🛑 Stopping development server...');
       

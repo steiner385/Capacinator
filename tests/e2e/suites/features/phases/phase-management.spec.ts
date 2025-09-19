@@ -140,7 +140,7 @@ test.describe('Phase Management', () => {
     
     // Reload page to see new phase
     await authenticatedPage.reload();
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Open phase manager
     const phaseSection = authenticatedPage.locator('h2:has-text("Project Timeline"), h2:has-text("Phases")');

@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Simple UI Test', () => {
   test('should show scenarios page with visible UI elements', async ({ page }) => {
@@ -98,7 +99,7 @@ test.describe('Simple UI Test', () => {
   test('should check API connectivity from browser', async ({ page }) => {
     console.log('🌐 Testing API connectivity');
     
-    await page.goto('/scenarios');
+    await setupPageWithAuth(page, '/scenarios');
     await page.waitForTimeout(2000);
     
     // Test API from browser context

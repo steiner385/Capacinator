@@ -23,7 +23,7 @@ test.describe('Demand Report Accuracy', () => {
     });
     
     await testHelpers.navigateTo('/reports');
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Demand report is usually the default tab, but click it to be sure
     const demandTab = authenticatedPage.locator('button:has-text("Demand Report"), button:has-text("Demand")').first();
@@ -266,7 +266,7 @@ test.describe('Demand Report Accuracy', () => {
       const applyButton = authenticatedPage.locator('button:has-text("Apply"), button:has-text("Filter")');
       if (await applyButton.isVisible()) {
         await applyButton.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         await authenticatedPage.waitForTimeout(1000);
         
         // Verify no errors

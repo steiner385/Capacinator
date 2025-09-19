@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Smoke Test - Basic Infrastructure', () => {
   
@@ -39,7 +39,7 @@ test.describe('Smoke Test - Basic Infrastructure', () => {
     const helpers = new TestHelpers(page);
     
     // Setup and go to dashboard
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await helpers.setupPage();
     
     // Navigate to Projects

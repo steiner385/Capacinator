@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 import { TestDataGenerator } from './helpers/test-data-generator';
 
 test.describe('Project Type Hierarchy and Role Customization', () => {
@@ -14,7 +15,7 @@ test.describe('Project Type Hierarchy and Role Customization', () => {
 
   test('should create and manage hierarchical project types with role customization', async ({ page }) => {
     // Navigate to project types page
-    await page.goto('/project-types');
+    await setupPageWithAuth(page, '/project-types');
     await expect(page.locator('h1')).toContainText('Project Types');
     
     // Test 1: Verify the page loaded and shows some project types

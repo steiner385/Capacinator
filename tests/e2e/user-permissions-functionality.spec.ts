@@ -1,9 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('User Permissions Functionality', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the settings page and user permissions tab
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await page.click('nav a[href="/settings"]');
     await page.click('button:has-text("User Permissions")');
     await expect(page.locator('.settings-section h2')).toContainText('User Permissions');
@@ -286,7 +287,7 @@ test.describe('User Permissions Functionality', () => {
   test.describe('Integration with Main Application', () => {
     test('should be accessible from main navigation', async ({ page }) => {
       // Start from home page
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       
       // Navigate to settings
       await page.click('nav a[href="/settings"]');

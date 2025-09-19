@@ -167,7 +167,7 @@ test.describe('API Endpoints Health Check', () => {
       await helpers.clickAndNavigate('nav a:has-text("Reports")', '/reports');
       
       // Wait for page to load
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Check that page loaded successfully (no 500 error page)
       const pageTitle = await page.locator('h1').first().textContent();
@@ -196,7 +196,7 @@ test.describe('API Endpoints Health Check', () => {
       await helpers.clickAndNavigate('nav a:has-text("Reports")', '/reports');
       
       // Wait for capacity report to load
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Look for capacity report elements
       const reportElements = [

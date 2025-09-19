@@ -1,11 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Project Roadmap Search Functionality - Using Existing Data', () => {
 
   test.beforeEach(async ({ page }) => {
     // Navigate to the roadmap page - use existing seeded data
-    await page.goto('/roadmap');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/roadmap');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
   });
 
   test('should show search input and perform basic search', async ({ page }) => {

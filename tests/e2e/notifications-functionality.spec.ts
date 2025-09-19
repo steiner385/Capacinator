@@ -1,9 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Email Notifications Functionality', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the settings page and email notifications tab
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await page.click('nav a[href="/settings"]');
     await page.click('button:has-text("Email Notifications")');
     await expect(page.locator('.settings-section h2')).toContainText('Email Notifications');
@@ -201,14 +202,14 @@ test.describe('Email Notifications Functionality', () => {
   test.describe('Integration with Assignment System', () => {
     test('should have notification system ready for assignment notifications', async ({ page }) => {
       // Navigate to assignments page to verify integration
-      await page.goto('/assignments');
+      await setupPageWithAuth(page, '/assignments');
       
       // The notification system should be running in the background
       // We can't easily test actual email sending in e2e, but we can verify
       // the system is properly integrated by checking the settings work
       
       // Go back to notifications settings
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await page.click('button:has-text("Email Notifications")');
       
       // Verify system is ready (configuration exists)
@@ -265,7 +266,7 @@ test.describe('Email Notifications Functionality', () => {
   test.describe('User Experience', () => {
     test('should show appropriate loading states', async ({ page }) => {
       // When switching to notifications tab, should show loading states
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await page.click('button:has-text("System")'); // Switch away
       await page.click('button:has-text("Email Notifications")'); // Switch back
       

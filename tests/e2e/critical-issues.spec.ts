@@ -7,7 +7,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     const page = authenticatedPage;
     
     // Navigate to projects page
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await waitForPageReady(page);
     
     const tableRows = page.locator(testConfig.selectors.dataTable);
@@ -46,7 +46,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     const page = authenticatedPage;
     
     // Test missing new project route
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await waitForPageReady(page);
     
     const addProjectButton = page.locator('button:has-text("New Project"), button:has-text("Add Project")');
@@ -69,7 +69,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     }
     
     // Test missing edit person route
-    await page.goto('/people');
+    await setupPageWithAuth(page, '/people');
     await waitForPageReady(page);
     
     const peopleRows = page.locator(testConfig.selectors.dataTable);
@@ -96,7 +96,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     const page = authenticatedPage;
     
     // Test projects delete
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await waitForPageReady(page);
     
     const tableRows = page.locator(testConfig.selectors.dataTable);
@@ -145,7 +145,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     }
     
     // Test people delete
-    await page.goto('/people');
+    await setupPageWithAuth(page, '/people');
     await waitForPageReady(page);
     
     const peopleRows = page.locator(testConfig.selectors.dataTable);
@@ -178,7 +178,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     const page = authenticatedPage;
     
     // Check if assignments page has working forms
-    await page.goto('/assignments');
+    await setupPageWithAuth(page, '/assignments');
     await waitForPageReady(page);
     
     const hasAssignmentForm = await page.locator('form, .assignment-form').isVisible();
@@ -189,7 +189,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     console.log(`Assignments page: Form=${hasAssignmentForm}, Button=${hasAssignmentButton}`);
     
     // Check if scenarios page has working CRUD
-    await page.goto('/scenarios');
+    await setupPageWithAuth(page, '/scenarios');
     await waitForPageReady(page);
     
     const hasScenarioButton = await page.locator('button').filter({ 

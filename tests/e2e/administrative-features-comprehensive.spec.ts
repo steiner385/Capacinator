@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Administrative Features Comprehensive Tests', () => {
   let helpers: TestHelpers;
@@ -12,7 +12,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
   test.describe('Administrative Dashboard', () => {
     test('should display administrative overview dashboard', async ({ page }) => {
       // Navigate to settings/admin area
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for administrative dashboard elements
@@ -45,7 +45,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should provide quick access to admin functions', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Check for quick action buttons or links
@@ -72,7 +72,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should display system health status', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for system health indicators
@@ -98,7 +98,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
 
   test.describe('Advanced User Management Workflows', () => {
     test('should support user creation workflow', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to user permissions/management
@@ -141,7 +141,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should support role assignment and modification', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to user permissions
@@ -185,7 +185,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should handle permission override management', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to user permissions
@@ -226,7 +226,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should provide user status management', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to user management area
@@ -259,7 +259,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
 
   test.describe('System Configuration Deep Testing', () => {
     test('should validate advanced system settings', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to system settings
@@ -310,7 +310,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should test configuration dependency validation', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Test allocation settings dependencies
@@ -346,7 +346,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should handle settings persistence and rollback', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to system settings
@@ -398,7 +398,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should support configuration import/export', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for configuration export/import options
@@ -434,7 +434,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
 
   test.describe('Backup and Restore Functionality', () => {
     test('should provide manual backup creation', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for backup section or option
@@ -476,7 +476,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should display backup history and management', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for backup management interface
@@ -507,7 +507,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should support backup verification', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for backup verification or integrity check
@@ -533,7 +533,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should handle restore operations', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for restore functionality
@@ -567,7 +567,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
 
   test.describe('System Health Monitoring', () => {
     test('should display comprehensive health dashboard', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for health monitoring section
@@ -608,7 +608,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should show system performance metrics', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for performance metrics
@@ -632,7 +632,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should provide alerting and notification configuration', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Navigate to notification settings
@@ -663,7 +663,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should monitor system resource usage', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Look for resource monitoring
@@ -692,7 +692,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
   test.describe('Audit Log Advanced Features', () => {
     test('should provide comprehensive audit filtering', async ({ page }) => {
       // Navigate to audit log
-      await page.goto('/audit-log');
+      await setupPageWithAuth(page, '/audit-log');
       await helpers.setupPage();
 
       // Check for advanced filtering options
@@ -731,7 +731,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should support undo operations with verification', async ({ page }) => {
-      await page.goto('/audit-log');
+      await setupPageWithAuth(page, '/audit-log');
       await helpers.setupPage();
 
       // Look for undo buttons
@@ -766,7 +766,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should provide audit data export capabilities', async ({ page }) => {
-      await page.goto('/audit-log');
+      await setupPageWithAuth(page, '/audit-log');
       await helpers.setupPage();
 
       // Look for export options
@@ -801,7 +801,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should display audit statistics and insights', async ({ page }) => {
-      await page.goto('/audit-log');
+      await setupPageWithAuth(page, '/audit-log');
       await helpers.setupPage();
 
       // Look for audit statistics
@@ -827,7 +827,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
 
   test.describe('Administrative Integration Tests', () => {
     test('should maintain consistency across admin sections', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Test navigation between admin sections
@@ -855,7 +855,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should handle administrative error scenarios gracefully', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Test invalid form submissions
@@ -885,7 +885,7 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should preserve admin state during navigation', async ({ page }) => {
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Make changes in system settings

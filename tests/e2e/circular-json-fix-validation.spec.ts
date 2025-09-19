@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 /**
  * Validation Test for Circular JSON Structure Fix
@@ -13,7 +13,7 @@ test.describe('Circular JSON Structure Fix Validation', () => {
 
   test.beforeEach(async ({ page }) => {
     testHelpers = new TestHelpers(page);
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await testHelpers.handleProfileSelection();
   });
 

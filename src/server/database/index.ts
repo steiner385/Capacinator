@@ -1,16 +1,32 @@
-import knex from 'knex';
+import knex, { Knex } from 'knex';
 import knexConfig from './knexfile.js';
 import path from 'path';
 import fs from 'fs';
 import { initializeAuditService } from '../services/audit/index.js';
 
+// Store database instance
+let _db: Knex | null = null;
+
 // Create and export the database connection
-export const db = knex(knexConfig);
+export function getDb(): Knex {
+  if (process.env.NODE_ENV === 'e2e' && global.__E2E_DB__) {
+    return global.__E2E_DB__;
+  }
+  
+  if (!_db) {
+    _db = knex(knexConfig);
+  }
+  
+  return _db;
+}
+
+// Export db as a getter for backward compatibility
+export const db = getDb();
 
 // Test the connection
 export async function testConnection(): Promise<boolean> {
   try {
-    await db.raw('SELECT 1');
+    await getDb().raw('SELECT 1');
     console.log('Database connection successful');
     return true;
   } catch (error) {
@@ -22,18 +38,20 @@ export async function testConnection(): Promise<boolean> {
 // Initialize database (run migrations)
 export async function initializeDatabase(): Promise<void> {
   try {
+    const database = getDb();
+    
     // Run migrations
-    await db.migrate.latest();
+    await database.migrate.latest();
     console.log('Database migrations completed');
     
     // Initialize audit service after migrations
-    initializeAuditService(db);
+    initializeAuditService(database);
     
     // Seed initial data if needed (skip for E2E)
     if (process.env.NODE_ENV !== 'e2e') {
-      const hasData = await db('roles').count('* as count').first();
+      const hasData = await database('roles').count('* as count').first();
       if (hasData?.count === 0) {
-        await db.seed.run();
+        await database.seed.run();
         console.log('Database seeded with initial data');
       }
     }

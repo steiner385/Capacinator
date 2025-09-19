@@ -1,17 +1,18 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Person Utilization Timeline', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the People page
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     
     // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await page.waitForSelector('[data-testid="people-tab"], .nav-link:has-text("People")', { timeout: 10000 });
     
     // Navigate to People page
     await page.click('[data-testid="people-tab"], .nav-link:has-text("People")');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Wait for people list to load
     await page.waitForSelector('table tbody tr', { timeout: 15000 });
@@ -27,7 +28,7 @@ test.describe('Person Utilization Timeline', () => {
     
     // Click to view person details
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Verify we're on the person details page
     await expect(page.locator('h1')).toContainText(personName || '');
@@ -59,7 +60,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');
@@ -80,7 +81,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');
@@ -110,7 +111,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');
@@ -134,7 +135,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Initially, timeline should not be visible
     const timelineChart = page.locator('text=Utilization Timeline');
@@ -161,7 +162,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');
@@ -183,7 +184,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');
@@ -203,7 +204,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');
@@ -231,7 +232,7 @@ test.describe('Person Utilization Timeline', () => {
       // Go back to people list if not on first iteration
       if (i > 0) {
         await page.goBack();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 30000 });
         await page.waitForSelector('table tbody tr');
       }
       
@@ -239,7 +240,7 @@ test.describe('Person Utilization Timeline', () => {
       const currentRow = page.locator('table tbody tr').nth(i);
       const personName = await currentRow.locator('td').first().textContent();
       await currentRow.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Verify person details page
       await expect(page.locator('h1')).toContainText(personName || '');
@@ -266,7 +267,7 @@ test.describe('Person Utilization Timeline', () => {
     // Click on first person
     const personRow = page.locator('table tbody tr').first();
     await personRow.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Expand allocation section
     const allocationSection = page.locator('text=Allocation vs Availability');

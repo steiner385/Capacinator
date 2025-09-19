@@ -107,7 +107,7 @@ test.describe('Phase Dependencies E2E Tests', () => {
     
     // Refresh page to see dependency
     await authenticatedPage.reload();
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Wait for dependencies to load
     await authenticatedPage.waitForResponse(response => 
@@ -243,7 +243,7 @@ test.describe('Phase Dependencies E2E Tests', () => {
     
     // Reload to see dependencies
     await authenticatedPage.reload();
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Try to move first phase to create potential conflict
     const phaseElement = authenticatedPage.locator(`[draggable="true"]:has-text("${testData.phases[0].name}")`);
@@ -343,7 +343,7 @@ test.describe('Phase Dependencies E2E Tests', () => {
     
     // Reload page to see dependency
     await authenticatedPage.reload();
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Find and click on dependency line
     const dependencyLine = authenticatedPage.locator('[class*="dependency"], .dependency-line').first();

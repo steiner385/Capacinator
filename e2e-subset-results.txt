@@ -1,0 +1,371 @@
+Running E2E test subset...
+
+> capacinator@1.0.0 test:e2e
+> playwright test tests/e2e/suites/smoke/smoke-tests.spec.ts tests/e2e/suites/api/assignment-contracts.spec.ts tests/e2e/20-read-operations.spec.ts tests/e2e/21-write-operations.spec.ts --workers=1 --timeout=180000
+
+🚀 Starting E2E global setup...
+🗄️ Initializing E2E database...
+🧪 Initializing E2E test database...
+🔧 Running E2E database migrations...
+Creating baseline database schema...
+✅ Baseline database schema created successfully
+Fixing primary role foreign key constraint...
+✅ Fixed primary role foreign key constraint
+Creating missing database views...
+✅ Created missing database views
+Adding person_utilization_view and project_demands_view...
+✅ Added person_utilization_view and project_demands_view
+Fixing project_demands_view with correct join conditions...
+✅ Fixed project_demands_view with correct join conditions
+Fixing database views...
+✅ Fixed database views
+Adding project_health_view for gaps analysis...
+✅ Added project_health_view for gaps analysis
+Fixing project_health_view with correct health_status column...
+✅ Fixed project_health_view with correct health_status column
+Improving project_demands_view with hour calculations...
+✅ Improved project_demands_view with hour calculations and project type info
+Fixing project_demands_view missing columns...
+✅ Fixed project_demands_view with missing phase_id and renamed estimated_hours to demand_hours
+Creating project_phase_dependencies table...
+✅ Created project_phase_dependencies table with constraints and indexes
+🔧 Fixing missing IDs in database records...
+Found 0 assignments without IDs
+Found 0 availability overrides without IDs
+✅ Fixed missing IDs
+🌱 Seeding E2E test data...
+🌱 Seeding E2E test data...
+✅ E2E test data seeded successfully
+✅ E2E database initialized successfully
+🚀 Starting development server for E2E tests...
+🚀 Starting server...
+✅ Server started successfully
+🚀 Starting client...
+✅ Client started successfully
+⏳ Waiting for server at http://localhost:3120...
+✅ Server is ready
+⏳ Waiting for application to be ready...
+✅ Application is ready
+🔍 Verifying test data...
+✅ API health check passed
+✅ /api/roles: 3 items
+🔍 Handling initial profile selection...
+📋 Profile selection modal detected
+🎯 Starting profile selection...
+📂 Opening profile dropdown...
+⚠️ Profile selection handling failed: locator.waitFor: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]').first() to be visible[22m
+
+    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:360:32)
+    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:329:7)
+    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:67:5) {
+  name: 'TimeoutError'
+}
+💾 Authentication state saved to /home/tony/GitHub/Capacinator/test-results/e2e-auth.json
+✅ E2E global setup completed successfully
+
+Running 56 tests using 1 worker
+
+  ✓   1 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:12:3 › Smoke Tests › @smoke @critical server health check (143ms)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+  ✓   2 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:20:3 › Smoke Tests › @smoke @critical can authenticate and reach dashboard (11.5s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+  ✓   3 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:28:3 › Smoke Tests › @smoke main navigation links work (11.3s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .report-tabs, button.tab
+  ✓   4 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:38:3 › Smoke Tests › @smoke projects page loads with table (12.4s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .report-tabs, button.tab
+  ✓   5 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:53:3 › Smoke Tests › @smoke people page loads with data (12.4s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+⚠️ Sidebar not found
+✅ Navigation links found
+✅ Main content area found
+⚠️ No specific content found within timeout, but page is still open
+  ✘   6 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:67:3 › Smoke Tests › @smoke assignments page is accessible (36.2s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+⚠️ Navigation links not found
+⚠️ Main content area not found
+⚠️ No specific content found within timeout, but page is still open
+  ✘   7 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:67:3 › Smoke Tests › @smoke assignments page is accessible (retry #1) (41.4s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .report-tabs, button.tab
+  ✓   8 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:80:3 › Smoke Tests › @smoke reports page shows tabs (12.2s)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .report-tabs, button.tab
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .report-tabs, button.tab
+Waiting for page content to load...
+✅ Layout container found
+⚠️ Sidebar not found
+⚠️ Navigation links not found
+✅ Main content area found
+⚠️ No specific content found within timeout, but page is still open
+  ✓   9 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:90:3 › Smoke Tests › @smoke no console errors on main pages (36.6s)
+  ✓  10 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:112:3 › Smoke Tests › @smoke API endpoints respond (36ms)
+✅ Loaded saved authentication state
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .report-tabs, button.tab
+  ✓  11 [smoke] › tests/e2e/suites/smoke/smoke-tests.spec.ts:140:3 › Smoke Tests › @smoke search functionality exists (13.3s)
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Click failed with nav a:has-text("Dashboard"), trying force click...
+  ✘  12 [chromium] › tests/e2e/20-read-operations.spec.ts:14:5 › Read Operations - All Pages › Dashboard Page › should display all dashboard metrics (22.0s)
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Click failed with nav a:has-text("Dashboard"), trying force click...
+  ✘  13 [chromium] › tests/e2e/20-read-operations.spec.ts:14:5 › Read Operations - All Pages › Dashboard Page › should display all dashboard metrics (retry #1) (22.5s)
+🔍 Checking for profile selection modal...
+📋 Profile modal detected, proceeding with selection...
+📝 Profile select component found
+🎯 Attempting to select profile...
+📂 Opened shadcn Select dropdown
+⚠️ Shadcn Select failed: page.waitForSelector: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('[role="option"], [data-radix-collection-item]') to be visible[22m
+
+❌ Profile selection failed: Failed to select profile from dropdown
+🔄 Attempting to continue anyway...
+📸 Error screenshot saved to /tmp/profile-modal-error.png
+Waiting for page content to load...
+✅ Layout container found
+✅ Sidebar found
+✅ Navigation links found
+✅ Main content area found
+✅ Found content: .chart-container
+Click failed with nav a:has-text("Dashboard"), trying force click...
+  ✘  14 [chromium] › tests/e2e/20-read-operations.spec.ts:33:5 › Read Operations - All Pages › Dashboard Page › should have working links to detail pages (53.5s)

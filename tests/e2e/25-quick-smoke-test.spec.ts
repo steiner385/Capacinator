@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Quick Smoke Test - Dev Environment', () => {
   let helpers: TestHelpers;
@@ -137,7 +137,7 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
     await helpers.setupPage();
     
     // Wait for the page to fully load and stabilize
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await helpers.waitForDataLoad();
     
     // Wait for any async data loading to complete
@@ -182,7 +182,7 @@ test.describe('Performance', () => {
     const helpers = new TestHelpers(page);
     const startTime = Date.now();
     
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await helpers.setupPage();
     
     const loadTime = Date.now() - startTime;
@@ -194,7 +194,7 @@ test.describe('Performance', () => {
     // Test navigation speed
     const navStart = Date.now();
     await helpers.navigateViaSidebar('Projects');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     const navTime = Date.now() - navStart;
     console.log(`Navigation time: ${navTime}ms`);

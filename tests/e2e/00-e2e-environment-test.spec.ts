@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('E2E Environment Verification', () => {
   test('should have isolated e2e environment running', async ({ page }) => {
     // Skip this test if running against dev environment instead of isolated E2E
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     const baseURL = page.url();
     
     if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
@@ -43,7 +43,7 @@ test.describe('E2E Environment Verification', () => {
 
   test('should have e2e database isolation', async ({ page }) => {
     // Skip this test if running against dev environment instead of isolated E2E
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     const baseURL = page.url();
     
     if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
@@ -68,7 +68,7 @@ test.describe('E2E Environment Verification', () => {
 
   test('should have e2e scenarios available', async ({ page }) => {
     // Skip this test if running against dev environment instead of isolated E2E  
-    await page.goto('/scenarios');
+    await setupPageWithAuth(page, '/scenarios');
     const baseURL = page.url();
     
     if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {
@@ -101,7 +101,7 @@ test.describe('E2E Environment Verification', () => {
 
   test('should not interfere with dev environment', async ({ page }) => {
     // Skip this test if running against dev environment instead of isolated E2E
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     const baseURL = page.url();
     
     if (baseURL.includes('dev.capacinator.com') || baseURL.includes('localhost:3120')) {

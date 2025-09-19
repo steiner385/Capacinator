@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Fixed Navigation Tests', () => {
   let helpers: TestHelpers;
@@ -20,14 +20,14 @@ test.describe('Fixed Navigation Tests', () => {
   });
 
   test('should navigate to dashboard using URL', async ({ page }) => {
-    await page.goto('/dashboard');
+    await setupPageWithAuth(page, '/dashboard');
     await helpers.waitForReactHydration();
     
     // Should be on dashboard
     expect(page.url()).toContain('/dashboard');
     
     // Should load dashboard content
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Should not show errors
     const errorElements = page.locator('.error, [role="alert"]');
@@ -36,14 +36,14 @@ test.describe('Fixed Navigation Tests', () => {
   });
 
   test('should navigate to projects using URL', async ({ page }) => {
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await helpers.waitForReactHydration();
     
     // Should be on projects page
     expect(page.url()).toContain('/projects');
     
     // Should load projects content
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Try to wait for API calls but don't fail if they don't come
     try {
@@ -99,15 +99,15 @@ test.describe('Fixed Navigation Tests', () => {
       
       // Use force click to avoid detachment issues
       await projectsLink.click({ force: true });
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should navigate to projects
       await page.waitForTimeout(1000); // Give time for navigation
       expect(page.url()).toContain('/projects');
     } else {
       // Fallback to direct navigation
-      await page.goto('/projects');
-      await page.waitForLoadState('networkidle');
+      await setupPageWithAuth(page, '/projects');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
     }
     
     // Should be on projects page
@@ -116,7 +116,7 @@ test.describe('Fixed Navigation Tests', () => {
 
   test('should handle page refreshing correctly', async ({ page }) => {
     // Navigate to a specific page
-    await page.goto('/dashboard');
+    await setupPageWithAuth(page, '/dashboard');
     await helpers.waitForReactHydration();
     
     // Refresh the page
@@ -132,9 +132,9 @@ test.describe('Fixed Navigation Tests', () => {
 
   test('should display correct page content', async ({ page }) => {
     // Test dashboard content
-    await page.goto('/dashboard');
+    await setupPageWithAuth(page, '/dashboard');
     await helpers.waitForReactHydration();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Wait for content to be visible and loaded
     await page.waitForSelector('.main-content', { timeout: 10000 });
@@ -151,9 +151,9 @@ test.describe('Fixed Navigation Tests', () => {
     expect(hasExpectedContent).toBeTruthy();
     
     // Test projects content  
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await helpers.waitForReactHydration();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Wait for projects page to load
     await page.waitForSelector('.main-content', { timeout: 10000 });
@@ -180,7 +180,7 @@ test.describe('Fixed Navigation Tests', () => {
       });
     });
     
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await helpers.waitForReactHydration();
     
     // Should still load the page structure

@@ -189,7 +189,7 @@ test.describe('People Management', () => {
         const personName = testData.people[0].name;
         
         await personLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Should navigate to detail page
         expect(authenticatedPage.url()).toMatch(/\/people\/[a-f0-9-]+$/);

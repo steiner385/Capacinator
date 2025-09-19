@@ -2,7 +2,7 @@ import { Page } from '@playwright/test';
 
 export async function setupTestUser(page: Page) {
   // Navigate to the application
-  await page.goto('http://localhost:3121');
+  await page.goto('http://localhost:3120');
   
   // Handle profile selection modal if it appears
   try {
@@ -12,27 +12,68 @@ export async function setupTestUser(page: Page) {
     if (profileModalVisible) {
       console.log('Profile modal detected, selecting user...');
       
-      // Click on the dropdown to open it
-      await page.locator('select').click();
+      // Click on the shadcn Select trigger to open dropdown
+      console.log('🎯 Attempting to open profile dropdown...');
+      const selectTrigger = page.locator('#person-select');
+      await selectTrigger.waitFor({ state: 'visible', timeout: 5000 });
       
-      // Get all options
-      const optionValues = await page.locator('select option').evaluateAll(
-        options => options.map(option => ({
-          value: (option as HTMLOptionElement).value,
-          text: (option as HTMLOptionElement).text
-        }))
-      );
+      // Take screenshot before clicking
+      await page.screenshot({ path: '/tmp/before-dropdown-click.png' });
       
-      console.log('Available profiles:', optionValues);
+      await selectTrigger.click();
+      console.log('📂 Clicked select trigger');
       
-      // Select the first non-empty option, preferably Alice Johnson for consistency
-      const validOption = optionValues.find(opt => opt.text === 'Alice Johnson') || 
-                         optionValues.find(opt => opt.value && opt.text !== 'Select your name...');
-      if (validOption) {
-        await page.locator('select').selectOption(validOption.value);
-        console.log('Selected profile:', validOption.text);
+      // Wait a bit for the dropdown portal to render
+      await page.waitForTimeout(1000);
+      
+      // Try multiple strategies to find dropdown options
+      console.log('🔍 Looking for dropdown options...');
+      
+      // Strategy 1: Look for role="option"
+      let options = page.locator('[role="option"]');
+      let optionCount = await options.count();
+      
+      // Strategy 2: If no options found, try data-radix attributes
+      if (optionCount === 0) {
+        console.log('⚠️ No options with role="option", trying data-radix-collection-item...');
+        options = page.locator('[data-radix-collection-item]');
+        optionCount = await options.count();
+      }
+      
+      // Strategy 3: Look in portals
+      if (optionCount === 0) {
+        console.log('⚠️ No options found, looking in portals...');
+        options = page.locator('[data-radix-popper-content-wrapper] [role="option"]');
+        optionCount = await options.count();
+      }
+      
+      console.log(`📊 Found ${optionCount} profile options`);
+      
+      // Take screenshot after dropdown should be open
+      await page.screenshot({ path: '/tmp/after-dropdown-click.png' });
+      
+      if (optionCount > 0) {
+        // Get option texts for logging
+        const optionTexts = await options.evaluateAll(elements => 
+          elements.map(el => el.textContent?.trim() || '')
+        );
+        console.log('Available profiles:', optionTexts);
+        
+        // Try to find and click a specific option or use the first one
+        const targetOption = optionTexts.findIndex(text => text.includes('Alice Johnson'));
+        const optionToClick = targetOption >= 0 ? targetOption : 0;
+        
+        await options.nth(optionToClick).click();
+        console.log(`✅ Selected profile: ${optionTexts[optionToClick]}`);
       } else {
-        throw new Error('No valid profile options found');
+        // Fallback: Try keyboard navigation
+        console.log('⚠️ No options visible, trying keyboard navigation...');
+        await selectTrigger.press('Enter');
+        await page.waitForTimeout(500);
+        await page.keyboard.press('ArrowDown');
+        await page.waitForTimeout(100);
+        await page.keyboard.press('Enter');
+        console.log('✅ Attempted selection via keyboard');
       }
       
       // Click Continue button

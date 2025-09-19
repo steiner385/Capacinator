@@ -118,13 +118,25 @@ export class TestDataHelpers {
       
       // Find or use first available
       const typesArray = types.data || types;
-      const subTypesArray = subTypes.data || subTypes;
       const locationsArray = locations.data || locations;
       
-      // Ensure they are arrays
-      if (!Array.isArray(subTypesArray)) {
-        console.error('SubTypes response is not an array:', subTypesArray);
-        throw new Error('Invalid subtypes response format');
+      // Handle the sub-types response which may be grouped by project type
+      let subTypesArray = [];
+      if (subTypes.data && Array.isArray(subTypes.data)) {
+        // If it's grouped data, flatten it
+        subTypesArray = subTypes.data.flatMap(group => group.sub_types || []);
+      } else if (Array.isArray(subTypes)) {
+        // If it's already a flat array
+        subTypesArray = subTypes;
+      } else if (subTypes.success === false) {
+        console.error('SubTypes request failed:', subTypes);
+        throw new Error('Failed to fetch project sub-types');
+      }
+      
+      // Ensure we have sub-types
+      if (!Array.isArray(subTypesArray) || subTypesArray.length === 0) {
+        console.error('SubTypes response is not valid:', subTypes);
+        throw new Error('Invalid subtypes response format or no subtypes available');
       }
       
       // Get the first available project type

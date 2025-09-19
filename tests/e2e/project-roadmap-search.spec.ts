@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 import { TestDataGenerator } from './helpers/test-data-generator';
 
 test.describe('Project Roadmap Search Functionality', () => {
@@ -11,8 +12,8 @@ test.describe('Project Roadmap Search Functionality', () => {
     await testDataGenerator.generateSearchTestData();
     
     // Navigate to the roadmap page
-    await page.goto('/roadmap');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/roadmap');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
   });
 
   test.afterEach(async () => {

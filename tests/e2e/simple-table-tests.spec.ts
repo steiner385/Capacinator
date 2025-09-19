@@ -1,12 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Simple Table Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the base URL
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     
     // Handle profile selection if it appears
-    const profileModal = page.locator('text=Select Your Profile');
+    const profileModal = page.locator('text="Select Your Profile"');
     if (await profileModal.isVisible({ timeout: 5000 })) {
       // Select first profile
       const select = page.locator('select').first();
@@ -26,7 +27,7 @@ test.describe('Simple Table Tests', () => {
     }
     
     // Wait for the app to be ready
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
   });
 
   test('can navigate to Projects page and see table', async ({ page }) => {

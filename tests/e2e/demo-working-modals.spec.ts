@@ -1,15 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('DEMO: Working Utilization Modals', () => {
   test('Demonstrate working Add/Remove project functionality', async ({ page }) => {
     const testHelpers = new TestHelpers(page);
     
     // Setup
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await testHelpers.handleProfileSelection();
-    await page.goto('/reports');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/reports');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Navigate to utilization report
     await page.click('button:has-text("Utilization Report")');

@@ -1,3 +1,4 @@
+import { setupPageWithAuth } from './improved-auth-helpers';
 import { Page, expect } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -1227,3 +1228,5 @@ export class TestHelpers {
     return null;
   }
 }
+// Re-export auth helpers for convenience
+export { setupPageWithAuth };

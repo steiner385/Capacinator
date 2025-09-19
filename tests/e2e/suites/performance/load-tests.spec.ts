@@ -149,7 +149,7 @@ test.describe('Performance and Load Testing', () => {
       
       // Force dashboard refresh
       await authenticatedPage.reload();
-      await authenticatedPage.waitForLoadState('networkidle');
+      await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Wait for dashboard elements to load
       await authenticatedPage.waitForSelector('h1:has-text("Dashboard"), h2:has-text("Dashboard"), [data-testid="dashboard"]', { 
@@ -276,7 +276,7 @@ test.describe('Performance and Load Testing', () => {
       if (await nextPageButton.isVisible()) {
         const paginationStart = Date.now();
         await nextPageButton.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         const paginationTime = Date.now() - paginationStart;
         
         console.log(`Pagination time: ${paginationTime}ms`);

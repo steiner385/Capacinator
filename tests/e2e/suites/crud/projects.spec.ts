@@ -218,7 +218,7 @@ test.describe('Project Management', () => {
         const projectName = testData.projects[0].name;
         
         await projectLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Should navigate to detail page
         expect(authenticatedPage.url()).toMatch(/\/projects\/[a-f0-9-]+$/);
@@ -252,7 +252,7 @@ test.describe('Project Management', () => {
         );
         const projectLink = projectRow.locator('td:first-child a');
         await projectLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Find edit button
         const editButton = authenticatedPage.locator('button:has-text("Edit"), button:has-text("Edit Project")');
@@ -300,7 +300,7 @@ test.describe('Project Management', () => {
         );
         const projectLink = projectRow.locator('td:first-child a');
         await projectLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Look for status change button/select
         const statusSelect = authenticatedPage.locator('select[name="status"]');
@@ -450,7 +450,7 @@ test.describe('Project Management', () => {
         );
         const projectLink = projectRow.locator('td:first-child a');
         await projectLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Look for phases section
         const phasesSection = authenticatedPage.locator('text=Phases, text=Project Phases');
@@ -487,7 +487,7 @@ test.describe('Project Management', () => {
         );
         const projectLink = projectRow.locator('td:first-child a');
         await projectLink.click();
-        await authenticatedPage.waitForLoadState('networkidle');
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
         
         // Look for add phase button
         const addPhaseButton = authenticatedPage.locator('button:has-text("Add Phase"), button:has-text("New Phase")');

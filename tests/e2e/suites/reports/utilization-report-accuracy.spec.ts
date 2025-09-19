@@ -24,7 +24,7 @@ test.describe('Utilization Report Accuracy', () => {
     });
     
     await testHelpers.navigateTo('/reports');
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Switch to Utilization Report tab
     const utilizationTab = authenticatedPage.locator('button:has-text("Utilization Report"), button:has-text("Utilization")').first();

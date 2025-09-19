@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { ImprovedAuthHelper } from './utils/improved-auth-helpers';
 
 async function checkPageLoad(page: any, url: string, expectedTitle: string) {
-  await page.goto(url);
+  const authHelper = new ImprovedAuthHelper(page);
+  await authHelper.setupPageWithAuth(url);
   await page.waitForLoadState('domcontentloaded');
   
   // Wait for React to mount
@@ -14,16 +16,16 @@ async function checkPageLoad(page: any, url: string, expectedTitle: string) {
   }, { timeout: 15000 });
   
   // Look for common elements that indicate the page is rendering
-  await page.waitForSelector('div, svg[class*="animate-spin"]-container, .text-destructive, h1, h2, h3, nav, main, [role="main"]', { timeout: 15000 });
+  await page.waitForSelector('div, svg[class*="animate-spin"], .text-destructive, h1, h2, h3, nav, main, [role="main"]', { timeout: 15000 });
   
   // If we have a loading spinner, wait for it to be replaced by content
-  const loadingSpinner = page.locator('svg[class*="animate-spin"]-container');
+  const loadingSpinner = page.locator('svg[class*="animate-spin"]');
   const loadingCount = await loadingSpinner.count();
   if (loadingCount > 0) {
     console.log(`${expectedTitle} page is loading...`);
     // Wait for loading to complete
     await page.waitForFunction(() => {
-      const spinner = document.querySelector('svg[class*="animate-spin"]-container');
+      const spinner = document.querySelector('svg[class*="animate-spin"]');
       return !spinner || spinner.style.display === 'none' || !spinner.offsetParent;
     }, { timeout: 30000 });
     
@@ -67,6 +69,12 @@ async function checkPageLoad(page: any, url: string, expectedTitle: string) {
 }
 
 test.describe('Basic Navigation Test', () => {
+  test.beforeEach(async ({ page }) => {
+    // Handle initial authentication
+    const authHelper = new ImprovedAuthHelper(page);
+    await authHelper.setupPageWithAuth('/');
+  });
+
   test('should load main application pages', async ({ page }) => {
     // Test all pages with error-tolerant approach
     await checkPageLoad(page, '/dashboard', 'Dashboard');

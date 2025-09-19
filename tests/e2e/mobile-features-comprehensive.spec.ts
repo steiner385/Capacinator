@@ -1,5 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Mobile Features Comprehensive Tests', () => {
   let helpers: TestHelpers;
@@ -13,7 +13,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
     test('should adapt dashboard layout for mobile viewport', async ({ page }) => {
       // Test mobile viewport (375x667 - iPhone SE)
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/dashboard');
+      await setupPageWithAuth(page, '/dashboard');
       await helpers.setupPage();
 
       // Check if dashboard cards stack vertically on mobile
@@ -50,7 +50,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
     test('should handle tablet viewport transitions', async ({ page }) => {
       // Start with desktop viewport
       await page.setViewportSize({ width: 1200, height: 800 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
 
       // Check initial layout
@@ -82,7 +82,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should display full-screen modals on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
 
       // Try to open a modal (new project)
@@ -113,7 +113,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should handle data table responsive behavior', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/people');
+      await setupPageWithAuth(page, '/people');
       await helpers.setupPage();
 
       // Check for data table
@@ -146,7 +146,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should adapt form layouts for mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Check form layout adaptation
@@ -176,7 +176,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
     test('should handle basic touch interactions', async ({ page }) => {
       // Use mobile viewport and test touch-like behavior
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/dashboard');
+      await setupPageWithAuth(page, '/dashboard');
       await helpers.setupPage();
 
       // Test button touch interactions
@@ -201,7 +201,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should support mobile navigation patterns', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
 
       // Check sidebar behavior on mobile
@@ -237,7 +237,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should handle gesture-like interactions', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
 
       // Test swipe-like behavior (not true gestures, but mouse drag simulation)
@@ -270,7 +270,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should support keyboard navigation on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Test tab navigation on mobile devices with keyboards
@@ -295,7 +295,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
   test.describe('Mobile Workflows and User Experience', () => {
     test('should complete project creation workflow on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
 
       // Start project creation workflow
@@ -337,7 +337,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should handle assignment creation on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/assignments');
+      await setupPageWithAuth(page, '/assignments');
       await helpers.setupPage();
 
       // Test assignment workflow
@@ -375,7 +375,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should navigate between pages efficiently on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/dashboard');
+      await setupPageWithAuth(page, '/dashboard');
       await helpers.setupPage();
 
       // Test navigation between key pages
@@ -405,7 +405,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should handle data filtering on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
 
       // Test filter interactions on mobile
@@ -451,7 +451,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
         const startTime = Date.now();
         await page.goto(testPage.path);
         await helpers.setupPage();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 30000 });
         const endTime = Date.now();
         
         const loadTime = endTime - startTime;
@@ -463,7 +463,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should handle large datasets on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/people');
+      await setupPageWithAuth(page, '/people');
       await helpers.setupPage();
 
       // Set filters to potentially get more data
@@ -484,7 +484,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
         await applyButton.click();
       }
       
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       const endTime = Date.now();
       
       const responseTime = endTime - startTime;
@@ -495,7 +495,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should render charts efficiently on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/reports');
+      await setupPageWithAuth(page, '/reports');
       await helpers.setupPage();
       
       // Wait for charts to render
@@ -524,7 +524,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
   test.describe('Offline Functionality Testing', () => {
     test('should detect network status', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/dashboard');
+      await setupPageWithAuth(page, '/dashboard');
       await helpers.setupPage();
 
       // Check for network status detection
@@ -555,11 +555,11 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should handle data caching for offline use', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
       
       // Load data while online
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       const onlineDataCount = await page.locator('tbody tr, .project-item').count();
       
       // Go offline
@@ -596,7 +596,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       }
 
       // Check for service worker
-      await page.goto('/');
+      await setupPageWithAuth(page, '/');
       await helpers.setupPage();
       
       const serviceWorker = await page.evaluate(() => {
@@ -622,7 +622,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
   test.describe('Mobile Accessibility and Usability', () => {
     test('should maintain accessibility standards on mobile', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/dashboard');
+      await setupPageWithAuth(page, '/dashboard');
       await helpers.setupPage();
 
       // Check for proper viewport meta tag
@@ -659,7 +659,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
 
     test('should support mobile screen readers', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/settings');
+      await setupPageWithAuth(page, '/settings');
       await helpers.setupPage();
 
       // Check for ARIA labels and accessibility attributes
@@ -691,7 +691,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
     test('should handle landscape orientation', async ({ page }) => {
       // Start in portrait mode
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.goto('/projects');
+      await setupPageWithAuth(page, '/projects');
       await helpers.setupPage();
 
       // Switch to landscape mode

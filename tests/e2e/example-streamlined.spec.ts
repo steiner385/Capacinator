@@ -11,7 +11,7 @@ test.describe('Streamlined E2E Test Example', () => {
     const page = authenticatedPage;
     
     // Navigate to projects page
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await waitForPageReady(page);
     
     // Wait for projects data to load
@@ -45,7 +45,7 @@ test.describe('Streamlined E2E Test Example', () => {
     const page = authenticatedPage;
     
     // Navigate directly to a project (if you know the ID)
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await waitForPageReady(page);
     
     // Get to project detail
@@ -95,7 +95,7 @@ test.describe('Tests with custom timeouts', () => {
     const page = authenticatedPage;
     
     // Your long-running test logic here
-    await page.goto('/dashboard');
+    await setupPageWithAuth(page, '/dashboard');
     await waitForPageReady(page);
     
     console.log('✅ Long running test completed');

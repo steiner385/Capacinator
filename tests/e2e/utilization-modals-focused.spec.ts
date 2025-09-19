@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 /**
  * Focused E2E Tests for Utilization Report Modal Functionality
@@ -13,19 +13,19 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
 
   test.beforeEach(async ({ page }) => {
     testHelpers = new TestHelpers(page);
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await testHelpers.handleProfileSelection();
     
     // Navigate to reports page first
-    await page.goto('/reports');
-    await page.waitForLoadState('networkidle');
+    await setupPageWithAuth(page, '/reports');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Navigate to utilization report and wait for it to load
     await page.click('button:has-text("Utilization Report")');
     
     // Wait for utilization overview to appear
     await page.waitForSelector('h2:has-text("🎯 Team Utilization Overview")', { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
     await page.waitForTimeout(3000); // Allow data to fully load
   });
 

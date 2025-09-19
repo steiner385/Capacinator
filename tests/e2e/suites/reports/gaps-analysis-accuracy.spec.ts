@@ -24,7 +24,7 @@ test.describe('Gaps Analysis Report Accuracy', () => {
     });
     
     await testHelpers.navigateTo('/reports');
-    await authenticatedPage.waitForLoadState('networkidle');
+    await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     
     // Switch to Gaps Report tab
     const gapsTab = authenticatedPage.locator('button:has-text("Gaps Report"), button:has-text("Gaps Analysis"), button:has-text("Gaps")').first();

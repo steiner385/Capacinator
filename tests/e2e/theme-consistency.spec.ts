@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
+import { setupPageWithAuth } from './utils/improved-auth-helpers';;
 
 test.describe('Theme Consistency - Light Mode', () => {
   // Define expected light mode colors
@@ -18,7 +19,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   };
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
   });
 
   test('should have correct background colors on all pages', async ({ page }) => {
@@ -65,7 +66,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have correct table styling and hover states', async ({ page }) => {
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
     await page.waitForSelector('.table');
 
     // Check table header background
@@ -84,7 +85,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have correct button colors and hover states', async ({ page }) => {
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
 
     // Primary button
     const primaryBtn = page.locator('button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])').first();
@@ -102,7 +103,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have correct form input styling', async ({ page }) => {
-    await page.goto('/projects/new');
+    await setupPageWithAuth(page, '/projects/new');
     await page.waitForSelector('.form-input');
 
     const input = page.locator('.form-input').first();
@@ -115,7 +116,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have correct badge colors', async ({ page }) => {
-    await page.goto('/people');
+    await setupPageWithAuth(page, '/people');
     
     // Check various badge types if they exist
     const badgeSelectors = [
@@ -133,7 +134,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have correct text colors and contrast', async ({ page }) => {
-    await page.goto('/dashboard');
+    await setupPageWithAuth(page, '/dashboard');
 
     // Primary text
     const heading = page.locator('h1').first();
@@ -147,7 +148,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have correct chart colors', async ({ page }) => {
-    await page.goto('/reports');
+    await setupPageWithAuth(page, '/reports');
     await page.waitForTimeout(2000);
 
     // Check if charts are rendered with correct colors
@@ -159,7 +160,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have consistent card and modal styling', async ({ page }) => {
-    await page.goto('/reports');
+    await setupPageWithAuth(page, '/reports');
 
     // Check summary cards
     const summaryCard = page.locator('.summary-card').first();
@@ -169,7 +170,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     }
 
     // Check modal if we can trigger one
-    await page.goto('/people');
+    await setupPageWithAuth(page, '/people');
     const deleteBtn = page.locator('.btn-icon.btn-danger').first();
     if (await deleteBtn.count() > 0) {
       await deleteBtn.click();
@@ -210,7 +211,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
 
   test('should have proper contrast ratios', async ({ page }) => {
-    await page.goto('/projects');
+    await setupPageWithAuth(page, '/projects');
 
     // Check text on background contrast
     const textElement = page.locator('.page-header h1').first();

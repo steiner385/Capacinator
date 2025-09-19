@@ -30,7 +30,7 @@ test.describe('Simple UI Test', () => {
     const projectsLink = page.locator('a').filter({ hasText: 'Projects' }).first();
     if (await projectsLink.isVisible()) {
       await projectsLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should navigate to projects page
       expect(page.url()).toContain('/projects');
@@ -40,7 +40,7 @@ test.describe('Simple UI Test', () => {
     const dashboardLink = page.locator('a').filter({ hasText: 'Dashboard' }).first();
     if (await dashboardLink.isVisible()) {
       await dashboardLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('networkidle', { timeout: 30000 });
       
       // Should navigate to dashboard
       expect(page.url()).toContain('/dashboard');

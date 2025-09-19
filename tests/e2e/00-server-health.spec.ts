@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
+import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
 
 test.describe('Server Health Check', () => {
   test('should reach the health endpoint', async ({ request }) => {
@@ -12,13 +12,13 @@ test.describe('Server Health Check', () => {
 
   test('should load the main page', async ({ page }) => {
     const helpers = new TestHelpers(page);
-    await page.goto('/');
+    await setupPageWithAuth(page, '/');
     await helpers.setupPage();
     
     // Should not be a complete error page
     await expect(page).not.toHaveTitle(/404|Error/);
     
     // Page should load without throwing
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
   });
 });
