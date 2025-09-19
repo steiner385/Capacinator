@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export class ResourceTemplatesController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -11,175 +12,46 @@ export class ResourceTemplatesController extends BaseController {
       role_id: req.query.role_id
     };
 
-    const result = await this.executeQuery(async () => {
-      let query = this.db('resource_templates')
-        .join('project_types', 'resource_templates.project_type_id', 'project_types.id')
-        .join('project_phases', 'resource_templates.phase_id', 'project_phases.id')
-        .join('roles', 'resource_templates.role_id', 'roles.id')
-        .select(
-          'resource_templates.*',
-          'project_types.name as project_type_name',
-          'project_phases.name as phase_name',
-          'roles.name as role_name'
-        );
+    // Generate a UUID for the resource templates
 
-      query = this.buildFilters(query, filters);
-      
-      if (req.query.page || req.query.limit) {
-        query = this.paginate(query, page, limit);
-      } else {
-        query = query.orderBy('project_types.name', 'project_phases.order_index', 'roles.name');
-      }
 
-      const allocations = await query;
+    const resultId = uuidv4();
 
-      // Get total count
-      let total = allocations.length;
-      if (req.query.page || req.query.limit) {
-        const countQuery = this.db('resource_templates').count('* as count');
-        this.buildFilters(countQuery, filters);
-        const totalResult = await countQuery.first();
-        total = Number(totalResult?.count) || 0;
-      }
 
-      if (req.query.page || req.query.limit) {
-        return {
-          data: allocations,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit)
-          }
-        };
-      } else {
-        return allocations;
-      }
-    }, res, 'Failed to fetch allocations');
 
-    if (result) {
-      res.json(result);
-    }
-  }
+    // Insert with generated ID
 
-  async getByProjectType(req: Request, res: Response) {
-    const { project_type_id } = req.params;
 
-    const result = await this.executeQuery(async () => {
-      // Get allocations grouped by phase
-      const allocations = await this.db('resource_templates')
-        .join('project_phases', 'resource_templates.phase_id', 'project_phases.id')
-        .join('roles', 'resource_templates.role_id', 'roles.id')
-        .where('resource_templates.project_type_id', project_type_id)
-        .select(
-          'resource_templates.*',
-          'project_phases.name as phase_name',
-          'project_phases.order_index as phase_order',
-          'roles.name as role_name'
-        )
-        .orderBy('project_phases.order_index', 'roles.name');
+    await this.db('resource_templates')
 
-      // Group by phase
-      const phaseMap = new Map();
-      
-      allocations.forEach(allocation => {
-        if (!phaseMap.has(allocation.phase_id)) {
-          phaseMap.set(allocation.phase_id, {
-            phase_id: allocation.phase_id,
-            phase_name: allocation.phase_name,
-            phase_order: allocation.phase_order,
-            allocations: []
-          });
-        }
-        
-        phaseMap.get(allocation.phase_id).allocations.push({
-          id: allocation.id,
-          role_id: allocation.role_id,
-          role_name: allocation.role_name,
-          allocation_percentage: allocation.allocation_percentage
-        });
-      });
 
-      // Convert to array and sort by phase order
-      const phases = Array.from(phaseMap.values()).sort((a, b) => a.phase_order - b.phase_order);
+      .insert({
 
-      // Get project type details
-      const projectType = await this.db('project_types')
-        .where('id', project_type_id)
-        .first();
 
-      return {
-        project_type: projectType,
-        phases,
-        summary: {
-          total_phases: phases.length,
-          total_allocations: allocations.length,
-          total_percentage_by_phase: phases.map(phase => ({
-            phase_name: phase.phase_name,
-            total_percentage: phase.allocations.reduce((sum: number, a: any) => sum + a.allocation_percentage, 0)
-          }))
-        }
-      };
-    }, res, 'Failed to fetch allocations by project type');
+        id: resultId,
 
-    if (result) {
-      res.json(result);
-    }
-  }
 
-  async create(req: Request, res: Response) {
-    const allocationData = req.body;
-
-    const result = await this.executeQuery(async () => {
-      // Check if this is a child project type (role allocations only allowed for child types)
-      const projectType = await this.db('project_types')
-        .where('id', allocationData.project_type_id)
-        .first();
-
-      if (!projectType) {
-        return res.status(404).json({
-          error: 'Project type not found'
-        });
-      }
-
-      // Prevent editing allocations for default child project types
-      if (projectType.is_default) {
-        return res.status(403).json({
-          error: 'Cannot modify allocations for default project types',
-          message: 'Default project types are read-only. Modify the parent project type instead.'
-        });
-      }
-
-      // Determine if this is an inherited template or a parent/override template
-      const isInherited = false; // Direct creation is never inherited
-      const parentTemplateId = null; // Will be set during inheritance propagation
-
-      // Validate allocation doesn't already exist
-      const existing = await this.db('resource_templates')
-        .where({
-          project_type_id: allocationData.project_type_id,
-          phase_id: allocationData.phase_id,
-          role_id: allocationData.role_id
-        })
-        .first();
-
-      if (existing) {
-        return res.status(409).json({
-          error: 'Allocation already exists',
-          existing,
-          message: 'Use PUT to update existing allocation'
-        });
-      }
-
-      const [allocation] = await this.db('resource_templates')
-        .insert({
+        ...{
           ...allocationData,
           is_inherited: isInherited,
           parent_template_id: parentTemplateId,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('*');
+          created_at: new Date(
+
+
+      });
+
+
+
+    // Fetch the created record
+
+
+    const [result] = await this.db('resource_templates')
+
+
+      .where({ id: resultId })
+
+
+      .select('*');
 
       // If this is a parent project type, propagate to children
       if (projectType.parent_id === null) {
@@ -197,73 +69,49 @@ export class ResourceTemplatesController extends BaseController {
   async bulkUpdate(req: Request, res: Response) {
     const { project_type_id, allocations } = req.body;
 
-    const result = await this.executeQuery(async () => {
-      // Check if this is a child project type (role allocations only allowed for child types)
-      const projectType = await this.db('project_types')
-        .where('id', project_type_id)
-        .first();
+    // Generate a UUID for the project types
 
-      if (!projectType) {
-        return res.status(404).json({
-          error: 'Project type not found'
-        });
-      }
 
-      // Prevent editing allocations for default child project types
-      if (projectType.is_default) {
-        return res.status(403).json({
-          error: 'Cannot modify allocations for default project types',
-          message: 'Default project types are read-only. Modify the parent project type instead.'
-        });
-      }
+    const resultId = uuidv4();
 
-      // Determine if this is an inherited template or a parent/override template
-      const isInherited = false; // Direct creation is never inherited
-      const parentTemplateId = null; // Will be set during inheritance propagation
 
-      const results = {
-        created: [] as any[],
-        updated: [] as any[],
-        failed: [] as any[]
-      };
 
-      await this.db.transaction(async (trx) => {
-        for (const allocation of allocations) {
-          try {
-            // Check if allocation exists
-            const existing = await trx('resource_templates')
-              .where({
-                project_type_id,
-                phase_id: allocation.phase_id,
-                role_id: allocation.role_id
-              })
-              .first();
+    // Insert with generated ID
 
-            if (existing) {
-              // Update existing
-              const [updated] = await trx('resource_templates')
-                .where('id', existing.id)
-                .update({
-                  allocation_percentage: allocation.allocation_percentage,
-                  updated_at: new Date()
-                })
-                .returning('*');
-              
-              results.updated.push(updated);
-            } else {
-              // Create new
-              const [created] = await trx('resource_templates')
-                .insert({
+
+    await this.db('project_types')
+
+
+      .insert({
+
+
+        id: resultId,
+
+
+        ...{
                   project_type_id,
                   phase_id: allocation.phase_id,
                   role_id: allocation.role_id,
                   allocation_percentage: allocation.allocation_percentage,
                   is_inherited: false,
                   parent_template_id: null,
-                  created_at: new Date(),
-                  updated_at: new Date()
-                })
-                .returning('*');
+                  created_at: new Date(
+
+
+      });
+
+
+
+    // Fetch the created record
+
+
+    const [result] = await this.db('project_types')
+
+
+      .where({ id: resultId })
+
+
+      .select('*');
               
               results.created.push(created);
             }
@@ -305,51 +153,42 @@ export class ResourceTemplatesController extends BaseController {
   async copy(req: Request, res: Response) {
     const { source_project_type_id, target_project_type_id } = req.body;
 
-    const result = await this.executeQuery(async () => {
-      // Validate source and target exist
-      const sourceType = await this.db('project_types')
-        .where('id', source_project_type_id)
-        .first();
-      
-      const targetType = await this.db('project_types')
-        .where('id', target_project_type_id)
-        .first();
+    // Generate a UUID for the project types
 
-      if (!sourceType || !targetType) {
-        return res.status(404).json({
-          error: 'Project type not found',
-          source_exists: !!sourceType,
-          target_exists: !!targetType
-        });
-      }
 
-      // Get all allocations from source
-      const sourceAllocations = await this.db('resource_templates')
-        .where('project_type_id', source_project_type_id)
-        .select('phase_id', 'role_id', 'allocation_percentage');
+    const resultId = uuidv4();
 
-      if (sourceAllocations.length === 0) {
-        return res.status(404).json({
-          error: 'No allocations found for source project type'
-        });
-      }
 
-      // Delete existing allocations for target
-      await this.db('resource_templates')
-        .where('project_type_id', target_project_type_id)
-        .del();
 
-      // Insert copied allocations
-      const newAllocations = sourceAllocations.map(allocation => ({
-        ...allocation,
-        project_type_id: target_project_type_id,
-        created_at: new Date(),
-        updated_at: new Date()
-      }));
+    // Insert with generated ID
 
-      const inserted = await this.db('resource_templates')
-        .insert(newAllocations)
-        .returning('*');
+
+    await this.db('project_types')
+
+
+      .insert({
+
+
+        id: resultId,
+
+
+        ...newAllocations
+
+
+      });
+
+
+
+    // Fetch the created record
+
+
+    const [result] = await this.db('project_types')
+
+
+      .where({ id: resultId })
+
+
+      .select('*');
 
       return {
         source: {

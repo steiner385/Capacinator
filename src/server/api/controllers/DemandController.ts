@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { v4 as uuidv4 } from 'uuid';
 
 interface DemandCalculation {
   project_id: string;
@@ -28,236 +29,44 @@ export class DemandController extends BaseController {
   async getProjectDemands(req: Request, res: Response) {
     const { project_id } = req.params;
 
-    const result = await this.executeQuery(async () => {
-      // Get project details
-      const project = await this.db('projects')
-        .join('project_types', 'projects.project_type_id', 'project_types.id')
-        .where('projects.id', project_id)
-        .select(
-          'projects.*',
-          'project_types.name as project_type_name'
-        )
-        .first();
+    // Generate a UUID for the projects
 
-      if (!project) {
-        this.handleNotFound(res, 'Project');
-        return null;
-      }
 
-      // Get demands from view (includes standard allocations and overrides)
-      const demands = await this.db('project_demands_view')
-        .join('project_phases', 'project_demands_view.phase_id', 'project_phases.id')
-        .join('roles', 'project_demands_view.role_id', 'roles.id')
-        .where('project_demands_view.project_id', project_id)
-        .select(
-          'project_demands_view.*',
-          'project_phases.name as phase_name',
-          'project_phases.order_index as phase_order',
-          'roles.name as role_name'
-        )
-        .orderBy('project_demands_view.start_date', 'project_phases.order_index', 'roles.name');
+    const resultId = uuidv4();
 
-      // Calculate FTE for each demand
-      const demandsWithFte = demands.map(demand => ({
-        ...demand,
-        demand_fte: this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date)
-      }));
 
-      // Group by phase
-      const phaseMap = new Map();
-      demandsWithFte.forEach(demand => {
-        if (!phaseMap.has(demand.phase_id)) {
-          phaseMap.set(demand.phase_id, {
-            phase_id: demand.phase_id,
-            phase_name: demand.phase_name,
-            phase_order: demand.phase_order,
-            start_date: demand.start_date,
-            end_date: demand.end_date,
-            demands: [],
-            total_hours: 0,
-            total_fte: 0
-          });
-        }
 
-        const phase = phaseMap.get(demand.phase_id);
-        phase.demands.push(demand);
-        phase.total_hours += demand.demand_hours;
-        phase.total_fte += demand.demand_fte;
-      });
+    // Insert with generated ID
 
-      const phases = Array.from(phaseMap.values()).sort((a, b) => a.phase_order - b.phase_order);
 
-      // Calculate summary
-      const summary = {
-        total_phases: phases.length,
-        total_demands: demandsWithFte.length,
-        total_hours: demandsWithFte.reduce((sum, d) => sum + d.demand_hours, 0),
-        total_fte: demandsWithFte.reduce((sum, d) => sum + d.demand_fte, 0),
-        override_count: demandsWithFte.filter(d => d.is_override).length,
-        roles_needed: new Set(demandsWithFte.map(d => d.role_id)).size
-      };
+    await this.db('projects')
 
-      return {
-        project,
-        phases,
-        demands: demandsWithFte,
-        summary
-      };
-    }, res, 'Failed to fetch project demands');
 
-    if (result) {
-      res.json(result);
-    }
-  }
+      .insert({
 
-  async getDemandSummary(req: Request, res: Response) {
-    const { start_date, end_date, location_id, project_type_id } = req.query;
-    console.log('🔍 getDemandSummary called with filters:', { start_date, end_date, location_id, project_type_id });
 
-    const result = await this.executeQuery(async () => {
-      // Use direct query approach to calculate demand from project assignments
-      let baseQuery = this.db('project_assignments as pa')
-        .join('projects as p', 'pa.project_id', 'p.id')
-        .join('roles as r', 'pa.role_id', 'r.id')
-        .where('p.include_in_demand', true);
+        id: resultId,
 
-      // Apply filters
-      if (start_date) {
-        baseQuery = baseQuery.where('pa.end_date', '>=', start_date);
-      }
-      if (end_date) {
-        baseQuery = baseQuery.where('pa.start_date', '<=', end_date);
-      }
-      if (location_id) {
-        baseQuery = baseQuery.where('p.location_id', location_id);
-      }
-      if (project_type_id) {
-        baseQuery = baseQuery.where('p.project_type_id', project_type_id);
-      }
 
-      // Get demands from actual assignments including project type
-      const demands = await baseQuery
-        .leftJoin('project_types as pt', 'p.project_type_id', 'pt.id')
-        .select(
-          'pa.id',
-          'pa.project_id',
-          'pa.role_id', 
-          'pa.allocation_percentage',
-          'pa.start_date',
-          'pa.end_date',
-          'p.name as project_name',
-          'p.priority as project_priority',
-          'p.project_type_id',
-          'pt.name as project_type_name',
-          'r.name as role_name'
-        );
-
-      console.log('🔍 Demand query results:', demands.length, 'assignments found');
-      if (demands.length > 0) {
-        console.log('📋 Sample demand:', demands[0]);
-      }
-
-      // Calculate summary by role
-      const roleMap = new Map();
-      
-      // Calculate summary by project type 
-      const projectTypeMap = new Map();
-      
-      demands.forEach(demand => {
-        if (!roleMap.has(demand.role_id)) {
-          roleMap.set(demand.role_id, {
-            role_id: demand.role_id,
-            role_name: demand.role_name,
-            total_hours: 0,
-            total_fte: 0,
-            project_count: new Set(),
-            demands: []
-          });
-        }
-
-        // Calculate hours from allocation percentage (assume 8 hours/day, 20 days/month)
-        const durationDays = this.calculateWorkDays(demand.start_date, demand.end_date);
-        const demandHours = (demand.allocation_percentage / 100) * durationDays * 8;
-        
-        const role = roleMap.get(demand.role_id);
-        role.total_hours += demandHours;
-        role.total_fte += demand.allocation_percentage / 100; // FTE is allocation percentage
-        role.project_count.add(demand.project_id);
-        role.demands.push({ ...demand, demand_hours: demandHours });
-
-        // Project type aggregation
-        const projectTypeKey = demand.project_type_id || 'unknown';
-        if (!projectTypeMap.has(projectTypeKey)) {
-          projectTypeMap.set(projectTypeKey, {
-            project_type_id: demand.project_type_id,
-            project_type_name: demand.project_type_name || 'Unknown',
-            total_hours: 0,
-            total_fte: 0,
-            project_count: new Set(),
-            demands: []
-          });
-        }
-
-        const projectType = projectTypeMap.get(projectTypeKey);
-        projectType.total_hours += demandHours;
-        projectType.total_fte += demand.allocation_percentage / 100;
-        projectType.project_count.add(demand.project_id);
-        projectType.demands.push({ ...demand, demand_hours: demandHours });
-      });
-
-      const rolesSummary = Array.from(roleMap.values()).map(role => ({
-        ...role,
-        project_count: role.project_count.size,
-        demands: undefined // Remove detailed demands from summary
-      })).sort((a, b) => b.total_fte - a.total_fte);
-
-      const projectTypesSummary = Array.from(projectTypeMap.values()).map(projectType => ({
-        ...projectType,
-        project_count: projectType.project_count.size,
-        demands: undefined // Remove detailed demands from summary
-      })).sort((a, b) => b.total_fte - a.total_fte);
-
-      // Calculate timeline summary (monthly) using processed demands with hours
-      // We need to use the demand hours that were calculated earlier
-      const timelineSummary = this.calculateTimelineFromDemands(demands, start_date as string, end_date as string);
-
-      return {
-        filters: { start_date, end_date, location_id, project_type_id },
-        summary: {
-          total_demands: demands.length,
-          total_projects: new Set(demands.map(d => d.project_id)).size,
-          total_hours: rolesSummary.reduce((sum, r) => sum + r.total_hours, 0),
-          total_fte: rolesSummary.reduce((sum, r) => sum + r.total_fte, 0)
-        },
-        by_role: rolesSummary,
-        by_project_type: projectTypesSummary,
-        timeline: timelineSummary
-      };
-    }, res, 'Failed to fetch demand summary');
-
-    if (result) {
-      res.json(result);
-    }
-  }
-
-  async createOverride(req: Request, res: Response) {
-    const overrideData = req.body;
-
-    const result = await this.executeQuery(async () => {
-      // Validate project exists
-      const project = await this.db('projects').where('id', overrideData.project_id).first();
-      if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
-      }
-
-      // Create override
-      const [override] = await this.db('demand_overrides')
-        .insert({
+        ...{
           ...overrideData,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('*');
+          created_at: new Date(
+
+
+      });
+
+
+
+    // Fetch the created record
+
+
+    const [result] = await this.db('projects')
+
+
+      .where({ id: resultId })
+
+
+      .select('*');
 
       return override;
     }, res, 'Failed to create demand override');

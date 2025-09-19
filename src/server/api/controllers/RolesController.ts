@@ -1,89 +1,36 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export class RolesController extends BaseController {
   async getAll(req: Request, res: Response) {
-    const result = await this.executeQuery(async () => {
-      const roles = await this.db('roles')
-        .select('*')
-        .orderBy('name');
+    // Generate a UUID for the roles
 
-      return roles;
-    }, res, 'Failed to fetch roles');
+    const resultId = uuidv4();
 
-    if (result) {
-      res.json(result);
-    }
-  }
 
-  async getById(req: Request, res: Response) {
-    const { id } = req.params;
+    // Insert with generated ID
 
-    const result = await this.executeQuery(async () => {
-      const role = await this.db('roles')
-        .where('id', id)
-        .first();
+    await this.db('roles')
 
-      if (!role) {
-        this.handleNotFound(res, 'Role');
-        return null;
-      }
+      .insert({
 
-      // Get people with this role
-      const people = await this.db('person_roles')
-        .join('people', 'person_roles.person_id', 'people.id')
-        .select(
-          'person_roles.*',
-          'people.name as person_name',
-          'people.email as person_email'
-        )
-        .where('person_roles.role_id', id);
+        id: resultId,
 
-      // Get role planners
-      const planners = await this.db('role_planners')
-        .join('people', 'role_planners.person_id', 'people.id')
-        .select(
-          'role_planners.*',
-          'people.name as person_name'
-        )
-        .where('role_planners.role_id', id)
-        .orderBy('role_planners.is_primary', 'desc');
-
-      // Get standard allocations
-      const standardAllocations = await this.db('standard_allocations')
-        .join('project_types', 'standard_allocations.project_type_id', 'project_types.id')
-        .join('project_phases', 'standard_allocations.phase_id', 'project_phases.id')
-        .select(
-          'standard_allocations.*',
-          'project_types.name as project_type_name',
-          'project_phases.name as phase_name'
-        )
-        .where('standard_allocations.role_id', id);
-
-      return {
-        ...role,
-        people,
-        planners,
-        standardAllocations
-      };
-    }, res, 'Failed to fetch role');
-
-    if (result) {
-      res.json(result);
-    }
-  }
-
-  async create(req: Request, res: Response) {
-    const roleData = req.body;
-
-    const result = await this.executeQuery(async () => {
-      const [role] = await this.db('roles')
-        .insert({
+        ...{
           ...roleData,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('*');
+          created_at: new Date(
+
+      });
+
+
+    // Fetch the created record
+
+    const [result] = await this.db('roles')
+
+      .where({ id: resultId })
+
+      .select('*');
 
       return role;
     }, res, 'Failed to create role');
@@ -97,61 +44,45 @@ export class RolesController extends BaseController {
     const { id } = req.params;
     const updateData = req.body;
 
-    const result = await this.executeQuery(async () => {
-      const [role] = await this.db('roles')
-        .where('id', id)
-        .update({
-          ...updateData,
-          updated_at: new Date()
-        })
-        .returning('*');
+    // Generate a UUID for the roles
 
-      if (!role) {
-        this.handleNotFound(res, 'Role');
-        return null;
-      }
 
-      return role;
-    }, res, 'Failed to update role');
+    const resultId = uuidv4();
 
-    if (result) {
-      res.json(result);
-    }
-  }
 
-  async delete(req: Request, res: Response) {
-    const { id } = req.params;
 
-    const result = await this.executeQuery(async () => {
-      const deletedCount = await this.db('roles')
-        .where('id', id)
-        .del();
+    // Insert with generated ID
 
-      if (deletedCount === 0) {
-        this.handleNotFound(res, 'Role');
-        return null;
-      }
 
-      return { message: 'Role deleted successfully' };
-    }, res, 'Failed to delete role');
+    await this.db('roles')
 
-    if (result) {
-      res.json(result);
-    }
-  }
 
-  async addPlanner(req: Request, res: Response) {
-    const { id } = req.params;
-    const plannerData = req.body;
+      .insert({
 
-    const result = await this.executeQuery(async () => {
-      const [rolePlanner] = await this.db('role_planners')
-        .insert({
+
+        id: resultId,
+
+
+        ...{
           role_id: id,
           ...plannerData,
-          assigned_at: new Date()
-        })
-        .returning('*');
+          assigned_at: new Date(
+
+
+      });
+
+
+
+    // Fetch the created record
+
+
+    const [result] = await this.db('roles')
+
+
+      .where({ id: resultId })
+
+
+      .select('*');
 
       return rolePlanner;
     }, res, 'Failed to add role planner');

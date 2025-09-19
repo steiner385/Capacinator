@@ -119,6 +119,24 @@ export async function seed(knex: Knex): Promise<void> {
       color_code: '#3B82F6',
       created_at: new Date(),
       updated_at: new Date()
+    },
+    {
+      id: 'psub-e2e-003',
+      project_type_id: 'ptype-e2e-002',
+      name: 'E2E iOS',
+      description: 'iOS mobile development',
+      color_code: '#34D399',
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'psub-e2e-004',
+      project_type_id: 'ptype-e2e-002',
+      name: 'E2E Android',
+      description: 'Android mobile development',
+      color_code: '#10B981',
+      created_at: new Date(),
+      updated_at: new Date()
     }
   ]);
   

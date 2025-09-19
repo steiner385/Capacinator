@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDb } from '../../database/index.js';
 import { getAuditService } from '../../services/audit/index.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Get all project sub-types (optionally filtered by project type)
 export const getProjectSubTypes = async (req: Request, res: Response) => {

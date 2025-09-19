@@ -72,6 +72,20 @@ export class TestHelpers {
     
     // Wait for content to be ready
     await this.waitForPageContent();
+    
+    // For mobile viewports, ensure we can see the main content
+    const viewport = this.page.viewportSize();
+    if (viewport && viewport.width < 768) {
+      // In mobile, the sidebar might overlap content
+      // Wait for main content to be visible
+      await this.page.waitForSelector('.main-content, main, [data-testid="main-content"]', { 
+        state: 'visible', 
+        timeout: 5000 
+      }).catch(() => {
+        // If main content not found, continue anyway
+        console.log('Note: Main content selector not found in mobile viewport');
+      });
+    }
   }
 
   /**
@@ -427,10 +441,40 @@ export class TestHelpers {
       // Add a small delay to ensure navigation is ready
       await this.page.waitForTimeout(500);
       
-      // Use the proven clickAndNavigate approach
-      const selector = `nav a:has-text("${menuItem}")`;
-      await this.clickAndNavigate(selector, expectedUrl);
-      return;
+      // Check if we're in mobile viewport
+      const viewport = this.page.viewportSize();
+      const isMobile = viewport && viewport.width < 768;
+      
+      // Try multiple selectors for navigation items
+      const selectors = [
+        `nav a:has-text("${menuItem}")`,
+        `.sidebar a:has-text("${menuItem}")`,
+        `.nav-link:has-text("${menuItem}")`,
+        `a[href="${expectedUrl}"]`
+      ];
+      
+      let clicked = false;
+      for (const selector of selectors) {
+        try {
+          const element = await this.page.$(selector);
+          if (element && await element.isVisible()) {
+            if (isMobile) {
+              // On mobile, sidebar might be partially off-screen
+              await element.scrollIntoViewIfNeeded();
+              await this.page.waitForTimeout(200);
+            }
+            await this.clickAndNavigate(selector, expectedUrl);
+            clicked = true;
+            break;
+          }
+        } catch (e) {
+          // Try next selector
+        }
+      }
+      
+      if (clicked) {
+        return;
+      }
     } catch (error) {
       console.log(`Could not find navigation item: ${menuItem}, using direct navigation to ${expectedUrl}`);
       

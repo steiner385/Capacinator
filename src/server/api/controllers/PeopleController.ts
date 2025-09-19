@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 import { isTableAudited } from '../../config/auditConfig.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export class PeopleController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -145,13 +146,22 @@ export class PeopleController extends BaseController {
       }, {} as any);
 
     const result = await this.executeQuery(async () => {
-      const [person] = await this.db('people')
+      // Generate a UUID for the person
+      const personId = uuidv4();
+      
+      // Insert with generated ID
+      await this.db('people')
         .insert({
+          id: personId,
           ...filteredData,
           created_at: new Date(),
           updated_at: new Date()
-        })
-        .returning('*');
+        });
+
+      // Fetch the created person
+      const [person] = await this.db('people')
+        .where({ id: personId })
+        .select('*');
 
       // Log audit entry for creation
       if (isTableAudited('people')) {
@@ -197,18 +207,23 @@ export class PeopleController extends BaseController {
       }, {} as any);
 
     const result = await this.executeQuery(async () => {
-      const [person] = await this.db('people')
+      // First update the record
+      const updatedCount = await this.db('people')
         .where('id', id)
         .update({
           ...filteredData,
           updated_at: new Date()
-        })
-        .returning('*');
+        });
 
-      if (!person) {
+      if (updatedCount === 0) {
         this.handleNotFound(res, 'Person');
         return null;
       }
+
+      // Then fetch the updated record
+      const [person] = await this.db('people')
+        .where({ id })
+        .select('*');
 
       return person;
     }, res, 'Failed to update person');
@@ -383,15 +398,23 @@ export class PeopleController extends BaseController {
 
         }
 
+        // Generate UUID for the person role
+        const personRoleId = uuidv4();
+
         // Insert the new person role
-        const [insertedPersonRole] = await trx('person_roles')
+        await trx('person_roles')
           .insert({
+            id: personRoleId,
             person_id: id,
             role_id,
             proficiency_level,
             is_primary
-          })
-          .returning('*');
+          });
+
+        // Fetch the inserted record
+        const [insertedPersonRole] = await trx('person_roles')
+          .where({ id: personRoleId })
+          .select('*');
 
         // If this is the primary role, update the people table reference
         if (is_primary) {

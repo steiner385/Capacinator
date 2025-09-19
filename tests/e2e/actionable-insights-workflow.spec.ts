@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
+import { TestHelpers } from './utils/test-helpers';
+import { setupPageWithAuth } from './utils/improved-auth-helpers';
 
 test.describe('Actionable Insights Workflow', () => {
   let helpers: TestHelpers;
@@ -7,22 +8,21 @@ test.describe('Actionable Insights Workflow', () => {
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
     
-    // Navigate to main page
-    await setupPageWithAuth(page, '/');
+    // Use improved auth helper for setup
+    await setupPageWithAuth(page, '/dashboard');
     
-    // Handle profile selection using robust helper
-    await helpers.handleProfileSelection();
+    // Wait for page to be ready
+    await helpers.waitForPageContent();
     
-    // Wait for dashboard to load
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    await expect(page.locator('h1')).toContainText('Dashboard');
+    // Verify we're on dashboard
+    await expect(page.locator('h1, [data-testid="page-title"]')).toContainText('Dashboard');
   });
 
   test('should complete full workflow from PersonDetails insights to assignment creation', async ({ page }) => {
     // Step 1: Navigate to People page
-    await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    await expect(page.locator('h1')).toContainText('People');
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForPageContent();
+    await expect(page.locator('h1, [data-testid="page-title"]')).toContainText('People');
 
     // Step 2: Check for team insights summary
     await expect(page.locator('.team-insights')).toBeVisible();
@@ -75,17 +75,17 @@ test.describe('Actionable Insights Workflow', () => {
 
   test('should show correct workload insights on PersonDetails page', async ({ page }) => {
     // Step 1: Navigate to People page
-    await page.click('nav a[href="/people"]');
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
+    await helpers.navigateViaSidebar('People');
+    await helpers.waitForPageContent();
 
     // Step 2: Click on a person's name to go to details
-    const personLinks = page.locator('table tbody tr td a');
+    const personLinks = page.locator('table tbody tr td a, [data-testid="person-link"]');
     if (await personLinks.count() > 0) {
       await personLinks.first().click();
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
+      await helpers.waitForPageContent();
       
       // Step 3: Verify PersonDetails page loads
-      await expect(page.locator('h1')).not.toContainText('People'); // Should have person's name
+      await expect(page.locator('h1, [data-testid="page-title"]')).not.toContainText('People'); // Should have person's name
       
       // Step 4: Check for workload insights section
       await expect(page.locator('.insights-section')).toBeVisible();

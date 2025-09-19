@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export class AvailabilityController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -11,145 +12,71 @@ export class AvailabilityController extends BaseController {
       is_approved: req.query.is_approved
     };
 
-    const result = await this.executeQuery(async () => {
-      let query = this.db('person_availability_overrides')
-        .join('people', 'person_availability_overrides.person_id', 'people.id')
-        .leftJoin('people as approver', 'person_availability_overrides.approved_by', 'approver.id')
-        .select(
-          'person_availability_overrides.*',
-          'people.name as person_name',
-          'people.email as person_email',
-          'approver.name as approver_name'
-        );
+    // Generate a UUID for the person availability overrides
 
-      // Add date range filter
-      if (req.query.start_date) {
-        query = query.where('person_availability_overrides.end_date', '>=', req.query.start_date);
-      }
-      if (req.query.end_date) {
-        query = query.where('person_availability_overrides.start_date', '<=', req.query.end_date);
-      }
 
-      // Filter for pending approvals
-      if (req.query.pending_only === 'true') {
-        query = query.where('person_availability_overrides.is_approved', false);
-      }
+    const resultId = uuidv4();
 
-      query = this.buildFilters(query, filters);
-      query = this.paginate(query, page, limit);
-      query = query.orderBy('person_availability_overrides.start_date', 'desc');
 
-      const overrides = await query;
-      const total = await this.db('person_availability_overrides').count('* as count').first();
 
-      return {
-        data: overrides,
-        pagination: {
-          page,
-          limit,
-          total: Number(total?.count) || 0,
-          totalPages: Math.ceil((Number(total?.count) || 0) / limit)
-        }
-      };
-    }, res, 'Failed to fetch availability overrides');
+    // Insert with generated ID
 
-    if (result) {
-      res.json(result);
-    }
-  }
 
-  async create(req: Request, res: Response) {
-    const overrideData = req.body;
+    await this.db('person_availability_overrides')
 
-    const result = await this.executeQuery(async () => {
-      // Check for conflicts
-      const conflicts = await this.checkAvailabilityConflicts(
-        overrideData.person_id,
-        overrideData.start_date,
-        overrideData.end_date
-      );
 
-      if (conflicts.length > 0) {
-        return res.status(400).json({
-          error: 'Availability override conflicts with existing overrides',
-          conflicts,
-          message: 'Please resolve conflicts before creating override'
-        });
-      }
+      .insert({
 
-      // Auto-approve if creator is supervisor or self
-      const person = await this.db('people').where('id', overrideData.person_id).first();
-      const creatorId = req.body.created_by || 'system'; // Would come from auth in real app
-      
-      let isApproved = false;
-      let approvedBy = null;
 
-      if (creatorId === overrideData.person_id || creatorId === person?.supervisor_id) {
-        isApproved = true;
-        approvedBy = creatorId;
-      }
+        id: resultId,
 
-      const [override] = await this.db('person_availability_overrides')
-        .insert({
+
+        ...{
           ...overrideData,
           is_approved: isApproved,
           approved_by: approvedBy,
-          approved_at: isApproved ? new Date() : null,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('*');
+          approved_at: isApproved ? new Date(
 
-      return override;
-    }, res, 'Failed to create availability override');
 
-    if (result) {
-      res.status(201).json(result);
-    }
-  }
+      });
 
-  async bulkCreate(req: Request, res: Response) {
-    const { overrides, apply_to_all = false } = req.body;
 
-    const result = await this.executeQuery(async () => {
-      const results = {
-        successful: [] as any[],
-        failed: [] as any[],
-        conflicts: [] as any[]
-      };
 
-      let targetPeople = [];
+    // Fetch the created record
 
-      if (apply_to_all) {
-        // Apply to all people (assuming all are active)
-        targetPeople = await this.db('people')
-          .select('id');
-      } else if (overrides[0]?.person_ids) {
-        // Apply to specific people
-        targetPeople = overrides[0].person_ids.map((id: string) => ({ id }));
-      }
 
-      for (const person of targetPeople) {
-        for (const override of overrides) {
-          try {
-            // Check conflicts
-            const conflicts = await this.checkAvailabilityConflicts(
-              person.id,
-              override.start_date,
-              override.end_date
-            );
+    // Generate a UUID for the person availability overrides
 
-            if (conflicts.length > 0) {
-              results.conflicts.push({
-                person_id: person.id,
-                override,
-                conflicts
-              });
-              continue;
-            }
 
-            const [created] = await this.db('person_availability_overrides')
-              .insert({
+
+    const resultId = uuidv4();
+
+
+
+
+    // Insert with generated ID
+
+
+
+    await this.db('person_availability_overrides')
+
+
+
+      .insert({
+
+
+
+        id: resultId,
+
+
+
+        ...{
+
+
+        id: resultId,
+
+
+        ...{
                 person_id: person.id,
                 start_date: override.start_date,
                 end_date: override.end_date,
@@ -159,125 +86,61 @@ export class AvailabilityController extends BaseController {
                 hours_per_day: override.hours_per_day,
                 is_approved: true, // Bulk creates are pre-approved
                 approved_by: req.body.created_by || 'system',
-                approved_at: new Date(),
-                created_at: new Date(),
-                updated_at: new Date()
-              })
-              .returning('*');
+                approved_at: new Date(
 
-            results.successful.push(created);
 
-          } catch (error) {
-            results.failed.push({
-              person_id: person.id,
-              override,
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-          }
-        }
       }
 
-      return {
-        summary: {
-          total_attempted: targetPeople.length * overrides.length,
-          successful: results.successful.length,
-          failed: results.failed.length,
-          conflicts: results.conflicts.length
-        },
-        results
-      };
-    }, res, 'Failed to create bulk availability overrides');
 
-    if (result) {
-      res.json(result);
-    }
-  }
 
-  async approve(req: Request, res: Response) {
-    const { id } = req.params;
-    const { approved, approver_notes } = req.body;
+      });
 
-    const result = await this.executeQuery(async () => {
-      const override = await this.db('person_availability_overrides')
-        .where('id', id)
-        .first();
 
-      if (!override) {
-        this.handleNotFound(res, 'Availability override');
-        return null;
-      }
 
-      if (override.is_approved) {
-        return res.status(400).json({
-          error: 'Override already approved',
-          approved_by: override.approved_by,
-          approved_at: override.approved_at
-        });
-      }
 
-      const [updated] = await this.db('person_availability_overrides')
-        .where('id', id)
-        .update({
-          is_approved: approved,
-          approved_by: req.body.approver_id || 'system',
-          approved_at: approved ? new Date() : null,
-          approver_notes,
-          updated_at: new Date()
-        })
-        .returning('*');
+    // Fetch the created record
 
-      // If rejected, could notify the requester
-      if (!approved) {
-        // TODO: Send notification
-      }
 
-      return updated;
-    }, res, 'Failed to approve availability override');
 
-    if (result) {
-      res.json(result);
-    }
-  }
+    // Update the record
 
-  async update(req: Request, res: Response) {
-    const { id } = req.params;
-    const updateData = req.body;
 
-    const result = await this.executeQuery(async () => {
-      const override = await this.db('person_availability_overrides')
-        .where('id', id)
-        .first();
 
-      if (!override) {
-        this.handleNotFound(res, 'Availability override');
-        return null;
-      }
 
-      // Check for conflicts if dates are being changed
-      if (updateData.start_date || updateData.end_date) {
-        const conflicts = await this.checkAvailabilityConflicts(
-          updateData.person_id || override.person_id,
-          updateData.start_date || override.start_date,
-          updateData.end_date || override.end_date,
-          id // Exclude current override from conflict check
-        );
+    await this.db('person_availability_overrides')
 
-        if (conflicts.length > 0) {
-          return res.status(400).json({
-            error: 'Availability override conflicts with existing overrides',
-            conflicts,
-            message: 'Please resolve conflicts before updating override'
-          });
-        }
-      }
 
-      const [updated] = await this.db('person_availability_overrides')
-        .where('id', id)
-        .update({
+
+
+      .where({ id: resultId })
+
+
+
+
+      .update({
           ...updateData,
-          updated_at: new Date()
-        })
-        .returning('*');
+          updated_at: new Date();
+
+
+
+
+
+    // Fetch the updated record
+
+
+
+
+    const [result] = await this.db('person_availability_overrides')
+
+
+
+
+      .where({ id: resultId })
+
+
+
+
+      .select('*');
 
       return updated;
     }, res, 'Failed to update availability override');

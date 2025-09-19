@@ -66,12 +66,13 @@ export class TestDataHelpers {
     location?: string;
   }): Promise<any> {
     const uniqueName = options?.name || `${context.prefix}-User`;
+    const uniqueId = this.generateUniqueId('');
     
     try {
       const response = await this.apiContext.post(`${this.baseURL}/api/people`, {
         data: {
           name: uniqueName,
-          email: options?.email || `${context.prefix}@test.com`,
+          email: options?.email || `${context.prefix}-${uniqueId}@test.com`,
           worker_type: 'FTE',
           default_availability_percentage: 100,
           default_hours_per_day: 8
@@ -139,19 +140,24 @@ export class TestDataHelpers {
         throw new Error('Invalid subtypes response format or no subtypes available');
       }
       
-      // Get the first available project type
-      const projectType = typesArray[0];
+      // Find a project type that has subtypes
+      let projectType = null;
+      let projectSubType = null;
       
-      // Find subtypes for this project type
-      let projectSubType;
-      // The API returns a flat array of subtypes, not grouped by type
-      const matchingSubTypes = subTypesArray.filter(st => st.project_type_id === projectType.id);
-      if (matchingSubTypes.length > 0) {
-        // Use the first matching subtype
-        projectSubType = matchingSubTypes[0];
-      } else {
-        // Fallback to any subtype if none match
-        projectSubType = subTypesArray[0];
+      for (const type of typesArray) {
+        const matchingSubTypes = subTypesArray.filter(st => st.project_type_id === type.id);
+        if (matchingSubTypes.length > 0) {
+          projectType = type;
+          projectSubType = matchingSubTypes[0];
+          break;
+        }
+      }
+      
+      // If no matching type/subtype pair found, throw error
+      if (!projectType || !projectSubType) {
+        console.error('Available types:', typesArray.map(t => ({ id: t.id, name: t.name })));
+        console.error('Available subtypes:', subTypesArray.map(st => ({ id: st.id, name: st.name, project_type_id: st.project_type_id })));
+        throw new Error('No valid project type/subtype combination found');
       }
       
       const location = locationsArray[0];

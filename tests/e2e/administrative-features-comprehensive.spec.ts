@@ -1,19 +1,21 @@
 import { test, expect } from '@playwright/test';
-import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
+import { TestHelpers } from './utils/test-helpers';
+import { setupPageWithAuth } from './utils/improved-auth-helpers';
 
 test.describe('Administrative Features Comprehensive Tests', () => {
   let helpers: TestHelpers;
 
   test.beforeEach(async ({ page }) => {
     helpers = new TestHelpers(page);
-    await helpers.setupPage();
+    await setupPageWithAuth(page, '/dashboard');
+    await helpers.waitForPageContent();
   });
 
   test.describe('Administrative Dashboard', () => {
     test('should display administrative overview dashboard', async ({ page }) => {
       // Navigate to settings/admin area
-      await setupPageWithAuth(page, '/settings');
-      await helpers.setupPage();
+      await helpers.navigateViaSidebar('Settings');
+      await helpers.waitForPageContent();
 
       // Look for administrative dashboard elements
       const adminSections = page.locator('text=/Settings|Administration|System|Configuration/i');
@@ -45,8 +47,8 @@ test.describe('Administrative Features Comprehensive Tests', () => {
     });
 
     test('should provide quick access to admin functions', async ({ page }) => {
-      await setupPageWithAuth(page, '/settings');
-      await helpers.setupPage();
+      await helpers.navigateViaSidebar('Settings');
+      await helpers.waitForPageContent();
 
       // Check for quick action buttons or links
       const quickActions = [
