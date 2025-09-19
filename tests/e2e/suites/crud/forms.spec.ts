@@ -38,11 +38,10 @@ test.describe('Form Validation and CRUD Operations', () => {
       await testHelpers.navigateTo('/projects');
       await testHelpers.waitForDataTable();
       
-      // Click add new project button if available
-      const addButton = authenticatedPage.locator('button:has-text("Add Project"), button:has-text("New Project"), button[title*="Add"]');
-      
-      if (await addButton.isVisible()) {
-        await addButton.click();
+      // Click add new project button
+      const addButton = authenticatedPage.locator('button:has-text("New Project")');
+      await expect(addButton).toBeVisible({ timeout: 10000 });
+      await addButton.click();
         
         // Should open form dialog
         await waitForDialog(authenticatedPage);
@@ -59,14 +58,26 @@ test.describe('Form Validation and CRUD Operations', () => {
         
         // Fill out form with unique test data
         const projectName = `${testContext.prefix}-Form-Test-Project`;
-        await testHelpers.fillForm({
-          'name': projectName,
-          'description': 'A test project created during E2E form testing',
-          'location_id': 'New York',
-          'project_type_id': 'Mobile App',
-          'start_date': '2024-01-01',
-          'end_date': '2024-12-31'
-        });
+        
+        // Fill form fields
+        await authenticatedPage.fill('input[name="name"]', projectName);
+        await authenticatedPage.fill('textarea[name="description"], input[name="description"]', 'A test project created during E2E form testing');
+        
+        // Select location using shadcn select
+        const locationSelect = authenticatedPage.locator('button[role="combobox"]').filter({ hasText: /select.*location/i }).first();
+        await locationSelect.click();
+        await authenticatedPage.locator('[role="option"]').first().click();
+        
+        // Select project type
+        const projectTypeSelect = authenticatedPage.locator('button[role="combobox"]').filter({ hasText: /select.*type/i }).first();
+        await projectTypeSelect.click();
+        await authenticatedPage.locator('[role="option"]').first().click();
+        
+        // Fill dates if present
+        const startDateInput = authenticatedPage.locator('input[name="start_date"], input[type="date"]').first();
+        if (await startDateInput.isVisible()) {
+          await startDateInput.fill('2024-01-01');
+        }
         
         // Track created project for cleanup
         const responsePromise = authenticatedPage.waitForResponse(response =>
@@ -90,7 +101,6 @@ test.describe('Form Validation and CRUD Operations', () => {
         // New project should appear in table
         const projectRow = await testDataHelpers.findByTestData('tbody tr', projectName);
         await expect(projectRow).toBeVisible();
-      }
     });
 
     test('should validate project date ranges', async ({ 
@@ -140,10 +150,9 @@ test.describe('Form Validation and CRUD Operations', () => {
       await testHelpers.navigateTo('/people');
       await testHelpers.waitForDataTable();
       
-      const addButton = authenticatedPage.locator('button:has-text("Add Person"), button:has-text("New Person")');
-      
-      if (await addButton.isVisible()) {
-        await addButton.click();
+      const addButton = authenticatedPage.locator('button:has-text("Add Person")');
+      await expect(addButton).toBeVisible({ timeout: 10000 });
+      await addButton.click();
         
         await waitForDialog(authenticatedPage);
         const formDialog = authenticatedPage.locator(SHADCN_SELECTORS.dialog);
@@ -165,15 +174,31 @@ test.describe('Form Validation and CRUD Operations', () => {
         const personName = `${testContext.prefix}-Test-User`;
         const personEmail = `${testContext.prefix}@example.com`;
         
-        await testHelpers.fillForm({
-          'name': personName,
-          'first_name': testContext.prefix,
-          'last_name': 'User',
-          'email': personEmail,
-          'primary_role_id': 'Developer',
-          'worker_type': 'FTE',
-          'type': 'employee'
-        });
+        // Fill form fields
+        await authenticatedPage.fill('input[name="name"]', personName);
+        await authenticatedPage.fill('input[name="email"], input[type="email"]', personEmail);
+        
+        // Select role if visible
+        const roleSelect = authenticatedPage.locator('select[name="primary_role_id"], button[role="combobox"]').filter({ hasText: /role/i }).first();
+        if (await roleSelect.isVisible()) {
+          if (await roleSelect.evaluate(el => el.tagName === 'SELECT')) {
+            await roleSelect.selectOption({ index: 1 }); // Select first available role
+          } else {
+            await roleSelect.click();
+            await authenticatedPage.locator('[role="option"]').first().click();
+          }
+        }
+        
+        // Select worker type if visible
+        const workerTypeSelect = authenticatedPage.locator('select[name="worker_type"], button[role="combobox"]').filter({ hasText: /type/i }).first();
+        if (await workerTypeSelect.isVisible()) {
+          if (await workerTypeSelect.evaluate(el => el.tagName === 'SELECT')) {
+            await workerTypeSelect.selectOption('FTE');
+          } else {
+            await workerTypeSelect.click();
+            await authenticatedPage.locator('[role="option"]:has-text("FTE")').click();
+          }
+        }
         
         // Track created person for cleanup
         const responsePromise = authenticatedPage.waitForResponse(response =>
@@ -195,7 +220,6 @@ test.describe('Form Validation and CRUD Operations', () => {
         // Verify person was added
         const personRow = await testDataHelpers.findByTestData('tbody tr', personName);
         await expect(personRow).toBeVisible();
-      }
     });
   });
 

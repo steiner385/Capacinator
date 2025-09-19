@@ -150,17 +150,15 @@ test.describe('People Management', () => {
       // If modal, fill form with unique data
       if (hasModal) {
         const personName = `${testContext.prefix}-New-Person`;
-        const personEmail = `${testContext.prefix}@example.com`;
+        const personEmail = `${testContext.prefix}-${Date.now()}@example.com`;
         await authenticatedPage.fill('input[name="name"]', personName);
         await authenticatedPage.fill('input[name="email"]', personEmail);
         
-        // Select role
-        const roleSelect = authenticatedPage.locator('select[name="primaryRole"]');
+        // Select role using shadcn select if visible
+        const roleSelect = authenticatedPage.locator('button[role="combobox"]').filter({ hasText: /role/i }).first();
         if (await roleSelect.isVisible()) {
-          const options = await roleSelect.locator('option').all();
-          if (options.length > 1) {
-            await roleSelect.selectOption({ index: 1 });
-          }
+          await roleSelect.click();
+          await authenticatedPage.locator('[role="option"]').first().click();
         }
         
         // Submit form

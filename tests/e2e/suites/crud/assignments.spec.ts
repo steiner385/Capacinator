@@ -45,14 +45,15 @@ test.describe('Assignment CRUD Operations', () => {
       );
       await authenticatedPage.getByRole('button', { name: /view/i }).click();
 
-      // Wait for person details page
-      await authenticatedPage.waitForSelector('text=Workload Insights', { timeout: 10000 });
+      // Wait for person details page to load
+      await authenticatedPage.waitForURL('**/people/**');
+      await testHelpers.waitForPageContent();
 
       // Click Add Assignment
       await authenticatedPage.getByRole('button', { name: /add assignment/i }).click();
 
-      // Wait for modal
-      await expect(authenticatedPage.locator('text=Smart Assignment')).toBeVisible({ timeout: 10000 });
+      // Wait for modal to open
+      await authenticatedPage.waitForSelector('[role="dialog"], .modal, [data-testid="assignment-modal"]', { timeout: 10000 });
 
       // Switch to manual tab if needed
       const manualTab = authenticatedPage.locator('button[role="tab"]:has-text("Manual Selection")');
@@ -61,18 +62,15 @@ test.describe('Assignment CRUD Operations', () => {
       }
 
       // Fill assignment form
-      // Select specific test project
-      await testDataHelpers.selectSpecificOption(
-        '#project-select, select[name="project_id"]',
-        testData.projects[0].name
-      );
+      // Select specific test project using shadcn select
+      const projectSelect = authenticatedPage.locator('button[role="combobox"]').filter({ hasText: /project/i }).first();
+      await projectSelect.click();
+      await authenticatedPage.locator(`[role="option"]:has-text("${testData.projects[0].name}")`).click();
 
-      // Select role (assuming default roles exist)
-      const roleSelect = authenticatedPage.locator('#role-select, select[name="role_id"]');
-      const roleOptions = await roleSelect.locator('option').all();
-      if (roleOptions.length > 1) {
-        await roleSelect.selectOption({ index: 1 });
-      }
+      // Select role using shadcn select
+      const roleSelect = authenticatedPage.locator('button[role="combobox"]').filter({ hasText: /role/i }).first();
+      await roleSelect.click();
+      await authenticatedPage.locator('[role="option"]').first().click();
 
       // Set allocation
       await authenticatedPage.fill('input[name="allocation_percentage"]', '50');
