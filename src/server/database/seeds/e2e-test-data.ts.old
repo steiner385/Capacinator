@@ -331,7 +331,7 @@ export async function seed(knex: Knex): Promise<void> {
     }
   ]);
   
-  // Seed project assignments
+  // Seed project assignments - create multiple assignments for utilization testing
   await knex('project_assignments').insert([
     {
       id: 'assign-e2e-001',
@@ -352,6 +352,42 @@ export async function seed(knex: Knex): Promise<void> {
       start_date: today,
       end_date: nextMonth,
       allocation_percentage: 60,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Additional assignment to test over-utilization scenarios
+    {
+      id: 'assign-e2e-003',
+      project_id: 'project-e2e-002',
+      person_id: 'person-e2e-001',
+      role_id: 'role-e2e-001',
+      start_date: today,
+      end_date: nextMonth,
+      allocation_percentage: 40,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Assignment for the manager
+    {
+      id: 'assign-e2e-004',
+      project_id: 'project-e2e-001',
+      person_id: 'person-e2e-003',
+      role_id: 'role-e2e-003',
+      start_date: today,
+      end_date: nextMonth,
+      allocation_percentage: 50,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Another assignment to create varying utilization levels
+    {
+      id: 'assign-e2e-005',
+      project_id: 'project-e2e-002',
+      person_id: 'person-e2e-002',
+      role_id: 'role-e2e-002',
+      start_date: nextWeek,
+      end_date: nextMonth,
+      allocation_percentage: 30,
       created_at: new Date(),
       updated_at: new Date()
     }

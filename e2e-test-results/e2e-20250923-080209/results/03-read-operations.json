@@ -1,0 +1,1117 @@
+🚀 Starting E2E global setup...
+🗄️ E2E database will be initialized by server...
+ℹ️ Development server already running on ports 3110/3120
+   E2E tests will use the existing server and database.
+   For isolated testing, stop the dev server first.
+⏳ Waiting for application to be ready...
+✅ Application is ready
+🔍 Verifying test data...
+✅ API health check passed
+✅ /api/roles: 4 items
+🔍 Handling initial profile selection...
+📋 Profile selection modal detected
+🎯 Starting profile selection...
+
+📍 Attempt 1/3 to select profile...
+Select trigger text: "Select your name..."
+📂 Opening profile dropdown...
+🔍 Trying strategy: Standard role="option"
+✅ Standard role="option": Found 16 options
+DOM state: 0 portals, 1 popper wrappers
+Available profiles: [
+  'E2E Over Utilized (E2E Developer)',
+  'E2E Normal Utilized (E2E Designer)',
+  'E2E Under Utilized (E2E Manager)',
+  'E2E Zero Utilized (E2E QA Engineer)',
+  'write-ops-Project-To-Edit-Owner',
+  'assign-Person-1',
+  'assign-Person-2',
+  'assign-Person-3',
+  'forms-Person-1',
+  'person-Person-1',
+  'person-Person-2',
+  'person-Person-3',
+  'assign-Person-1',
+  'assign-Person-2',
+  'assign-Person-3',
+  'forms-Project-To-Edit-Owner'
+]
+Selecting profile: "E2E Over Utilized (E2E Developer)"
+Select value after click: "E2E Over Utilized (E2E Developer)"
+👆 Clicking Continue button...
+✅ Profile selected successfully
+✅ Profile selected and saved
+💾 Current auth data: { hasCurrentUser: true, hasSelectedProfile: true }
+💾 Authentication state saved to /home/tony/GitHub/Capacinator/test-results/e2e-auth.json
+✅ Saved state verification: Contains localStorage data
+✅ E2E global setup completed successfully
+
+Running 11 tests using 1 worker
+
+[1A[2K[1/11] [chromium] › tests/e2e/20-read-operations.spec.ts:8:5 › Read Operations - All Pages › Dashboard Page › should display all dashboard metrics
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:8:5 › Read Operations - All Pages › Dashboard Page › should display all dashboard metrics
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K[2/11] [chromium] › tests/e2e/20-read-operations.spec.ts:20:5 › Read Operations - All Pages › Dashboard Page › should have working links to detail pages
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:20:5 › Read Operations - All Pages › Dashboard Page › should have working links to detail pages
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K[3/11] [chromium] › tests/e2e/20-read-operations.spec.ts:40:5 › Read Operations - All Pages › Projects Page › should display project list with all columns
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:40:5 › Read Operations - All Pages › Projects Page › should display project list with all columns
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[4/11] [chromium] › tests/e2e/20-read-operations.spec.ts:60:5 › Read Operations - All Pages › Projects Page › should have working filters
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:60:5 › Read Operations - All Pages › Projects Page › should have working filters
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[5/11] [chromium] › tests/e2e/20-read-operations.spec.ts:87:5 › Read Operations - All Pages › Projects Page › should have clickable project names
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:87:5 › Read Operations - All Pages › Projects Page › should have clickable project names
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[6/11] [chromium] › tests/e2e/20-read-operations.spec.ts:111:5 › Read Operations - All Pages › People Page › should display people list with columns
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:111:5 › Read Operations - All Pages › People Page › should display people list with columns
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[7/11] [chromium] › tests/e2e/20-read-operations.spec.ts:130:5 › Read Operations - All Pages › People Page › should show person details on click
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:130:5 › Read Operations - All Pages › People Page › should show person details on click
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[8/11] [chromium] › tests/e2e/20-read-operations.spec.ts:147:5 › Read Operations - All Pages › Assignments Page › should display assignments table
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:147:5 › Read Operations - All Pages › Assignments Page › should display assignments table
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: table, .table
+
+[1A[2K[9/11] [chromium] › tests/e2e/20-read-operations.spec.ts:165:5 › Read Operations - All Pages › Assignments Page › should have add assignment button
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:165:5 › Read Operations - All Pages › Assignments Page › should have add assignment button
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: table, .table
+
+[1A[2K[10/11] [chromium] › tests/e2e/20-read-operations.spec.ts:172:5 › Read Operations - All Pages › Reports Page › should display report tabs
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:172:5 › Read Operations - All Pages › Reports Page › should display report tabs
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[11/11] [chromium] › tests/e2e/20-read-operations.spec.ts:189:5 › Read Operations - All Pages › Reports Page › should switch between report tabs
+[1A[2K[chromium] › tests/e2e/20-read-operations.spec.ts:189:5 › Read Operations - All Pages › Reports Page › should switch between report tabs
+🔍 Checking for profile selection modal...
+
+[1A[2K📋 Profile modal detected, proceeding with selection...
+
+[1A[2K📝 Profile select component found
+
+[1A[2K🎯 Attempting to select profile...
+
+[1A[2K📂 Opened shadcn Select dropdown
+
+[1A[2KSelecting profile: E2E Over Utilized (E2E Developer)
+
+[1A[2K✅ Profile selected using shadcn Select
+
+[1A[2K⏳ Waiting for Continue button to become enabled...
+
+[1A[2K✅ Continue button is now enabled
+
+[1A[2K👆 Clicking Continue button...
+
+[1A[2K✅ Continue button clicked successfully
+
+[1A[2K⏳ Waiting for profile modal to close...
+
+[1A[2K✅ Profile modal successfully closed
+
+[1A[2K⏳ Waiting for navigation to stabilize...
+
+[1A[2K✅ Network activity settled
+
+[1A[2K🎉 Profile selection process completed
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+🧹 Starting E2E global teardown...
+🗑️ Cleaning up test data for run: e2e-1758629032523
+⚠️ scenario assignments endpoint not available, skipping cleanup
+🗄️ E2E database will be cleaned up with server...
+🗑️ Cleaning up authentication state...
+✅ E2E global teardown completed successfully
+[1A[2K  11 passed (2.8m)

@@ -1,0 +1,296 @@
+🚀 Starting E2E global setup...
+🗄️ E2E database will be initialized by server...
+ℹ️ Development server already running on ports 3110/3120
+   E2E tests will use the existing server and database.
+   For isolated testing, stop the dev server first.
+⏳ Waiting for application to be ready...
+✅ Application is ready
+🔍 Verifying test data...
+✅ API health check passed
+✅ /api/roles: 4 items
+🔍 Handling initial profile selection...
+📋 Profile selection modal detected
+🎯 Starting profile selection...
+
+📍 Attempt 1/3 to select profile...
+Select trigger text: "Select your name..."
+📂 Opening profile dropdown...
+🔍 Trying strategy: Standard role="option"
+✅ Standard role="option": Found 16 options
+DOM state: 0 portals, 1 popper wrappers
+Available profiles: [
+  'E2E Over Utilized (E2E Developer)',
+  'E2E Normal Utilized (E2E Designer)',
+  'E2E Under Utilized (E2E Manager)',
+  'E2E Zero Utilized (E2E QA Engineer)',
+  'write-ops-Project-To-Edit-Owner',
+  'assign-Person-1',
+  'assign-Person-2',
+  'assign-Person-3',
+  'forms-Person-1',
+  'person-Person-1',
+  'person-Person-2',
+  'person-Person-3',
+  'assign-Person-1',
+  'assign-Person-2',
+  'assign-Person-3',
+  'forms-Project-To-Edit-Owner'
+]
+Selecting profile: "E2E Over Utilized (E2E Developer)"
+Select value after click: "E2E Over Utilized (E2E Developer)"
+👆 Clicking Continue button...
+✅ Profile selected successfully
+✅ Profile selected and saved
+💾 Current auth data: { hasCurrentUser: true, hasSelectedProfile: true }
+💾 Authentication state saved to /home/tony/GitHub/Capacinator/test-results/e2e-auth.json
+✅ Saved state verification: Contains localStorage data
+✅ E2E global setup completed successfully
+
+Running 8 tests using 2 workers
+
+[1A[2K[1/8] [chromium] › tests/e2e/00-server-health.spec.ts:3:3 › Server Health Check › should reach the health endpoint
+[1A[2K[2/8] [chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+[1A[2K[3/8] [chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Loaded saved authentication state
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ Loaded saved authentication state
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+🔍 Checking for profile selection modal...
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+🔍 Checking for profile selection modal...
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ No profile modal detected, continuing...
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ No profile modal detected, continuing...
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+Waiting for page content to load...
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Found content: .chart-container
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+Waiting for page content to load...
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+✅ Found content: .chart-container
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Main content area found
+
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:3:3 › E2E Environment Verification › should have isolated e2e environment running
+⚠️ Running against dev environment instead of isolated E2E
+
+[1A[2K[chromium] › tests/e2e/00-server-health.spec.ts:9:3 › Server Health Check › should load the main page
+✅ Found content: .chart-container
+
+[1A[2K[4/8] [chromium] › tests/e2e/00-e2e-environment-test.spec.ts:29:3 › E2E Environment Verification › should have e2e database isolation
+[1A[2K[5/8] [chromium] › tests/e2e/00-server-health.spec.ts:17:3 › Server Health Check › should have working API endpoints
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:29:3 › E2E Environment Verification › should have e2e database isolation
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K⚠️ Running against dev environment - database isolation check skipped
+
+[1A[2K[6/8] [chromium] › tests/e2e/00-e2e-environment-test.spec.ts:49:3 › E2E Environment Verification › should have e2e scenarios available
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:49:3 › E2E Environment Verification › should have e2e scenarios available
+✅ E2E scenarios available: 5 total, 1 baseline
+
+[1A[2K[7/8] [chromium] › tests/e2e/00-e2e-environment-test.spec.ts:68:3 › E2E Environment Verification › should not interfere with dev environment
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:68:3 › E2E Environment Verification › should not interfere with dev environment
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Running safely on: localhost
+
+[1A[2K[8/8] [chromium] › tests/e2e/00-e2e-environment-test.spec.ts:78:3 › E2E Environment Verification › should have authentication working
+[1A[2K[chromium] › tests/e2e/00-e2e-environment-test.spec.ts:78:3 › E2E Environment Verification › should have authentication working
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Authentication verified
+
+🧹 Starting E2E global teardown...
+🗑️ Cleaning up test data for run: e2e-1758628929881
+⚠️ scenario assignments endpoint not available, skipping cleanup
+🗄️ E2E database will be cleaned up with server...
+🗑️ Cleaning up authentication state...
+✅ E2E global teardown completed successfully
+[1A[2K  8 passed (27.1s)

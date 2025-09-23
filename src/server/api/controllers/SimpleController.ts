@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
-import { v4 as uuidv4 } from 'uuid';
 
 export class SimpleController extends BaseController {
   constructor(private tableName: string) {
@@ -90,22 +89,13 @@ export class SimpleController extends BaseController {
     const itemData = req.body;
 
     const result = await this.executeQuery(async () => {
-      // Generate a UUID for the new record
-      const itemId = uuidv4();
-
-      // Insert with generated ID
-      await this.db(this.tableName)
+      const [item] = await this.db(this.tableName)
         .insert({
-          id: itemId,
           ...itemData,
           created_at: new Date(),
           updated_at: new Date()
-        });
-
-      // Fetch the created record
-      const [item] = await this.db(this.tableName)
-        .where({ id: itemId })
-        .select('*');
+        })
+        .returning('*');
 
       return { data: item };
     }, res, `Failed to create ${this.tableName.slice(0, -1)}`);
@@ -120,23 +110,18 @@ export class SimpleController extends BaseController {
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
-      // Update the record
-      const updateCount = await this.db(this.tableName)
+      const [item] = await this.db(this.tableName)
         .where('id', id)
         .update({
           ...updateData,
           updated_at: new Date()
-        });
+        })
+        .returning('*');
 
-      if (updateCount === 0) {
+      if (!item) {
         this.handleNotFound(res, this.tableName.slice(0, -1));
         return null;
       }
-
-      // Fetch the updated record
-      const [item] = await this.db(this.tableName)
-        .where({ id })
-        .select('*');
 
       return { data: item };
     }, res, `Failed to update ${this.tableName.slice(0, -1)}`);

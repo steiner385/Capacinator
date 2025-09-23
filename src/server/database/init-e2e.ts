@@ -2,6 +2,7 @@ import { Knex } from 'knex';
 import knex from 'knex';
 import path from 'path';
 import fs from 'fs/promises';
+import e2eConfig, { E2E_DB_FILE, E2E_DB_DIR } from './knexfile.e2e.js';
 
 let e2eDb: Knex | null = null;
 
@@ -17,22 +18,19 @@ export async function initializeE2EDatabase(): Promise<Knex> {
     await e2eDb.destroy();
   }
 
-  // Create E2E database connection
-  e2eDb = knex({
-    client: 'better-sqlite3',
-    connection: {
-      filename: ':memory:' // Use in-memory database for E2E tests
-    },
-    useNullAsDefault: true,
-    migrations: {
-      directory: path.resolve('src/server/database/migrations'),
-      loadExtensions: ['.ts', '.js']
-    },
-    seeds: {
-      directory: path.resolve('src/server/database/seeds'),
-      loadExtensions: ['.ts', '.js']
+  // Delete existing E2E database file if it exists for a clean slate
+  try {
+    await fs.unlink(E2E_DB_FILE);
+    console.log('🗑️ Removed existing E2E database file');
+  } catch (err: any) {
+    // File doesn't exist, that's fine
+    if (err.code !== 'ENOENT') {
+      console.warn('⚠️ Warning: Could not delete E2E database file:', err.message);
     }
-  });
+  }
+
+  // Create E2E database connection using the file-based config
+  e2eDb = knex(e2eConfig);
 
   try {
     // Run migrations
@@ -41,7 +39,10 @@ export async function initializeE2EDatabase(): Promise<Knex> {
     
     // Run E2E specific seeds only - it includes all necessary data
     console.log('🌱 Seeding E2E test data...');
-    await e2eDb.seed.run({ specific: 'e2e-test-data.ts' });
+    await e2eDb.seed.run({ specific: 'e2e-test-data-consolidated.ts' });
+    
+    // Set global E2E database for server to use
+    (global as any).__E2E_DB__ = e2eDb;
     
     console.log('✅ E2E database initialized successfully');
     return e2eDb;
@@ -72,6 +73,19 @@ export async function cleanupE2EDatabase(): Promise<void> {
     try {
       await e2eDb.destroy();
       e2eDb = null;
+      // Clear global E2E database
+      delete (global as any).__E2E_DB__;
+      
+      // Delete the E2E database file
+      try {
+        await fs.unlink(E2E_DB_FILE);
+        console.log('🗑️ Removed E2E database file');
+      } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+          console.warn('⚠️ Warning: Could not delete E2E database file:', err.message);
+        }
+      }
+      
       console.log('✅ E2E database cleaned up');
     } catch (error) {
       console.error('❌ Error cleaning up E2E database:', error);
@@ -97,7 +111,7 @@ export async function resetE2EDatabase(): Promise<void> {
     await e2eDb.migrate.latest();
     
     // Re-seed data
-    await e2eDb.seed.run({ specific: 'e2e-test-data.ts' });
+    await e2eDb.seed.run({ specific: 'e2e-test-data-consolidated.ts' });
     
     console.log('✅ E2E database reset complete');
   } catch (error) {

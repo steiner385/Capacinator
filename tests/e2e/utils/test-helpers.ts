@@ -55,20 +55,14 @@ export class TestHelpers {
    * Navigate to a specific page and wait for it to load
    */
   async navigateTo(path: string) {
-    // If we're not on the base URL yet, go to base first
-    const currentUrl = this.page.url();
-    if (!currentUrl.includes('localhost:3120') || currentUrl === 'about:blank') {
-      await this.page.goto('/');
-      await this.page.waitForLoadState('networkidle');
-      // Handle profile selection if it appears
-      await this.handleProfileSelection();
-    }
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3120';
+    const fullUrl = path.startsWith('http') ? path : `${baseUrl}${path}`;
     
-    // Now navigate to the specific path
-    if (path !== '/') {
-      await this.page.goto(path);
-      await this.page.waitForLoadState('networkidle');
-    }
+    // Navigate to the specific path
+    await this.page.goto(fullUrl, { waitUntil: 'domcontentloaded' });
+    
+    // Handle profile selection if it appears  
+    await this.handleProfileSelection();
     
     // Wait for content to be ready
     await this.waitForPageContent();

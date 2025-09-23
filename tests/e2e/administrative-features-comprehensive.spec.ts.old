@@ -1,15 +1,6 @@
-import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
-import { setupPageWithAuth } from './utils/improved-auth-helpers';
+import { test, expect } from './fixtures';
 
 test.describe('Administrative Features Comprehensive Tests', () => {
-  let helpers: TestHelpers;
-
-  test.beforeEach(async ({ page }) => {
-    helpers = new TestHelpers(page);
-    await setupPageWithAuth(page, '/dashboard');
-    await helpers.waitForPageContent();
-  });
 
   test.describe('Administrative Dashboard', () => {
     test('should display administrative overview dashboard', async ({ page }) => {
@@ -435,28 +426,28 @@ test.describe('Administrative Features Comprehensive Tests', () => {
   });
 
   test.describe('Backup and Restore Functionality', () => {
-    test('should provide manual backup creation', async ({ page }) => {
-      await setupPageWithAuth(page, '/settings');
-      await helpers.setupPage();
+    test('should provide manual backup creation', async ({ authenticatedPage, testHelpers }) => {
+      await testHelpers.navigateTo('/settings');
+      await testHelpers.waitForPageContent();
 
       // Look for backup section or option
-      const backupSection = page.locator('text=/backup|archive|export data/i, button:has-text("Backup")');
+      const backupSection = authenticatedPage.locator('text=/backup|archive|export data/i, button:has-text("Backup")');
       
       if (await backupSection.count() > 0) {
         console.log('✅ Backup functionality found');
         
         // Click on backup option
         await backupSection.first().click();
-        await page.waitForTimeout(500);
+        await authenticatedPage.waitForTimeout(500);
         
         // Look for backup creation button
-        const createBackupButton = page.locator('button:has-text("Create Backup"), button:has-text("Generate Backup")');
+        const createBackupButton = authenticatedPage.locator('button:has-text("Create Backup"), button:has-text("Generate Backup")');
         
         if (await createBackupButton.count() > 0) {
           await createBackupButton.click();
           
           // Check for backup progress or completion
-          const backupStatus = page.locator('text=/creating|generating|completed|progress/i');
+          const backupStatus = authenticatedPage.locator('text=/creating|generating|completed|progress/i');
           
           try {
             await expect(backupStatus.first()).toBeVisible({ timeout: 5000 });
@@ -467,12 +458,15 @@ test.describe('Administrative Features Comprehensive Tests', () => {
         }
       } else {
         // Alternative: Check for data export as backup
-        await page.click('button:has-text("Export")');
-        await page.waitForTimeout(500);
-        
-        const exportOptions = page.locator('text=/all data|complete export|full backup/i');
-        if (await exportOptions.count() > 0) {
-          console.log('✅ Data export available as backup alternative');
+        const exportButton = authenticatedPage.locator('button:has-text("Export")');
+        if (await exportButton.isVisible()) {
+          await exportButton.click();
+          await authenticatedPage.waitForTimeout(500);
+          
+          const exportOptions = authenticatedPage.locator('text=/all data|complete export|full backup/i');
+          if (await exportOptions.count() > 0) {
+            console.log('✅ Data export available as backup alternative');
+          }
         }
       }
     });

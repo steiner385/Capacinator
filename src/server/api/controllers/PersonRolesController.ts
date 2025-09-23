@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
-import { v4 as uuidv4 } from 'uuid';
 
 export class PersonRolesController extends BaseController {
   
@@ -11,47 +10,85 @@ export class PersonRolesController extends BaseController {
     try {
       const { personId } = req.params;
       
-      // Generate a UUID for the people
+      const personRoles = await this.db('person_roles as pr')
+        .join('roles as r', 'pr.role_id', 'r.id')
+        .join('people as p', 'pr.person_id', 'p.id')
+        .where('pr.person_id', personId)
+        .select(
+          'pr.id',
+          'pr.person_id',
+          'pr.role_id',
+          'pr.proficiency_level',
+          'pr.is_primary',
+          'r.name as role_name',
+          'r.description as role_description',
+          'p.name as person_name'
+        )
+        .orderBy('pr.is_primary', 'desc')
+        .orderBy('pr.proficiency_level', 'desc');
 
-      
-      const personRolesId = uuidv4();
+      res.json({ data: personRoles });
+    } catch (error) {
+      console.error('Error fetching person roles:', error);
+      res.status(500).json({ error: 'Failed to fetch person roles' });
+    }
+  }
 
+  /**
+   * Add a role to a person with expertise level
+   */
+  async addPersonRole(req: Request, res: Response) {
+    try {
+      const { personId } = req.params;
+      const { role_id, proficiency_level = 3, is_primary = false } = req.body;
 
-      
-      // Insert with generated ID
+      // Validate proficiency level
+      if (proficiency_level < 1 || proficiency_level > 5) {
+        return res.status(400).json({ 
+          error: 'Proficiency level must be between 1 (novice) and 5 (expert)' 
+        });
+      }
 
-      
-      await this.db('people')
+      // Check if person exists
+      const person = await this.db('people').where('id', personId).first();
+      if (!person) {
+        return res.status(404).json({ error: 'Person not found' });
+      }
 
-      
+      // Check if role exists  
+      const role = await this.db('roles').where('id', role_id).first();
+      if (!role) {
+        return res.status(404).json({ error: 'Role not found' });
+      }
+
+      // Check if person already has this role
+      const existingPersonRole = await this.db('person_roles')
+        .where('person_id', personId)
+        .where('role_id', role_id)
+        .first();
+
+      if (existingPersonRole) {
+        return res.status(409).json({ 
+          error: 'Person already has this role. Use PUT to update expertise level.' 
+        });
+      }
+
+      // If setting as primary, remove primary flag from other roles
+      if (is_primary) {
+        await this.db('person_roles')
+          .where('person_id', personId)
+          .update({ is_primary: false });
+      }
+
+      // Create the person role
+      const [insertedPersonRole] = await this.db('person_roles')
         .insert({
-
-      
-          id: personRolesId,
-
-      
-          ...{
           person_id: personId,
           role_id,
           proficiency_level,
           is_primary
-        }
-
-      
-        });
-
-
-      
-      // Fetch the created record
-
-      
-      const [personRoles] = await this.db('people')
-
-      
-        .where({ id: personRolesId })
-
-      
-        .select('*');
+        })
+        .returning('*');
 
       // If setting as primary, update the primary_person_role_id in people table
       if (is_primary) {

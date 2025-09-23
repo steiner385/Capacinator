@@ -69,7 +69,7 @@ export class ImportController extends BaseController {
         };
       }
 
-      return JSON.parse(result.settings);
+      return JSON.parse(result.value || '{}');
     } catch (error) {
       console.error('Failed to load import settings:', error);
       // Return default settings on error

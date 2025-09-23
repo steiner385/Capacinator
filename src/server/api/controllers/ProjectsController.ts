@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
-import { v4 as uuidv4 } from 'uuid';
 
 export class ProjectsController extends BaseController {
   /**
@@ -15,34 +14,241 @@ export class ProjectsController extends BaseController {
     }
 
     // Check if project type exists
-    // Generate a UUID for the project types
+    const projectType = await this.db('project_types')
+      .select('id', 'name')
+      .where('id', projectTypeId)
+      .first();
 
-    const projectTypeId = uuidv4();
+    if (!projectType) {
+      throw new Error(`Project type with ID ${projectTypeId} not found`);
+    }
 
+    // Validate the project sub-type
+    const projectSubType = await this.db('project_sub_types')
+      .select('id', 'name', 'project_type_id', 'is_active')
+      .where('id', projectSubTypeId)
+      .first();
 
-    // Insert with generated ID
+    if (!projectSubType) {
+      throw new Error(`Project sub-type with ID ${projectSubTypeId} not found`);
+    }
 
-    await this.db('project_types')
+    if (projectSubType.project_type_id !== projectTypeId) {
+      throw new Error(`Project sub-type "${projectSubType.name}" does not belong to project type "${projectType.name}"`);
+    }
 
-      .insert({
+    if (!projectSubType.is_active) {
+      throw new Error(`Project sub-type "${projectSubType.name}" is not active`);
+    }
+  }
+  async debugQuery(req: Request, res: Response) {
+    const testQuery = await this.db('projects')
+      .select('id', 'name')
+      .select(this.db.raw('(SELECT MIN(start_date) FROM project_phases_timeline WHERE project_id = projects.id) as start_date'))
+      .select(this.db.raw('(SELECT MAX(end_date) FROM project_phases_timeline WHERE project_id = projects.id) as end_date'))
+      .limit(3);
+    
+    res.json({ debug: testQuery });
+  }
 
-        id: projectTypeId,
+  async getAll(req: Request, res: Response) {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const filters = {
+      location_id: req.query.location_id,
+      project_type_id: req.query.project_type_id,
+      priority: req.query.priority,
+      include_in_demand: req.query.include_in_demand
+    };
 
-        ...{
-          id: projectId,
+    const result = await this.executeQuery(async () => {
+      let query = this.db('projects')
+        .leftJoin('locations', 'projects.location_id', 'locations.id')
+        .leftJoin('project_types', 'projects.project_type_id', 'project_types.id')
+        .leftJoin('project_sub_types', 'projects.project_sub_type_id', 'project_sub_types.id')
+        .leftJoin('people as owner', 'projects.owner_id', 'owner.id')
+        .leftJoin('project_phases as current_phase', 'projects.current_phase_id', 'current_phase.id')
+        .select(
+          'projects.*',
+          'locations.name as location_name',
+          'project_types.name as project_type_name',
+          this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
+          'project_sub_types.name as project_sub_type_name',
+          'owner.name as owner_name',
+          'current_phase.name as current_phase_name',
+          // Calculate start_date and end_date from project phases timeline
+          this.db.raw(`(
+            SELECT MIN(start_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as start_date`),
+          this.db.raw(`(
+            SELECT MAX(end_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as end_date`)
+        );
+
+      query = this.buildFilters(query, filters);
+      query = this.paginate(query, page, limit);
+
+      const projects = await query;
+      
+      // DEBUG: Test if raw SQL is working
+      const testQuery = await this.db('projects')
+        .select('id', 'name')
+        .select(this.db.raw('(SELECT MIN(start_date) FROM project_phases_timeline WHERE project_id = projects.id) as start_date'))
+        .limit(1);
+      console.log('DEBUG - Test query result:', JSON.stringify(testQuery[0], null, 2));
+      
+      const total = await this.db('projects').count('* as count').first();
+
+      return {
+        data: projects,
+        pagination: {
+          page,
+          limit,
+          total: Number(total?.count) || 0,
+          totalPages: Math.ceil((Number(total?.count) || 0) / limit)
+        }
+      };
+    }, res, 'Failed to fetch projects');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async getById(req: Request, res: Response) {
+    const { id } = req.params;
+
+    const result = await this.executeQuery(async () => {
+      const project = await this.db('projects')
+        .leftJoin('locations', 'projects.location_id', 'locations.id')
+        .leftJoin('project_types', 'projects.project_type_id', 'project_types.id')
+        .leftJoin('project_sub_types', 'projects.project_sub_type_id', 'project_sub_types.id')
+        .leftJoin('people as owner', 'projects.owner_id', 'owner.id')
+        .leftJoin('project_phases as current_phase', 'projects.current_phase_id', 'current_phase.id')
+        .select(
+          'projects.*',
+          'locations.name as location_name',
+          'project_types.name as project_type_name',
+          this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
+          'project_sub_types.name as project_sub_type_name',
+          'owner.name as owner_name',
+          'current_phase.name as current_phase_name',
+          // Calculate start_date and end_date from project phases timeline
+          this.db.raw(`(
+            SELECT MIN(start_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as start_date`),
+          this.db.raw(`(
+            SELECT MAX(end_date) 
+            FROM project_phases_timeline 
+            WHERE project_id = projects.id
+          ) as end_date`)
+        )
+        .where('projects.id', id)
+        .first();
+
+      if (!project) {
+        this.handleNotFound(res, 'Project');
+        return null;
+      }
+
+      // Get phases timeline
+      const phases = await this.db('project_phases_timeline')
+        .join('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
+        .select(
+          'project_phases_timeline.*',
+          'project_phases.name as phase_name',
+          'project_phases.description as phase_description'
+        )
+        .where('project_phases_timeline.project_id', id)
+        .orderBy('project_phases_timeline.start_date');
+
+      // Get assignments
+      const assignments = await this.db('project_assignments')
+        .join('people', 'project_assignments.person_id', 'people.id')
+        .join('roles', 'project_assignments.role_id', 'roles.id')
+        .select(
+          'project_assignments.*',
+          'people.name as person_name',
+          'roles.name as role_name'
+        )
+        .where('project_assignments.project_id', id)
+        .orderBy('project_assignments.start_date');
+
+      // Get planners
+      const planners = await this.db('project_planners')
+        .join('people', 'project_planners.person_id', 'people.id')
+        .select(
+          'project_planners.*',
+          'people.name as person_name'
+        )
+        .where('project_planners.project_id', id)
+        .orderBy('project_planners.is_primary_planner', 'desc');
+
+      return {
+        ...project,
+        phases,
+        assignments,
+        planners
+      };
+    }, res, 'Failed to fetch project');
+
+    if (result) {
+      res.json(result);
+    }
+  }
+
+  async create(req: Request, res: Response) {
+    const projectData = req.body;
+
+    const result = await this.executeQuery(async () => {
+      // Validate project type and sub-type relationship
+      await this.validateProjectSubType(projectData.project_type_id, projectData.project_sub_type_id);
+
+      const [project] = await this.db('projects')
+        .insert({
           ...projectData,
-          created_at: new Date(
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
 
-      });
+      return project;
+    }, res, 'Failed to create project');
 
+    if (result) {
+      res.status(201).json(result);
+    }
+  }
 
-    // Fetch the created record
+  async update(req: Request, res: Response) {
+    const { id } = req.params;
+    const updateData = req.body;
 
-    const [projectType] = await this.db('project_types')
+    const result = await this.executeQuery(async () => {
+      // Get current project to track timeline changes
+      const currentProject = await this.db('projects').where('id', id).first();
+      
+      // Validate project type and sub-type relationship
+      if (updateData.project_type_id || updateData.project_sub_type_id) {
+        const typeId = updateData.project_type_id || currentProject?.project_type_id;
+        const subTypeId = updateData.project_sub_type_id || currentProject?.project_sub_type_id;
+        
+        await this.validateProjectSubType(typeId, subTypeId);
+      }
 
-      .where({ id: projectTypeId })
-
-      .select('*');
+      const [project] = await this.db('projects')
+        .where('id', id)
+        .update({
+          ...updateData,
+          updated_at: new Date()
+        })
+        .returning('*');
 
       if (!project) {
         this.handleNotFound(res, 'Project');

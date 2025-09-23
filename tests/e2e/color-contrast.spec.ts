@@ -1,24 +1,19 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures'
 import { evaluateColorContrast, checkWCAGCompliance } from './utils/test-helpers';
-import { setupPageWithAuth } from './utils/improved-auth-helpers';
-
 // Helper to evaluate color contrast between two elements
 async function getContrastRatio(page, selector1: string, selector2: string) {
-  return await page.evaluate(([sel1, sel2]) => {
+  return await authenticatedPage.evaluate(([sel1, sel2]) => {
     const elem1 = document.querySelector(sel1);
     const elem2 = document.querySelector(sel2);
     if (!elem1 || !elem2) return null;
-    
     const style1 = window.getComputedStyle(elem1);
     const style2 = window.getComputedStyle(elem2);
-    
     // Get RGB values
     const getRGB = (color: string) => {
       const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       if (!match) return null;
       return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
     };
-    
     // Calculate relative luminance
     const getLuminance = (rgb: any) => {
       const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(val => {
@@ -27,28 +22,21 @@ async function getContrastRatio(page, selector1: string, selector2: string) {
       });
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
-    
     const color1 = getRGB(style1.color);
     const bg2 = getRGB(style2.backgroundColor);
-    
     if (!color1 || !bg2) return null;
-    
     const lum1 = getLuminance(color1);
     const lum2 = getLuminance(bg2);
-    
     const contrast = (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
     return Math.round(contrast * 100) / 100;
   }, [selector1, selector2]);
 }
-
 // Helper to check element contrast
 async function checkElementContrast(page, selector: string, minRatio: number = 4.5) {
-  return await page.evaluate(([sel, min]) => {
+  return await authenticatedPage.evaluate(([sel, min]) => {
     const elem = document.querySelector(sel);
     if (!elem) return { passes: false, error: 'Element not found' };
-    
     const style = window.getComputedStyle(elem);
-    
     // Get effective background color by traversing up the DOM tree
     const getEffectiveBackground = (element: Element) => {
       let current = element;
@@ -62,14 +50,12 @@ async function checkElementContrast(page, selector: string, minRatio: number = 4
       // Default to body background
       return window.getComputedStyle(document.body).backgroundColor || 'rgb(255, 255, 255)';
     };
-    
     // Get RGB values
     const getRGB = (color: string) => {
       const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       if (!match) return null;
       return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
     };
-    
     // Calculate relative luminance
     const getLuminance = (rgb: any) => {
       const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(val => {
@@ -78,19 +64,14 @@ async function checkElementContrast(page, selector: string, minRatio: number = 4
       });
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
-    
     const textColor = getRGB(style.color);
     const bgColorStr = getEffectiveBackground(elem);
     const bgColor = getRGB(bgColorStr);
-    
     if (!textColor || !bgColor) return { passes: false, error: 'Could not parse colors', textColor: style.color, bgColor: bgColorStr };
-    
     const lum1 = getLuminance(textColor);
     const lum2 = getLuminance(bgColor);
-    
     const contrast = (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
     const ratio = Math.round(contrast * 100) / 100;
-    
     return {
       passes: ratio >= min,
       ratio,
@@ -100,90 +81,70 @@ async function checkElementContrast(page, selector: string, minRatio: number = 4
     };
   }, [selector, minRatio]);
 }
-
 test.describe('Color Contrast Validation', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupPageWithAuth(page, '/');
-  });
-
-  test('primary text has sufficient contrast', async ({ page }) => {
+  test('primary text has sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
     const result = await checkElementContrast(page, 'h1');
     expect(result.passes).toBeTruthy();
     expect(result.ratio).toBeGreaterThanOrEqual(4.5);
   });
-
-  test('navigation links have sufficient contrast', async ({ page }) => {
-    const navLinks = await page.$$('.nav-item a');
+  test('navigation links have sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    const navLinks = await authenticatedPage.$$('.nav-item a');
     for (const link of navLinks) {
       const text = await link.textContent();
       const result = await checkElementContrast(page, `.nav-item a:has-text("${text}")`);
       expect(result.passes).toBeTruthy();
     }
   });
-
-  test('table headers have sufficient contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/projects');
-    await page.waitForSelector('table th, .table th, [role="table"] th', { timeout: 10000 });
-    
-    const headers = await page.$$('table th, .table th');
+  test('table headers have sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/projects');
+    await authenticatedPage.waitForSelector('table th, .table th, [role="table"] th', { timeout: 10000 });
+    const headers = await authenticatedPage.$$('table th, .table th');
     for (let i = 0; i < headers.length; i++) {
       const result = await checkElementContrast(page, `table th:nth-of-type(${i + 1}), .table th:nth-of-type(${i + 1})`);
       expect(result.passes).toBeTruthy();
     }
   });
-
-  test('table rows maintain contrast on hover', async ({ page }) => {
-    await setupPageWithAuth(page, '/projects');
-    await page.waitForSelector('table tbody tr, .table tbody tr, [role="table"] tbody tr', { timeout: 10000 });
-    
+  test('table rows maintain contrast on hover', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/projects');
+    await authenticatedPage.waitForSelector('table tbody tr, .table tbody tr, [role="table"] tbody tr', { timeout: 10000 });
     // Check normal state
     const normalResult = await checkElementContrast(page, 'table tbody tr:first-child td, .table tbody tr:first-child td');
     expect(normalResult.passes).toBeTruthy();
-    
     // Hover over row
-    await page.hover('table tbody tr:first-child, .table tbody tr:first-child');
-    
+    await authenticatedPage.hover('table tbody tr:first-child, .table tbody tr:first-child');
     // Check hover state
     const hoverResult = await checkElementContrast(page, 'table tbody tr:first-child td, .table tbody tr:first-child td');
     expect(hoverResult.passes).toBeTruthy();
     expect(hoverResult.ratio).toBeGreaterThanOrEqual(4.5);
   });
-
-  test('buttons have sufficient contrast in all states', async ({ page }) => {
+  test('buttons have sufficient contrast in all states', async ({ authenticatedPage, testHelpers }) => {
     // Primary button
     const primaryResult = await checkElementContrast(page, 'button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])');
     expect(primaryResult.passes).toBeTruthy();
-    
     // Secondary button
     const secondaryResult = await checkElementContrast(page, 'button[class*="outline"], button[class*="secondary"]');
     expect(secondaryResult.passes).toBeTruthy();
-    
     // Danger button
-    await setupPageWithAuth(page, '/projects');
-    await page.waitForSelector('.btn-danger');
+    await testHelpers.navigateTo('/projects');
+    await authenticatedPage.waitForSelector('.btn-danger');
     const dangerResult = await checkElementContrast(page, '.btn-danger');
     expect(dangerResult.passes).toBeTruthy();
   });
-
-  test('form inputs have sufficient contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/people');
-    await page.click('button:has-text("Add Person")');
-    await page.waitForSelector('input[type="text"], input[type="email"], .form-input, [class*="input"]', { timeout: 10000 });
-    
+  test('form inputs have sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/people');
+    await authenticatedPage.click('button:has-text("Add Person")');
+    await authenticatedPage.waitForSelector('input[type="text"], input[type="email"], .form-input, [class*="input"]', { timeout: 10000 });
     // Check input fields
     const inputResult = await checkElementContrast(page, 'input[type="text"], input[type="email"], .form-input');
     expect(inputResult.passes).toBeTruthy();
-    
     // Check labels
     const labelResult = await checkElementContrast(page, 'label, .form-label, [class*="label"]');
     expect(labelResult.passes).toBeTruthy();
   });
-
-  test('badges have sufficient contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/projects');
-    await page.waitForSelector('.badge, [class*="badge"]', { timeout: 10000 });
-    
-    const badges = await page.$$('.badge, [class*="badge"]');
+  test('badges have sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/projects');
+    await authenticatedPage.waitForSelector('.badge, [class*="badge"]', { timeout: 10000 });
+    const badges = await authenticatedPage.$$('.badge, [class*="badge"]');
     for (let i = 0; i < Math.min(badges.length, 5); i++) {
       const badgeClass = await badges[i].getAttribute('class');
       const selector = `.badge:nth-of-type(${i + 1})`;
@@ -191,18 +152,14 @@ test.describe('Color Contrast Validation', () => {
       expect(result.passes).toBeTruthy();
     }
   });
-
-  test('focus indicators are clearly visible', async ({ page }) => {
-    await setupPageWithAuth(page, '/');
-    
+  test('focus indicators are clearly visible', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/');
     // Tab through interactive elements
-    await page.keyboard.press('Tab');
-    
+    await authenticatedPage.keyboard.press('Tab');
     // Check if focus indicator is visible
-    const focusedElement = await page.evaluate(() => {
+    const focusedElement = await authenticatedPage.evaluate(() => {
       const elem = document.activeElement;
       if (!elem) return null;
-      
       const style = window.getComputedStyle(elem);
       return {
         outline: style.outline,
@@ -211,45 +168,35 @@ test.describe('Color Contrast Validation', () => {
         boxShadow: style.boxShadow
       };
     });
-    
     expect(focusedElement).not.toBeNull();
     expect(focusedElement.outline).not.toBe('none');
   });
-
-  test('error states have sufficient contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/people');
-    await page.click('button:has-text("Add Person")');
-    
+  test('error states have sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/people');
+    await authenticatedPage.click('button:has-text("Add Person")');
     // Submit empty form to trigger errors
-    await page.click('button:has-text("Save")');
-    
+    await authenticatedPage.click('button:has-text("Save")');
     // Check error message contrast
-    await page.waitForSelector('.text-danger, .text-destructive, [class*="error"], [class*="danger"]', { timeout: 10000 });
+    await authenticatedPage.waitForSelector('.text-danger, .text-destructive, [class*="error"], [class*="danger"]', { timeout: 10000 });
     const errorResult = await checkElementContrast(page, '.text-danger, .text-destructive, [class*="error"]');
     expect(errorResult.passes).toBeTruthy();
   });
-
-  test('reports page charts have accessible colors', async ({ page }) => {
-    await setupPageWithAuth(page, '/reports');
-    await page.waitForSelector('.recharts-wrapper, svg[class*="chart"], canvas', { timeout: 10000 });
-    
+  test('reports page charts have accessible colors', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/reports');
+    await authenticatedPage.waitForSelector('.recharts-wrapper, svg[class*="chart"], canvas', { timeout: 10000 });
     // Check chart text elements
-    const chartTexts = await page.$$('.recharts-text, svg text, [class*="chart"] text');
+    const chartTexts = await authenticatedPage.$$('.recharts-text, svg text, [class*="chart"] text');
     for (let i = 0; i < Math.min(chartTexts.length, 5); i++) {
-      const result = await page.evaluate((index) => {
+      const result = await authenticatedPage.evaluate((index) => {
         const texts = document.querySelectorAll('.recharts-text');
         const text = texts[index];
         if (!text) return { passes: false };
-        
         const style = window.getComputedStyle(text);
         const fill = style.fill;
-        
         // For SVG elements, we need to check against the background
         const chartBg = text.closest('.chart-container');
         if (!chartBg) return { passes: false };
-        
         const bgStyle = window.getComputedStyle(chartBg);
-        
         // Simple contrast check for demonstration
         return {
           passes: true, // SVG contrast is complex, simplified here
@@ -257,73 +204,58 @@ test.describe('Color Contrast Validation', () => {
           background: bgStyle.backgroundColor
         };
       }, i);
-      
       expect(result.passes).toBeTruthy();
     }
   });
-
-  test('dark/light theme switch maintains contrast', async ({ page }) => {
+  test('dark/light theme switch maintains contrast', async ({ authenticatedPage, testHelpers }) => {
     // Test in dark mode (default)
     const darkResult = await checkElementContrast(page, 'h1');
     expect(darkResult.passes).toBeTruthy();
-    
     // Switch to light mode
-    await page.evaluate(() => {
+    await authenticatedPage.evaluate(() => {
       document.documentElement.style.colorScheme = 'light';
     });
-    
     // Test in light mode
     const lightResult = await checkElementContrast(page, 'h1');
     expect(lightResult.passes).toBeTruthy();
   });
-
-  test('highlighted table rows maintain contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/reports');
-    await page.click('button:has-text("Gaps Analysis")');
-    await page.waitForSelector('.highlight-danger, [class*="danger"], [class*="error"], tr[class*="red"]', { timeout: 10000 });
-    
+  test('highlighted table rows maintain contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/reports');
+    await authenticatedPage.click('button:has-text("Gaps Analysis")');
+    await authenticatedPage.waitForSelector('.highlight-danger, [class*="danger"], [class*="error"], tr[class*="red"]', { timeout: 10000 });
     // Check highlighted row contrast
     const highlightResult = await checkElementContrast(page, '.highlight-danger td, [class*="danger"] td, tr[class*="red"] td');
     expect(highlightResult.passes).toBeTruthy();
-    
     // Check on hover
-    await page.hover('.highlight-danger');
+    await authenticatedPage.hover('.highlight-danger');
     const hoverHighlightResult = await checkElementContrast(page, '.highlight-danger td, [class*="danger"] td, tr[class*="red"] td');
     expect(hoverHighlightResult.passes).toBeTruthy();
   });
-
-  test('sidebar navigation has sufficient contrast', async ({ page }) => {
-    const sidebarItems = await page.$$('.nav-item, nav a, [role="navigation"] a');
-    
+  test('sidebar navigation has sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    const sidebarItems = await authenticatedPage.$$('.nav-item, nav a, [role="navigation"] a');
     for (let i = 0; i < sidebarItems.length; i++) {
       const result = await checkElementContrast(page, `.nav-item:nth-of-type(${i + 1}) a, nav a:nth-of-type(${i + 1})`);
       expect(result.passes).toBeTruthy();
     }
-    
     // Check active state
     const activeResult = await checkElementContrast(page, '.nav-item.active a, nav a.active, nav [aria-current="page"]');
     expect(activeResult.passes).toBeTruthy();
   });
-
-  test('modal content has sufficient contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/people');
-    await page.click('button:has-text("Add Person")');
-    await page.waitForSelector('[role="dialog"] > div');
-    
+  test('modal content has sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/people');
+    await authenticatedPage.click('button:has-text("Add Person")');
+    await authenticatedPage.waitForSelector('[role="dialog"] > div');
     // Check modal header
     const headerResult = await checkElementContrast(page, '[role="dialog"] > div h2');
     expect(headerResult.passes).toBeTruthy();
-    
     // Check modal body text
     const bodyResult = await checkElementContrast(page, '[role="dialog"] > div .form-label');
     expect(bodyResult.passes).toBeTruthy();
   });
-
-  test('WCAG AA compliance for all text elements', async ({ page }) => {
-    await setupPageWithAuth(page, '/');
-    
+  test('WCAG AA compliance for all text elements', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/');
     // Get all text elements
-    const textElements = await page.evaluate(() => {
+    const textElements = await authenticatedPage.evaluate(() => {
       const elements = Array.from(document.querySelectorAll('*'));
       return elements
         .filter(el => {
@@ -339,7 +271,6 @@ test.describe('Color Contrast Validation', () => {
           selector: el.className ? `.${el.className.split(' ')[0]}` : el.tagName.toLowerCase()
         }));
     });
-    
     // Sample check on various elements
     const sampled = textElements.slice(0, 20);
     for (const elem of sampled) {
@@ -354,38 +285,29 @@ test.describe('Color Contrast Validation', () => {
     }
   });
 });
-
 test.describe('Interactive State Contrast', () => {
-  test('button hover states maintain contrast', async ({ page }) => {
-    await setupPageWithAuth(page, '/');
-    
+  test('button hover states maintain contrast', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/');
     const buttons = ['button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])', 'button[class*="outline"], button[class*="secondary"]', '.btn-outline'];
-    
     for (const selector of buttons) {
-      await page.waitForSelector(selector);
-      
+      await authenticatedPage.waitForSelector(selector);
       // Normal state
       const normalResult = await checkElementContrast(page, selector);
       expect(normalResult.passes).toBeTruthy();
-      
       // Hover state
-      await page.hover(selector);
+      await authenticatedPage.hover(selector);
       const hoverResult = await checkElementContrast(page, selector);
       expect(hoverResult.passes).toBeTruthy();
     }
   });
-
-  test('input focus states have visible indicators', async ({ page }) => {
-    await setupPageWithAuth(page, '/people');
-    await page.click('button:has-text("Add Person")');
-    
-    const input = await page.$('.form-input');
+  test('input focus states have visible indicators', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/people');
+    await authenticatedPage.click('button:has-text("Add Person")');
+    const input = await authenticatedPage.$('.form-input');
     await input?.focus();
-    
-    const focusStyle = await page.evaluate(() => {
+    const focusStyle = await authenticatedPage.evaluate(() => {
       const elem = document.activeElement;
       if (!elem) return null;
-      
       const style = window.getComputedStyle(elem);
       return {
         borderColor: style.borderColor,
@@ -393,17 +315,13 @@ test.describe('Interactive State Contrast', () => {
         outline: style.outline
       };
     });
-    
     expect(focusStyle).not.toBeNull();
     expect(focusStyle.boxShadow).not.toBe('none');
   });
-
-  test('active navigation items have sufficient contrast', async ({ page }) => {
+  test('active navigation items have sufficient contrast', async ({ authenticatedPage, testHelpers }) => {
     const pages = ['/projects', '/people', '/assignments', '/reports'];
-    
     for (const pagePath of pages) {
-      await setupPageWithAuth(page, pagePath);
-      
+      await testHelpers.navigateTo('pagePath');
       const activeNavResult = await checkElementContrast(page, '.nav-item.active a, nav a.active, nav [aria-current="page"]');
       expect(activeNavResult.passes).toBeTruthy();
     }

@@ -1,0 +1,1010 @@
+🚀 Starting E2E global setup...
+🗄️ E2E database will be initialized by server...
+ℹ️ Development server already running on ports 3110/3120
+   E2E tests will use the existing server and database.
+   For isolated testing, stop the dev server first.
+⏳ Waiting for application to be ready...
+✅ Application is ready
+🔍 Verifying test data...
+✅ API health check passed
+✅ /api/roles: 4 items
+🔍 Handling initial profile selection...
+📋 Profile selection modal detected
+🎯 Starting profile selection...
+
+📍 Attempt 1/3 to select profile...
+Select trigger text: "Select your name..."
+📂 Opening profile dropdown...
+🔍 Trying strategy: Standard role="option"
+✅ Standard role="option": Found 16 options
+DOM state: 0 portals, 1 popper wrappers
+Available profiles: [
+  'E2E Over Utilized (E2E Developer)',
+  'E2E Normal Utilized (E2E Designer)',
+  'E2E Under Utilized (E2E Manager)',
+  'E2E Zero Utilized (E2E QA Engineer)',
+  'write-ops-Project-To-Edit-Owner',
+  'assign-Person-1',
+  'assign-Person-2',
+  'assign-Person-3',
+  'forms-Person-1',
+  'person-Person-1',
+  'person-Person-2',
+  'person-Person-3',
+  'assign-Person-1',
+  'assign-Person-2',
+  'assign-Person-3',
+  'forms-Project-To-Edit-Owner'
+]
+Selecting profile: "E2E Over Utilized (E2E Developer)"
+Select value after click: "E2E Over Utilized (E2E Developer)"
+👆 Clicking Continue button...
+✅ Profile selected successfully
+✅ Profile selected and saved
+💾 Current auth data: { hasCurrentUser: true, hasSelectedProfile: true }
+💾 Authentication state saved to /home/tony/GitHub/Capacinator/test-results/e2e-auth.json
+✅ Saved state verification: Contains localStorage data
+✅ E2E global setup completed successfully
+
+Running 12 tests using 2 workers
+
+[1A[2K[1/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+[1A[2K[2/12] [smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Loaded saved authentication state
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+Waiting for page content to load...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+Waiting for page content to load...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Layout container found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ Layout container found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Sidebar found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ Sidebar found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Found content: .chart-container
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+✅ Found content: .chart-container
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+Testing Dashboard page...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:3:3 › Smoke Test - Basic Infrastructure › should load application and authenticate
+Page heading: Dashboard
+
+[1A[2K✅ Smoke test passed - application loads and authenticates successfully
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+🔍 Checking for profile selection modal...
+
+[1A[2K[3/12] [smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KNote: Dashboard page has no data, but loaded successfully
+
+[1A[2KTesting Projects page...
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KTesting People page...
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KTesting Assignments page...
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: table, .table
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: table, .table
+
+[1A[2KTesting Reports page...
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:3:3 › Quick Smoke Test - Dev Environment › @smoke should load application and verify all pages
+✅ Smoke test passed - all pages are accessible
+
+[1A[2K[4/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:40:3 › Quick Smoke Test - Dev Environment › should verify API connectivity
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:40:3 › Quick Smoke Test - Dev Environment › should verify API connectivity
+✅ API connectivity verified
+
+[1A[2K[5/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ Loaded saved authentication state
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ Layout container found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ Main content area found
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:23:3 › Smoke Test - Basic Infrastructure › should navigate between main pages
+✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Navigation test passed - can navigate between pages
+
+[1A[2K[6/12] [smoke] › tests/e2e/smoke-test.spec.ts:44:3 › Smoke Test - Basic Infrastructure › should have working sidebar navigation
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:44:3 › Smoke Test - Basic Infrastructure › should have working sidebar navigation
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:44:3 › Smoke Test - Basic Infrastructure › should have working sidebar navigation
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: table, .table
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:44:3 › Smoke Test - Basic Infrastructure › should have working sidebar navigation
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K[7/12] [smoke] › tests/e2e/smoke-test.spec.ts:55:3 › Smoke Test - Basic Infrastructure › should display main content area
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:55:3 › Smoke Test - Basic Infrastructure › should display main content area
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:54:3 › Quick Smoke Test - Dev Environment › should verify data relationships work
+✅ Data relationships verified
+
+[1A[2K[8/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:76:3 › Quick Smoke Test - Dev Environment › should verify forms work
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:76:3 › Quick Smoke Test - Dev Environment › should verify forms work
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:55:3 › Smoke Test - Basic Infrastructure › should display main content area
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:76:3 › Quick Smoke Test - Dev Environment › should verify forms work
+✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:55:3 › Smoke Test - Basic Infrastructure › should display main content area
+✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:76:3 › Quick Smoke Test - Dev Environment › should verify forms work
+✅ No profile modal detected, continuing...
+
+[1A[2K[smoke] › tests/e2e/smoke-test.spec.ts:55:3 › Smoke Test - Basic Infrastructure › should display main content area
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Main content area found
+
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:76:3 › Quick Smoke Test - Dev Environment › should verify forms work
+Waiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K✅ Forms verified
+
+[1A[2K[9/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:109:3 › Quick Smoke Test - Dev Environment › should verify dashboard metrics update
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:109:3 › Quick Smoke Test - Dev Environment › should verify dashboard metrics update
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Dashboard metrics verified
+
+[1A[2K[10/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:129:3 › Quick Smoke Test - Dev Environment › should handle browser refresh
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:129:3 › Quick Smoke Test - Dev Environment › should handle browser refresh
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2K✅ Browser refresh handled correctly
+
+[1A[2K[11/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:150:5 › Quick Smoke Test - Dev Environment › Mobile Viewport › should handle mobile navigation
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:150:5 › Quick Smoke Test - Dev Environment › Mobile Viewport › should handle mobile navigation
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K✅ Mobile viewport tested
+
+[1A[2K[12/12] [smoke] › tests/e2e/25-quick-smoke-test.spec.ts:169:5 › Quick Smoke Test - Dev Environment › Performance › should load pages within acceptable time
+[1A[2K[smoke] › tests/e2e/25-quick-smoke-test.spec.ts:169:5 › Quick Smoke Test - Dev Environment › Performance › should load pages within acceptable time
+✅ Loaded saved authentication state
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .chart-container
+
+[1A[2K🔍 Checking for profile selection modal...
+
+[1A[2K✅ No profile modal detected, continuing...
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KWaiting for page content to load...
+
+[1A[2K✅ Layout container found
+
+[1A[2K✅ Sidebar found
+
+[1A[2K✅ Navigation links found
+
+[1A[2K✅ Main content area found
+
+[1A[2K✅ Found content: .report-tabs, button.tab
+
+[1A[2KInitial load time: 1130ms
+
+[1A[2KNavigation time: 1118ms
+
+🧹 Starting E2E global teardown...
+🗑️ Cleaning up test data for run: e2e-1758629821273
+⚠️ scenario assignments endpoint not available, skipping cleanup
+🗄️ E2E database will be cleaned up with server...
+🗑️ Cleaning up authentication state...
+✅ E2E global teardown completed successfully
+[1A[2K  12 passed (1.0m)

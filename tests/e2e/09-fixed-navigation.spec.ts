@@ -1,193 +1,84 @@
-import { test, expect } from '@playwright/test';
-import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
-
+import { test, expect } from './fixtures';
 test.describe('Fixed Navigation Tests', () => {
-  let helpers: TestHelpers;
-
-  test.beforeEach(async ({ page }) => {
-    helpers = new TestHelpers(page);
-    await helpers.navigateTo('/');
-    await helpers.setupPage();
-  });
-
-  test('should load and display the app correctly', async ({ page }) => {
+  test('should load and display the app correctly', async ({ authenticatedPage, testHelpers }) => {
     // Check basic page accessibility
-    const body = page.locator('body');
+    const body = authenticatedPage.locator('body');
     await expect(body).toBeVisible();
-    
+    // Check navigation exists
+    await expect(authenticatedPage.locator('.sidebar, nav')).toBeVisible();
     console.log('✅ Fixed navigation UI is accessible');
-    expect(true).toBe(true);
   });
-
-  test('should navigate to dashboard using URL', async ({ page }) => {
-    await setupPageWithAuth(page, '/dashboard');
-    await helpers.waitForReactHydration();
-    
+  test('should navigate to dashboard using URL', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/dashboard');
+    await testHelpers.waitForPageContent();
     // Should be on dashboard
-    expect(page.url()).toContain('/dashboard');
-    
-    // Should load dashboard content
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    
+    expect(authenticatedPage.url()).toContain('/dashboard');
     // Should not show errors
-    const errorElements = page.locator('.error, [role="alert"]');
+    const errorElements = authenticatedPage.locator('.error, [role="alert"]');
     const errorCount = await errorElements.count();
     expect(errorCount).toBe(0);
   });
-
-  test('should navigate to projects using URL', async ({ page }) => {
-    await setupPageWithAuth(page, '/projects');
-    await helpers.waitForReactHydration();
-    
+  test('should navigate to projects using URL', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/projects');
+    await testHelpers.waitForPageContent();
     // Should be on projects page
-    expect(page.url()).toContain('/projects');
-    
-    // Should load projects content
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    
-    // Try to wait for API calls but don't fail if they don't come
-    try {
-      await page.waitForResponse(response => 
-        response.url().includes('/api/projects') && response.status() === 200,
-        { timeout: 10000 }
-      );
-    } catch {
-      // API call might not happen immediately, that's ok
-      console.log('API call timeout - continuing test');
-    }
-    
-    // Should have some content loaded
-    await expect(page.locator('.main-content').first()).toBeVisible();
+    expect(authenticatedPage.url()).toContain('/projects');
+    // Should show projects content or empty state
+    const hasContent = await authenticatedPage.locator('table, .data-table, .empty-state').count() > 0;
+    expect(hasContent).toBe(true);
   });
-
-  test('should display sidebar navigation links', async ({ page }) => {
-    await helpers.waitForNavigation();
-    
-    // Check for navigation links
-    const expectedLinks = ['Dashboard', 'Projects', 'People', 'Roles', 'Assignments'];
-    
-    for (const linkText of expectedLinks) {
-      const link = page.locator('a').filter({ hasText: linkText });
-      if (await link.isVisible()) {
-        await expect(link).toBeVisible();
-        console.log(`✓ Found navigation link: ${linkText}`);
-      } else {
-        console.log(`⚠ Navigation link not found: ${linkText}`);
-      }
-    }
-    
-    // Should have at least some navigation links
-    const allLinks = page.locator('.sidebar a, nav a');
-    const linkCount = await allLinks.count();
-    expect(linkCount).toBeGreaterThan(3);
+  test('should navigate to people using navigation click', async ({ authenticatedPage, testHelpers }) => {
+    // Navigate using helper method
+    await testHelpers.navigateTo('/people');
+    await testHelpers.waitForPageContent();
+    // Should be on people page
+    expect(authenticatedPage.url()).toContain('/people');
+    // Should show people content
+    const hasContent = await authenticatedPage.locator('table, .data-table, h1:has-text("People")').count() > 0;
+    expect(hasContent).toBe(true);
   });
-
-  test('should navigate between pages using direct clicks', async ({ page }) => {
-    await helpers.waitForReactHydration();
-    
-    // Find and click Projects link using various strategies
-    let projectsLink = page.locator('.nav-link').filter({ hasText: 'Projects' });
-    
-    if (!(await projectsLink.isVisible())) {
-      projectsLink = page.locator('a').filter({ hasText: 'Projects' });
-    }
-    
-    if (await projectsLink.isVisible()) {
-      // Wait for element to be stable
-      await projectsLink.waitFor({ state: 'attached' });
-      await page.waitForTimeout(200);
-      
-      // Use force click to avoid detachment issues
-      await projectsLink.click({ force: true });
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-      
-      // Should navigate to projects
-      await page.waitForTimeout(1000); // Give time for navigation
-      expect(page.url()).toContain('/projects');
-    } else {
-      // Fallback to direct navigation
-      await setupPageWithAuth(page, '/projects');
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-    }
-    
-    // Should be on projects page
-    expect(page.url()).toContain('/projects');
-  });
-
-  test('should handle page refreshing correctly', async ({ page }) => {
+  test('should maintain navigation state on page refresh', async ({ authenticatedPage, testHelpers }) => {
     // Navigate to a specific page
-    await setupPageWithAuth(page, '/dashboard');
-    await helpers.waitForReactHydration();
-    
+    await testHelpers.navigateTo('/assignments');
+    await testHelpers.waitForPageContent();
+    // Get current URL
+    const urlBefore = authenticatedPage.url();
     // Refresh the page
-    await page.reload();
-    await helpers.waitForReactHydration();
-    
+    await authenticatedPage.reload();
+    await testHelpers.waitForPageContent();
     // Should still be on the same page
-    expect(page.url()).toContain('/dashboard');
-    
-    // Should load content correctly
-    await expect(page.locator('.main-content, main')).toBeVisible();
+    const urlAfter = authenticatedPage.url();
+    expect(urlAfter).toContain('/assignments');
+    expect(urlAfter).toBe(urlBefore);
   });
-
-  test('should display correct page content', async ({ page }) => {
-    // Test dashboard content
-    await setupPageWithAuth(page, '/dashboard');
-    await helpers.waitForReactHydration();
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    
-    // Wait for content to be visible and loaded
-    await page.waitForSelector('.main-content', { timeout: 10000 });
-    
-    // Check for dashboard content in multiple ways
-    const dashboardFound = await page.locator('body').textContent();
-    const hasExpectedContent = dashboardFound && (
-      dashboardFound.includes('Dashboard') || 
-      dashboardFound.includes('Capacinator') ||
-      dashboardFound.includes('Reports') ||
-      dashboardFound.includes('Analytics')
-    );
-    
-    expect(hasExpectedContent).toBeTruthy();
-    
-    // Test projects content  
-    await setupPageWithAuth(page, '/projects');
-    await helpers.waitForReactHydration();
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    
-    // Wait for projects page to load
-    await page.waitForSelector('.main-content', { timeout: 10000 });
-    
-    // Check for projects content
-    const projectsText = await page.locator('body').textContent();
-    const hasProjectContent = projectsText && (
-      projectsText.includes('Projects') ||
-      projectsText.includes('Capacinator') ||
-      projectsText.includes('Add Project') ||
-      projectsText.includes('Filter')
-    );
-    
-    expect(hasProjectContent).toBeTruthy();
+  test('should handle navigation errors gracefully', async ({ authenticatedPage, testHelpers }) => {
+    // Try to navigate to a non-existent page
+    await authenticatedPage.goto('/non-existent-page-123');
+    // Wait a bit for redirect or error handling
+    await authenticatedPage.waitForTimeout(2000);
+    // Should either show 404 or redirect to valid page
+    const currentUrl = authenticatedPage.url();
+    const is404 = await authenticatedPage.locator('text=/404|not found/i').count() > 0;
+    const isValidPage = currentUrl.includes('dashboard') || currentUrl.includes('projects') || currentUrl.includes('people');
+    expect(is404 || isValidPage).toBe(true);
   });
-
-  test('should handle API errors gracefully', async ({ page }) => {
-    // Mock a failed API response
-    await page.route('**/api/**', route => {
-      route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Server error' })
-      });
-    });
-    
-    await setupPageWithAuth(page, '/projects');
-    await helpers.waitForReactHydration();
-    
-    // Should still load the page structure
-    await expect(page.locator('.main-content, main')).toBeVisible();
-    
-    // Should not crash the app
-    const bodyText = await page.textContent('body');
-    expect(bodyText).toBeTruthy();
+  test('should have working breadcrumb navigation', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/projects');
+    await testHelpers.waitForPageContent();
+    // Check if breadcrumbs exist
+    const breadcrumbs = authenticatedPage.locator('.breadcrumb, [aria-label="Breadcrumb"], nav[aria-label="breadcrumb"]');
+    if (await breadcrumbs.count() > 0) {
+      console.log('✅ Breadcrumbs found');
+      // Try clicking home/dashboard breadcrumb
+      const homeBreadcrumb = breadcrumbs.locator('a:has-text("Home"), a:has-text("Dashboard")').first();
+      if (await homeBreadcrumb.isVisible()) {
+        await homeBreadcrumb.click();
+        await testHelpers.waitForPageContent();
+        // Should navigate to home/dashboard
+        expect(authenticatedPage.url()).toMatch(/\/(dashboard|$)/);
+      }
+    } else {
+      console.log('ℹ️ No breadcrumb navigation found');
+    }
   });
 });

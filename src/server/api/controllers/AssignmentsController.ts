@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
-import { v4 as uuidv4 } from 'uuid';
 
 interface AssignmentConflict {
   person_id: string;
@@ -108,9 +107,6 @@ export class AssignmentsController extends BaseController {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
-      // Validate assignment data based on date mode
-      await this.validateAssignmentData(assignmentData);
-
       // Compute dates based on assignment mode
       const computedDates = await this.computeAssignmentDates(assignmentData);
       
@@ -127,71 +123,37 @@ export class AssignmentsController extends BaseController {
       );
 
       if (conflicts && conflicts.total_allocation > 100) {
-        // Clean conflicts object to prevent circular references
-        const cleanConflicts = JSON.parse(JSON.stringify(conflicts));
         return res.status(400).json({
           error: 'Assignment would exceed person capacity',
-          conflicts: cleanConflicts,
+          conflicts,
           message: `Person is already allocated ${conflicts.total_allocation - assignmentData.allocation_percentage}% during this period`
         });
       }
 
-      // Generate a UUID for the assignment
-      const assignmentId = uuidv4();
-      
-      await this.db('project_assignments')
+      const [assignment] = await this.db('project_assignments')
         .insert({
-          id: assignmentId,
           ...assignmentData,
           ...computedDates,
           created_at: new Date(),
           updated_at: new Date()
-        });
-        
-      // Fetch the inserted assignment
-      const assignment = await this.db('project_assignments')
-        .where('id', assignmentId)
-        .first();
-        
-      if (!assignment) {
-        throw new Error(`Failed to fetch assignment with ID ${assignmentId}`);
-      }
+        })
+        .returning('*');
 
-      // Send notification for assignment creation (don't await to avoid circular refs)
-      // Pass only the necessary data to avoid circular references
-      notificationScheduler.sendAssignmentNotification(
-        assignmentData.person_id,
-        'created',
-        {
-          project_id: assignmentData.project_id,
-          role_id: assignmentData.role_id,
-          start_date: assignmentData.start_date,
-          end_date: assignmentData.end_date,
-          allocation_percentage: assignmentData.allocation_percentage
-        }
-      ).catch(error => {
+      // Return assignment with computed dates
+      const assignmentWithDates = { ...assignment, ...computedDates };
+      
+      // Send notification for assignment creation
+      try {
+        await notificationScheduler.sendAssignmentNotification(
+          assignmentData.person_id,
+          'created',
+          assignmentData
+        );
+      } catch (error) {
         console.error('Failed to send assignment notification:', error);
-      });
+      }
       
-      // Manually construct clean response object to prevent circular references
-      const cleanResponse = {
-        id: assignment.id,
-        project_id: assignment.project_id,
-        person_id: assignment.person_id,
-        role_id: assignment.role_id,
-        phase_id: assignment.phase_id,
-        start_date: assignment.start_date,
-        end_date: assignment.end_date,
-        allocation_percentage: assignment.allocation_percentage,
-        assignment_date_mode: assignment.assignment_date_mode,
-        computed_start_date: computedDates.computed_start_date,
-        computed_end_date: computedDates.computed_end_date,
-        notes: assignment.notes,
-        created_at: assignment.created_at,
-        updated_at: assignment.updated_at
-      };
-      
-      return transformDates(cleanResponse, [
+      return transformDates(assignmentWithDates, [
         ...COMMON_DATE_FIELDS,
         'computed_start_date',
         'computed_end_date'
@@ -256,40 +218,28 @@ export class AssignmentsController extends BaseController {
         );
 
         if (conflict && conflict.total_allocation > 100) {
-          // Clean conflict object to prevent circular references
-          const cleanConflict = JSON.parse(JSON.stringify(conflict));
           return res.status(400).json({
             error: 'Capacity exceeded',
-            conflict: cleanConflict
+            conflict
           });
         }
       }
 
       // Update assignment
-      await this.db('project_assignments')
+      const [updated] = await this.db('project_assignments')
         .where('id', id)
         .update({
           ...updateData,
           updated_at: new Date()
-        });
-        
-      // Fetch the updated assignment
-      const updated = await this.db('project_assignments')
-        .where('id', id)
-        .first();
+        })
+        .returning('*');
 
       // Send notification for assignment update
       try {
         await notificationScheduler.sendAssignmentNotification(
           updateData.person_id || existing.person_id,
           'updated',
-          {
-            project_id: updateData.project_id || existing.project_id,
-            role_id: updateData.role_id || existing.role_id,
-            start_date: updateData.start_date || existing.start_date,
-            end_date: updateData.end_date || existing.end_date,
-            allocation_percentage: updateData.allocation_percentage || existing.allocation_percentage
-          }
+          { ...existing, ...updateData }
         );
       } catch (error) {
         console.error('Failed to send assignment notification:', error);
@@ -347,9 +297,7 @@ export class AssignmentsController extends BaseController {
           );
 
           if (conflict && conflict.total_allocation > 100) {
-            // Clean conflict object to prevent circular references
-            const cleanConflict = JSON.parse(JSON.stringify(conflict));
-            results.conflicts.push(cleanConflict);
+            results.conflicts.push(conflict);
             results.failed.push({
               ...assignment,
               reason: 'Capacity exceeded',
@@ -359,10 +307,8 @@ export class AssignmentsController extends BaseController {
           }
 
           // Create assignment
-          const assignmentId = uuidv4();
-          await this.db('project_assignments')
+          const [created] = await this.db('project_assignments')
             .insert({
-              id: assignmentId,
               project_id,
               person_id: assignment.person_id,
               role_id: assignment.role_id,
@@ -372,12 +318,8 @@ export class AssignmentsController extends BaseController {
               notes: assignment.notes,
               created_at: new Date(),
               updated_at: new Date()
-            });
-            
-          // Fetch the created assignment
-          const created = await this.db('project_assignments')
-            .where('id', assignmentId)
-            .first();
+            })
+            .returning('*');
 
           results.successful.push(transformDates(created, COMMON_DATE_FIELDS));
 
@@ -439,15 +381,12 @@ export class AssignmentsController extends BaseController {
       sum + assignment.allocation_percentage, allocation_percentage
     );
 
-    // Get person's current availability from overrides
-    const availabilityOverride = await this.db('person_availability_overrides')
+    // Get person's current availability
+    const availability = await this.db('person_availability_view')
       .where('person_id', person_id)
-      .where('start_date', '<=', start_date)
-      .where('end_date', '>=', end_date)
-      .orderBy('created_at', 'desc')
       .first();
 
-    const available_capacity = availabilityOverride?.availability_percentage || person?.default_availability_percentage || 100;
+    const available_capacity = availability?.effective_availability_percentage || 100;
 
     if (total_allocation > available_capacity) {
       return {
@@ -528,18 +467,12 @@ export class AssignmentsController extends BaseController {
 
         const currentAllocation = allocations?.total_allocation || 0;
 
-        // Get person's availability from person table and overrides
-        const personData = await this.db('people')
-          .where('id', person.id)
-          .first();
-        
-        const availabilityOverride = await this.db('person_availability_overrides')
+        // Get availability
+        const availability = await this.db('person_availability_view')
           .where('person_id', person.id)
-          .orderBy('created_at', 'desc')
           .first();
 
-        const personCapacity = availabilityOverride?.availability_percentage || personData?.default_availability_percentage || 100;
-        const availableCapacity = personCapacity - currentAllocation;
+        const availableCapacity = (availability?.effective_availability_percentage || 100) - currentAllocation;
 
         if (availableCapacity >= Number(required_allocation)) {
           suggestions.push({
@@ -548,7 +481,7 @@ export class AssignmentsController extends BaseController {
             proficiency_level: person.proficiency_level,
             current_allocation: currentAllocation,
             available_capacity: availableCapacity,
-            availability_status: availabilityOverride?.override_type || 'available',
+            availability_status: availability?.availability_status,
             score: this.calculateSuggestionScore(person, availableCapacity)
           });
         }
@@ -576,14 +509,6 @@ export class AssignmentsController extends BaseController {
     const { start_date, end_date } = req.query;
 
     const result = await this.executeQuery(async () => {
-      // Use reasonable default date range if not provided (current year ± 1 year)
-      const currentDate = new Date();
-      const defaultStartDate = new Date(currentDate.getFullYear() - 1, 0, 1).toISOString().split('T')[0]; // Start of last year
-      const defaultEndDate = new Date(currentDate.getFullYear() + 1, 11, 31).toISOString().split('T')[0]; // End of next year
-      
-      const effectiveStartDate = start_date as string || defaultStartDate;
-      const effectiveEndDate = end_date as string || defaultEndDate;
-      
       let query = this.db('project_assignments')
         .join('projects', 'project_assignments.project_id', 'projects.id')
         .join('roles', 'project_assignments.role_id', 'roles.id')
@@ -593,17 +518,27 @@ export class AssignmentsController extends BaseController {
           'projects.name as project_name',
           'projects.priority as project_priority',
           'roles.name as role_name'
-        )
-        .where('project_assignments.end_date', '>=', effectiveStartDate)
-        .where('project_assignments.start_date', '<=', effectiveEndDate);
+        );
+
+      if (start_date) {
+        query = query.where('project_assignments.end_date', '>=', start_date);
+      }
+      if (end_date) {
+        query = query.where('project_assignments.start_date', '<=', end_date);
+      }
 
       const assignments = await query.orderBy('project_assignments.start_date');
 
       // Get availability overrides in the same period
       let availabilityQuery = this.db('person_availability_overrides')
-        .where('person_id', person_id)
-        .where('end_date', '>=', effectiveStartDate)
-        .where('start_date', '<=', effectiveEndDate);
+        .where('person_id', person_id);
+
+      if (start_date) {
+        availabilityQuery = availabilityQuery.where('end_date', '>=', start_date);
+      }
+      if (end_date) {
+        availabilityQuery = availabilityQuery.where('start_date', '<=', end_date);
+      }
 
       const availabilityOverrides = await availabilityQuery.orderBy('start_date');
 
@@ -694,9 +629,13 @@ export class AssignmentsController extends BaseController {
     score += availableCapacity * 0.5;
 
     // Higher score for higher proficiency
-    // proficiency_level is numeric (1-5) in the database
-    const proficiencyBonus = (person.proficiency_level || 0) * 10;
-    score += proficiencyBonus;
+    const proficiencyScores: Record<string, number> = {
+      'Expert': 40,
+      'Senior': 30,
+      'Intermediate': 20,
+      'Junior': 10
+    };
+    score += proficiencyScores[person.proficiency_level] || 0;
 
     // Could add years of experience if it was in the schema
     // score += Math.min(person.years_experience * 2, 20);
@@ -835,107 +774,6 @@ export class AssignmentsController extends BaseController {
         
       default:
         throw new Error(`Unknown assignment_date_mode: ${mode}`);
-    }
-  }
-
-  /**
-   * Validate assignment data based on assignment_date_mode
-   */
-  private async validateAssignmentData(assignmentData: any): Promise<void> {
-    // Basic required fields
-    if (!assignmentData.project_id) {
-      throw new Error('project_id is required');
-    }
-    if (!assignmentData.person_id) {
-      throw new Error('person_id is required');
-    }
-    if (!assignmentData.role_id) {
-      throw new Error('role_id is required');
-    }
-    if (!assignmentData.allocation_percentage || assignmentData.allocation_percentage <= 0 || assignmentData.allocation_percentage > 100) {
-      throw new Error('allocation_percentage must be between 1 and 100');
-    }
-
-    const mode = assignmentData.assignment_date_mode || 'fixed';
-
-    switch (mode) {
-      case 'fixed':
-        // Require explicit start_date and end_date
-        if (!assignmentData.start_date) {
-          throw new Error('start_date is required for fixed date mode');
-        }
-        if (!assignmentData.end_date) {
-          throw new Error('end_date is required for fixed date mode');
-        }
-        
-        // Validate date order
-        if (new Date(assignmentData.start_date) >= new Date(assignmentData.end_date)) {
-          throw new Error('start_date must be before end_date');
-        }
-        break;
-
-      case 'phase':
-        // Require phase_id and project_id
-        if (!assignmentData.phase_id) {
-          throw new Error('phase_id is required for phase-aligned assignments');
-        }
-        
-        // Verify the phase exists in the project
-        const phaseTimeline = await this.db('project_phases_timeline')
-          .where('project_id', assignmentData.project_id)
-          .where('phase_id', assignmentData.phase_id)
-          .first();
-          
-        if (!phaseTimeline) {
-          throw new Error(`Phase ${assignmentData.phase_id} not found in project ${assignmentData.project_id}`);
-        }
-        
-        // Verify phase has valid dates
-        if (!phaseTimeline.start_date || !phaseTimeline.end_date) {
-          throw new Error('Selected phase does not have valid start and end dates');
-        }
-        break;
-
-      case 'project':
-        // Verify project exists and has aspiration dates
-        const project = await this.db('projects')
-          .where('id', assignmentData.project_id)
-          .first();
-          
-        if (!project) {
-          throw new Error(`Project ${assignmentData.project_id} not found`);
-        }
-        
-        if (!project.aspiration_start || !project.aspiration_finish) {
-          throw new Error('Project does not have aspiration dates set. Please set project aspiration dates first.');
-        }
-        
-        // Validate aspiration date order
-        if (new Date(project.aspiration_start) >= new Date(project.aspiration_finish)) {
-          throw new Error('Project aspiration dates are invalid (start must be before finish)');
-        }
-        break;
-
-      default:
-        throw new Error(`Invalid assignment_date_mode: ${mode}. Must be 'fixed', 'phase', or 'project'`);
-    }
-
-    // Verify person exists
-    const person = await this.db('people')
-      .where('id', assignmentData.person_id)
-      .first();
-      
-    if (!person) {
-      throw new Error(`Person ${assignmentData.person_id} not found`);
-    }
-
-    // Verify role exists
-    const role = await this.db('roles')
-      .where('id', assignmentData.role_id)
-      .first();
-      
-    if (!role) {
-      throw new Error(`Role ${assignmentData.role_id} not found`);
     }
   }
 }

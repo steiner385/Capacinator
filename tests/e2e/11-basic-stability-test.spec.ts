@@ -1,71 +1,64 @@
-import { test, expect } from '@playwright/test';
-import { TestHelpers , setupPageWithAuth} from './utils/test-helpers';
-
+import { test, expect } from './fixtures';
 test.describe('Basic Stability Test', () => {
-  let helpers: TestHelpers;
-
-  test.beforeEach(async ({ page }) => {
-    helpers = new TestHelpers(page);
-    await setupPageWithAuth(page, '/');
-    await helpers.waitForReactHydration();
-  });
-
-  test('should load the home page with basic content', async ({ page }) => {
-    // Wait for the page to be fully loaded
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    
+  test('should load the home page with basic content', async ({ authenticatedPage, testHelpers }) => {
+    // Wait for content
+    await testHelpers.waitForPageContent();
     // Should have some content
-    const bodyText = await page.textContent('body');
+    const bodyText = await authenticatedPage.textContent('body');
     expect(bodyText).toBeTruthy();
-    expect(bodyText).toContain('Capacinator');
-    
+    expect(bodyText.toLowerCase()).toContain('capacinator');
     // Should have basic structure
-    await expect(page.locator('body')).toBeVisible();
+    await expect(authenticatedPage.locator('body')).toBeVisible();
   });
-
-  test('should have working page navigation', async ({ page }) => {
-    // Test direct URL navigation instead of clicking
-    await setupPageWithAuth(page, '/dashboard');
-    await helpers.waitForReactHydration();
-    
-    expect(page.url()).toContain('/dashboard');
-    
+  test('should have working page navigation', async ({ authenticatedPage, testHelpers }) => {
+    // Test navigation to dashboard
+    await testHelpers.navigateTo('/dashboard');
+    await testHelpers.waitForPageContent();
+    expect(authenticatedPage.url()).toContain('/dashboard');
     // Should load content
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    const bodyText = await page.textContent('body');
+    const bodyText = await authenticatedPage.textContent('body');
     expect(bodyText).toBeTruthy();
   });
-
-  test('should handle projects page navigation', async ({ page }) => {
-    // Test direct URL navigation
-    await setupPageWithAuth(page, '/projects');
-    await helpers.waitForReactHydration();
-    
-    expect(page.url()).toContain('/projects');
-    
+  test('should handle projects page navigation', async ({ authenticatedPage, testHelpers }) => {
+    // Test navigation to projects
+    await testHelpers.navigateTo('/projects');
+    await testHelpers.waitForPageContent();
+    expect(authenticatedPage.url()).toContain('/projects');
     // Should load content without errors
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
-    const bodyText = await page.textContent('body');
+    const bodyText = await authenticatedPage.textContent('body');
     expect(bodyText).toBeTruthy();
   });
-
-  test('should handle API health check', async ({ page }) => {
-    // Check if the server is responding
-    const response = await page.request.get('/api/health');
-    expect(response.status()).toBe(200);
-    
-    const healthData = await response.json();
-    expect(healthData.status).toBe('ok'); // Fix: API returns 'ok' not 'healthy'
+  test('should handle people page navigation', async ({ authenticatedPage, testHelpers }) => {
+    // Test navigation to people
+    await testHelpers.navigateTo('/people');
+    await testHelpers.waitForPageContent();
+    expect(authenticatedPage.url()).toContain('/people');
+    // Should load content without errors
+    const bodyText = await authenticatedPage.textContent('body');
+    expect(bodyText).toBeTruthy();
   });
-
-  test('should display navigation elements', async ({ page }) => {
-    await helpers.waitForNavigation();
-    
-    // Check for basic navigation structure
-    const hasNavigation = await helpers.isElementVisible('.sidebar') || 
-                          await helpers.isElementVisible('nav') ||
-                          await helpers.isElementVisible('.navigation');
-    
-    expect(hasNavigation).toBeTruthy();
+  test('should maintain stability across multiple navigations', async ({ authenticatedPage, testHelpers }) => {
+    // Navigate through multiple pages rapidly
+    const pages = ['/', '/dashboard', '/projects', '/people', '/assignments'];
+    for (const path of pages) {
+      await testHelpers.navigateTo(path);
+      await testHelpers.waitForPageContent();
+      // Should not have any errors
+      const errorElements = await authenticatedPage.locator('.error, [role="alert"], .error-boundary').count();
+      expect(errorElements).toBe(0);
+    }
+  });
+  test('should handle page refresh without errors', async ({ authenticatedPage, testHelpers }) => {
+    // Navigate to projects
+    await testHelpers.navigateTo('/projects');
+    await testHelpers.waitForPageContent();
+    // Refresh the page
+    await authenticatedPage.reload();
+    await testHelpers.waitForPageContent();
+    // Should still be on projects page
+    expect(authenticatedPage.url()).toContain('/projects');
+    // Should not have errors
+    const errorElements = await authenticatedPage.locator('.error, [role="alert"]').count();
+    expect(errorElements).toBe(0);
   });
 });

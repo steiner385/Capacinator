@@ -9,8 +9,15 @@ let _db: Knex | null = null;
 
 // Create and export the database connection
 export function getDb(): Knex {
-  if (process.env.NODE_ENV === 'e2e' && global.__E2E_DB__) {
-    return global.__E2E_DB__;
+  // In E2E mode, use the file-based database configuration
+  if (process.env.NODE_ENV === 'e2e') {
+    // Check for global E2E DB first (set during init) - for backward compatibility
+    const globalE2EDb = (global as any).__E2E_DB__;
+    if (globalE2EDb) {
+      return globalE2EDb;
+    }
+    // For E2E, we now use file-based database through knexConfig
+    // which already handles E2E mode internally
   }
   
   if (!_db) {
@@ -21,7 +28,47 @@ export function getDb(): Knex {
 }
 
 // Export db as a getter for backward compatibility
-export const db = getDb();
+// For ESM modules, we need a different approach
+let _dbProxy: Knex | null = null;
+
+// Create a function that returns the current database instance
+// This allows controllers to use this.db() or this.db('table')
+export function createDbFunction(): any {
+  const dbFunction = function(tableName?: string) {
+    const actualDb = getDb();
+    if (tableName) {
+      return actualDb(tableName);
+    }
+    return actualDb;
+  };
+  
+  // Copy all properties and methods from Knex to the function
+  return new Proxy(dbFunction, {
+    get(target, prop) {
+      const actualDb = getDb();
+      if (prop in target) {
+        return target[prop as keyof typeof target];
+      }
+      return actualDb[prop as keyof Knex];
+    },
+    has(target, prop) {
+      const actualDb = getDb();
+      return (prop in target) || (prop in actualDb);
+    },
+    apply(target, thisArg, args) {
+      return target.apply(thisArg, args);
+    }
+  });
+}
+
+// Export db as a function that always uses the current database
+export const db = createDbFunction();
+
+// Function to reinitialize db (useful for E2E tests)
+export function reinitializeDb(): void {
+  _db = null;
+  _dbProxy = null;
+}
 
 // Test the connection
 export async function testConnection(): Promise<boolean> {

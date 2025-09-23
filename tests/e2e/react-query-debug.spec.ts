@@ -1,24 +1,20 @@
-import { test, expect } from '@playwright/test'
-import { setupPageWithAuth } from './utils/improved-auth-helpers';;
-
-test('Debug React Query behavior with console monitoring', async ({ page }) => {
+import { test, expect } from './fixtures'
+test('Debug React Query behavior with console monitoring', async ({ authenticatedPage, testHelpers }) => {
   // Enable comprehensive console logging
   const consoleMessages: string[] = [];
-  page.on('console', (message) => {
+  authenticatedPage.on('console', (message) => {
     const text = message.text();
     consoleMessages.push(`[${message.type()}] ${text}`);
     console.log(`Console [${message.type()}]: ${text}`);
   });
-
   // Enable error logging
-  page.on('pageerror', (error) => {
+  authenticatedPage.on('pageerror', (error) => {
     console.error(`Page error: ${error.message}`);
     console.error(`Stack: ${error.stack}`);
   });
-
   // Monitor network requests
   const networkRequests: Array<{url: string, status: number, timing: number}> = [];
-  page.on('response', (response) => {
+  authenticatedPage.on('response', (response) => {
     if (response.url().includes('/api/')) {
       networkRequests.push({
         url: response.url(),
@@ -28,18 +24,14 @@ test('Debug React Query behavior with console monitoring', async ({ page }) => {
       console.log(`API Response: ${response.status()} ${response.url()}`);
     }
   });
-
   console.log('🚀 Starting React Query debug test...');
-  
   // Navigate to reports page
-  await page.goto('https://localhost:3121/reports');
-  
+  await authenticatedPage.goto('https://localhost:3121/reports');
   // Wait longer to observe behavior
   console.log('⏳ Waiting 10 seconds to observe React Query behavior...');
-  await page.waitForTimeout(10000);
-  
+  await authenticatedPage.waitForTimeout(10000);
   // Check current state
-  const currentState = await page.evaluate(() => {
+  const currentState = await authenticatedPage.evaluate(() => {
     return {
       url: window.location.href,
       title: document.title,
@@ -52,15 +44,12 @@ test('Debug React Query behavior with console monitoring', async ({ page }) => {
       localStorageUser: localStorage.getItem('capacinator_current_user')
     };
   });
-
   console.log('📊 Current page state:', JSON.stringify(currentState, null, 2));
   console.log('🌐 Network requests made:', networkRequests.length);
   networkRequests.forEach(req => {
     console.log(`  ${req.status} ${req.url}`);
   });
-  
   console.log('📝 Console messages count:', consoleMessages.length);
-  
   // Look for specific React Query or network related messages
   const reactQueryMessages = consoleMessages.filter(msg => 
     msg.toLowerCase().includes('query') || 
@@ -68,15 +57,12 @@ test('Debug React Query behavior with console monitoring', async ({ page }) => {
     msg.toLowerCase().includes('axios') ||
     msg.toLowerCase().includes('api')
   );
-  
   if (reactQueryMessages.length > 0) {
     console.log('🔍 React Query related messages:');
     reactQueryMessages.forEach(msg => console.log(`  ${msg}`));
   }
-
   // Take screenshot
-  await page.screenshot({ path: '/tmp/react-query-debug.png', fullPage: true });
-
+  await authenticatedPage.screenshot({ path: '/tmp/react-query-debug.png', fullPage: true });
   // Basic assertion
   expect(currentState.url).toContain('/reports');
 });

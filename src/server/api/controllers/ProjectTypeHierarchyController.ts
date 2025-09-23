@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectTypeWithHierarchy {
   id: string;
@@ -21,20 +20,70 @@ export class ProjectTypeHierarchyController extends BaseController {
   getHierarchy = async (req: Request, res: Response): Promise<void> => {
     try {
       // Get all project types (parents)
-      // Generate a UUID for the project types
+      const projectTypes = await this.db('project_types')
+        .select('*')
+        .orderBy('name');
 
-      const projectTypesId = uuidv4();
+      // Get all project sub-types (children)
+      const projectSubTypes = await this.db('project_sub_types')
+        .leftJoin('project_types', 'project_sub_types.project_type_id', 'project_types.id')
+        .select(
+          'project_sub_types.*',
+          'project_types.name as project_type_name',
+          'project_types.color_code as project_type_color'
+        )
+        .orderBy('project_types.name')
+        .orderBy('project_sub_types.name');
 
+      const hierarchy = this.buildNewHierarchy(projectTypes, projectSubTypes);
+      
+      res.json({ 
+        success: true, 
+        data: hierarchy
+      });
+    } catch (error) {
+      console.error('Hierarchy error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to get hierarchy',
+        details: (error as Error).message 
+      });
+    }
+  };
 
-      // Insert with generated ID
+  // Get phases for a project type (including inherited)
+  getProjectTypePhases = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const { projectTypeId } = req.params;
+      const phases = await this.getInheritedPhases(projectTypeId);
+      
+      return res.json({ 
+        success: true, 
+        data: phases 
+      });
+    }, res);
+  };
 
-      await this.db('project_types')
+  // Create Project Sub-Type
+  createChild = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const { parentId } = req.params;
+      const { name, description, color_code } = req.body;
+      
+      const parent = await this.db('project_types').where('id', parentId).first();
+      if (!parent) {
+        return res.status(404).json({ error: 'Project Type not found' });
+      }
 
-        .insert({
+      // Get max sort order for Project Sub-Types of this Project Type
+      const maxSortOrder = await this.db('project_types')
+        .where('parent_id', parentId)
+        .max('sort_order as max')
+        .first();
 
-          id: projectTypesId,
+      const nextSortOrder = (maxSortOrder?.max || 0) + 1;
 
-          ...{
+      const child = await this.db('project_types').insert({
         name,
         description,
         color_code,
@@ -42,18 +91,7 @@ export class ProjectTypeHierarchyController extends BaseController {
         is_parent: false,
         level: parent.level + 1,
         sort_order: nextSortOrder
-      }
-
-        });
-
-
-      // Fetch the created record
-
-      const [projectTypes] = await this.db('project_types')
-
-        .where({ id: projectTypesId })
-
-        .select('*');
+      }).returning('*');
 
       // Update Project Type to mark as having Project Sub-Types
       await this.db('project_types')

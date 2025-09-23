@@ -61,8 +61,8 @@ export const test = base.extend<TestFixtures>({
       console.log('⚠️ Could not load saved auth state:', error);
     }
     
-    // Navigate to home
-    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    // Navigate to home using the helper which has baseURL context
+    await helpers.navigateTo('/');
     
     // Setup page (handles profile selection if needed)
     await helpers.setupPage();

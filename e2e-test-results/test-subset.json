@@ -1,0 +1,39 @@
+
+> capacinator@1.0.0 test:e2e
+> playwright test tests/e2e/smoke-test.spec.ts tests/e2e/21-write-operations.spec.ts tests/e2e/24-data-relationships.spec.ts tests/e2e/suites/security/api-validation.spec.ts tests/e2e/actionable-insights-workflow.spec.ts tests/e2e/07-error-handling.spec.ts --reporter=json
+
+🚀 Starting E2E global setup...
+🗄️ E2E database will be initialized by server...
+ℹ️ Development server already running on ports 3110/3120
+   E2E tests will use the existing server and database.
+   For isolated testing, stop the dev server first.
+⏳ Waiting for application to be ready...
+✅ Application is ready
+🔍 Verifying test data...
+✅ API health check passed
+✅ /api/roles: 4 items
+🔍 Handling initial profile selection...
+📋 Profile selection modal detected
+🎯 Starting profile selection...
+
+📍 Attempt 1/3 to select profile...
+Select trigger text: "Select your name..."
+📂 Opening profile dropdown...
+🔍 Trying strategy: Standard role="option"
+✅ Standard role="option": Found 4 options
+DOM state: 0 portals, 1 popper wrappers
+Available profiles: [
+  'E2E Over Utilized (E2E Developer)',
+  'E2E Normal Utilized (E2E Designer)',
+  'E2E Under Utilized (E2E Manager)',
+  'E2E Zero Utilized (E2E QA Engineer)'
+]
+Selecting profile: "E2E Over Utilized (E2E Developer)"
+Select value after click: "E2E Over Utilized (E2E Developer)"
+👆 Clicking Continue button...
+✅ Profile selected successfully
+✅ Profile selected and saved
+💾 Current auth data: { hasCurrentUser: true, hasSelectedProfile: true }
+💾 Authentication state saved to /home/tony/GitHub/Capacinator/test-results/e2e-auth.json
+✅ Saved state verification: Contains localStorage data
+✅ E2E global setup completed successfully

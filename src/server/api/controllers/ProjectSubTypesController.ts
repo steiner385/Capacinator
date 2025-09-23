@@ -1,14 +1,13 @@
 import { Request, Response } from 'express';
-import { getDb } from '../../database/index.js';
+import { db } from '../../database/index.js';
 import { getAuditService } from '../../services/audit/index.js';
-import { v4 as uuidv4 } from 'uuid';
 
 // Get all project sub-types (optionally filtered by project type)
 export const getProjectSubTypes = async (req: Request, res: Response) => {
   try {
     const { project_type_id, include_inactive } = req.query;
 
-    let query = getDb()('project_sub_types')
+    let query = db('project_sub_types')
       .leftJoin('project_types', 'project_sub_types.project_type_id', 'project_types.id')
       .select(
         'project_sub_types.*',
@@ -69,7 +68,7 @@ export const getProjectSubType = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const projectSubType = await getDb()('project_sub_types')
+    const projectSubType = await db('project_sub_types')
       .leftJoin('project_types', 'project_sub_types.project_type_id', 'project_types.id')
       .select(
         'project_sub_types.*',
@@ -87,7 +86,7 @@ export const getProjectSubType = async (req: Request, res: Response) => {
     }
 
     // Get associated phases
-    const phases = await getDb()('project_type_phases')
+    const phases = await db('project_type_phases')
       .join('project_phases', 'project_type_phases.phase_id', 'project_phases.id')
       .where('project_type_phases.project_sub_type_id', id)
       .orWhere('project_type_phases.project_type_id', projectSubType.project_type_id)
@@ -100,7 +99,7 @@ export const getProjectSubType = async (req: Request, res: Response) => {
       .orderBy('project_type_phases.order_index');
 
     // Get resource templates
-    const resourceTemplates = await getDb()('resource_templates')
+    const resourceTemplates = await db('resource_templates')
       .join('roles', 'resource_templates.role_id', 'roles.id')
       .join('project_phases', 'resource_templates.phase_id', 'project_phases.id')
       .where('resource_templates.project_sub_type_id', id)
@@ -145,7 +144,7 @@ export const createProjectSubType = async (req: Request, res: Response) => {
     }
 
     // Check if project type exists
-    const projectType = await getDb()('project_types').where('id', project_type_id).first();
+    const projectType = await db('project_types').where('id', project_type_id).first();
     if (!projectType) {
       return res.status(404).json({
         success: false,
@@ -154,7 +153,7 @@ export const createProjectSubType = async (req: Request, res: Response) => {
     }
 
     // Check for duplicate name within the same project type
-    const existingSubType = await getDb()('project_sub_types')
+    const existingSubType = await db('project_sub_types')
       .where('project_type_id', project_type_id)
       .where('name', name)
       .first();
@@ -176,7 +175,7 @@ export const createProjectSubType = async (req: Request, res: Response) => {
       is_active: true
     };
 
-    const [created] = await getDb()('project_sub_types')
+    const [created] = await db('project_sub_types')
       .insert(newProjectSubType)
       .returning('*');
 
@@ -185,14 +184,14 @@ export const createProjectSubType = async (req: Request, res: Response) => {
 
     // Audit log
     const auditService = getAuditService();
-    await auditService.logChange({
-      tableName: 'project_sub_types',
-      recordId: created.id,
-      action: 'CREATE',
-      oldValues: null,
-      newValues: created,
-      changedBy: req.user?.id || 'system'
-    });
+    await auditService.logChange(
+      'project_sub_types',
+      created.id,
+      'INSERT',
+      null,
+      created,
+      req.user?.id || 'system'
+    );
 
     res.status(201).json({
       success: true,
@@ -214,7 +213,7 @@ export const updateProjectSubType = async (req: Request, res: Response) => {
     const { name, description, color_code, sort_order, is_active } = req.body;
 
     // Get existing record for audit
-    const existingSubType = await getDb()('project_sub_types').where('id', id).first();
+    const existingSubType = await db('project_sub_types').where('id', id).first();
     if (!existingSubType) {
       return res.status(404).json({
         success: false,
@@ -224,7 +223,7 @@ export const updateProjectSubType = async (req: Request, res: Response) => {
 
     // Check for duplicate name (if name is being changed)
     if (name && name !== existingSubType.name) {
-      const duplicateSubType = await getDb()('project_sub_types')
+      const duplicateSubType = await db('project_sub_types')
         .where('project_type_id', existingSubType.project_type_id)
         .where('name', name)
         .where('id', '!=', id)
@@ -248,21 +247,21 @@ export const updateProjectSubType = async (req: Request, res: Response) => {
     if (sort_order !== undefined) updates.sort_order = sort_order;
     if (is_active !== undefined) updates.is_active = is_active;
 
-    const [updated] = await getDb()('project_sub_types')
+    const [updated] = await db('project_sub_types')
       .where('id', id)
       .update(updates)
       .returning('*');
 
     // Audit log
     const auditService = getAuditService();
-    await auditService.logChange({
-      tableName: 'project_sub_types',
-      recordId: id,
-      action: 'UPDATE',
-      oldValues: existingSubType,
-      newValues: updated,
-      changedBy: req.user?.id || 'system'
-    });
+    await auditService.logChange(
+      'project_sub_types',
+      id,
+      'UPDATE',
+      existingSubType,
+      updated,
+      req.user?.id || 'system'
+    );
 
     res.json({
       success: true,
@@ -283,7 +282,7 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     // Get existing record for audit
-    const existingSubType = await getDb()('project_sub_types').where('id', id).first();
+    const existingSubType = await db('project_sub_types').where('id', id).first();
     if (!existingSubType) {
       return res.status(404).json({
         success: false,
@@ -292,7 +291,7 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
     }
 
     // Check if sub-type is being used by any projects
-    const projectCount = await getDb()('projects')
+    const projectCount = await db('projects')
       .where('project_sub_type_id', id)
       .count('* as count')
       .first();
@@ -305,7 +304,7 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
     }
 
     // Delete associated records first
-    await getDb().transaction(async (trx) => {
+    await db.transaction(async (trx) => {
       // Delete resource templates
       await trx('resource_templates')
         .where('project_sub_type_id', id)
@@ -324,14 +323,14 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
 
     // Audit log
     const auditService = getAuditService();
-    await auditService.logChange({
-      tableName: 'project_sub_types',
-      recordId: id,
-      action: 'DELETE',
-      oldValues: existingSubType,
-      newValues: null,
-      changedBy: req.user?.id || 'system'
-    });
+    await auditService.logChange(
+      'project_sub_types',
+      id,
+      'DELETE',
+      existingSubType,
+      null,
+      req.user?.id || 'system'
+    );
 
     res.json({
       success: true,
@@ -350,12 +349,12 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
 async function inheritFromProjectType(subTypeId: string, projectTypeId: string) {
   try {
     // Inherit phases
-    const parentPhases = await getDb()('project_type_phases')
+    const parentPhases = await db('project_type_phases')
       .where('project_type_id', projectTypeId)
       .whereNull('project_sub_type_id');
 
     for (const phase of parentPhases) {
-      await getDb()('project_type_phases').insert({
+      await db('project_type_phases').insert({
         project_sub_type_id: subTypeId,
         project_type_id: projectTypeId,
         phase_id: phase.phase_id,
@@ -366,12 +365,12 @@ async function inheritFromProjectType(subTypeId: string, projectTypeId: string) 
     }
 
     // Inherit resource templates
-    const parentTemplates = await getDb()('resource_templates')
+    const parentTemplates = await db('resource_templates')
       .where('project_type_id', projectTypeId)
       .whereNull('project_sub_type_id');
 
     for (const template of parentTemplates) {
-      await getDb()('resource_templates').insert({
+      await db('resource_templates').insert({
         project_sub_type_id: subTypeId,
         project_type_id: projectTypeId,
         phase_id: template.phase_id,

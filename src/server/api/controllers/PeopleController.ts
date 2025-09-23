@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 import { isTableAudited } from '../../config/auditConfig.js';
-import { v4 as uuidv4 } from 'uuid';
 
 export class PeopleController extends BaseController {
   async getAll(req: Request, res: Response) {
@@ -93,23 +92,14 @@ export class PeopleController extends BaseController {
       const assignments = await this.db('project_assignments')
         .join('projects', 'project_assignments.project_id', 'projects.id')
         .join('roles', 'project_assignments.role_id', 'roles.id')
-        .leftJoin('project_phases', 'project_assignments.phase_id', 'project_phases.id')
         .select(
           'project_assignments.*',
           'projects.name as project_name',
-          'roles.name as role_name',
-          'project_phases.name as phase_name'
+          'roles.name as role_name'
         )
         .where('project_assignments.person_id', id)
-        .where(function() {
-          // Use computed_end_date if available, otherwise use end_date
-          this.where('project_assignments.computed_end_date', '>=', new Date())
-            .orWhere(function() {
-              this.whereNull('project_assignments.computed_end_date')
-                .andWhere('project_assignments.end_date', '>=', new Date());
-            });
-        })
-        .orderBy(this.db.raw('COALESCE(project_assignments.computed_start_date, project_assignments.start_date)'));
+        .where('project_assignments.end_date', '>=', new Date())
+        .orderBy('project_assignments.start_date');
 
       // Get availability overrides
       const availabilityOverrides = await this.db('person_availability_overrides')
@@ -146,22 +136,13 @@ export class PeopleController extends BaseController {
       }, {} as any);
 
     const result = await this.executeQuery(async () => {
-      // Generate a UUID for the person
-      const personId = uuidv4();
-      
-      // Insert with generated ID
-      await this.db('people')
+      const [person] = await this.db('people')
         .insert({
-          id: personId,
           ...filteredData,
           created_at: new Date(),
           updated_at: new Date()
-        });
-
-      // Fetch the created person
-      const [person] = await this.db('people')
-        .where({ id: personId })
-        .select('*');
+        })
+        .returning('*');
 
       // Log audit entry for creation
       if (isTableAudited('people')) {
@@ -207,23 +188,18 @@ export class PeopleController extends BaseController {
       }, {} as any);
 
     const result = await this.executeQuery(async () => {
-      // First update the record
-      const updatedCount = await this.db('people')
+      const [person] = await this.db('people')
         .where('id', id)
         .update({
           ...filteredData,
           updated_at: new Date()
-        });
+        })
+        .returning('*');
 
-      if (updatedCount === 0) {
+      if (!person) {
         this.handleNotFound(res, 'Person');
         return null;
       }
-
-      // Then fetch the updated record
-      const [person] = await this.db('people')
-        .where({ id })
-        .select('*');
 
       return person;
     }, res, 'Failed to update person');
@@ -398,23 +374,15 @@ export class PeopleController extends BaseController {
 
         }
 
-        // Generate UUID for the person role
-        const personRoleId = uuidv4();
-
         // Insert the new person role
-        await trx('person_roles')
+        const [insertedPersonRole] = await trx('person_roles')
           .insert({
-            id: personRoleId,
             person_id: id,
             role_id,
             proficiency_level,
             is_primary
-          });
-
-        // Fetch the inserted record
-        const [insertedPersonRole] = await trx('person_roles')
-          .where({ id: personRoleId })
-          .select('*');
+          })
+          .returning('*');
 
         // If this is the primary role, update the people table reference
         if (is_primary) {

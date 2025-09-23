@@ -2,8 +2,9 @@ import { chromium, FullConfig, Browser, BrowserContext, Page } from '@playwright
 import path from 'path';
 import fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
-import { initializeE2EDatabase, cleanupE2EDatabase } from '../../../src/server/database/init-e2e.js';
+// E2E database initialization removed - server handles it
 
+// Store processes globally so teardown can access them
 let serverProcess: ChildProcess | null = null;
 let clientProcess: ChildProcess | null = null;
 
@@ -19,22 +20,24 @@ async function globalSetup(config: FullConfig) {
   let page: Page | null = null;
   
   try {
-    // Step 1: Initialize E2E Database
-    console.log('🗄️ Initializing E2E database...');
-    await initializeE2EDatabase();
+    // Step 1: E2E Database will be initialized by the server itself
+    console.log('🗄️ E2E database will be initialized by server...');
     
-    // Step 2: Start development server if not already running
+    // Step 2: Check if server is already running
     const baseURL = config.projects[0].use.baseURL || 'http://localhost:3120';
     const serverRunning = await checkServerRunning(baseURL);
     
-    if (!serverRunning) {
-      console.log('🚀 Starting development server for E2E tests...');
+    if (serverRunning) {
+      console.log('ℹ️ Development server already running on ports 3110/3120');
+      console.log('   E2E tests will use the existing server and database.');
+      console.log('   For isolated testing, stop the dev server first.');
+    } else {
+      // Step 3: Start E2E server
+      console.log('🚀 Starting E2E server...');
       await startDevServer();
       
       // Wait for server to be ready
       await waitForServer(baseURL, 60); // 60 second timeout
-    } else {
-      console.log('✅ Development server already running');
     }
     
     // Step 3: Launch browser for setup
@@ -142,6 +145,7 @@ async function startDevServer(): Promise<void> {
       detached: false,
       cwd: process.cwd()
     });
+    (global as any).__SERVER_PROCESS__ = serverProcess;
     
     // Capture server output for debugging
     let serverStarted = false;
@@ -160,6 +164,7 @@ async function startDevServer(): Promise<void> {
           detached: false,
           cwd: process.cwd()
         });
+        (global as any).__CLIENT_PROCESS__ = clientProcess;
         
         clientProcess.stdout?.on('data', (data) => {
           const output = data.toString();

@@ -4,7 +4,7 @@
  */
 
 import { FullConfig, chromium } from '@playwright/test';
-import { cleanupE2EDatabase } from '../../../src/server/database/init-e2e.js';
+// E2E database cleanup removed - server handles it
 import { ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -22,9 +22,8 @@ async function globalTeardown(config: FullConfig) {
       await cleanupTestData(baseURL, testRunId);
     }
     
-    // Step 2: Clean up E2E database
-    console.log('🗄️ Cleaning up E2E database...');
-    await cleanupE2EDatabase();
+    // Step 2: E2E database cleanup handled by server shutdown
+    console.log('🗄️ E2E database will be cleaned up with server...');
     
     // Step 3: Stop development servers if we started them
     const serverProcess = (global as any).__SERVER_PROCESS__ as ChildProcess | undefined;

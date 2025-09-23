@@ -568,37 +568,13 @@ export class ExportController extends BaseController {
     // Get person utilization
     const personUtilization = await this.db('person_utilization_view').select('*');
     
-    // Calculate role-based utilization data using actual person utilization (same logic as ReportingController)
-    const roleUtilization = new Map();
-    
-    personUtilization.forEach((person: any) => {
-      const roleName = person.role_name || 'Unknown Role';
-      const dailyCapacity = (person.default_availability_percentage / 100) * (person.default_hours_per_day || 8);
-      const dailyUtilized = (person.total_allocation_percentage / 100) * (person.default_hours_per_day || 8);
-      
-      if (!roleUtilization.has(roleName)) {
-        roleUtilization.set(roleName, {
-          capacity: 0,
-          utilized: 0,
-          people_count: 0
-        });
-      }
-      
-      const current = roleUtilization.get(roleName);
-      roleUtilization.set(roleName, {
-        capacity: current.capacity + dailyCapacity,
-        utilized: current.utilized + dailyUtilized,
-        people_count: current.people_count + 1
-      });
-    });
-    
-    // Convert to array format with monthly hours (20 working days)
-    const byRole = Array.from(roleUtilization.entries()).map(([role, data]) => ({
-      role,
-      capacity: Math.round(data.capacity * 20), // Convert daily hours to monthly
-      utilized: Math.round(data.utilized * 20),
-      people_count: data.people_count
-    })).filter(item => item.capacity > 0);
+    // Transform capacity gaps to role-based data
+    const byRole = capacityGaps.map(gap => ({
+      role: gap.role_name,
+      capacity: Math.round(gap.total_capacity_fte * 160), // Convert FTE to hours
+      utilized: Math.round((gap.total_capacity_fte - Math.abs(gap.gap_fte || 0)) * 160),
+      gap_fte: gap.gap_fte
+    }));
     
     // Calculate totals
     const totalCapacity = byRole.reduce((sum, r) => sum + r.capacity, 0);

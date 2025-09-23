@@ -1,96 +1,92 @@
-import { test, expect } from '@playwright/test';
-import { TestHelpers } from './utils/test-helpers';
-
+import { test, expect } from './fixtures';
 test.describe('Simple UI Test', () => {
-  let helpers: TestHelpers;
-
-  test.beforeEach(async ({ page }) => {
-    helpers = new TestHelpers(page);
-    await helpers.navigateTo('/');
-  });
-
-  test('should load and display basic UI elements', async ({ page }) => {
-    // Handle profile selection and setup
-    await helpers.setupPage();
-    
+  test('should load and display basic UI elements', async ({ authenticatedPage, testHelpers }) => {
     // Should have a title/heading
-    await expect(page.locator('h1').first()).toBeVisible();
-    
+    await expect(authenticatedPage.locator('h1').first()).toBeVisible();
     // Should have navigation elements
-    await expect(page.locator('.sidebar, nav')).toBeVisible();
-    
+    await expect(authenticatedPage.locator('.sidebar, nav')).toBeVisible();
     // Should have main content area
-    await expect(page.locator('.main-content, main')).toBeVisible();
+    await expect(authenticatedPage.locator('.main-content, main, [role="main"], .content')).toBeVisible();
   });
-
-  test('should be able to navigate to different pages', async ({ page }) => {
-    await helpers.setupPage();
-    
-    // Try to find and click Projects link
-    const projectsLink = page.locator('a').filter({ hasText: 'Projects' }).first();
-    if (await projectsLink.isVisible()) {
-      await projectsLink.click();
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-      
-      // Should navigate to projects page
-      expect(page.url()).toContain('/projects');
-    }
-    
-    // Try to find and click Dashboard link
-    const dashboardLink = page.locator('a').filter({ hasText: 'Dashboard' }).first();
-    if (await dashboardLink.isVisible()) {
-      await dashboardLink.click();
-      await page.waitForLoadState('networkidle', { timeout: 30000 });
-      
-      // Should navigate to dashboard
-      expect(page.url()).toContain('/dashboard');
-    }
+  test('should be able to navigate to different pages', async ({ authenticatedPage, testHelpers }) => {
+    // Try to navigate to Projects
+    await testHelpers.navigateTo('/projects');
+    await testHelpers.waitForPageContent();
+    // Should navigate to projects page
+    expect(authenticatedPage.url()).toContain('/projects');
+    // Try to navigate to Dashboard
+    await testHelpers.navigateTo('/dashboard');
+    await testHelpers.waitForPageContent();
+    // Should navigate to dashboard
+    expect(authenticatedPage.url()).toContain('/dashboard');
   });
-
-  test('should display some data or content', async ({ page }) => {
-    await helpers.waitForNavigation();
-    
-    // Should have some content (not just empty page)
-    const bodyText = await page.locator('body').textContent();
-    expect(bodyText).toBeTruthy();
-    expect(bodyText?.length).toBeGreaterThan(100);
-    
-    // Should not show error messages by default
-    const errorElements = page.locator('.error, .alert-error, [role="alert"]');
-    const errorCount = await errorElements.count();
-    
-    if (errorCount > 0) {
-      // If there are errors, log them for debugging
-      for (let i = 0; i < errorCount; i++) {
-        const errorText = await errorElements.nth(i).textContent();
-        console.log(`Error found: ${errorText}`);
+  test('should display some data or content', async ({ authenticatedPage, testHelpers }) => {
+    await testHelpers.navigateTo('/dashboard');
+    await testHelpers.waitForPageContent();
+    // Should have some content visible
+    const contentSelectors = [
+      '.card',
+      '.chart-container',
+      '.metric-card',
+      '.data-display',
+      'canvas',
+      'svg',
+      '[role="img"]'
+    ];
+    let foundContent = false;
+    for (const selector of contentSelectors) {
+      const count = await authenticatedPage.locator(selector).count();
+      if (count > 0) {
+        foundContent = true;
+        console.log(`✅ Found content: ${selector}`);
+        break;
+      }
+    }
+    expect(foundContent).toBe(true);
+  });
+  test('should handle basic interactions', async ({ authenticatedPage, testHelpers }) => {
+    // Navigate to a page with data table
+    await testHelpers.navigateTo('/people');
+    await testHelpers.waitForDataTable();
+    // Check if there are interactive elements
+    const buttons = await authenticatedPage.locator('button').count();
+    expect(buttons).toBeGreaterThan(0);
+    // Try clicking a button
+    const addButton = authenticatedPage.locator('button:has-text("New"), button:has-text("Add")').first();
+    if (await addButton.isVisible()) {
+      await addButton.click();
+      // Should open a form or dialog
+      await authenticatedPage.waitForTimeout(1000);
+      const formOrDialog = authenticatedPage.locator('form, [role="dialog"]');
+      expect(await formOrDialog.count()).toBeGreaterThan(0);
+      // Close the form/dialog
+      const closeButton = authenticatedPage.locator('button[aria-label="Close"], button:has-text("Cancel")');
+      if (await closeButton.isVisible()) {
+        await closeButton.click();
       }
     }
   });
-
-  test('should have working API connection', async ({ page }) => {
-    // Check if the page makes successful API calls
-    const responsePromise = page.waitForResponse(response => 
-      response.url().includes('/api/') && response.status() === 200
-    );
-    
-    await helpers.navigateTo('/dashboard');
-    
-    try {
-      const response = await responsePromise;
-      expect(response.status()).toBe(200);
-      
-      // Validate that API responses return parseable JSON
-      try {
-        const responseBody = await response.json();
-        expect(responseBody).toBeDefined();
-        console.log(`✅ Successful API call with valid JSON: ${response.url()}`);
-      } catch (jsonError) {
-        console.log(`⚠️ API call succeeded but returned non-JSON response: ${response.url()}`);
-      }
-    } catch (error) {
-      console.log('No successful API calls detected within timeout');
-      // This is okay - the page might work without immediate API calls
+  test('should have responsive navigation', async ({ authenticatedPage, testHelpers }) => {
+    // Check desktop navigation
+    const desktopNav = authenticatedPage.locator('.sidebar, nav:not(.mobile-nav)');
+    await expect(desktopNav).toBeVisible();
+    // Set mobile viewport
+    await authenticatedPage.setViewportSize({ width: 375, height: 667 });
+    // Check if mobile menu exists
+    const mobileMenuToggle = authenticatedPage.locator('[aria-label="Menu"], .mobile-menu-toggle, button:has-text("Menu")');
+    const hasMobileMenu = await mobileMenuToggle.count() > 0;
+    if (hasMobileMenu) {
+      console.log('✅ Mobile menu toggle found');
+      // Try to open mobile menu
+      await mobileMenuToggle.first().click();
+      await authenticatedPage.waitForTimeout(500);
+      // Navigation should be visible somehow
+      const navVisible = await authenticatedPage.locator('.sidebar, nav, [role="navigation"]').isVisible();
+      expect(navVisible).toBe(true);
+    } else {
+      console.log('ℹ️ No mobile menu - navigation may always be visible');
     }
+    // Reset viewport
+    await authenticatedPage.setViewportSize({ width: 1280, height: 720 });
   });
 });
