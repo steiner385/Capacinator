@@ -965,6 +965,8 @@ export async function seed(knex: Knex): Promise<void> {
           assignment_date_mode: 'phase', // Use phase-based dates
           start_date: null, // Will be computed from phase
           end_date: null, // Will be computed from phase
+          computed_start_date: developmentPhase.start_date, // Set computed dates
+          computed_end_date: developmentPhase.end_date, // Set computed dates
           allocation_percentage: 40, // Reduced to 40% to allow for multiple assignments
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -990,6 +992,8 @@ export async function seed(knex: Knex): Promise<void> {
           assignment_date_mode: 'phase', // Use phase-based dates
           start_date: null, // Will be computed from phase
           end_date: null, // Will be computed from phase
+          computed_start_date: qaPhase.start_date, // Set computed dates
+          computed_end_date: qaPhase.end_date, // Set computed dates
           allocation_percentage: 30, // Low allocation for QA testing
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

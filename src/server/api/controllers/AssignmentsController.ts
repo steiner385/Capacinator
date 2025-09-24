@@ -107,12 +107,60 @@ export class AssignmentsController extends BaseController {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Validate required fields
+      if (!assignmentData.project_id || !assignmentData.person_id || !assignmentData.role_id) {
+        return res.status(400).json({
+          error: 'Missing required fields: project_id, person_id, and role_id are required'
+        });
+      }
+
+      // Validate assignment_date_mode
+      const validDateModes = ['fixed', 'project', 'phase'];
+      if (!assignmentData.assignment_date_mode || !validDateModes.includes(assignmentData.assignment_date_mode)) {
+        return res.status(400).json({
+          error: 'Invalid assignment_date_mode. Must be one of: fixed, project, phase'
+        });
+      }
+
+      // Validate dates based on mode
+      if (assignmentData.assignment_date_mode === 'fixed') {
+        if (!assignmentData.start_date || !assignmentData.end_date) {
+          return res.status(400).json({
+            error: 'Start date and end date are required for fixed date mode assignments'
+          });
+        }
+        // Validate date format and order
+        const startDate = new Date(assignmentData.start_date);
+        const endDate = new Date(assignmentData.end_date);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return res.status(400).json({
+            error: 'Invalid date format. Use YYYY-MM-DD format'
+          });
+        }
+        if (startDate > endDate) {
+          return res.status(400).json({
+            error: 'Start date must be before or equal to end date'
+          });
+        }
+      } else if (assignmentData.assignment_date_mode === 'phase' && !assignmentData.phase_id) {
+        return res.status(400).json({
+          error: 'Phase ID is required for phase-based assignments'
+        });
+      }
+
       // Compute dates based on assignment mode
       const computedDates = await this.computeAssignmentDates(assignmentData);
       
       // Use computed dates for conflict checking
       const effectiveStartDate = computedDates.computed_start_date || assignmentData.start_date;
       const effectiveEndDate = computedDates.computed_end_date || assignmentData.end_date;
+
+      // Ensure we have valid dates for the assignment
+      if (!effectiveStartDate || !effectiveEndDate) {
+        return res.status(400).json({
+          error: 'Unable to determine assignment dates. Check project/phase configuration.'
+        });
+      }
 
       // Check for conflicts before creating
       const conflicts = await this.checkConflicts(
@@ -207,12 +255,76 @@ export class AssignmentsController extends BaseController {
         return null;
       }
 
+      // Validate date mode if it's being changed
+      if (updateData.assignment_date_mode) {
+        const validDateModes = ['fixed', 'project', 'phase'];
+        if (!validDateModes.includes(updateData.assignment_date_mode)) {
+          return res.status(400).json({
+            error: 'Invalid assignment_date_mode. Must be one of: fixed, project, phase'
+          });
+        }
+      }
+
+      // Determine the effective date mode
+      const dateMode = updateData.assignment_date_mode || existing.assignment_date_mode;
+
+      // Validate dates based on mode
+      if (dateMode === 'fixed') {
+        const startDate = updateData.start_date || existing.start_date;
+        const endDate = updateData.end_date || existing.end_date;
+        
+        if (!startDate || !endDate) {
+          return res.status(400).json({
+            error: 'Start date and end date are required for fixed date mode assignments'
+          });
+        }
+
+        // Validate date format and order if dates are being updated
+        if (updateData.start_date || updateData.end_date) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({
+              error: 'Invalid date format. Use YYYY-MM-DD format'
+            });
+          }
+          if (start > end) {
+            return res.status(400).json({
+              error: 'Start date must be before or equal to end date'
+            });
+          }
+        }
+      } else if (dateMode === 'phase') {
+        const phaseId = updateData.phase_id || existing.phase_id;
+        if (!phaseId) {
+          return res.status(400).json({
+            error: 'Phase ID is required for phase-based assignments'
+          });
+        }
+      }
+
+      // Compute dates for the updated assignment
+      const assignmentForComputation = { ...existing, ...updateData };
+      const computedDates = await this.computeAssignmentDates(assignmentForComputation);
+      
+      // Use computed dates for conflict checking
+      const effectiveStartDate = computedDates.computed_start_date || updateData.start_date || existing.start_date;
+      const effectiveEndDate = computedDates.computed_end_date || updateData.end_date || existing.end_date;
+
+      // Ensure we have valid dates
+      if (!effectiveStartDate || !effectiveEndDate) {
+        return res.status(400).json({
+          error: 'Unable to determine assignment dates. Check project/phase configuration.'
+        });
+      }
+
       // Check conflicts if dates or allocation changed
-      if (updateData.start_date || updateData.end_date || updateData.allocation_percentage) {
+      if (updateData.start_date || updateData.end_date || updateData.allocation_percentage || 
+          updateData.assignment_date_mode || updateData.phase_id) {
         const conflict = await this.checkConflicts(
           updateData.person_id || existing.person_id,
-          updateData.start_date || existing.start_date,
-          updateData.end_date || existing.end_date,
+          effectiveStartDate,
+          effectiveEndDate,
           updateData.allocation_percentage || existing.allocation_percentage,
           id // Exclude current assignment
         );
@@ -654,10 +766,21 @@ export class AssignmentsController extends BaseController {
 
     if (assignments.length === 0) return summary;
 
+    // Filter out assignments without any valid dates and use effective dates
+    const validAssignments = assignments.filter(a => {
+      const startDate = a.computed_start_date || a.start_date;
+      const endDate = a.computed_end_date || a.end_date;
+      return startDate && endDate;
+    }).map(a => ({
+      ...a,
+      effective_start_date: a.computed_start_date || a.start_date,
+      effective_end_date: a.computed_end_date || a.end_date
+    }));
+    
     // Calculate metrics
     let totalAllocationDays = 0;
-    assignments.forEach(assignment => {
-      const days = this.daysBetween(assignment.start_date, assignment.end_date);
+    validAssignments.forEach(assignment => {
+      const days = this.daysBetween(assignment.effective_start_date, assignment.effective_end_date);
       summary.total_days_assigned += days;
       totalAllocationDays += days * assignment.allocation_percentage;
       summary.peak_allocation = Math.max(summary.peak_allocation, assignment.allocation_percentage);
@@ -665,17 +788,17 @@ export class AssignmentsController extends BaseController {
 
     summary.average_allocation = totalAllocationDays / summary.total_days_assigned;
 
-    // Find gaps between assignments
-    const sortedAssignments = [...assignments].sort((a, b) => 
-      a.start_date.localeCompare(b.start_date)
-    );
+    // Find gaps between assignments (using filtered valid assignments)
+    const sortedAssignments = [...validAssignments].sort((a, b) => {
+      return a.effective_start_date.localeCompare(b.effective_start_date);
+    });
 
     for (let i = 0; i < sortedAssignments.length - 1; i++) {
-      const gap = this.daysBetween(sortedAssignments[i].end_date, sortedAssignments[i + 1].start_date) - 1;
+      const gap = this.daysBetween(sortedAssignments[i].effective_end_date, sortedAssignments[i + 1].effective_start_date) - 1;
       if (gap > 0) {
         summary.gaps.push({
-          start: sortedAssignments[i].end_date,
-          end: sortedAssignments[i + 1].start_date,
+          start: sortedAssignments[i].effective_end_date,
+          end: sortedAssignments[i + 1].effective_start_date,
           days: gap
         });
       }

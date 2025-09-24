@@ -400,6 +400,8 @@ export async function seed(knex: Knex): Promise<void> {
               phase_id: phase.phase_id,
               start_date: null, // Phase-based assignment
               end_date: null, // Phase-based assignment
+              computed_start_date: phase.start_date, // Set computed dates
+              computed_end_date: phase.end_date, // Set computed dates
               allocation_percentage: finalAllocation,
               assignment_date_mode: 'phase' // Use phase-based mode
             });

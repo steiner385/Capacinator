@@ -1,7 +1,7 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
 import { randomUUID } from 'crypto';
-import { testDb } from './setup';
+import { db as testDb } from './setup';
 import { AssignmentsController } from '../../src/server/api/controllers/AssignmentsController';
 import { ReportingController } from '../../src/server/api/controllers/ReportingController';
 
