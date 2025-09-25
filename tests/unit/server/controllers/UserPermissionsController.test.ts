@@ -135,25 +135,24 @@ describe('UserPermissionsController', () => {
           role_name: 'Admin',
           is_active: true,
           last_login: '2023-01-01',
-          permission_overrides: 0
+          is_system_admin: false,
+          role_priority: 1,
+          primary_role_name: 'Developer'
         }
       ];
 
-      // First query for count
-      const mockCountQuery = createMockQuery();
-      mockCountQuery.first.mockResolvedValue({ count: 1 });
-      
-      // Second query for users
+      // First query for users
       const mockUsersQuery = createMockQuery(mockUsers);
       
-      // Third query for permission counts
-      const mockPermissionCountsQuery = createMockQuery([]);
+      // Second query for permission counts
+      const mockPermissionCountsQuery = createMockQuery([
+        { person_id: '1', override_count: '2' }
+      ]);
       
       let callCount = 0;
       (controller as any).db = jest.fn(() => {
         callCount++;
-        if (callCount === 1) return mockCountQuery;
-        if (callCount === 2) return mockUsersQuery;
+        if (callCount === 1) return mockUsersQuery;
         return mockPermissionCountsQuery;
       });
 
@@ -161,15 +160,20 @@ describe('UserPermissionsController', () => {
 
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: {
-          users: mockUsers,
-          pagination: {
-            page: 1,
-            limit: 50,
-            total: 1,
-            totalPages: 1
+        data: [
+          {
+            id: '1',
+            name: 'John Doe',
+            email: 'john@example.com',
+            role_name: 'Admin',
+            is_active: true,
+            last_login: '2023-01-01',
+            is_system_admin: false,
+            role_priority: 1,
+            primary_role_name: 'Developer',
+            permission_overrides: '2'
           }
-        }
+        ]
       });
     });
   });
@@ -181,31 +185,50 @@ describe('UserPermissionsController', () => {
       const mockUser = {
         id: '1',
         name: 'John Doe',
+        email: 'john@example.com',
+        user_role_id: 'role-1',
+        is_system_admin: false,
         role_name: 'Admin',
-        role_permissions: [{ name: 'system:admin' }]
+        role_is_admin: false
       };
 
-      const mockOverrides = [{ permission_name: 'people:edit', granted: true }];
+      const mockRolePermissions = [
+        {
+          permission_id: 'perm-1',
+          permission_name: 'projects:view',
+          permission_description: 'View projects',
+          permission_category: 'projects',
+          source: 'role'
+        }
+      ];
+
+      const mockIndividualPermissions = [
+        {
+          permission_id: 'perm-2',
+          permission_name: 'people:edit',
+          permission_description: 'Edit people',
+          permission_category: 'people',
+          granted: true
+        }
+      ];
 
       // First query for user
       const mockUserQuery = createMockQuery();
       mockUserQuery.first.mockResolvedValue(mockUser);
       
-      // Second query for role (mock subquery)
-      const mockRoleQuery = createMockQuery();
-      mockRoleQuery.first.mockResolvedValue({ role_id: 'role-1', permissions: ['projects:view'] });
+      // Second query for role permissions
+      const mockRoleQuery = createMockQuery(mockRolePermissions);
       
-      // Third query for overrides
-      const mockOverridesQuery = createMockQuery(mockOverrides);
+      // Third query for individual permissions
+      const mockIndividualQuery = createMockQuery(mockIndividualPermissions);
       
       let callCount = 0;
       (controller as any).db = jest.fn(() => {
         callCount++;
         if (callCount === 1) return mockUserQuery;
         if (callCount === 2) return mockRoleQuery;
-        return mockOverridesQuery;
+        return mockIndividualQuery;
       });
-      (controller as any).db.raw = jest.fn((sql: string) => sql);
 
       await controller.getUserPermissions(mockReq as Request, mockRes as Response);
 
@@ -213,9 +236,20 @@ describe('UserPermissionsController', () => {
         success: true,
         data: {
           user: mockUser,
-          rolePermissions: [{ name: 'system:admin' }],
-          permissionOverrides: mockOverrides,
-          effectivePermissions: expect.any(Array)
+          permissions: expect.arrayContaining([
+            expect.objectContaining({
+              permission_id: 'perm-1',
+              permission_name: 'projects:view',
+              source: 'role'
+            }),
+            expect.objectContaining({
+              permission_id: 'perm-2',
+              permission_name: 'people:edit',
+              source: 'override'
+            })
+          ]),
+          rolePermissions: 1,
+          individualOverrides: 1
         }
       });
     });
@@ -270,33 +304,36 @@ describe('UserPermissionsController', () => {
     });
   });
 
-  describe('updateUserPermissionOverrides', () => {
-    it('should update user permission overrides', async () => {
+  describe('updateUserPermission', () => {
+    it('should update user permission override', async () => {
       mockReq.params = { userId: '1' };
       mockReq.body = {
-        overrides: [
-          { permissionId: 'perm1', granted: true },
-          { permissionId: 'perm2', granted: false }
-        ]
+        permissionId: 'perm1',
+        granted: true,
+        reason: 'Test reason'
       };
 
       // First query to check user exists
       const mockUserQuery = createMockQuery();
       mockUserQuery.first.mockResolvedValue({ id: '1', name: 'Test User' });
       
-      // Second query to delete existing overrides
-      const mockDeleteQuery = createMockQuery();
-      mockDeleteQuery.del.mockResolvedValue(1);
+      // Second query to check permission exists
+      const mockPermissionQuery = createMockQuery();
+      mockPermissionQuery.first.mockResolvedValue({ id: 'perm1', name: 'test:permission' });
       
-      // Third query to insert new overrides
+      // Third query to check existing override
+      const mockExistingQuery = createMockQuery();
+      mockExistingQuery.first.mockResolvedValue(null); // No existing override
+      
+      // Fourth query to insert new override
       const mockInsertQuery = createMockQuery();
-      mockInsertQuery.insert.mockResolvedValue([]);
       
       let callCount = 0;
       (controller as any).db = jest.fn(() => {
         callCount++;
         if (callCount === 1) return mockUserQuery;
-        if (callCount === 2) return mockDeleteQuery;
+        if (callCount === 2) return mockPermissionQuery;
+        if (callCount === 3) return mockExistingQuery;
         return mockInsertQuery;
       });
 
@@ -304,25 +341,25 @@ describe('UserPermissionsController', () => {
 
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        message: 'Permission overrides updated successfully'
+        message: 'Permission granted successfully'
       });
     });
 
-    it('should return 400 for invalid overrides format', async () => {
-      mockReq.params = { userId: '1' };
-      mockReq.body = { overrides: 'invalid' };
+    it('should return 404 for invalid user', async () => {
+      mockReq.params = { userId: '999' };
+      mockReq.body = { permissionId: 'perm1', granted: true };
       
       // First query to check user exists
       const mockUserQuery = createMockQuery();
-      mockUserQuery.first.mockResolvedValue({ id: '1', name: 'Test User' });
+      mockUserQuery.first.mockResolvedValue(null); // User not found
       
       (controller as any).db = jest.fn(() => mockUserQuery);
 
       await controller.updateUserPermission(mockReq as Request, mockRes as Response);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'overrides must be an array'
+        error: 'User not found'
       });
     });
   });

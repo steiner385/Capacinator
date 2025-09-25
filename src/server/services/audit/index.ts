@@ -30,5 +30,5 @@ export function getAuditService(): AuditService | null {
   return auditServiceInstance;
 }
 
-export { AuditService } from './AuditService.js';
+export { AuditService, AuditConfig } from './AuditService.js';
 export { auditModelChanges, createAuditMiddleware } from '../../middleware/auditMiddleware.js';

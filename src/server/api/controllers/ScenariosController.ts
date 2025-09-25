@@ -190,9 +190,9 @@ export class ScenariosController extends BaseController {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
-      const assignments = await this.db('scenario_assignments_view')
+      const assignments = await this.db('scenario_project_assignments')
         .where('scenario_id', id)
-        .orderBy(['project_name', 'person_name']);
+        .select('*');
 
       return assignments;
     }, res, 'Failed to fetch scenario assignments');
@@ -222,6 +222,13 @@ export class ScenariosController extends BaseController {
     if (!project_id || !person_id || !role_id || allocation_percentage === undefined) {
       return res.status(400).json({ 
         error: 'project_id, person_id, role_id, and allocation_percentage are required' 
+      });
+    }
+    
+    // Validate allocation percentage bounds
+    if (allocation_percentage <= 0 || allocation_percentage > 100) {
+      return res.status(400).json({ 
+        error: 'allocation_percentage must be between 1 and 100' 
       });
     }
 
@@ -326,8 +333,8 @@ export class ScenariosController extends BaseController {
 
       // Get assignments for both scenarios
       const [assignments1, assignments2] = await Promise.all([
-        this.db('scenario_assignments_view').where('scenario_id', id),
-        this.db('scenario_assignments_view').where('scenario_id', compare_to)
+        this.db('scenario_project_assignments').where('scenario_id', id),
+        this.db('scenario_project_assignments').where('scenario_id', compare_to)
       ]);
 
       // TODO: Implement detailed comparison logic
@@ -660,7 +667,6 @@ export class ScenariosController extends BaseController {
           assignment_date_mode: assignmentData.assignment_date_mode,
           start_date: assignmentData.start_date,
           end_date: assignmentData.end_date,
-          notes: assignmentData.notes,
           change_type: 'modified',
           updated_at: new Date()
         });
@@ -677,7 +683,6 @@ export class ScenariosController extends BaseController {
         assignment_date_mode: assignmentData.assignment_date_mode,
         start_date: assignmentData.start_date,
         end_date: assignmentData.end_date,
-        notes: assignmentData.notes,
         change_type: 'added',
         base_assignment_id: assignmentData.base_assignment_id,
         created_at: new Date(),

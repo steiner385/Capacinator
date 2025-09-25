@@ -2,7 +2,7 @@ import { FullConfig } from '@playwright/test';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { E2EProcessManager } from './process-manager';
-import { cleanupE2EDatabase } from '../../../src/server/database/init-e2e.js';
+import { cleanupE2EDatabase } from '../../../src/server/database/init-e2e';
 
 async function globalTeardown(config: FullConfig) {
   console.log('🧹 Starting E2E global teardown v2...');

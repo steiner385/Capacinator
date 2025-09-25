@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { Knex } from 'knex';
-import { ProjectPhaseDependenciesController } from '../../../src/server/api/controllers/ProjectPhaseDependenciesController.js';
-import { ProjectsController } from '../../../src/server/api/controllers/ProjectsController.js';
-import { PeopleController } from '../../../src/server/api/controllers/PeopleController.js';
-import { AssignmentsController } from '../../../src/server/api/controllers/AssignmentsController.js';
+import { ProjectPhaseDependenciesController } from '../../../src/server/api/controllers/ProjectPhaseDependenciesController';
+import { ProjectsController } from '../../../src/server/api/controllers/ProjectsController';
+import { PeopleController } from '../../../src/server/api/controllers/PeopleController';
+import { AssignmentsController } from '../../../src/server/api/controllers/AssignmentsController';
 
 /**
  * Factory function to create project phase dependencies routes with injected database
@@ -14,25 +14,19 @@ export function createProjectPhaseDependenciesRouter(db: Knex): Router {
   const controller = new ProjectPhaseDependenciesController(db);
 
   // Get all dependencies (with optional project filter)
-  router.get('/', (req, res) => controller.getAll(req, res));
+  router.get('/', (req, res) => ProjectPhaseDependenciesController.getAll(req, res));
 
   // Get a specific dependency by ID
-  router.get('/:id', (req, res) => controller.getById(req, res));
+  router.get('/:id', (req, res) => ProjectPhaseDependenciesController.getById(req, res));
 
   // Create a new dependency
-  router.post('/', (req, res) => controller.create(req, res));
+  router.post('/', (req, res) => ProjectPhaseDependenciesController.create(req, res));
 
   // Update a dependency
-  router.put('/:id', (req, res) => controller.update(req, res));
+  router.put('/:id', (req, res) => ProjectPhaseDependenciesController.update(req, res));
 
   // Delete a dependency
-  router.delete('/:id', (req, res) => controller.delete(req, res));
-
-  // Calculate cascade effects for a phase change
-  router.post('/calculate-cascade', (req, res) => controller.calculateCascade(req, res));
-
-  // Apply cascade changes to the database
-  router.post('/apply-cascade', (req, res) => controller.applyCascade(req, res));
+  router.delete('/:id', (req, res) => ProjectPhaseDependenciesController.delete(req, res));
 
   return router;
 }

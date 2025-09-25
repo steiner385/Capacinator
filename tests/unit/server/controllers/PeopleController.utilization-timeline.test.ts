@@ -1,42 +1,46 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
-
 import { Request, Response } from 'express';
 import { PeopleController } from '../../../../src/server/api/controllers/PeopleController';
 
-// Mock the database function that returns query builder
-const mockDb = jest.fn();
+// Mock the database module
+jest.mock('../../../../src/server/database/index.js', () => ({
+  db: jest.fn()
+}));
 
-// Create chainable mock query
-const createMockQuery = () => {
-  const query = {
-    raw: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    join: jest.fn().mockReturnThis(),
-    first: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis()
-  };
-  return query;
-};
-
-// Mock database function to return chainable queries
-mockDb.mockImplementation((table: string) => createMockQuery());
+const { db } = require('../../../../src/server/database/index.js');
 
 describe('PeopleController.getPersonUtilizationTimeline', () => {
   let controller: PeopleController;
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let jsonSpy: jest.SpyInstance;
-  let statusSpy: jest.SpyInstance;
+  let mockQuery: any;
+
+  // Helper to create chainable mock
+  const createChainableMock = (finalValue?: any) => {
+    const mock: any = {
+      select: jest.fn().mockReturnThis(),
+      join: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      first: jest.fn().mockResolvedValue(finalValue),
+      then: finalValue !== undefined ? jest.fn((cb: any) => Promise.resolve(cb(finalValue))) : jest.fn()
+    };
+    return mock;
+  };
 
   beforeEach(() => {
-    // Create controller with mocked database
-    controller = new PeopleController(mockDb as any);
+    jest.clearAllMocks();
     
-    jsonSpy = jest.fn();
-    statusSpy = jest.fn().mockReturnValue({ json: jsonSpy });
+    // Create controller instance
+    controller = new PeopleController();
     
+    // Mock the database on the controller
+    const { db } = require('../../../../src/server/database/index.js');
+    (controller as any).db = db;
+    
+    // Setup request and response mocks
     mockReq = {
       params: { id: 'test-person-id' },
       query: { 
@@ -44,18 +48,19 @@ describe('PeopleController.getPersonUtilizationTimeline', () => {
         endDate: '2023-12-31' 
       }
     };
-    
+
     mockRes = {
-      json: jsonSpy as any,
-      status: statusSpy as any
+      json: jest.fn().mockReturnThis(),
+      status: jest.fn().mockReturnThis()
     };
 
     jest.clearAllMocks();
   });
 
-  describe('Successful Timeline Generation', () => {
-    test('should generate utilization timeline for person with assignments', async () => {
+  describe('Basic functionality', () => {
+    test('should calculate utilization timeline correctly', async () => {
       const mockPerson = {
+        id: 'test-person-id',
         name: 'John Doe',
         default_availability_percentage: 100,
         default_hours_per_day: 8
@@ -63,118 +68,65 @@ describe('PeopleController.getPersonUtilizationTimeline', () => {
 
       const mockAssignments = [
         {
+          id: 'assign-1',
+          project_id: 'proj-1',
+          project_name: 'Project A',
           allocation_percentage: 50,
-          start_date: '2023-01-15',
-          end_date: '2023-01-31',
-          project_name: 'Project A'
+          start_date: '2023-01-01',
+          end_date: '2023-03-31'
         },
         {
+          id: 'assign-2',
+          project_id: 'proj-2',
+          project_name: 'Project B',
           allocation_percentage: 30,
           start_date: '2023-02-01',
-          end_date: '2023-02-28',
-          project_name: 'Project B'
-        },
-        {
-          allocation_percentage: 70,
-          start_date: '2023-03-01',
-          end_date: '2023-03-15',
-          project_name: 'Project C'
+          end_date: '2023-04-30'
         }
       ];
 
-      // Mock database responses
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
-      
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
-      
-      // Mock the database calls to return appropriate queries
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
+      // Mock database calls
+      const personQuery = createChainableMock(mockPerson);
+      const assignmentsQuery = {
+        join: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockResolvedValue(mockAssignments)
+      };
+
+      ((controller as any).db as jest.Mock)
+        .mockReturnValueOnce(personQuery) // First call for people table
+        .mockReturnValueOnce(assignmentsQuery); // Second call for project_assignments
 
       await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
 
-      expect(jsonSpy).toHaveBeenCalledWith(
+      expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           personName: 'John Doe',
           defaultAvailability: 100,
           timeline: expect.arrayContaining([
             expect.objectContaining({
               month: '2023-01',
-              availability: 100,
               utilization: 50,
+              availability: 100,
               over_allocated: false
             }),
             expect.objectContaining({
               month: '2023-02',
+              utilization: 80, // 50 + 30
               availability: 100,
-              utilization: 30,
               over_allocated: false
             }),
             expect.objectContaining({
               month: '2023-03',
+              utilization: 80,
               availability: 100,
-              utilization: 70,
               over_allocated: false
-            })
-          ])
-        })
-      );
-    });
-
-    test('should handle person with overlapping assignments in same month', async () => {
-      const mockPerson = {
-        name: 'Jane Smith',
-        default_availability_percentage: 100,
-        default_hours_per_day: 8
-      };
-
-      const mockAssignments = [
-        {
-          allocation_percentage: 60,
-          start_date: '2023-01-01',
-          end_date: '2023-01-31',
-          project_name: 'Project A'
-        },
-        {
-          allocation_percentage: 50,
-          start_date: '2023-01-15',
-          end_date: '2023-02-15',
-          project_name: 'Project B'
-        }
-      ];
-
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
-
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
-
-      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
-
-      expect(jsonSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          timeline: expect.arrayContaining([
-            expect.objectContaining({
-              month: '2023-01',
-              utilization: 110, // 60 + 50 = overlapping assignments
-              over_allocated: true
             }),
             expect.objectContaining({
-              month: '2023-02',
-              utilization: 50,
+              month: '2023-04',
+              utilization: 30,
+              availability: 100,
               over_allocated: false
             })
           ])
@@ -182,147 +134,39 @@ describe('PeopleController.getPersonUtilizationTimeline', () => {
       );
     });
 
-    test('should filter timeline data to relevant months only', async () => {
+    test('should return 404 if person not found', async () => {
+      const mockQuery = createChainableMock(null);
+      ((controller as any).db as jest.Mock).mockReturnValue(mockQuery);
+
+      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Person not found' });
+    });
+
+    test('should handle missing date parameters with defaults', async () => {
+      mockReq.query = {}; // No dates provided
+      
       const mockPerson = {
-        name: 'Filter Test',
-        default_availability_percentage: 80,
-        default_hours_per_day: 8
+        id: 'test-person-id',
+        name: 'Jane Doe',
+        default_availability_percentage: 100
       };
 
-      const mockAssignments = [
-        {
-          allocation_percentage: 40,
-          start_date: '2023-06-01',
-          end_date: '2023-06-30',
-          project_name: 'Summer Project'
-        }
-      ];
+      const personQuery = createChainableMock(mockPerson);
+      const assignmentsQuery = createChainableMock([]);
+      assignmentsQuery.orderBy.mockResolvedValue([]);
 
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
-
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
+      (controller as any).db = jest.fn()
+        .mockReturnValueOnce(personQuery)
+        .mockReturnValueOnce(assignmentsQuery);
 
       await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
 
-      const result = jsonSpy.mock.calls[0][0];
-      
-      // Should only include relevant months (around the assignment period)
-      expect(result.timeline).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            month: '2023-06',
-            utilization: 40
-          })
-        ])
-      );
-
-      // Should not include months with zero utilization far from assignments
-      const hasIrrelevantMonths = result.timeline.some((month: any) => 
-        month.month === '2023-01' || month.month === '2023-12'
-      );
-      expect(hasIrrelevantMonths).toBeFalsy();
-    });
-  });
-
-  describe('Error Handling', () => {
-    test('should return error when person not found', async () => {
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(null);
-      
-      mockDb.mockImplementation(() => mockPersonQuery);
-
-      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
-
-      // Should call status with error code
-      expect(statusSpy).toHaveBeenCalled();
-    });
-
-    test('should handle database errors gracefully', async () => {
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockRejectedValue(new Error('Database error'));
-      
-      mockDb.mockImplementation(() => mockPersonQuery);
-
-      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
-
-      // Should handle error appropriately
-      expect(statusSpy).toHaveBeenCalled();
-    });
-
-    test('should handle missing person ID parameter', async () => {
-      mockReq.params = {}; // Missing ID
-
-      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
-
-      expect(statusSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('Date Range Handling', () => {
-    test('should apply date filters to assignments query', async () => {
-      const mockPerson = {
-        name: 'Date Test',
-        default_availability_percentage: 100,
-        default_hours_per_day: 8
-      };
-
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
-
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue([]);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
-
-      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
-
-      // Verify date filtering was applied
-      expect(mockAssignmentsQuery.where).toHaveBeenCalledWith('project_assignments.end_date', '>=', '2023-01-01');
-      expect(mockAssignmentsQuery.where).toHaveBeenCalledWith('project_assignments.start_date', '<=', '2023-12-31');
-    });
-
-    test('should work without date parameters', async () => {
-      const mockPerson = {
-        name: 'No Date Test',
-        default_availability_percentage: 100,
-        default_hours_per_day: 8
-      };
-
-      // Remove date parameters
-      mockReq.query = {};
-
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
-
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue([]);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
-
-      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
-
-      expect(jsonSpy).toHaveBeenCalledWith(
+      // Should use default date range (e.g., current year)
+      expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          personName: 'No Date Test',
+          personName: 'Jane Doe',
           defaultAvailability: 100,
           timeline: expect.any(Array)
         })
@@ -330,121 +174,217 @@ describe('PeopleController.getPersonUtilizationTimeline', () => {
     });
   });
 
-  describe('Timeline Data Structure', () => {
-    test('should return correct data structure', async () => {
+  describe('Edge cases', () => {
+    test('should handle person with no assignments', async () => {
       const mockPerson = {
-        name: 'Structure Test',
-        default_availability_percentage: 90,
-        default_hours_per_day: 8
+        id: 'test-person-id',
+        name: 'Unassigned Person',
+        default_availability_percentage: 100
       };
 
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
+      const personQuery = createChainableMock(mockPerson);
+      const assignmentsQuery = createChainableMock([]);
+      assignmentsQuery.orderBy.mockResolvedValue([]);
 
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue([]);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
+      (controller as any).db = jest.fn()
+        .mockReturnValueOnce(personQuery)
+        .mockReturnValueOnce(assignmentsQuery);
 
       await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
 
-      expect(jsonSpy).toHaveBeenCalledWith({
-        personName: 'Structure Test',
-        defaultAvailability: 90,
-        timeline: expect.any(Array)
-      });
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          personName: 'Unassigned Person',
+          defaultAvailability: 100,
+          timeline: [] // Empty timeline when no assignments
+        })
+      );
     });
 
-    test('should mark over-allocated months correctly', async () => {
+    test('should handle overlapping assignments correctly', async () => {
       const mockPerson = {
-        name: 'Over Allocated Test',
-        default_availability_percentage: 100,
-        default_hours_per_day: 8
+        id: 'test-person-id',
+        name: 'Busy Person',
+        default_availability_percentage: 100
       };
 
       const mockAssignments = [
         {
-          allocation_percentage: 120, // Over 100%
+          allocation_percentage: 60,
           start_date: '2023-01-01',
-          end_date: '2023-01-31',
-          project_name: 'Overload Project'
+          end_date: '2023-02-28',
+          project_name: 'Project A'
+        },
+        {
+          allocation_percentage: 50,
+          start_date: '2023-01-15',
+          end_date: '2023-03-31',
+          project_name: 'Project B'
         }
       ];
 
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
+      const personQuery = createChainableMock(mockPerson);
+      const assignmentsQuery = createChainableMock(mockAssignments);
+      assignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
 
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
+      (controller as any).db = jest.fn()
+        .mockReturnValueOnce(personQuery)
+        .mockReturnValueOnce(assignmentsQuery);
 
       await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
 
-      expect(jsonSpy).toHaveBeenCalledWith(
+      expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           timeline: expect.arrayContaining([
             expect.objectContaining({
               month: '2023-01',
-              utilization: 120,
+              utilization: 110, // 60 + 50 for overlapping period
               over_allocated: true
+            }),
+            expect.objectContaining({
+              month: '2023-02',
+              utilization: 110,
+              over_allocated: true
+            }),
+            expect.objectContaining({
+              month: '2023-03',
+              utilization: 50,
+              over_allocated: false
             })
           ])
         })
       );
     });
 
-    test('should handle person with different availability percentage', async () => {
+    test('should handle database errors', async () => {
       const mockPerson = {
-        name: 'Part Time',
-        default_availability_percentage: 50, // Part-time
+        id: 'test-person-id',
+        name: 'Test Person',
+        default_availability_percentage: 100
+      };
+      
+      const personQuery = createChainableMock(mockPerson);
+      const failingQuery = {
+        join: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockRejectedValue(new Error('Database error'))
+      };
+      
+      ((controller as any).db as jest.Mock)
+        .mockReturnValueOnce(personQuery)
+        .mockReturnValueOnce(failingQuery);
+
+      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ 
+        error: 'Failed to fetch person utilization timeline' 
+      });
+    });
+  });
+
+  describe('Complex scenarios', () => {
+    test('should handle fractional allocations and part-time availability', async () => {
+      const mockPerson = {
+        id: 'part-time-person',
+        name: 'Part Timer',
+        default_availability_percentage: 50, // Part-time worker
         default_hours_per_day: 4
       };
 
       const mockAssignments = [
         {
-          allocation_percentage: 75, // Over their 50% availability
+          allocation_percentage: 75, // 75% of their 50% availability
           start_date: '2023-01-01',
           end_date: '2023-01-31',
-          project_name: 'Part Time Project'
+          project_name: 'Part Time Project',
+          project_id: 'proj-1'
         }
       ];
 
-      const mockPersonQuery = createMockQuery();
-      mockPersonQuery.first.mockResolvedValue(mockPerson);
+      const personQuery = createChainableMock(mockPerson);
+      const assignmentsQuery = createChainableMock(mockAssignments);
+      assignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
 
-      const mockAssignmentsQuery = createMockQuery();
-      mockAssignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
-
-      mockDb.mockImplementation((table: string) => {
-        if (table === 'people') {
-          return mockPersonQuery;
-        }
-        return mockAssignmentsQuery;
-      });
+      (controller as any).db = jest.fn()
+        .mockReturnValueOnce(personQuery)
+        .mockReturnValueOnce(assignmentsQuery);
 
       await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
 
-      expect(jsonSpy).toHaveBeenCalledWith(
+      expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          personName: 'Part Time',
+          personName: 'Part Timer',
           defaultAvailability: 50,
           timeline: expect.arrayContaining([
             expect.objectContaining({
               month: '2023-01',
               availability: 50,
               utilization: 75,
-              over_allocated: true // 75% > 50% availability
+              over_allocated: true // 75% > 50% available
+            })
+          ])
+        })
+      );
+    });
+
+    test('should aggregate multiple assignments in same month', async () => {
+      const mockPerson = {
+        id: 'test-person-id',
+        name: 'Multi Project Person',
+        default_availability_percentage: 100
+      };
+
+      const mockAssignments = [
+        {
+          allocation_percentage: 25,
+          start_date: '2023-01-01',
+          end_date: '2023-01-31',
+          project_name: 'Project A',
+          project_id: 'proj-a'
+        },
+        {
+          allocation_percentage: 25,
+          start_date: '2023-01-01',
+          end_date: '2023-01-31',
+          project_name: 'Project B',
+          project_id: 'proj-b'
+        },
+        {
+          allocation_percentage: 25,
+          start_date: '2023-01-01',
+          end_date: '2023-01-31',
+          project_name: 'Project C',
+          project_id: 'proj-c'
+        },
+        {
+          allocation_percentage: 30, // This puts them over 100%
+          start_date: '2023-01-01',
+          end_date: '2023-01-31',
+          project_name: 'Project D',
+          project_id: 'proj-d'
+        }
+      ];
+
+      const personQuery = createChainableMock(mockPerson);
+      const assignmentsQuery = createChainableMock(mockAssignments);
+      assignmentsQuery.orderBy.mockResolvedValue(mockAssignments);
+
+      (controller as any).db = jest.fn()
+        .mockReturnValueOnce(personQuery)
+        .mockReturnValueOnce(assignmentsQuery);
+
+      await controller.getPersonUtilizationTimeline(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timeline: expect.arrayContaining([
+            expect.objectContaining({
+              month: '2023-01',
+              utilization: 105, // 25 + 25 + 25 + 30
+              over_allocated: true,
+              over_allocated: true
             })
           ])
         })

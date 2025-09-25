@@ -1,4 +1,4 @@
-import { cleanupE2EDatabase } from '../../../src/server/database/init-e2e.js';
+import { cleanupE2EDatabase } from '../../../src/server/database/init-e2e';
 
 async function globalTeardown() {
   console.log('🧹 Starting E2E global teardown...');

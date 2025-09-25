@@ -226,7 +226,7 @@ export function InteractiveTimeline({
       // Only update if the width actually changed to prevent unnecessary re-renders
       setTimelineWidth(prevWidth => {
         if (Math.abs(newWidth - prevWidth) > 1) { // Allow 1px tolerance
-          console.log('📏 InteractiveTimeline width updated:', prevWidth, '→', newWidth);
+          // console.log('📏 InteractiveTimeline width updated:', prevWidth, '→', newWidth);
           return newWidth;
         }
         return prevWidth;
@@ -369,17 +369,18 @@ export function InteractiveTimeline({
     // Sort items by start date to ensure correct adjacency
     const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
     
-    console.log('🔧 Handle generation debug:', { 
-      mode, 
-      itemsCount: items.length, 
-      sortedItemsCount: sortedItems.length,
-      items: sortedItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        start: item.startDate.toISOString().split('T')[0],
-        end: item.endDate.toISOString().split('T')[0]
-      }))
-    });
+    // Debug logging disabled - uncomment if needed for debugging
+    // console.log('🔧 Handle generation debug:', { 
+    //   mode, 
+    //   itemsCount: items.length, 
+    //   sortedItemsCount: sortedItems.length,
+    //   items: sortedItems.map(item => ({
+    //     id: item.id,
+    //     name: item.name,
+    //     start: item.startDate.toISOString().split('T')[0],
+    //     end: item.endDate.toISOString().split('T')[0]
+    //   }))
+    // });
 
     // Add a test handle for debugging (always at position 100px)
     if (sortedItems.length > 0) {
@@ -391,7 +392,7 @@ export function InteractiveTimeline({
         x: 100, // Always show at 100px from left
         adjacentPhaseId: sortedItems.length > 1 ? sortedItems[1].id : undefined
       });
-      console.log('🧪 Added test handle for debugging');
+      // console.log('🧪 Added test handle for debugging');
     }
 
     for (let i = 0; i < sortedItems.length; i++) {
@@ -408,12 +409,12 @@ export function InteractiveTimeline({
         const timeDiff = currentStartTime - prevEndTime;
         const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
         
-        console.log(`📐 Left handle check for ${currentItem.name}:`, {
-          prevPhase: prevItem.name,
-          prevEndTime: prevItem.endDate.toISOString().split('T')[0],
-          currentStartTime: currentItem.startDate.toISOString().split('T')[0],
-          daysDiff: Math.round(daysDiff * 10) / 10
-        });
+        // console.log(`📐 Left handle check for ${currentItem.name}:`, {
+        //   prevPhase: prevItem.name,
+        //   prevEndTime: prevItem.endDate.toISOString().split('T')[0],
+        //   currentStartTime: currentItem.startDate.toISOString().split('T')[0],
+        //   daysDiff: Math.round(daysDiff * 10) / 10
+        // });
         
         if (daysDiff > 0.001) { // Show if there's any gap (temporary for testing)
           // There's a gap - show extend-left handle
@@ -429,7 +430,7 @@ export function InteractiveTimeline({
             adjacentPhaseId: prevItem.id
           });
           
-          console.log(`✅ Added extend-left handle for ${currentItem.name}`);
+          // console.log(`✅ Added extend-left handle for ${currentItem.name}`);
         }
       }
       
@@ -440,12 +441,12 @@ export function InteractiveTimeline({
         const timeDiff = nextStartTime - currentEndTime;
         const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
         
-        console.log(`📐 Right handle check for ${currentItem.name}:`, {
-          nextPhase: nextItem.name,
-          currentEndTime: currentItem.endDate.toISOString().split('T')[0],
-          nextStartTime: nextItem.startDate.toISOString().split('T')[0],
-          daysDiff: Math.round(daysDiff * 10) / 10
-        });
+        // console.log(`📐 Right handle check for ${currentItem.name}:`, {
+        //   nextPhase: nextItem.name,
+        //   currentEndTime: currentItem.endDate.toISOString().split('T')[0],
+        //   nextStartTime: nextItem.startDate.toISOString().split('T')[0],
+        //   daysDiff: Math.round(daysDiff * 10) / 10
+        // });
         
         if (daysDiff > 0.001) { // Show if there's any gap (temporary for testing)
           // There's a gap - show extend-right handle
@@ -462,7 +463,7 @@ export function InteractiveTimeline({
             adjacentPhaseId: nextItem.id
           });
           
-          console.log(`✅ Added extend-right handle for ${currentItem.name}`);
+          // console.log(`✅ Added extend-right handle for ${currentItem.name}`);
         } else if (Math.abs(daysDiff) <= 7) { // Adjacent or overlapping within 7 days (temporary for testing)
           // Phases are adjacent or slightly overlapping - show adjust-both handle
           const boundaryX = currentPosition.left + currentPosition.width;
@@ -476,12 +477,12 @@ export function InteractiveTimeline({
             adjacentPhaseId: nextItem.id
           });
           
-          console.log(`✅ Added adjust-both handle between ${currentItem.name} and ${nextItem.name}`);
+          // console.log(`✅ Added adjust-both handle between ${currentItem.name} and ${nextItem.name}`);
         }
       }
     }
 
-    console.log('🎯 Generated handles:', handles.length, handles.map(h => ({ id: h.id, type: h.handleType, phase: h.phaseId })));
+    // console.log('🎯 Generated handles:', handles.length, handles.map(h => ({ id: h.id, type: h.handleType, phase: h.phaseId })));
     return handles;
   }, [items, viewport, mode]);
 
@@ -769,7 +770,7 @@ export function InteractiveTimeline({
         
         // Apply cascading updates to all shifted phases
         if (dragState.adjacentPhases?.shiftedPhases) {
-          console.log('🔄 Applying cascading updates to', dragState.adjacentPhases.shiftedPhases.length, 'phases');
+          // console.log('🔄 Applying cascading updates to', dragState.adjacentPhases.shiftedPhases.length, 'phases');
           
           // Sort phases by their position to apply updates in order
           const sortedShiftedPhases = [...dragState.adjacentPhases.shiftedPhases].sort((a, b) => {
@@ -781,10 +782,10 @@ export function InteractiveTimeline({
           
           // Apply updates to all shifted phases
           sortedShiftedPhases.forEach(shiftedPhase => {
-            console.log(`📅 Updating phase ${shiftedPhase.id}:`, {
-              newStart: shiftedPhase.newStartDate.toISOString().split('T')[0],
-              newEnd: shiftedPhase.newEndDate.toISOString().split('T')[0]
-            });
+            // console.log(`📅 Updating phase ${shiftedPhase.id}:`, {
+            //   newStart: shiftedPhase.newStartDate.toISOString().split('T')[0],
+            //   newEnd: shiftedPhase.newEndDate.toISOString().split('T')[0]
+            // });
             onItemResize(shiftedPhase.id, shiftedPhase.newStartDate, shiftedPhase.newEndDate);
           });
         }
@@ -834,13 +835,13 @@ export function InteractiveTimeline({
 
   // Handle direct phase boundary actions with visual handles
   const handlePhaseAction = useCallback((handle: { phaseId: string; handleType: string; adjacentPhaseId?: string }) => {
-    console.log('🎯 Direct phase action triggered:', handle);
+    // console.log('🎯 Direct phase action triggered:', handle);
     
     const phase = items.find(item => item.id === handle.phaseId);
     const adjacentPhase = handle.adjacentPhaseId ? items.find(item => item.id === handle.adjacentPhaseId) : null;
     
     if (!phase) {
-      console.log('⚠️ Could not find phase');
+      // console.log('⚠️ Could not find phase');
       return;
     }
     
@@ -849,7 +850,7 @@ export function InteractiveTimeline({
         if (adjacentPhase) {
           // Extend current phase left to meet the adjacent phase
           const newStartDate = adjacentPhase.endDate;
-          console.log('🔸 Extending phase left to adjacent phase end');
+          // console.log('🔸 Extending phase left to adjacent phase end');
           if (onItemResize) {
             onItemResize(phase.id, newStartDate, phase.endDate);
           }
@@ -860,7 +861,7 @@ export function InteractiveTimeline({
         if (adjacentPhase) {
           // Extend current phase right to meet the adjacent phase
           const newEndDate = adjacentPhase.startDate;
-          console.log('🔸 Extending phase right to adjacent phase start');
+          // console.log('🔸 Extending phase right to adjacent phase start');
           if (onItemResize) {
             onItemResize(phase.id, phase.startDate, newEndDate);
           }
@@ -878,7 +879,7 @@ export function InteractiveTimeline({
           
           // Handle edge case: if phases are already adjacent or overlapping
           if (daysBetween <= 0) {
-            console.log('🔗 Phases are already adjacent, no adjustment needed');
+            // console.log('🔗 Phases are already adjacent, no adjustment needed');
             return;
           }
           
@@ -888,14 +889,14 @@ export function InteractiveTimeline({
           const newBoundaryStr = addDaysSafe(phaseEndStr, midpointOffset);
           const newBoundaryDate = parseDateSafe(newBoundaryStr);
           
-          console.log('🔗 Adjusting both phases with dependency-safe midpoint:', {
-            phaseEnds: phaseEndStr,
-            adjacentStarts: adjacentStartStr,
-            daysBetween,
-            midpointOffset,
-            newBoundary: newBoundaryStr,
-            maintainsFSDependency: true
-          });
+          // console.log('🔗 Adjusting both phases with dependency-safe midpoint:', {
+          //   phaseEnds: phaseEndStr,
+          //   adjacentStarts: adjacentStartStr,
+          //   daysBetween,
+          //   midpointOffset,
+          //   newBoundary: newBoundaryStr,
+          //   maintainsFSDependency: true
+          // });
           
           if (onItemResize) {
             // Validate that the new arrangement maintains FS dependency constraints
@@ -905,7 +906,7 @@ export function InteractiveTimeline({
             // For FS dependency, successor must start on the same day or after predecessor ends
             // This should always be true since we use the same date, but let's validate
             if (predecessorEndsStr <= successorStartsStr) {
-              console.log('✅ FS dependency maintained - applying adjustment');
+              // console.log('✅ FS dependency maintained - applying adjustment');
               onItemResize(phase.id, phase.startDate, newBoundaryDate);
               onItemResize(adjacentPhase.id, newBoundaryDate, adjacentPhase.endDate);
             } else {
@@ -922,7 +923,7 @@ export function InteractiveTimeline({
     
     // Clear hover state after action
     setHoveredHandle(null);
-    console.log('✅ Phase action completed:', handle.handleType);
+    // console.log('✅ Phase action completed:', handle.handleType);
   }, [items, onItemResize]);
 
   // Handle drag start for phase boundary adjustments
@@ -1515,7 +1516,7 @@ export function InteractiveTimeline({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('🎯 Handle clicked:', handle);
+                // console.log('🎯 Handle clicked:', handle);
                 if (!dragState.type) {
                   handlePhaseAction(handle);
                 }

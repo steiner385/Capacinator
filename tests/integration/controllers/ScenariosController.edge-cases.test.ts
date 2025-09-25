@@ -1,8 +1,14 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 import supertest from 'supertest';
 import express from 'express';
-import { db as testDb } from '../setup.js';
-import { ScenariosController } from '../../../src/server/api/controllers/ScenariosController.js';
+
+// Mock the database module to use test database
+jest.mock('../../../src/server/database/index.js', () => ({
+  db: require('../setup').db
+}));
+
+import { db as testDb, createMockRequest, createMockResponse, cleanDatabase, createTestData } from '../test-utils';
+import { ScenariosController } from '../../../src/server/api/controllers/ScenariosController';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -18,22 +24,17 @@ describe('ScenariosController - Complex Edge Cases', () => {
   let testAssignments: any[] = [];
 
   beforeEach(async () => {
-    // Clean up test data
-    await testDb('scenario_merge_conflicts').del();
-    await testDb('scenario_project_assignments').del();
-    await testDb('scenario_project_phases').del();
-    await testDb('scenario_projects').del();
-    await testDb('scenarios').del();
-    await testDb('project_assignments').del();
-    await testDb('projects').del();
-    await testDb('people').del();
+    // Clean up test data using centralized utility
+    await cleanDatabase();
     
     // Setup test app
     app = express();
     app.use(express.json());
     
     // Setup scenarios routes manually with test database
-    const scenariosController = new ScenariosController(testDb);
+    const scenariosController = new ScenariosController();
+    // Mock the db property
+    (scenariosController as any).db = testDb;
     const router = express.Router();
     
     router.get('/', scenariosController.getAll.bind(scenariosController));
@@ -120,52 +121,8 @@ describe('ScenariosController - Complex Edge Cases', () => {
   });
 
   afterEach(async () => {
-    // Clean up test data (check if tables exist first)
-    try {
-      await testDb('scenario_merge_conflicts').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('scenario_project_assignments').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('scenario_project_phases').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('scenarios').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('project_assignments').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('projects').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('person_roles').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('people').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
-    try {
-      await testDb('roles').del();
-    } catch (error) {
-      // Table doesn't exist, skip
-    }
+    // Clean up test data using centralized utility
+    await cleanDatabase();
   });
 
   describe('Multi-Level Hierarchy Edge Cases', () => {

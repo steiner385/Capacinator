@@ -22,6 +22,13 @@ export function getDb(): Knex {
   
   if (!_db) {
     _db = knex(knexConfig);
+    
+    // Log which database we're using (only on first connection)
+    if (process.env.NODE_ENV === 'e2e') {
+      console.log('🧪 Using E2E test database');
+    } else {
+      console.log('🔧 Using development database');
+    }
   }
   
   return _db;

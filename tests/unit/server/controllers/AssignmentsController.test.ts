@@ -1,7 +1,7 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Mock NotificationScheduler before importing the controller
-jest.mock('../../../../src/server/services/NotificationScheduler.js', () => ({
+jest.mock('../../../../src/server/services/NotificationScheduler', () => ({
   notificationScheduler: {
     sendAssignmentNotification: jest.fn().mockResolvedValue(true),
     initializeScheduler: jest.fn()
@@ -67,8 +67,6 @@ describe('AssignmentsController', () => {
     existingAllocations: any[],
     availability: number = 100
   ) => {
-    mockDb.mockReset();
-    
     const personQuery = createChainableMock();
     personQuery.first.mockResolvedValue({
       ...personData,
@@ -77,13 +75,20 @@ describe('AssignmentsController', () => {
     
     const assignmentsQuery = createChainableMock(existingAllocations);
     
-    const availabilityOverrideQuery = createChainableMock();
-    availabilityOverrideQuery.first.mockResolvedValue(null); // No override
+    const availabilityViewQuery = createChainableMock();
+    availabilityViewQuery.first.mockResolvedValue({ 
+      person_id: personData.id,
+      effective_availability_percentage: availability
+    });
     
-    mockDb
-      .mockReturnValueOnce(personQuery) // people table
-      .mockReturnValueOnce(assignmentsQuery) // project_assignments
-      .mockReturnValueOnce(availabilityOverrideQuery); // person_availability_overrides
+    // Mock the controller's db method directly
+    let callCount = 0;
+    (controller as any).db = jest.fn(() => {
+      callCount++;
+      if (callCount === 1) return personQuery; // people table
+      if (callCount === 2) return assignmentsQuery; // project_assignments with join
+      return availabilityViewQuery; // person_availability_view
+    });
   };
 
   beforeAll(async () => {
@@ -419,8 +424,13 @@ describe('AssignmentsController', () => {
           updated_at: new Date()
         }]);
         
-        mockDb.mockReset();
-        mockDb.mockReturnValueOnce(insertQuery1).mockReturnValueOnce(insertQuery2);
+        // Mock the testController's db method
+        let callCount = 0;
+        (testController as any).db = jest.fn(() => {
+          callCount++;
+          if (callCount === 1) return insertQuery1;
+          return insertQuery2;
+        });
 
         const mockReq = {
           body: {
@@ -503,8 +513,8 @@ describe('AssignmentsController', () => {
           updated_at: new Date()
         }]);
         
-        mockDb.mockReset();
-        mockDb.mockReturnValueOnce(insertQuery1);
+        // Mock the testController's db method
+        (testController as any).db = jest.fn(() => insertQuery1);
 
         const mockReq = {
           body: {
@@ -629,12 +639,12 @@ describe('AssignmentsController', () => {
           { 
             id: 'person-1', 
             name: 'Alice Johnson', 
-            proficiency_level: 5  // Expert (1-5 scale)
+            proficiency_level: 'Expert'
           },
           { 
             id: 'person-2', 
             name: 'Bob Smith', 
-            proficiency_level: 2  // Junior (1-5 scale)
+            proficiency_level: 'Junior'
           }
         ];
 
@@ -646,35 +656,41 @@ describe('AssignmentsController', () => {
         const aliceAllocationQuery = createChainableMock();
         aliceAllocationQuery.first.mockResolvedValue({ total_allocation: 20 });
         
-        const aliceAvailabilityQuery = createChainableMock();
-        aliceAvailabilityQuery.first.mockResolvedValue({ 
-          id: 'person-1',
-          name: 'Alice Johnson',
-          default_availability_percentage: 100
+        const aliceAvailabilityViewQuery = createChainableMock();
+        aliceAvailabilityViewQuery.first.mockResolvedValue({
+          person_id: 'person-1',
+          effective_availability_percentage: 100
         });
         
         const bobAllocationQuery = createChainableMock();
         bobAllocationQuery.first.mockResolvedValue({ total_allocation: 30 }); // Bob has 30% allocated, 70% available
         
-        const bobAvailabilityQuery = createChainableMock();
-        bobAvailabilityQuery.first.mockResolvedValue({ 
+        const bobPersonQuery = createChainableMock();
+        bobPersonQuery.first.mockResolvedValue({ 
           id: 'person-2',
           name: 'Bob Smith',
           default_availability_percentage: 100
         });
         
+        const bobAvailabilityViewQuery = createChainableMock();
+        bobAvailabilityViewQuery.first.mockResolvedValue({
+          person_id: 'person-2',
+          effective_availability_percentage: 100
+        });
+        
         // Set up the database mocks in order
-        mockDb.mockReset();
-        mockDb
-          .mockReturnValueOnce(peopleQuery) // person_roles query
+        let callCount = 0;
+        (controller as any).db = jest.fn(() => {
+          callCount++;
+          if (callCount === 1) return peopleQuery; // person_roles query
           // For Alice
-          .mockReturnValueOnce(aliceAllocationQuery) // Alice allocation query
-          .mockReturnValueOnce(aliceAvailabilityQuery) // Alice people query
-          .mockReturnValueOnce(createChainableMock(null)) // Alice availability overrides query
+          if (callCount === 2) return aliceAllocationQuery; // Alice allocation query
+          if (callCount === 3) return aliceAvailabilityViewQuery; // Alice person_availability_view query
           // For Bob
-          .mockReturnValueOnce(bobAllocationQuery) // Bob allocation query
-          .mockReturnValueOnce(bobAvailabilityQuery) // Bob people query
-          .mockReturnValueOnce(createChainableMock(null)); // Bob availability overrides query
+          if (callCount === 4) return bobAllocationQuery; // Bob allocation query
+          if (callCount === 5) return bobAvailabilityViewQuery; // Bob person_availability_view query
+          return createChainableMock();
+        });
 
         const mockReq = {
           query: {
@@ -710,7 +726,7 @@ describe('AssignmentsController', () => {
           { 
             id: 'person-1', 
             name: 'Alice Johnson', 
-            proficiency_level: 5 // Expert level (numeric)
+            proficiency_level: 'Expert'
           }
         ];
 
@@ -729,12 +745,15 @@ describe('AssignmentsController', () => {
         });
         
         // Set up the database mocks in order
-        mockDb.mockReset();
-        mockDb
-          .mockReturnValueOnce(peopleQuery) // person_roles query
-          .mockReturnValueOnce(aliceAllocationQuery) // Alice allocation query
-          .mockReturnValueOnce(aliceAvailabilityQuery) // Alice people query
-          .mockReturnValueOnce(createChainableMock(null)); // Alice availability overrides query
+        let callCount = 0;
+        (controller as any).db = jest.fn(() => {
+          callCount++;
+          if (callCount === 1) return peopleQuery; // person_roles query
+          if (callCount === 2) return aliceAllocationQuery; // Alice allocation query
+          if (callCount === 3) return aliceAvailabilityQuery; // Alice people query
+          if (callCount === 4) return createChainableMock(null); // Alice availability overrides query
+          return createChainableMock();
+        });
 
         const mockReq = {
           query: {
@@ -808,15 +827,15 @@ describe('AssignmentsController', () => {
 
     describe('Suggestion Scoring Algorithm', () => {
       it('should calculate scores correctly based on proficiency and availability', () => {
-        const expertPerson = { proficiency_level: 5 }; // Expert level
-        const juniorPerson = { proficiency_level: 2 }; // Junior level
+        const expertPerson = { proficiency_level: 'Expert' };
+        const juniorPerson = { proficiency_level: 'Junior' };
 
         const expertScore = (controller as any).calculateSuggestionScore(expertPerson, 80);
         const juniorScore = (controller as any).calculateSuggestionScore(juniorPerson, 80);
 
         expect(expertScore).toBeGreaterThan(juniorScore);
-        expect(expertScore).toBe(40 + 50); // 80 * 0.5 + 5 * 10
-        expect(juniorScore).toBe(40 + 20); // 80 * 0.5 + 2 * 10
+        expect(expertScore).toBe(40 + 40); // 80 * 0.5 + 40 (Expert score)
+        expect(juniorScore).toBe(40 + 10); // 80 * 0.5 + 10 (Junior score)
       });
     });
 

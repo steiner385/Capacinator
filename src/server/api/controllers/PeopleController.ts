@@ -256,16 +256,17 @@ export class PeopleController extends BaseController {
     const { id } = req.params;
     const { startDate, endDate } = req.query;
 
-    const result = await this.executeQuery(async () => {
-      // Get person details
-      const person = await this.db('people')
-        .where('id', id)
-        .select('name', 'default_availability_percentage', 'default_hours_per_day')
-        .first();
+    // First check if person exists
+    const person = await this.db('people')
+      .where('id', id)
+      .select('name', 'default_availability_percentage', 'default_hours_per_day')
+      .first();
 
-      if (!person) {
-        throw new Error('Person not found');
-      }
+    if (!person) {
+      return this.handleNotFound(res, 'Person');
+    }
+
+    const result = await this.executeQuery(async () => {
 
       // Get project assignments for this person with date filtering
       let assignmentsQuery = this.db('project_assignments')

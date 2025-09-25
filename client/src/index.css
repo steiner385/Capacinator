@@ -429,6 +429,12 @@ input:focus, select:focus, textarea:focus {
   gap: 0.5rem;
   border-bottom: 2px solid var(--border-color);
   margin-bottom: 2rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  z-index: 10;
+  padding: 1rem 0 0 0;
+  margin-top: -1rem;
 }
 
 .report-tabs .tab {
@@ -458,6 +464,16 @@ input:focus, select:focus, textarea:focus {
   background: var(--bg-secondary);
   border-radius: 8px;
   padding: 2rem;
+}
+
+/* Tab Navigation - Generic sticky tabs for Assignments page */
+.tab-navigation {
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  z-index: 10;
+  padding-top: 1rem;
+  margin-top: -1rem;
 }
 
 .report-summary {

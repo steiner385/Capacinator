@@ -10,7 +10,7 @@ const mockEmailService = {
   getUserNotificationPreferences: jest.fn()
 };
 
-jest.mock('../../../../src/server/services/EmailService.js', () => ({
+jest.mock('../../../../src/server/services/EmailService', () => ({
   emailService: mockEmailService
 }));
 
@@ -43,7 +43,7 @@ const createMockQuery = () => {
 
 const mockDb = jest.fn(() => createMockQuery()) as any;
 
-jest.mock('../../../../src/server/database/index.js', () => ({
+jest.mock('../../../../src/server/database/index', () => ({
   db: mockDb
 }));
 

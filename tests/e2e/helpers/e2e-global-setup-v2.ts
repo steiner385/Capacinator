@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { E2EProcessManager } from './process-manager';
 import { waitForHealthy, checkPortsAvailable } from './health-check';
-import { initializeE2EDatabase, cleanupE2EDatabase } from '../../../src/server/database/init-e2e.js';
+import { initializeE2EDatabase, cleanupE2EDatabase } from '../../../src/server/database/init-e2e';
 
 // Use consistent ports for E2E tests
 const E2E_PORTS = {

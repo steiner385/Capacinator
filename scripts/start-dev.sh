@@ -2,6 +2,13 @@
 
 echo "🚀 Starting Capacinator development environment..."
 
+# Clean up any orphaned processes first
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [ -f "$SCRIPT_DIR/cleanup-orphaned-processes.sh" ]; then
+    "$SCRIPT_DIR/cleanup-orphaned-processes.sh"
+    echo ""
+fi
+
 # Create log directory
 mkdir -p /tmp/capacinator-logs
 

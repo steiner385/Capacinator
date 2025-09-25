@@ -1,6 +1,6 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
-import { db } from '../../../../src/server/database/index.js';
+import { db } from '../setup';
 import { randomUUID } from 'crypto';
 
 /**
@@ -55,7 +55,6 @@ describe('Assignment Business Rules Validation', () => {
     await db('roles').insert({
       id: testData.role_id,
       name: 'Test Business Role',
-      description: 'Test role for business rules',
       created_at: new Date(),
       updated_at: new Date()
     });

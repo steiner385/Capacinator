@@ -1,6 +1,6 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
-import { AuditService, AuditConfig } from '../../../src/server/services/audit/index.js';
-import { db as testDb } from '../setup.js';
+import { AuditService, AuditConfig } from '../../../src/server/services/audit/index';
+import { db as testDb } from '../setup';
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper to create test user

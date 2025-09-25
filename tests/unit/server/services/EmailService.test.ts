@@ -36,7 +36,7 @@ const createMockQuery = () => {
 const mockDb = jest.fn(() => createMockQuery()) as any;
 mockDb.fn = { now: jest.fn() };
 
-jest.mock('../../../../src/server/database/index.js', () => ({
+jest.mock('../../../../src/server/database/index', () => ({
   db: mockDb
 }));
 
@@ -52,7 +52,7 @@ const mockNodemailer = {
 
 jest.mock('nodemailer', () => mockNodemailer);
 
-import { EmailService } from '../../../../src/server/services/EmailService.js';
+import { EmailService } from '../../../../src/server/services/EmailService';
 
 describe('EmailService', () => {
   let emailService: EmailService;

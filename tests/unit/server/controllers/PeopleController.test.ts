@@ -4,11 +4,11 @@ import { Request, Response } from 'express';
 import { PeopleController } from '../../../../src/server/api/controllers/PeopleController';
 
 // Mock the audit middleware
-jest.mock('../../../../src/server/middleware/auditMiddleware.js', () => ({
+jest.mock('../../../../src/server/middleware/auditMiddleware', () => ({
   auditModelChanges: jest.fn()
 }));
 
-jest.mock('../../../../src/server/config/auditConfig.js', () => ({
+jest.mock('../../../../src/server/config/auditConfig', () => ({
   isTableAudited: jest.fn().mockReturnValue(true)
 }));
 
@@ -293,7 +293,7 @@ describe('PeopleController', () => {
     });
 
     test('should create person with audit logging', async () => {
-      const { auditModelChanges } = require('../../../../src/server/middleware/auditMiddleware.js');
+      const { auditModelChanges } = require('../../../../src/server/middleware/auditMiddleware');
       
       req.body = {
         name: 'New Employee',
