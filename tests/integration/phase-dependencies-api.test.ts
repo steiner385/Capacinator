@@ -9,6 +9,15 @@ jest.mock('../../src/server/database/index.js', () => ({
   db: require('./setup').db
 }));
 
+// Mock the notification scheduler to prevent cron jobs
+jest.mock('../../src/server/services/NotificationScheduler.js', () => ({
+  notificationScheduler: {
+    scheduleAssignmentNotification: jest.fn(),
+    start: jest.fn(),
+    stop: jest.fn()
+  }
+}));
+
 // Create test app
 const app = express();
 app.use(express.json());
@@ -16,6 +25,8 @@ app.use(express.json());
 // Create routes using the controller with mocked database
 const router = express.Router();
 router.get('/', ProjectPhaseDependenciesController.getAll);
+router.post('/calculate-cascade', ProjectPhaseDependenciesController.calculateCascade);
+router.post('/apply-cascade', ProjectPhaseDependenciesController.applyCascade);
 router.get('/:id', ProjectPhaseDependenciesController.getById);
 router.post('/', ProjectPhaseDependenciesController.create);
 router.put('/:id', ProjectPhaseDependenciesController.update);
@@ -392,7 +403,7 @@ describe('Phase Dependencies API Integration Tests', () => {
     });
   });
 
-  describe.skip('POST /api/project-phase-dependencies/calculate-cascade', () => {
+  describe('POST /api/project-phase-dependencies/calculate-cascade', () => {
     beforeEach(async () => {
       // Create dependencies: Phase 1 -> Phase 2 -> Phase 3
       await db('project_phase_dependencies').insert([
@@ -419,7 +430,7 @@ describe('Phase Dependencies API Integration Tests', () => {
       ]);
     });
 
-    test('should calculate cascade effects', async () => {
+    test.skip('should calculate cascade effects - SKIPPED: Cascade service needs investigation', async () => {
       // Change Phase 1 to end later, which should push Phase 2 and Phase 3
       const cascadeData = {
         project_id: testProjectId,
@@ -438,8 +449,8 @@ describe('Phase Dependencies API Integration Tests', () => {
       expect(response.body).toHaveProperty('circular_dependencies');
       
       // Since Phase 1 -> Phase 2 -> Phase 3, moving Phase 1 should affect Phase 2 and Phase 3
-      expect(response.body.data.affected_phases.length).toBe(2);
-      expect(response.body.data.cascade_count).toBe(2);
+      expect(response.body.affected_phases.length).toBe(2);
+      expect(response.body.cascade_count).toBe(2);
     });
 
     test('should validate required fields', async () => {
@@ -456,7 +467,7 @@ describe('Phase Dependencies API Integration Tests', () => {
     });
   });
 
-  describe.skip('POST /api/project-phase-dependencies/apply-cascade', () => {
+  describe('POST /api/project-phase-dependencies/apply-cascade', () => {
     beforeEach(async () => {
       // Ensure we have the phase timeline records that will be updated
       const exists = await db('project_phases_timeline').where('id', testPhaseTimelineId2).first();

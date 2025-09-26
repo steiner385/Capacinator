@@ -25,7 +25,7 @@ export function FilterBar({ filters, values, onChange, onReset }: FilterBarProps
   const hasActiveFilters = Object.values(values).some(v => v !== '');
 
   return (
-    <div className="filter-bar">
+    <div className="filter-bar" data-testid="filter-panel">
       <div className="filter-bar-content">
         {filters.map((filter) => (
           <div key={filter.name} className="filter-item">

@@ -8,6 +8,15 @@ jest.mock('../../src/server/database/index.js', () => ({
   db: require('./setup').db
 }));
 
+// Mock the notification scheduler to prevent cron jobs
+jest.mock('../../src/server/services/NotificationScheduler.js', () => ({
+  notificationScheduler: {
+    scheduleAssignmentNotification: jest.fn(),
+    start: jest.fn(),
+    stop: jest.fn()
+  }
+}));
+
 import { AssignmentsController } from '../../src/server/api/controllers/AssignmentsController';
 import { ReportingController } from '../../src/server/api/controllers/ReportingController';
 
@@ -21,7 +30,7 @@ import { ReportingController } from '../../src/server/api/controllers/ReportingC
  * - Conflict detection
  */
 
-describe.skip('Utilization Modals API Integration - SKIPPED: Test suite timing out', () => {
+describe('Utilization Modals API Integration', () => {
   let assignmentsController: AssignmentsController;
   let reportingController: ReportingController;
   let testData: any;
@@ -147,16 +156,16 @@ describe.skip('Utilization Modals API Integration - SKIPPED: Test suite timing o
   });
 
   afterAll(async () => {
+    // Clean up test data
     try {
-      // Clean up test data
       await testDb('project_assignments').where('person_id', 'in', [testData.person1_id, testData.person2_id]).del();
       await testDb('person_roles').where('person_id', 'in', [testData.person1_id, testData.person2_id]).del();
-      await testDb('people').where('id', 'in', [testData.person1_id, testData.person2_id]).del();
-      await testDb('projects').where('id', 'in', [testData.project1_id, testData.project2_id, testData.project3_id]).del();
+      await testDb('projects').whereIn('id', [testData.project1_id, testData.project2_id, testData.project3_id]).del();
+      await testDb('people').whereIn('id', [testData.person1_id, testData.person2_id]).del();
       await testDb('roles').where('id', testData.role_id).del();
       await testDb('locations').where('id', testData.location_id).del();
     } catch (error) {
-      console.log('Cleanup error:', error);
+      console.error('Error in afterAll cleanup:', error);
     }
   });
 

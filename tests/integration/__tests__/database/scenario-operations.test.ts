@@ -22,7 +22,6 @@ describe('Scenario Database Operations', () => {
     // Clean up scenario test data tables (in proper order due to foreign keys)
     const tables = [
       'scenario_merge_conflicts',
-      'scenario_assignments_view',
       'scenario_project_assignments',
       'scenario_project_phases',
       'scenario_projects',
@@ -196,7 +195,18 @@ describe('Scenario Database Operations', () => {
       });
     });
 
-    it.skip('should enforce unique constraint on scenario assignments', async () => {
+    it.skip('should enforce unique constraint on scenario assignments - SKIPPED: SQLite test DB not enforcing constraints', async () => {
+      // Create scenario project first
+      await db('scenario_projects').insert({
+        id: randomUUID(),
+        scenario_id: scenarioId,
+        project_id: testData.projects[0].id,
+        name: 'Test Scenario Project',
+        change_type: 'added',
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+
       const assignmentData = {
         id: randomUUID(),
         scenario_id: scenarioId,
@@ -207,6 +217,8 @@ describe('Scenario Database Operations', () => {
         allocation_percentage: 50,
         assignment_date_mode: 'project',
         change_type: 'added',
+        is_billable: 1,
+        is_aspirational: 0,
         created_at: new Date(),
         updated_at: new Date()
       };
@@ -319,7 +331,7 @@ describe('Scenario Database Operations', () => {
       });
     });
 
-    it.skip('should compute dates correctly for different assignment modes', async () => {
+    it('should compute dates correctly for different assignment modes', async () => {
       // Create a scenario project with custom dates
       await db('scenario_projects').insert({
         id: randomUUID(),
@@ -521,7 +533,7 @@ describe('Scenario Database Operations', () => {
   });
 
   describe('Performance and Indexing', () => {
-    it.skip('should efficiently query scenario assignments', async () => {
+    it('should efficiently query scenario assignments', async () => {
       const scenarioId = randomUUID();
       await db('scenarios').insert({
         id: scenarioId,
@@ -579,6 +591,20 @@ describe('Scenario Database Operations', () => {
           }
         }
       }
+
+      // Create scenario_projects for each project so the view can join
+      const scenarioProjects = testData.projects.map((project: any) => ({
+        id: randomUUID(),
+        scenario_id: scenarioId,
+        project_id: project.id,
+        name: `Scenario ${project.name}`,
+        aspiration_start: '2025-01-01',
+        aspiration_finish: '2025-12-31',
+        change_type: 'added',
+        created_at: new Date(),
+        updated_at: new Date()
+      }));
+      await db('scenario_projects').insert(scenarioProjects);
 
       await db('scenario_project_assignments').insert(assignments);
 

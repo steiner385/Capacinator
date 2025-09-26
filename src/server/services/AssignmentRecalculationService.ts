@@ -115,17 +115,20 @@ export class AssignmentRecalculationService {
         for (let i = 0; i < updates.length; i += batchSize) {
           const batch = updates.slice(i, i + batchSize);
           
-          // Use raw SQL for efficient batch update
-          await trx.raw(`
-            UPDATE project_assignments
-            SET computed_start_date = updates.computed_start_date,
-                computed_end_date = updates.computed_end_date,
-                updated_at = NOW()
-            FROM (VALUES ${
-              batch.map((_, idx) => `($${idx * 3 + 1}, $${idx * 3 + 2}, $${idx * 3 + 3})`).join(', ')
-            }) AS updates(id, computed_start_date, computed_end_date)
-            WHERE project_assignments.id = updates.id::uuid
-          `, batch.flatMap(u => [u.id, u.computed_start_date, u.computed_end_date]));
+          // Use database-agnostic batch update
+          if (batch.length > 0) {
+            const now = new Date();
+            // Update each assignment individually for compatibility
+            for (const update of batch) {
+              await trx('project_assignments')
+                .where('id', update.id)
+                .update({
+                  computed_start_date: update.computed_start_date,
+                  computed_end_date: update.computed_end_date,
+                  updated_at: now
+                });
+            }
+          }
         }
       }
 

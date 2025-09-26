@@ -115,6 +115,13 @@ export class TestHelpers {
   }
 
   /**
+   * Wait for page load - alias for waitForPageContent for backward compatibility
+   */
+  async waitForPageLoad() {
+    await this.waitForPageContent();
+  }
+
+  /**
    * Click an element and navigate to a URL
    */
   async clickAndNavigate(selector: string, expectedUrl: string) {

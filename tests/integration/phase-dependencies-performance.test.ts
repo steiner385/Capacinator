@@ -1,5 +1,15 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 import { db } from './setup';
+
+// Mock the notification scheduler to prevent cron jobs
+jest.mock('../../src/server/services/NotificationScheduler.js', () => ({
+  notificationScheduler: {
+    scheduleAssignmentNotification: jest.fn(),
+    start: jest.fn(),
+    stop: jest.fn()
+  }
+}));
+
 import { ProjectPhaseCascadeService } from '../../src/server/services/ProjectPhaseCascadeService.js';
 
 describe('Phase Dependencies Performance Tests', () => {
@@ -100,7 +110,7 @@ describe('Phase Dependencies Performance Tests', () => {
       console.log(`Database query time for ${numPhases} phases: ${responseTime}ms`);
     });
 
-    test.skip('should handle complex dependency chain efficiently - SKIPPED: Complex cascade logic needs investigation', async () => {
+    test.skip('should handle complex dependency chain efficiently - SKIPPED: Cascade service implementation incomplete', async () => {
       const numPhases = 20;
       
       // Create phases and dependencies in a chain: Phase 1 -> Phase 2 -> ... -> Phase N
@@ -415,7 +425,7 @@ describe('Phase Dependencies Performance Tests', () => {
   });
 
   describe('Concurrent Operations', () => {
-    test.skip('should handle multiple cascade calculations concurrently - SKIPPED: Complex cascade logic needs investigation', async () => {
+    test.skip('should handle multiple cascade calculations concurrently - SKIPPED: Cascade service implementation incomplete', async () => {
       const numPhases = 5;
       
       // Setup test data

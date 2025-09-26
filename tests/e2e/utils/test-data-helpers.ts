@@ -398,6 +398,74 @@ export class TestDataHelpers {
   }
 
   /**
+   * Create project phases for a test project
+   */
+  async createProjectPhases(context: TestDataContext, projectId: string, phaseCount: number = 2): Promise<any[]> {
+    const phases = [];
+    
+    try {
+      // Get available phases
+      const phasesResponse = await this.apiContext.get(`${this.baseURL}/api/phases`);
+      const availablePhases = await phasesResponse.json();
+      const phasesArray = availablePhases.data || availablePhases || [];
+      
+      if (phasesArray.length === 0) {
+        // Create a custom phase if no standard phases exist
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+        
+        const customPhaseResponse = await this.apiContext.post(`${this.baseURL}/api/project-phases/custom`, {
+          data: {
+            project_id: projectId,
+            phase_name: `${context.prefix}-Custom-Phase-1`,
+            description: 'Test custom phase',
+            start_date: startDate.toISOString().split('T')[0],
+            end_date: endDate.toISOString().split('T')[0],
+            order_index: 1
+          }
+        });
+        
+        const customPhase = await customPhaseResponse.json();
+        if (customPhase.id) {
+          context.createdIds.projectPhases.push(customPhase.id);
+          phases.push(customPhase);
+        }
+      } else {
+        // Use standard phases
+        const startDate = new Date();
+        
+        for (let i = 0; i < Math.min(phaseCount, phasesArray.length); i++) {
+          const phase = phasesArray[i];
+          const phaseStartDate = new Date(startDate);
+          phaseStartDate.setMonth(phaseStartDate.getMonth() + i * 2);
+          const phaseEndDate = new Date(phaseStartDate);
+          phaseEndDate.setMonth(phaseEndDate.getMonth() + 1);
+          
+          const response = await this.apiContext.post(`${this.baseURL}/api/project-phases`, {
+            data: {
+              project_id: projectId,
+              phase_id: phase.id,
+              start_date: phaseStartDate.toISOString().split('T')[0],
+              end_date: phaseEndDate.toISOString().split('T')[0]
+            }
+          });
+          
+          const projectPhase = await response.json();
+          if (projectPhase.id) {
+            context.createdIds.projectPhases.push(projectPhase.id);
+            phases.push(projectPhase);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error creating project phases:', error);
+    }
+    
+    return phases;
+  }
+
+  /**
    * Create test data in bulk
    */
   async createBulkTestData(context: TestDataContext, options: {
@@ -405,6 +473,7 @@ export class TestDataHelpers {
     people?: number;
     assignments?: number;
     scenarios?: number;
+    includePhases?: boolean;
   }): Promise<{
     projects: any[];
     people: any[];
@@ -433,6 +502,11 @@ export class TestDataHelpers {
         owner: result.people[i % result.people.length]
       });
       result.projects.push(project);
+      
+      // Create phases for each project if requested
+      if (options.includePhases) {
+        await this.createProjectPhases(context, project.id, 2);
+      }
     }
     
     // Create scenarios

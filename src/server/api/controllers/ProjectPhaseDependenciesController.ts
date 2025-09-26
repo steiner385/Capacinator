@@ -155,4 +155,45 @@ export class ProjectPhaseDependenciesController {
       res.status(500).json({ error: 'Failed to delete dependency' });
     }
   }
+
+  static async calculateCascade(req: Request, res: Response) {
+    try {
+      const { project_id, phase_timeline_id, new_start_date, new_end_date } = req.body;
+
+      // Import cascade service
+      const { ProjectPhaseCascadeService } = await import('../../services/ProjectPhaseCascadeService.js');
+      const cascadeService = new ProjectPhaseCascadeService(db);
+
+      // Calculate cascade effects
+      const result = await cascadeService.calculateCascade(
+        project_id,
+        phase_timeline_id,
+        new Date(new_start_date),
+        new Date(new_end_date)
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error calculating cascade:', error);
+      res.status(500).json({ error: 'Failed to calculate cascade effects' });
+    }
+  }
+
+  static async applyCascade(req: Request, res: Response) {
+    try {
+      const { project_id, cascade_data } = req.body;
+
+      // Import cascade service
+      const { ProjectPhaseCascadeService } = await import('../../services/ProjectPhaseCascadeService.js');
+      const cascadeService = new ProjectPhaseCascadeService(db);
+
+      // Apply cascade changes
+      await cascadeService.applyCascade(project_id, cascade_data);
+
+      res.json({ message: 'Cascade changes applied successfully' });
+    } catch (error) {
+      console.error('Error applying cascade:', error);
+      res.status(500).json({ error: 'Failed to apply cascade changes' });
+    }
+  }
 }

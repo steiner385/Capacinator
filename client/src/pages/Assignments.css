@@ -446,6 +446,41 @@
   flex: 1;
 }
 
+/* Inline editing styles for visible inputs */
+.inline-edit-input {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.inline-edit-input:hover:not(:disabled) {
+  background: var(--bg-secondary) !important;
+}
+
+.inline-edit-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+.inline-edit-input:disabled {
+  cursor: not-allowed;
+}
+
+/* Make sure inputs are visible in table cells */
+td input[type="number"],
+td input[type="text"],
+td input[type="date"] {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Ensure inputs in td are accessible */
+.data-table td:has(input[type="number"]),
+.data-table td:has(input[type="text"]),
+.data-table td:has(input[type="date"]) {
+  padding: 0.5rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .page-header {

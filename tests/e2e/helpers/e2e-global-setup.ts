@@ -1,8 +1,9 @@
 import { chromium, FullConfig, Browser, BrowserContext, Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { spawn, ChildProcess } from 'child_process';
-// E2E database initialization removed - server handles it
+import { spawn, ChildProcess, execSync } from 'child_process';
+// Import E2E database initialization
+import { initializeE2EDatabase } from '../../../src/server/database/init-e2e.js';
 
 // Store processes globally so teardown can access them
 let serverProcess: ChildProcess | null = null;
@@ -20,8 +21,15 @@ async function globalSetup(config: FullConfig) {
   let page: Page | null = null;
   
   try {
-    // Step 1: E2E Database will be initialized by the server itself
-    console.log('🗄️ E2E database will be initialized by server...');
+    // Step 1: Initialize E2E database
+    console.log('🗄️ Initializing E2E database...');
+    try {
+      await initializeE2EDatabase();
+      console.log('✅ E2E database initialized successfully');
+    } catch (dbError) {
+      console.error('❌ Failed to initialize E2E database:', dbError);
+      throw dbError;
+    }
     
     // Step 2: Check if server is already running
     const baseURL = config.projects[0].use.baseURL || 'http://localhost:3120';

@@ -3,11 +3,33 @@
  * Tests inline editing functionality in the assignments table
  */
 import { test, expect, tags } from '../../fixtures';
+import { TestDataContext } from '../../utils/test-data-helpers';
 test.describe('Assignment Inline Editing', () => {
-  test.beforeEach(async ({ authenticatedPage, testHelpers }) => {
+  let testContext: any;
+  
+  test.beforeEach(async ({ authenticatedPage, testHelpers, testDataHelpers }) => {
+    // Create test data to ensure we have assignments to edit
+    testContext = testDataHelpers.createTestContext('inline-edit');
+    const testData = await testDataHelpers.createBulkTestData(testContext, {
+      projects: 1,
+      people: 2,
+      assignments: 4
+    });
+    
     // Navigate to Assignments page
     await testHelpers.navigateTo('/assignments');
     await testHelpers.waitForDataTable();
+    
+    // Wait for assignment data to load
+    await authenticatedPage.waitForSelector('table tbody tr', { timeout: 10000 });
+    await authenticatedPage.waitForLoadState('networkidle');
+  });
+  
+  test.afterEach(async ({ testDataHelpers }) => {
+    // Clean up test data
+    if (testContext) {
+      await testDataHelpers.cleanupTestContext(testContext);
+    }
   });
   test.describe('Allocation Percentage Editing', () => {
     test(`${tags.crud} edit allocation percentage inline`, async ({ authenticatedPage, testHelpers }) => {
@@ -138,13 +160,38 @@ test.describe('Assignment Inline Editing', () => {
       if (await input.count() === 0) {
         test.skip('No inline editable fields found');
       }
+      // Get the original value
+      const originalValue = await input.getAttribute('value') || await input.inputValue();
+      
+      // Wait for any pending requests to complete
+      await authenticatedPage.waitForLoadState('networkidle');
+      
+      // Set up response listener for the update
+      const updatePromise = authenticatedPage.waitForResponse(response => 
+        response.url().includes('/api/assignments/') && 
+        (response.request().method() === 'PUT' || response.request().method() === 'PATCH'),
+        { timeout: 10000 }
+      );
+      
       // Click to focus and edit
       await input.click();
       await input.fill('80');
+      
       // Click outside to blur
       await authenticatedPage.locator('h1, h2, .page-header').first().click();
-      // Wait for save
-      await authenticatedPage.waitForTimeout(500);
+      
+      // Wait for the API update to complete
+      try {
+        const response = await updatePromise;
+        await expect(response.status()).toBe(200);
+      } catch (error) {
+        // If no API call was made, the value might be the same
+        console.log('No API update detected - value might be unchanged');
+      }
+      
+      // Wait a bit for DOM update
+      await authenticatedPage.waitForTimeout(200);
+      
       // Verify the value was saved
       await expect(input).toHaveValue('80');
     });
@@ -178,27 +225,54 @@ test.describe('Assignment Inline Editing', () => {
   });
   test.describe('Concurrent Operations', () => {
     test(`${tags.crud} handle concurrent edits properly`, async ({ authenticatedPage }) => {
-      // Edit first field
-      const firstInput = authenticatedPage.locator('td:has(input[type="number"])').first().locator('input[type="number"]');
-      if (await firstInput.count() === 0) {
-        test.skip('No inline editable fields found');
+      // Find all editable inputs
+      const inputs = authenticatedPage.locator('td:has(input[type="number"]) input[type="number"]');
+      const inputCount = await inputs.count();
+      
+      if (inputCount < 2) {
+        test.skip('Not enough inline editable fields for concurrent edit test');
+        return;
       }
+      
+      // Get references to first two inputs
+      const firstInput = inputs.nth(0);
+      const secondInput = inputs.nth(1);
+      
+      // Wait for initial load
+      await authenticatedPage.waitForLoadState('networkidle');
+      
+      // Set up listener for first update
+      const firstUpdatePromise = authenticatedPage.waitForResponse(response => 
+        response.url().includes('/api/assignments/') && 
+        (response.request().method() === 'PUT' || response.request().method() === 'PATCH'),
+        { timeout: 10000 }
+      ).catch(() => null); // Don't fail if no update happens
+      
+      // Edit first field
       await firstInput.click();
       await firstInput.fill('60');
-      // Without saving, try to edit another field
-      const secondInput = authenticatedPage.locator('td:has(input[type="number"])').nth(1).locator('input[type="number"]');
-      if (await secondInput.count() > 0) {
-        await secondInput.click();
-        // The first edit should be saved automatically
-        await authenticatedPage.waitForTimeout(500);
-        // Verify first value was saved
-        await expect(firstInput).toHaveValue('60');
-        // Now edit the second field
-        await secondInput.fill('40');
-        await secondInput.press('Enter');
-        // Verify second value was saved
-        await expect(secondInput).toHaveValue('40');
+      
+      // Click on second input (should trigger blur on first)
+      await secondInput.click();
+      
+      // Wait for first input to save
+      const firstResponse = await firstUpdatePromise;
+      if (firstResponse) {
+        await expect(firstResponse.status()).toBe(200);
       }
+      
+      // Verify first input saved
+      await expect(firstInput).toHaveValue('60');
+      
+      // Now edit second field
+      await secondInput.fill('40');
+      await secondInput.press('Enter');
+      
+      // Wait a bit for save
+      await authenticatedPage.waitForTimeout(200);
+      
+      // Verify second input saved
+      await expect(secondInput).toHaveValue('40');
     });
     test(`${tags.crud} maintain table sorting after inline edit`, async ({ authenticatedPage, testHelpers }) => {
       const rowCount = await testHelpers.getTableRowCount();

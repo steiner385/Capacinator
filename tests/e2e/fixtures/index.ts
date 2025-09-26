@@ -7,6 +7,7 @@ import { test as base, Page, APIRequestContext } from '@playwright/test';
 import { TestHelpers } from '../utils/test-helpers';
 import { TestDataGenerator } from '../helpers/test-data-generator';
 import { TestDataHelpers } from '../utils/test-data-helpers';
+import { E2ETestDataBuilder } from '../helpers/e2e-test-data-builder';
 import fs from 'fs';
 import path from 'path';
 
@@ -17,6 +18,7 @@ type TestFixtures = {
   apiContext: APIRequestContext;
   testData: TestDataGenerator;
   testDataHelpers: TestDataHelpers;
+  e2eTestDataBuilder: E2ETestDataBuilder;
   seededDatabase: void;
 };
 
@@ -108,6 +110,18 @@ export const test = base.extend<TestFixtures>({
   testDataHelpers: async ({ page, apiContext }, use) => {
     const helpers = new TestDataHelpers(page, apiContext);
     await use(helpers);
+  },
+
+  // E2E Test Data Builder - creates consistent test scenarios
+  e2eTestDataBuilder: async ({ apiContext }, use) => {
+    const testPrefix = `e2e_${Date.now()}`;
+    const builder = new E2ETestDataBuilder(apiContext, testPrefix);
+    
+    // Use the builder
+    await use(builder);
+    
+    // Cleanup after test
+    await builder.cleanup();
   },
 
   // Database seeding fixture - runs once per test

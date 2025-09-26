@@ -242,25 +242,56 @@ export default function Assignments() {
       header: 'Allocation',
       sortable: true,
       render: (value, row) => (
-        <div className="allocation-cell">
-          {getUtilizationIcon(value)}
-          <InlineEdit
-            value={value}
-            onSave={(newValue) => {
-              updateAssignmentMutation.mutate({
-                id: row.id,
-                data: { allocation_percentage: Number(newValue) }
-              });
-            }}
+        <div className="allocation-cell" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <input
             type="number"
+            defaultValue={value}
+            onChange={(e) => {
+              const newValue = Number(e.target.value);
+              // Validate range
+              if (newValue < 0) e.target.value = '0';
+              if (newValue > 100) e.target.value = '100';
+            }}
+            onBlur={(e) => {
+              const newValue = Number(e.target.value);
+              if (newValue !== value && newValue >= 0 && newValue <= 100) {
+                updateAssignmentMutation.mutate({
+                  id: row.id,
+                  data: { allocation_percentage: newValue }
+                });
+              }
+              e.target.style.borderColor = 'transparent';
+              e.target.style.background = 'transparent';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+              } else if (e.key === 'Escape') {
+                e.currentTarget.value = value.toString();
+                e.currentTarget.blur();
+              }
+            }}
             min={0}
             max={100}
-            renderValue={(val) => (
-              <span className={getUtilizationColor(Number(val))}>
-                {val}%
-              </span>
-            )}
+            className={`inline-edit-input ${getUtilizationColor(value)}`}
+            style={{
+              width: '60px',
+              padding: '4px 8px',
+              border: '1px solid transparent',
+              borderRadius: '4px',
+              background: 'transparent',
+              textAlign: 'center',
+              transition: 'all 0.2s',
+              cursor: 'pointer'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--primary-color)';
+              e.target.style.background = 'var(--bg-secondary)';
+              e.target.select();
+            }}
           />
+          <span>%</span>
+          {getUtilizationIcon(value)}
         </div>
       )
     },
@@ -268,37 +299,89 @@ export default function Assignments() {
       key: 'start_date',
       header: 'Start Date',
       sortable: true,
-      render: (value, row) => (
-        <InlineEdit
-          value={row.computed_start_date || value}
-          onSave={(newDate) => {
-            updateAssignmentMutation.mutate({
-              id: row.id,
-              data: { start_date: newDate as string }
-            });
-          }}
-          type="date"
-          renderValue={(date) => formatDate(date as string)}
-        />
-      )
+      render: (value, row) => {
+        const dateValue = row.computed_start_date || value;
+        const isComputed = row.assignment_date_mode !== 'fixed';
+        return (
+          <input
+            type="date"
+            defaultValue={dateValue}
+            onBlur={(e) => {
+              if (!isComputed && e.target.value !== dateValue) {
+                updateAssignmentMutation.mutate({
+                  id: row.id,
+                  data: { start_date: e.target.value }
+                });
+              }
+              e.target.style.borderColor = 'transparent';
+              e.target.style.background = 'transparent';
+            }}
+            disabled={isComputed}
+            className="inline-edit-input"
+            style={{
+              width: '140px',
+              padding: '4px 8px',
+              border: '1px solid transparent',
+              borderRadius: '4px',
+              background: 'transparent',
+              transition: 'all 0.2s',
+              cursor: isComputed ? 'not-allowed' : 'pointer',
+              opacity: isComputed ? 0.7 : 1
+            }}
+            onFocus={(e) => {
+              if (!isComputed) {
+                e.target.style.borderColor = 'var(--primary-color)';
+                e.target.style.background = 'var(--bg-secondary)';
+              }
+            }}
+            title={isComputed ? `Computed from ${row.assignment_date_mode} dates` : 'Click to edit'}
+          />
+        );
+      }
     },
     {
       key: 'end_date',
       header: 'End Date',
       sortable: true,
-      render: (value, row) => (
-        <InlineEdit
-          value={row.computed_end_date || value}
-          onSave={(newDate) => {
-            updateAssignmentMutation.mutate({
-              id: row.id,
-              data: { end_date: newDate as string }
-            });
-          }}
-          type="date"
-          renderValue={(date) => formatDate(date as string)}
-        />
-      )
+      render: (value, row) => {
+        const dateValue = row.computed_end_date || value;
+        const isComputed = row.assignment_date_mode !== 'fixed';
+        return (
+          <input
+            type="date"
+            defaultValue={dateValue}
+            onBlur={(e) => {
+              if (!isComputed && e.target.value !== dateValue) {
+                updateAssignmentMutation.mutate({
+                  id: row.id,
+                  data: { end_date: e.target.value }
+                });
+              }
+              e.target.style.borderColor = 'transparent';
+              e.target.style.background = 'transparent';
+            }}
+            disabled={isComputed}
+            className="inline-edit-input"
+            style={{
+              width: '140px',
+              padding: '4px 8px',
+              border: '1px solid transparent',
+              borderRadius: '4px',
+              background: 'transparent',
+              transition: 'all 0.2s',
+              cursor: isComputed ? 'not-allowed' : 'pointer',
+              opacity: isComputed ? 0.7 : 1
+            }}
+            onFocus={(e) => {
+              if (!isComputed) {
+                e.target.style.borderColor = 'var(--primary-color)';
+                e.target.style.background = 'var(--bg-secondary)';
+              }
+            }}
+            title={isComputed ? `Computed from ${row.assignment_date_mode} dates` : 'Click to edit'}
+          />
+        );
+      }
     },
     {
       key: 'duration',
@@ -312,6 +395,50 @@ export default function Assignments() {
         const weeks = Math.round(days / 7);
         return weeks > 0 ? `${weeks}w` : `${days}d`;
       }
+    },
+    {
+      key: 'notes',
+      header: 'Notes',
+      render: (value, row) => (
+        <input
+          type="text"
+          defaultValue={value || ''}
+          placeholder="Add notes..."
+          onBlur={(e) => {
+            const newValue = e.target.value;
+            if (newValue !== (value || '')) {
+              updateAssignmentMutation.mutate({
+                id: row.id,
+                data: { notes: newValue }
+              });
+            }
+            e.target.style.borderColor = 'transparent';
+            e.target.style.background = 'transparent';
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+            } else if (e.key === 'Escape') {
+              e.currentTarget.value = value || '';
+              e.currentTarget.blur();
+            }
+          }}
+          className="inline-edit-input"
+          style={{
+            width: '100%',
+            padding: '4px 8px',
+            border: '1px solid transparent',
+            borderRadius: '4px',
+            background: 'transparent',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'var(--primary-color)';
+            e.target.style.background = 'var(--bg-secondary)';
+          }}
+        />
+      )
     },
     {
       key: 'actions',
