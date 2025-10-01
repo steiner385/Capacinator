@@ -42,6 +42,9 @@ export function ScenarioProvider({ children }: ScenarioProviderProps) {
   // Store current scenario in localStorage for persistence
   useEffect(() => {
     if (currentScenario) {
+      // Store the full scenario object for the API client to use
+      localStorage.setItem('currentScenario', JSON.stringify(currentScenario));
+      // Also store just the ID for backward compatibility
       localStorage.setItem('capacinator-current-scenario', currentScenario.id);
     }
   }, [currentScenario]);

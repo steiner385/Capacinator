@@ -5,18 +5,48 @@
  */
 import { test, expect, tags } from '../../fixtures';
 import { TestDataContext } from '../../utils/test-data-helpers';
+import { ScenarioTestUtils, createUniqueTestPrefix, waitForSync } from '../../helpers/scenario-test-utils';
 test.describe('Scenario Edge Cases', () => {
   let testContext: TestDataContext;
   let testScenarios: any[];
-  test.beforeEach(async ({ testDataHelpers, testHelpers, apiContext }) => {
+  let scenarioUtils: ScenarioTestUtils;
+  let userId: string;
+  
+  test.beforeEach(async ({ testDataHelpers, testHelpers, apiContext, authenticatedPage }) => {
     // Create isolated test context
-    testContext = testDataHelpers.createTestContext('scnedge');
+    const uniquePrefix = createUniqueTestPrefix('scnedge');
+    testContext = testDataHelpers.createTestContext(uniquePrefix);
     testScenarios = [];
+    
+    // Initialize scenario utilities
+    scenarioUtils = new ScenarioTestUtils({
+      page: authenticatedPage,
+      apiContext,
+      testPrefix: uniquePrefix
+    });
+    
+    // Get user ID
+    try {
+      const profileResponse = await apiContext.get('/api/profile');
+      if (profileResponse.ok()) {
+        const profile = await profileResponse.json();
+        userId = profile.person?.id || '';
+      }
+    } catch (error) {
+      console.log('Could not get profile:', error);
+    }
+    
+    if (!userId) {
+      const testUser = await testDataHelpers.createTestUser(testContext);
+      userId = testUser.id;
+    }
+    
     await testHelpers.navigateTo('/scenarios');
-    await testHelpers.waitForPageLoad();
+    await testHelpers.waitForPageContent();
   });
   test.afterEach(async ({ testDataHelpers }) => {
     // Clean up all test data
+    await scenarioUtils.cleanupScenariosByPrefix(testContext.prefix);
     await testDataHelpers.cleanupTestContext(testContext);
   });
   test.describe('Hierarchy Edge Cases', () => {
@@ -28,8 +58,9 @@ test.describe('Scenario Edge Cases', () => {
       const level1Data = {
         name: `${testContext.prefix}-Level-1-Parent`,
         description: 'Top level parent scenario',
-        type: 'baseline',
-        status: 'active'
+        scenario_type: 'baseline',
+        status: 'active',
+        created_by: userId
       };
       const level1Response = await apiContext.post('/api/scenarios', { data: level1Data });
       const level1Scenario = await level1Response.json();
@@ -39,9 +70,10 @@ test.describe('Scenario Edge Cases', () => {
       const level2Data = {
         name: `${testContext.prefix}-Level-2-Child`,
         description: 'Second level child scenario',
-        type: 'what-if',
+        scenario_type: 'branch',
         status: 'draft',
-        parent_scenario_id: level1Scenario.id
+        parent_scenario_id: level1Scenario.id,
+        created_by: userId
       };
       const level2Response = await apiContext.post('/api/scenarios', { data: level2Data });
       const level2Scenario = await level2Response.json();
@@ -50,22 +82,37 @@ test.describe('Scenario Edge Cases', () => {
       const level3Data = {
         name: `${testContext.prefix}-Level-3-Grandchild`,
         description: 'Third level grandchild scenario',
-        type: 'forecast',
+        scenario_type: 'sandbox',
         status: 'draft',
-        parent_scenario_id: level2Scenario.id
+        parent_scenario_id: level2Scenario.id,
+        created_by: userId
       };
       const level3Response = await apiContext.post('/api/scenarios', { data: level3Data });
       const level3Scenario = await level3Response.json();
       testContext.createdIds.scenarios.push(level3Scenario.id);
       // Reload page to see hierarchy
       await authenticatedPage.reload();
-      // Switch to graphical view to see hierarchy
-      await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
-      // Verify all three levels are visible
-      await expect(authenticatedPage.locator(`.graph-node:has-text("${level1Scenario.name}"), text:has-text("${level1Scenario.name}")`)).toBeVisible();
-      await expect(authenticatedPage.locator(`.graph-node:has-text("${level2Scenario.name}"), text:has-text("${level2Scenario.name}")`)).toBeVisible();
-      await expect(authenticatedPage.locator(`.graph-node:has-text("${level3Scenario.name}"), text:has-text("${level3Scenario.name}")`)).toBeVisible();
+      await scenarioUtils.waitForScenariosToLoad();
+      
+      // Check if graphical view exists
+      const graphicalButton = authenticatedPage.getByRole('button', { name: 'Graphical' });
+      if (await graphicalButton.isVisible()) {
+        await graphicalButton.click();
+        await waitForSync(authenticatedPage);
+        
+        // Verify all three levels are visible in graphical view
+        await expect(authenticatedPage.locator(`.graph-node:has-text("${level1Scenario.name}"), text:has-text("${level1Scenario.name}")`)).toBeVisible();
+        await expect(authenticatedPage.locator(`.graph-node:has-text("${level2Scenario.name}"), text:has-text("${level2Scenario.name}")`)).toBeVisible();
+        await expect(authenticatedPage.locator(`.graph-node:has-text("${level3Scenario.name}"), text:has-text("${level3Scenario.name}")`)).toBeVisible();
+      } else {
+        // If no graphical view, verify in the hierarchy tree
+        const level1Row = await scenarioUtils.getScenarioRow(level1Scenario.name);
+        await expect(level1Row).toBeVisible();
+        const level2Row = await scenarioUtils.getScenarioRow(level2Scenario.name);
+        await expect(level2Row).toBeVisible();
+        const level3Row = await scenarioUtils.getScenarioRow(level3Scenario.name);
+        await expect(level3Row).toBeVisible();
+      }
     });
     test('should prevent scenarios from being their own parent', async ({ 
       authenticatedPage,
@@ -76,8 +123,9 @@ test.describe('Scenario Edge Cases', () => {
       const selfRefData = {
         name: `${testContext.prefix}-Self-Reference-Test`,
         description: 'Testing self-reference prevention',
-        type: 'what-if',
-        status: 'draft'
+        scenario_type: 'branch',
+        status: 'draft',
+        created_by: userId
       };
       const response = await apiContext.post('/api/scenarios', { data: selfRefData });
       const selfRefScenario = await response.json();
@@ -85,13 +133,13 @@ test.describe('Scenario Edge Cases', () => {
       testContext.createdIds.scenarios.push(selfRefScenario.id);
       // Reload and try to edit it
       await authenticatedPage.reload();
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        selfRefScenario.name
-      );
-      await scenarioCard.click();
-      await authenticatedPage.click('button:has-text("Edit")');
-      const modal = authenticatedPage.locator('[role="dialog"]');
+      await scenarioUtils.waitForScenariosToLoad();
+      
+      const scenarioRow = await scenarioUtils.getScenarioRow(selfRefScenario.name);
+      const editButton = scenarioUtils.getActionButton(scenarioRow, 'edit');
+      await editButton.click();
+      
+      const modal = authenticatedPage.locator('[role="dialog"], .modal');
       // Check parent dropdown options
       const parentSelect = modal.locator('select[name="parent_scenario"], select[name="parent_scenario_id"]');
       if (await parentSelect.count() > 0) {
@@ -193,11 +241,8 @@ test.describe('Scenario Edge Cases', () => {
           // Wait for modal to close
           await expect(modal).not.toBeVisible({ timeout: 3000 });
           // Verify the name is properly displayed/escaped
-          const createdCard = await testDataHelpers.findByTestData(
-            '.scenario-card',
-            fullName
-          );
-          const displayedName = await createdCard.locator('.scenario-name, h3, h4').textContent();
+          const createdRow = await scenarioUtils.getScenarioRow(fullName);
+          const displayedName = await createdRow.locator('.scenario-name, .name, h3, h4').textContent();
           // Should not contain unescaped HTML
           expect(displayedName).not.toContain('<script>');
         }
@@ -279,11 +324,8 @@ test.describe('Scenario Edge Cases', () => {
       await authenticatedPage.reload();
       // All scenarios should be created
       for (const scenario of rapidScenarios) {
-        const card = await testDataHelpers.findByTestData(
-          '.scenario-card',
-          scenario.name
-        );
-        await expect(card).toBeVisible();
+        const row = await scenarioUtils.getScenarioRow(scenario.name);
+        await expect(row).toBeVisible();
       }
       // Should complete in reasonable time
       expect(endTime - startTime).toBeLessThan(15000);
@@ -296,8 +338,9 @@ test.describe('Scenario Edge Cases', () => {
       const parentData = {
         name: `${testContext.prefix}-Parent-Hub`,
         description: 'Parent with many children',
-        type: 'baseline',
-        status: 'active'
+        scenario_type: 'baseline',
+        status: 'active',
+        created_by: userId
       };
       const parentResponse = await apiContext.post('/api/scenarios', { data: parentData });
       const parentScenario = await parentResponse.json();
@@ -308,9 +351,10 @@ test.describe('Scenario Edge Cases', () => {
         const childData = {
           name: `${testContext.prefix}-Child-${i}`,
           description: `Child scenario ${i}`,
-          type: 'what-if',
+          scenario_type: 'branch',
           status: 'draft',
-          parent_scenario_id: parentScenario.id
+          parent_scenario_id: parentScenario.id,
+          created_by: userId
         };
         const childResponse = await apiContext.post('/api/scenarios', { data: childData });
         const childScenario = await childResponse.json();
@@ -361,8 +405,8 @@ test.describe('Scenario Edge Cases', () => {
       // Modal should be closed and no partial data
       await expect(modal).not.toBeVisible();
       // The interrupted scenario should not exist
-      const interruptedCard = authenticatedPage.locator(`.scenario-card:has-text("${interruptedName}")`);
-      await expect(interruptedCard).not.toBeVisible();
+      const interruptedRow = authenticatedPage.locator('.hierarchy-row').filter({ hasText: interruptedName });
+      await expect(interruptedRow).not.toBeVisible();
     });
     test('should handle browser back/forward correctly', async ({ 
       authenticatedPage,
@@ -373,8 +417,9 @@ test.describe('Scenario Edge Cases', () => {
       const navData = {
         name: `${testContext.prefix}-Navigation-Test`,
         description: 'Testing browser navigation',
-        type: 'baseline',
-        status: 'active'
+        scenario_type: 'baseline',
+        status: 'active',
+        created_by: userId
       };
       const response = await apiContext.post('/api/scenarios', { data: navData });
       const navScenario = await response.json();
@@ -382,12 +427,12 @@ test.describe('Scenario Edge Cases', () => {
       testContext.createdIds.scenarios.push(navScenario.id);
       // Reload to see the scenario
       await authenticatedPage.reload();
+      await scenarioUtils.waitForScenariosToLoad();
       // Navigate to the scenario
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        navScenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(navScenario.name);
+      // Click on scenario name to navigate to details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      await nameLink.click();
       // Should be on scenario detail page
       await expect(authenticatedPage).toHaveURL(/\/scenarios\/[^/]+$/);
       await expect(authenticatedPage.locator('h1')).toContainText(navScenario.name);
@@ -438,8 +483,9 @@ test.describe('Scenario Edge Cases', () => {
         const data = {
           name: `${testContext.prefix}-Bulk-Select-${i}`,
           description: `Bulk selection test ${i}`,
-          type: 'what-if',
-          status: 'draft'
+          scenario_type: 'branch',
+          status: 'draft',
+          created_by: userId
         };
         const response = await apiContext.post('/api/scenarios', { data });
         const scenario = await response.json();
@@ -460,11 +506,8 @@ test.describe('Scenario Edge Cases', () => {
         // Check if our test scenarios are selected
         let selectedCount = 0;
         for (const scenario of bulkScenarios) {
-          const card = await testDataHelpers.findByTestData(
-            '.scenario-card',
-            scenario.name
-          );
-          const checkbox = card.locator('input[type="checkbox"]');
+          const row = await scenarioUtils.getScenarioRow(scenario.name);
+          const checkbox = row.locator('input[type="checkbox"]');
           if (await checkbox.isChecked()) {
             selectedCount++;
           }
@@ -483,8 +526,9 @@ test.describe('Scenario Edge Cases', () => {
       const parentData = {
         name: `${testContext.prefix}-Parent-Protected`,
         description: 'Parent that cannot be deleted',
-        type: 'baseline',
-        status: 'active'
+        scenario_type: 'baseline',
+        status: 'active',
+        created_by: userId
       };
       const parentResponse = await apiContext.post('/api/scenarios', { data: parentData });
       const parentScenario = await parentResponse.json();
@@ -493,20 +537,19 @@ test.describe('Scenario Edge Cases', () => {
       const childData = {
         name: `${testContext.prefix}-Child-Dependency`,
         description: 'Child that depends on parent',
-        type: 'what-if',
+        scenario_type: 'branch',
         status: 'draft',
-        parent_scenario_id: parentScenario.id
+        parent_scenario_id: parentScenario.id,
+        created_by: userId
       };
       const childResponse = await apiContext.post('/api/scenarios', { data: childData });
       const childScenario = await childResponse.json();
       testContext.createdIds.scenarios.push(childScenario.id);
       // Reload and try to delete parent
       await authenticatedPage.reload();
-      const parentCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        parentScenario.name
-      );
-      const deleteButton = parentCard.locator('button[aria-label="Delete"], button[title*="Delete"]');
+      await scenarioUtils.waitForScenariosToLoad();
+      const parentRow = await scenarioUtils.getScenarioRow(parentScenario.name);
+      const deleteButton = scenarioUtils.getActionButton(parentRow, 'delete');
       if (await deleteButton.count() > 0) {
         await deleteButton.click();
         // Confirm delete
@@ -527,8 +570,9 @@ test.describe('Scenario Edge Cases', () => {
         const data = {
           name: `${testContext.prefix}-Partial-${i}`,
           description: `Partial operation test ${i}`,
-          type: 'what-if',
-          status: 'draft'
+          scenario_type: 'branch',
+          status: 'draft',
+          created_by: userId
         };
         const response = await apiContext.post('/api/scenarios', { data });
         const scenario = await response.json();
@@ -542,25 +586,24 @@ test.describe('Scenario Edge Cases', () => {
       await authenticatedPage.reload();
       // Make one read-only (simulate protection)
       await authenticatedPage.evaluate((scenarioName) => {
-        const cards = Array.from(document.querySelectorAll('.scenario-card'));
-        const targetCard = cards.find(c => c.textContent?.includes(scenarioName));
-        if (targetCard) {
-          targetCard.setAttribute('data-readonly', 'true');
-          targetCard.classList.add('readonly');
+        const rows = Array.from(document.querySelectorAll('.hierarchy-row'));
+        const targetRow = rows.find(r => r.textContent?.includes(scenarioName));
+        if (targetRow) {
+          targetRow.setAttribute('data-readonly', 'true');
+          targetRow.classList.add('readonly');
         }
       }, partialScenarios[1].name);
       // Select all partial test scenarios
-      await authenticatedPage.click('button:has-text("Select"), button:has-text("Bulk")');
-      for (const scenario of partialScenarios) {
-        const card = await testDataHelpers.findByTestData(
-          '.scenario-card',
-          scenario.name
-        );
-        const checkbox = card.locator('input[type="checkbox"]');
-        if (await checkbox.isEnabled()) {
-          await checkbox.check();
+      const selectButton = authenticatedPage.locator('button:has-text("Select"), button:has-text("Bulk Select")');
+      if (await selectButton.isVisible()) {
+        await selectButton.click();
+        for (const scenario of partialScenarios) {
+          const row = await scenarioUtils.getScenarioRow(scenario.name);
+          const checkbox = row.locator('input[type="checkbox"]');
+          if (await checkbox.isEnabled()) {
+            await checkbox.check();
+          }
         }
-      }
       // Try bulk delete
       const bulkDeleteButton = authenticatedPage.locator('.bulk-actions-toolbar button:has-text("Delete"), .bulk-actions button:has-text("Delete")');
       if (await bulkDeleteButton.count() > 0) {

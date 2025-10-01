@@ -1,0 +1,183 @@
+/* Common Modal Styles - Ensuring consistent styling across all modals */
+
+/* Modal Overlay - Solid background to prevent transparency issues */
+.modal-overlay,
+.modal-backdrop,
+[role="dialog"]::backdrop,
+.ReactModal__Overlay,
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75) !important; /* Solid dark background */
+  backdrop-filter: none !important; /* Remove any blur effects */
+  z-index: var(--z-modal-backdrop, 200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Modal Container - Solid background for content */
+.modal-container,
+.modal-content,
+.modal,
+[role="dialog"] > div:first-child,
+.ReactModal__Content,
+.dialog-content {
+  background: var(--bg-primary, #ffffff) !important; /* Solid white/theme background */
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: var(--z-modal, 300);
+}
+
+/* Prevent any transparent backgrounds in modal children */
+.modal-container *,
+.modal-content *,
+.modal * {
+  background-color: inherit;
+}
+
+/* Modal Header - Consistent styling */
+.modal-header,
+.dialog-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.modal-header h2,
+.modal-header h3,
+.dialog-header h2,
+.dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+/* Modal Body - Scrollable content area */
+.modal-body,
+.dialog-body,
+.modal-content-inner {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: var(--bg-primary, #ffffff) !important;
+}
+
+/* Modal Footer - Action buttons */
+.modal-footer,
+.modal-actions,
+.dialog-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb) !important;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* Close button */
+.modal-close,
+.dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-tertiary, #6b7280);
+  font-size: 24px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.modal-close:hover,
+.dialog-close:hover {
+  background: var(--bg-hover, #f3f4f6);
+  color: var(--text-primary, #111827);
+}
+
+/* Ensure Radix UI Dialog components have solid backgrounds */
+[data-radix-popper-content-wrapper] {
+  background: transparent !important;
+}
+
+[role="dialog"][data-state="open"] {
+  background: var(--bg-primary, #ffffff) !important;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .modal-overlay,
+[data-theme="dark"] .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+[data-theme="dark"] .modal-container,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal {
+  background: var(--bg-primary, #1f2937) !important;
+  border-color: var(--border-color, #374151);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+  background: var(--bg-secondary, #111827) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .modal-overlay,
+  .modal-backdrop {
+    padding: 0;
+  }
+  
+  .modal-container,
+  .modal-content {
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
+
+/* Animation classes */
+.modal-enter {
+  opacity: 0;
+}
+
+.modal-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+.modal-exit {
+  opacity: 1;
+}
+
+.modal-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}

@@ -20,6 +20,7 @@ test.describe('Database Corruption Prevention Tests', () => {
   });
   test.afterEach(async ({ testDataHelpers }) => {
     // Clean up all test data
+    await scenarioUtils.cleanupScenariosByPrefix(testContext.prefix);
     await testDataHelpers.cleanupTestContext(testContext);
   });
   test(`${tags.scenarios} ${tags.critical} should prevent database corruption during scenario operations`, async ({ 
@@ -43,23 +44,30 @@ test.describe('Database Corruption Prevention Tests', () => {
       await typeSelect.selectOption('branch');
     }
     // Submit form
-    await authenticatedPage.click('button:has-text("Create Scenario"), button:has-text("Create")');
-    await authenticatedPage.waitForTimeout(2000);
-    // Verify scenario was created
-    await expect(authenticatedPage.locator(`.scenario-card:has-text("${scenarioName}")`).first()).toBeVisible({ timeout: 10000 });
+    await modal.locator('button:has-text("Create"), button:has-text("Save")').click();
+    
+    // Wait for modal to close and data to sync
+    await expect(modal).not.toBeVisible();
+    await waitForSync(authenticatedPage);
+    
+    // Verify scenario was created using utilities
+    await scenarioUtils.waitForScenariosToLoad();
+    const scenarioRow = await scenarioUtils.getScenarioRow(scenarioName);
+    await expect(scenarioRow).toBeVisible();
     console.log('✅ Created test scenario');
     // Test 2: Test merge operation (should succeed safely)
     console.log('🔄 Testing merge operation');
-    const newScenarioCard = authenticatedPage.locator(`.scenario-card:has-text("${scenarioName}")`);
-    const mergeButton = newScenarioCard.locator('button:has-text("Merge")');
-    if (await mergeButton.count() > 0) {
+    const mergeButton = scenarioRow.locator('button[title*="Merge"], button.action-button:has-text("Merge")');
+    
+    if (await mergeButton.isVisible()) {
       await mergeButton.click();
       await authenticatedPage.waitForTimeout(1000);
+      
       // Handle any merge confirmation dialog
-      const confirmButton = authenticatedPage.locator('button:has-text("Confirm"), button:has-text("Merge")');
-      if (await confirmButton.count() > 0) {
+      const confirmButton = authenticatedPage.locator('button').filter({ hasText: /^Confirm$|^Merge$/ }).last();
+      if (await confirmButton.isVisible()) {
         await confirmButton.click();
-        await authenticatedPage.waitForTimeout(2000);
+        await waitForSync(authenticatedPage);
       }
       console.log('✅ Merge operation completed safely');
     } else {
@@ -97,28 +105,32 @@ test.describe('Database Corruption Prevention Tests', () => {
     );
     // Setup each page with authentication
     for (const page of pages) {
-      const helpers = new TestHelpers(page);
+      // Note: TestHelpers is not imported, need to handle authentication differently
       await page.goto('/', { waitUntil: 'domcontentloaded' });
-      await helpers.setupPage();
-      await helpers.navigateTo('/scenarios');
-      await helpers.waitForPageReady();
+      // Simple wait for page load
+      await page.waitForTimeout(2000);
+      await page.goto('/scenarios', { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.scenarios-hierarchy', { timeout: 15000 });
     }
     // Have both users create scenarios simultaneously
     const concurrentCreations = pages.map(async (page, index) => {
       try {
         await page.click('button:has-text("New Scenario")');
         await page.waitForSelector('[role="dialog"], .modal', { timeout: 5000 });
-        const scenarioName = `${testContext.prefix}_Concurrent_Test_${index + 1}`;
-        await page.fill('input[id="scenario-name"], input[name="name"]', scenarioName);
-        await page.fill('textarea[id="scenario-description"], textarea[name="description"]', `Testing concurrent operations ${index + 1}`);
-        const typeSelect = page.locator('select[id="scenario-type"], select[name="type"]');
-        if (await typeSelect.count() > 0) {
+        const scenarioName = `${testContext.prefix}-Concurrent-Test-${index + 1}`;
+        const modal = page.locator('[role="dialog"], .modal');
+        await modal.locator('input[name="name"], #name').fill(scenarioName);
+        await modal.locator('textarea[name="description"], #description').fill(`Testing concurrent operations ${index + 1}`);
+        
+        const typeSelect = modal.locator('select[name="scenario_type"], #scenario_type');
+        if (await typeSelect.isVisible()) {
           await typeSelect.selectOption('branch');
         }
-        await page.click('button:has-text("Create Scenario"), button:has-text("Create")');
+        await modal.locator('button:has-text("Create"), button:has-text("Save")').click();
         await page.waitForTimeout(2000);
-        // Verify scenario was created
-        const scenarioExists = await page.locator(`.scenario-card:has-text("${scenarioName}")`).count() > 0;
+        
+        // Verify scenario was created in hierarchy
+        const scenarioExists = await page.locator('.hierarchy-row').filter({ hasText: scenarioName }).count() > 0;
         return { success: scenarioExists, index };
       } catch (error) {
         return { success: false, index, error: error.toString() };
@@ -131,7 +143,8 @@ test.describe('Database Corruption Prevention Tests', () => {
     console.log('✅ Concurrent scenario creation succeeded');
     // Verify both scenarios exist on the first page
     for (let i = 0; i < 2; i++) {
-      await expect(pages[0].locator(`.scenario-card:has-text("${testContext.prefix}_Concurrent_Test_${i + 1}")`).first()).toBeVisible();
+      const scenarioName = `${testContext.prefix}-Concurrent-Test-${i + 1}`;
+      await expect(pages[0].locator('.hierarchy-row').filter({ hasText: scenarioName }).first()).toBeVisible();
     }
     // Cleanup contexts
     await Promise.all(contexts.map(context => context.close()));
@@ -143,25 +156,30 @@ test.describe('Database Corruption Prevention Tests', () => {
     testDataHelpers 
   }) => {
     console.log('🧪 Testing UI Responsiveness During Database Operations');
-    await testHelpers.navigateTo('/scenarios');
-    await testHelpers.waitForPageReady();
+    // Navigation already done in beforeEach
     // Create multiple scenarios rapidly to test UI responsiveness
     for (let i = 1; i <= 3; i++) {
       console.log(`Creating scenario ${i}/3`);
       await authenticatedPage.click('button:has-text("New Scenario")');
       await authenticatedPage.waitForSelector('[role="dialog"], .modal', { timeout: 5000 });
-      const scenarioName = `${testContext.prefix}_Rapid_Test_${i}`;
-      await authenticatedPage.fill('input[id="scenario-name"], input[name="name"]', scenarioName);
-      await authenticatedPage.fill('textarea[id="scenario-description"], textarea[name="description"]', `Testing rapid operations ${i}`);
-      await authenticatedPage.click('button:has-text("Create Scenario"), button:has-text("Create")');
-      await authenticatedPage.waitForTimeout(1000);
+      const scenarioName = `${testContext.prefix}-Rapid-Test-${i}`;
+      const modal = authenticatedPage.locator('[role="dialog"], .modal');
+      await modal.locator('input[name="name"], #name').fill(scenarioName);
+      await modal.locator('textarea[name="description"], #description').fill(`Testing rapid operations ${i}`);
+      await modal.locator('button:has-text("Create"), button:has-text("Save")').click();
+      
+      // Wait for modal to close
+      await expect(modal).not.toBeVisible();
+      await waitForSync(authenticatedPage);
       // Verify UI is still responsive
       const isUIResponsive = await authenticatedPage.locator('button:has-text("New Scenario")').isVisible();
       expect(isUIResponsive).toBe(true);
     }
     // Verify all scenarios were created
     for (let i = 1; i <= 3; i++) {
-      await expect(authenticatedPage.locator(`.scenario-card:has-text("${testContext.prefix}_Rapid_Test_${i}")`).first()).toBeVisible();
+      const scenarioName = `${testContext.prefix}-Rapid-Test-${i}`;
+      const row = await scenarioUtils.getScenarioRow(scenarioName);
+      await expect(row).toBeVisible();
     }
     console.log('✅ UI remained responsive during rapid database operations');
   });
@@ -171,8 +189,7 @@ test.describe('Database Corruption Prevention Tests', () => {
     testDataHelpers 
   }) => {
     console.log('🧪 Testing Error Handling');
-    await testHelpers.navigateTo('/scenarios');
-    await testHelpers.waitForPageReady();
+    // Navigation already done in beforeEach
     // Test creating scenario with invalid data
     await authenticatedPage.click('button:has-text("New Scenario")');
     await authenticatedPage.waitForSelector('[role="dialog"], .modal', { timeout: 5000 });

@@ -201,7 +201,22 @@ export default function Assignments() {
         
         return (
           <div className="project-info">
-            <span className="project-name">{value}</span>
+            <span className="project-name">
+              {value}
+              {row.assignment_type === 'scenario' && (
+                <span className="scenario-badge" style={{
+                  marginLeft: '8px',
+                  padding: '2px 6px',
+                  fontSize: '10px',
+                  borderRadius: '4px',
+                  backgroundColor: 'var(--primary-light)',
+                  color: 'var(--primary-dark)',
+                  fontWeight: '500'
+                }}>
+                  {row.scenario_name || 'Scenario'}
+                </span>
+              )}
+            </span>
             <span className="text-xs text-muted">
               {formatDate(startDate)} - {formatDate(endDate)}
               <span className="assignment-mode-badge">{modeLabel}</span>

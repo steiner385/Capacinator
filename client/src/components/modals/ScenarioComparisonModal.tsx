@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRightLeft, TrendingUp, TrendingDown, Plus, Minus, Edit } from 'lucide-react';
+import { ArrowRightLeft, TrendingUp, TrendingDown, Plus, Minus, Edit, X } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { Scenario } from '../../types';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '../ui/dialog';
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -305,23 +306,28 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 flex flex-col">
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/75 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content className="scenario-comparison-modal fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] bg-background border border-border shadow-lg rounded-lg">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Scenario Comparison</DialogTitle>
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
         </DialogHeader>
-        <div className="px-6 pt-4 pb-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Compare scenarios to understand differences in assignments, phases, projects, and overall impact.
-          </p>
-        </div>
+        <div className="modal-body">
+          <div className="comparison-setup">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Compare scenarios to understand differences in assignments, phases, projects, and overall impact.
+            </p>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
-          {!comparisonData ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-[1fr,auto,1fr]">
+            {!comparisonData ? (
+              <div className="space-y-6">
+              <div className="scenario-selection">
                 {renderScenarioInfo(sourceScenario, "Source Scenario")}
                 
-                <div className="flex items-center justify-center">
+                <div className="comparison-arrow">
                   <ArrowRightLeft className="h-8 w-8 text-muted-foreground" />
                 </div>
 
@@ -375,12 +381,24 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              <div className="comparison-actions">
+                <Button 
+                  onClick={runComparison} 
+                  disabled={!selectedTargetId || loading}
+                  className="comparison-btn"
+                  size="lg"
+                >
+                  {loading && <Spinner className="mr-2" size="sm" />}
+                  {loading ? 'Running Comparison...' : 'Compare Scenarios'}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-[1fr,auto,1fr]">
+              <div className="scenario-selection">
                 {renderScenarioInfo(comparisonData.scenario1, "Source")}
-                <div className="flex items-center justify-center">
+                <div className="comparison-arrow">
                   <ArrowRightLeft className="h-8 w-8 text-muted-foreground" />
                 </div>
                 {renderScenarioInfo(comparisonData.scenario2, "Target")}
@@ -423,19 +441,14 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
               </Tabs>
             </div>
           )}
+          </div>
         </div>
 
         <DialogFooter className="px-6 py-4 border-t">
           {!comparisonData ? (
-            <>
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button onClick={runComparison} disabled={!selectedTargetId || loading}>
-                {loading && <Spinner className="mr-2" size="sm" />}
-                {loading ? 'Running Comparison...' : 'Compare Scenarios'}
-              </Button>
-            </>
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
           ) : (
             <>
               <Button variant="outline" onClick={() => setComparisonData(null)}>
@@ -458,7 +471,8 @@ export const ScenarioComparisonModal: React.FC<ScenarioComparisonModalProps> = (
             </>
           )}
         </DialogFooter>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
     </Dialog>
   );
 };

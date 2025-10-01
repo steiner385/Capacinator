@@ -27,14 +27,18 @@ export class AssignmentsController extends BaseController {
       status: req.query.status
     };
 
+    // Get scenario from header
+    const scenarioId = req.headers['x-scenario-id'] as string;
+    const includeAllScenarios = req.query.includeAllScenarios === 'true';
+
     const result = await this.executeQuery(async () => {
-      let query = this.db('project_assignments')
-        .join('projects', 'project_assignments.project_id', 'projects.id')
-        .join('people', 'project_assignments.person_id', 'people.id')
-        .join('roles', 'project_assignments.role_id', 'roles.id')
-        .leftJoin('project_phases', 'project_assignments.phase_id', 'project_phases.id')
+      let query = this.db('assignments_view')
+        .join('projects', 'assignments_view.project_id', 'projects.id')
+        .join('people', 'assignments_view.person_id', 'people.id')
+        .join('roles', 'assignments_view.role_id', 'roles.id')
+        .leftJoin('project_phases', 'assignments_view.phase_id', 'project_phases.id')
         .select(
-          'project_assignments.*',
+          'assignments_view.*',
           'projects.name as project_name',
           'projects.aspiration_start',
           'projects.aspiration_finish',
@@ -43,32 +47,37 @@ export class AssignmentsController extends BaseController {
           'project_phases.name as phase_name'
         );
 
+      // Filter by scenario if provided and not including all scenarios
+      if (scenarioId && !includeAllScenarios) {
+        query = query.where('assignments_view.scenario_id', scenarioId);
+      }
+
       // Add date range filter using computed dates
       if (req.query.start_date) {
         query = query.where(function() {
-          this.where('project_assignments.computed_end_date', '>=', req.query.start_date as string)
+          this.where('assignments_view.computed_end_date', '>=', req.query.start_date as string)
             .orWhere(function() {
-              this.whereNull('project_assignments.computed_end_date')
-                .andWhere('project_assignments.end_date', '>=', req.query.start_date as string);
+              this.whereNull('assignments_view.computed_end_date')
+                .andWhere('assignments_view.end_date', '>=', req.query.start_date as string);
             });
         });
       }
       if (req.query.end_date) {
         query = query.where(function() {
-          this.where('project_assignments.computed_start_date', '<=', req.query.end_date as string)
+          this.where('assignments_view.computed_start_date', '<=', req.query.end_date as string)
             .orWhere(function() {
-              this.whereNull('project_assignments.computed_start_date')
-                .andWhere('project_assignments.start_date', '<=', req.query.end_date as string);
+              this.whereNull('assignments_view.computed_start_date')
+                .andWhere('assignments_view.start_date', '<=', req.query.end_date as string);
             });
         });
       }
 
       query = this.buildFilters(query, filters);
       query = this.paginate(query, page, limit);
-      query = query.orderBy('project_assignments.start_date', 'desc');
+      query = query.orderBy('assignments_view.start_date', 'desc');
 
       const assignments = await query;
-      const total = await this.db('project_assignments').count('* as count').first();
+      const total = await this.db('assignments_view').count('* as count').first();
 
       // Compute dates for each assignment
       const assignmentsWithComputedDates = await Promise.all(
@@ -111,6 +120,19 @@ export class AssignmentsController extends BaseController {
       if (!assignmentData.project_id || !assignmentData.person_id || !assignmentData.role_id) {
         return res.status(400).json({
           error: 'Missing required fields: project_id, person_id, and role_id are required'
+        });
+      }
+
+      // Validate allocation percentage
+      const allocation = assignmentData.allocation_percentage || 0;
+      if (allocation <= 0) {
+        return res.status(400).json({
+          error: 'Allocation percentage must be positive'
+        });
+      }
+      if (allocation > 200) {
+        return res.status(400).json({
+          error: 'Allocation percentage cannot exceed 200%'
         });
       }
 
@@ -170,12 +192,9 @@ export class AssignmentsController extends BaseController {
         assignmentData.allocation_percentage
       );
 
+      let warning = null;
       if (conflicts && conflicts.total_allocation > 100) {
-        return res.status(400).json({
-          error: 'Assignment would exceed person capacity',
-          conflicts,
-          message: `Person is already allocated ${conflicts.total_allocation - assignmentData.allocation_percentage}% during this period`
-        });
+        warning = `Person will be overallocated at ${conflicts.total_allocation}% during this period`;
       }
 
       const [assignment] = await this.db('project_assignments')
@@ -201,11 +220,22 @@ export class AssignmentsController extends BaseController {
         console.error('Failed to send assignment notification:', error);
       }
       
-      return transformDates(assignmentWithDates, [
+      const response = transformDates(assignmentWithDates, [
         ...COMMON_DATE_FIELDS,
         'computed_start_date',
         'computed_end_date'
       ]);
+      
+      // Add warning if person is overallocated
+      if (warning) {
+        return {
+          ...response,
+          warning,
+          totalAllocation: conflicts.total_allocation
+        };
+      }
+      
+      return response;
     }, res, 'Failed to create assignment');
 
     if (result) {
@@ -217,18 +247,52 @@ export class AssignmentsController extends BaseController {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
-      const assignment = await this.db('project_assignments')
-        .join('projects', 'project_assignments.project_id', 'projects.id')
-        .join('people', 'project_assignments.person_id', 'people.id')
-        .join('roles', 'project_assignments.role_id', 'roles.id')
-        .select(
-          'project_assignments.*',
-          'projects.name as project_name',
-          'people.name as person_name',
-          'roles.name as role_name'
-        )
-        .where('project_assignments.id', id)
-        .first();
+      // Check if this is a scenario assignment
+      const isScenarioAssignment = id.startsWith('spa-');
+      
+      let assignment;
+      if (isScenarioAssignment) {
+        // Remove the 'spa-' prefix to get the actual ID
+        const actualId = id.substring(4);
+        assignment = await this.db('scenario_project_assignments')
+          .join('projects', 'scenario_project_assignments.project_id', 'projects.id')
+          .join('people', 'scenario_project_assignments.person_id', 'people.id')
+          .join('roles', 'scenario_project_assignments.role_id', 'roles.id')
+          .join('scenarios', 'scenario_project_assignments.scenario_id', 'scenarios.id')
+          .select(
+            'scenario_project_assignments.*',
+            'projects.name as project_name',
+            'people.name as person_name',
+            'roles.name as role_name',
+            'scenarios.name as scenario_name'
+          )
+          .where('scenario_project_assignments.id', actualId)
+          .where('scenarios.status', 'active')
+          .first();
+          
+        if (assignment) {
+          // Add the spa- prefix back to the ID
+          assignment.id = 'spa-' + assignment.id;
+          assignment.assignment_type = 'scenario';
+        }
+      } else {
+        assignment = await this.db('project_assignments')
+          .join('projects', 'project_assignments.project_id', 'projects.id')
+          .join('people', 'project_assignments.person_id', 'people.id')
+          .join('roles', 'project_assignments.role_id', 'roles.id')
+          .select(
+            'project_assignments.*',
+            'projects.name as project_name',
+            'people.name as person_name',
+            'roles.name as role_name'
+          )
+          .where('project_assignments.id', id)
+          .first();
+          
+        if (assignment) {
+          assignment.assignment_type = 'direct';
+        }
+      }
 
       if (!assignment) {
         this.handleNotFound(res, 'Assignment');
@@ -248,11 +312,40 @@ export class AssignmentsController extends BaseController {
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
-      // Check if assignment exists
-      const existing = await this.db('project_assignments').where('id', id).first();
+      // Check if this is a scenario assignment
+      const isScenarioAssignment = id.startsWith('spa-');
+      let existing;
+      let tableName;
+      let actualId;
+      
+      if (isScenarioAssignment) {
+        actualId = id.substring(4); // Remove 'spa-' prefix
+        tableName = 'scenario_project_assignments';
+        existing = await this.db(tableName).where('id', actualId).first();
+      } else {
+        actualId = id;
+        tableName = 'project_assignments';
+        existing = await this.db(tableName).where('id', actualId).first();
+      }
+      
       if (!existing) {
         this.handleNotFound(res, 'Assignment');
         return null;
+      }
+
+      // Validate allocation percentage if provided
+      if (updateData.allocation_percentage !== undefined) {
+        const allocation = updateData.allocation_percentage;
+        if (allocation <= 0) {
+          return res.status(400).json({
+            error: 'Allocation percentage must be positive'
+          });
+        }
+        if (allocation > 200) {
+          return res.status(400).json({
+            error: 'Allocation percentage cannot exceed 200%'
+          });
+        }
       }
 
       // Validate date mode if it's being changed
@@ -319,6 +412,9 @@ export class AssignmentsController extends BaseController {
       }
 
       // Check conflicts if dates or allocation changed
+      let warning = null;
+      let totalAllocation = null;
+      
       if (updateData.start_date || updateData.end_date || updateData.allocation_percentage || 
           updateData.assignment_date_mode || updateData.phase_id) {
         const conflict = await this.checkConflicts(
@@ -330,21 +426,24 @@ export class AssignmentsController extends BaseController {
         );
 
         if (conflict && conflict.total_allocation > 100) {
-          return res.status(400).json({
-            error: 'Capacity exceeded',
-            conflict
-          });
+          warning = `Person will be overallocated at ${conflict.total_allocation}% during this period`;
+          totalAllocation = conflict.total_allocation;
         }
       }
 
       // Update assignment
-      const [updated] = await this.db('project_assignments')
-        .where('id', id)
+      const [updated] = await this.db(tableName)
+        .where('id', actualId)
         .update({
           ...updateData,
           updated_at: new Date()
         })
         .returning('*');
+        
+      // Add back the spa- prefix if it's a scenario assignment
+      if (isScenarioAssignment && updated) {
+        updated.id = 'spa-' + updated.id;
+      }
 
       // Send notification for assignment update
       try {
@@ -357,7 +456,18 @@ export class AssignmentsController extends BaseController {
         console.error('Failed to send assignment notification:', error);
       }
 
-      return transformDates(updated, COMMON_DATE_FIELDS);
+      const response = transformDates(updated, COMMON_DATE_FIELDS);
+      
+      // Add warning if person is overallocated
+      if (warning) {
+        return {
+          ...response,
+          warning,
+          currentTotalAllocation: totalAllocation
+        };
+      }
+      
+      return response;
     }, res, 'Failed to update assignment');
 
     if (result) {
@@ -369,9 +479,20 @@ export class AssignmentsController extends BaseController {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
-      const deleted = await this.db('project_assignments')
-        .where('id', id)
-        .del();
+      // Check if this is a scenario assignment
+      const isScenarioAssignment = id.startsWith('spa-');
+      let deleted;
+      
+      if (isScenarioAssignment) {
+        const actualId = id.substring(4); // Remove 'spa-' prefix
+        deleted = await this.db('scenario_project_assignments')
+          .where('id', actualId)
+          .del();
+      } else {
+        deleted = await this.db('project_assignments')
+          .where('id', id)
+          .del();
+      }
 
       if (deleted === 0) {
         this.handleNotFound(res, 'Assignment');

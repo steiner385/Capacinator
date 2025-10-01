@@ -1,3 +1,5 @@
+@import "../styles/modal-common.css";
+
 .project-roadmap {
   height: 100vh;
   display: flex;
@@ -227,7 +229,7 @@
   gap: 4px;
   z-index: 20;
   background: hsl(var(--card));
-  backdrop-filter: blur(4px);
+  /* backdrop-filter removed for solid background */
   border-radius: 8px;
   padding: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -283,7 +285,7 @@
   font-weight: 500;
   color: hsl(var(--muted-foreground));
   background: hsl(var(--card));
-  backdrop-filter: blur(4px);
+  /* backdrop-filter removed for solid background */
   cursor: pointer;
   transition: all 0.15s ease;
   min-width: 120px;
@@ -320,7 +322,7 @@
   width: 60px;
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.02));
   border: 1px solid rgba(37, 99, 235, 0.1);
-  backdrop-filter: blur(8px);
+  /* backdrop-filter removed for solid background */
   cursor: pointer;
   display: flex;
   align-items: center;

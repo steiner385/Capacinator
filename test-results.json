@@ -1,10 +1,7 @@
-
-> capacinator@1.0.0 test:e2e
-> playwright test --reporter=json
-
 🚀 Starting E2E global setup...
 🗄️ Initializing E2E database...
 🧪 Initializing E2E test database...
+🗑️ Removed existing E2E database file
 🔧 Running E2E database migrations...
 Creating baseline database schema...
 ✅ Baseline database schema created successfully
@@ -22,6 +19,13 @@ Adding project_health_view for gaps analysis...
 ✅ Added project_health_view for gaps analysis
 Fixing project_health_view with correct health_status column...
 ✅ Fixed project_health_view with correct health_status column
+Creating settings table...
+✅ Created settings table with default import settings
+🔧 Fixing assignments with null dates...
+Found 0 phase-based assignments with null dates
+Found 0 project-based assignments with null dates
+Found 0 assignments still with null dates
+✅ Assignment dates fixed
 Improving project_demands_view with hour calculations...
 ✅ Improved project_demands_view with hour calculations and project type info
 Fixing project_demands_view missing columns...
@@ -32,16 +36,32 @@ Creating project_phase_dependencies table...
 Found 0 assignments without IDs
 Found 0 availability overrides without IDs
 ✅ Fixed missing IDs
+Creating person_availability_view...
+✅ Created person_availability_view
+Fixing person_utilization_view to use scenario assignments...
+✅ Fixed person_utilization_view to use scenario assignments
+Fixing project_demands_view to use actual assignments...
+✅ Fixed project_demands_view to use scenario assignments
 🌱 Seeding E2E test data...
-🌱 Seeding E2E test data...
-✅ E2E test data seeded successfully
+🌱 Seeding consolidated E2E test data...
+Existing people before clear: 
+People count after clear: 0
+✅ Consolidated E2E test data seeded successfully
+📊 Utilization scenarios created:
+   - E2E Over Utilized: 120% (80% + 40%)
+   - E2E Normal Utilized: 80%
+   - E2E Under Utilized: 40%
+   - E2E Zero Utilized: 0%
 ✅ E2E database initialized successfully
-✅ Development server already running
+✅ E2E database initialized successfully
+ℹ️ Development server already running on ports 3110/3120
+   E2E tests will use the existing server and database.
+   For isolated testing, stop the dev server first.
 ⏳ Waiting for application to be ready...
 ✅ Application is ready
 🔍 Verifying test data...
 ✅ API health check passed
-✅ /api/roles: 3 items
+✅ /api/roles: 13 items
 🔍 Handling initial profile selection...
 📋 Profile selection modal detected
 🎯 Starting profile selection...
@@ -50,7 +70,7 @@ Found 0 availability overrides without IDs
 Select trigger text: "Select your name..."
 📂 Opening profile dropdown...
 🔍 Trying strategy: Standard role="option"
-✅ Standard role="option": Found 33 options
+✅ Standard role="option": Found 10 options
 DOM state: 0 portals, 0 popper wrappers
 Available profiles: []
 Selecting profile: "undefined"
@@ -58,9 +78,9 @@ Selecting profile: "undefined"
 Call log:
 [2m  - waiting for locator('[role="option"]:visible').first()[22m
 
-    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:458:43)
-    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:329:7)
-    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:67:5) {
+    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:471:43)
+    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:342:7)
+    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:78:5) {
   name: 'TimeoutError'
 }
 🔄 Retrying...
@@ -69,51 +89,17 @@ Call log:
 Select trigger text: "Select your name..."
 📂 Opening profile dropdown...
 🔍 Trying strategy: Standard role="option"
-✅ Standard role="option": Found 33 options
-DOM state: 0 portals, 1 popper wrappers
-Available profiles: [
-  'E2E Test User 1 (E2E Developer)',
-  'E2E Test User 2 (E2E Designer)',
-  'E2E Test Manager (E2E Manager)',
-  'proj-Person-1',
-  'proj-Person-2',
-  'person-Person-1',
-  'person-Person-2',
-  'person-Person-3',
-  'assign-Person-1',
-  'assign-Person-2',
-  'assign-Person-3',
-  'forms-Person-1',
-  'assign-Person-1',
-  'assign-Person-2',
-  'assign-Person-3',
-  'navlinks-Person-1',
-  'navlinks-Person-2',
-  'person-Person-1',
-  'person-Person-2',
-  'person-Person-3',
-  'assign-Person-1',
-  'assign-Person-2',
-  'assign-Person-3',
-  'person-Person-1',
-  'person-Person-2',
-  'person-Person-3',
-  'proj-Person-1',
-  'proj-Person-2',
-  'forms-Person-1',
-  'write-ops-Project-To-Delete-Owner',
-  'data-rel-Person-1',
-  'data-rel-Person-2',
-  'data-rel-Person-3'
-]
-Selecting profile: "E2E Test User 1 (E2E Developer)"
+✅ Standard role="option": Found 10 options
+DOM state: 0 portals, 0 popper wrappers
+Available profiles: []
+Selecting profile: "undefined"
 ❌ Attempt 2 failed: locator.click: Timeout 30000ms exceeded.
 Call log:
 [2m  - waiting for locator('[role="option"]:visible').first()[22m
 
-    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:458:43)
-    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:329:7)
-    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:67:5) {
+    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:471:43)
+    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:342:7)
+    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:78:5) {
   name: 'TimeoutError'
 }
 🔄 Retrying...
@@ -122,219 +108,25 @@ Call log:
 Select trigger text: "Select your name..."
 📂 Opening profile dropdown...
 🔍 Trying strategy: Standard role="option"
-✅ Standard role="option": Found 33 options
-DOM state: 0 portals, 1 popper wrappers
-Available profiles: [
-  'E2E Test User 1 (E2E Developer)',
-  'E2E Test User 2 (E2E Designer)',
-  'E2E Test Manager (E2E Manager)',
-  'proj-Person-1',
-  'proj-Person-2',
-  'person-Person-1',
-  'person-Person-2',
-  'person-Person-3',
-  'assign-Person-1',
-  'assign-Person-2',
-  'assign-Person-3',
-  'forms-Person-1',
-  'assign-Person-1',
-  'assign-Person-2',
-  'assign-Person-3',
-  'navlinks-Person-1',
-  'navlinks-Person-2',
-  'person-Person-1',
-  'person-Person-2',
-  'person-Person-3',
-  'assign-Person-1',
-  'assign-Person-2',
-  'assign-Person-3',
-  'person-Person-1',
-  'person-Person-2',
-  'person-Person-3',
-  'proj-Person-1',
-  'proj-Person-2',
-  'forms-Person-1',
-  'write-ops-Project-To-Delete-Owner',
-  'data-rel-Person-1',
-  'data-rel-Person-2',
-  'data-rel-Person-3'
-]
-Selecting profile: "E2E Test User 1 (E2E Developer)"
+✅ Standard role="option": Found 10 options
+DOM state: 0 portals, 0 popper wrappers
+Available profiles: []
+Selecting profile: "undefined"
 ❌ Attempt 3 failed: locator.click: Timeout 30000ms exceeded.
 Call log:
 [2m  - waiting for locator('[role="option"]:visible').first()[22m
 
-    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:458:43)
-    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:329:7)
-    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:67:5) {
+    at selectProfile (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:471:43)
+    at handleInitialProfileSelection (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:342:7)
+    at globalSetup (/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts:78:5) {
   name: 'TimeoutError'
 }
 🔌 All UI attempts failed, trying API fallback...
 🔌 Using API fallback for profile selection...
-API fallback: Selecting E2E Test User 1
+API fallback: Selecting Alice Johnson
 ✅ Profile selected via API fallback
 ✅ Profile selected and saved
 💾 Current auth data: { hasCurrentUser: true, hasSelectedProfile: true }
 💾 Authentication state saved to /home/tony/GitHub/Capacinator/test-results/e2e-auth.json
 ✅ Saved state verification: Contains localStorage data
 ✅ E2E global setup completed successfully
-🧹 Starting E2E global teardown...
-🗑️ Cleaning up test data for run: e2e-1758311537311
-⚠️ scenario assignments endpoint not available, skipping cleanup
-🗄️ Cleaning up E2E database...
-🧹 Cleaning up E2E database...
-✅ E2E database cleaned up
-🗑️ Cleaning up authentication state...
-✅ E2E global teardown completed successfully
-{
-  "config": {
-    "configFile": "/home/tony/GitHub/Capacinator/playwright.config.ts",
-    "rootDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-    "forbidOnly": false,
-    "fullyParallel": false,
-    "globalSetup": "/home/tony/GitHub/Capacinator/tests/e2e/helpers/e2e-global-setup.ts",
-    "globalTeardown": "/home/tony/GitHub/Capacinator/tests/e2e/helpers/global-teardown.ts",
-    "globalTimeout": 0,
-    "grep": {},
-    "grepInvert": null,
-    "maxFailures": 0,
-    "metadata": {},
-    "preserveOutput": "always",
-    "reporter": [
-      [
-        "json"
-      ]
-    ],
-    "reportSlowTests": {
-      "max": 5,
-      "threshold": 300000
-    },
-    "quiet": false,
-    "projects": [
-      {
-        "outputDir": "/home/tony/GitHub/Capacinator/test-results",
-        "repeatEach": 1,
-        "retries": 1,
-        "metadata": {},
-        "id": "smoke",
-        "name": "smoke",
-        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-        "testIgnore": [
-          "**/archived/**/*.spec.ts"
-        ],
-        "testMatch": [
-          "/.*smoke.*\\.spec\\.ts$/"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "/home/tony/GitHub/Capacinator/test-results",
-        "repeatEach": 1,
-        "retries": 1,
-        "metadata": {},
-        "id": "chromium",
-        "name": "chromium",
-        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-        "testIgnore": [
-          "/.*smoke.*\\.spec\\.ts$/",
-          "/.*slow.*\\.spec\\.ts$/"
-        ],
-        "testMatch": [
-          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "/home/tony/GitHub/Capacinator/test-results",
-        "repeatEach": 1,
-        "retries": 1,
-        "metadata": {},
-        "id": "firefox",
-        "name": "firefox",
-        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-        "testIgnore": [
-          "**/archived/**/*.spec.ts"
-        ],
-        "testMatch": [
-          "/.*@cross-browser.*\\.spec\\.ts$/"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "/home/tony/GitHub/Capacinator/test-results",
-        "repeatEach": 1,
-        "retries": 1,
-        "metadata": {},
-        "id": "mobile",
-        "name": "mobile",
-        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-        "testIgnore": [
-          "**/archived/**/*.spec.ts"
-        ],
-        "testMatch": [
-          "/.*mobile.*\\.spec\\.ts$/"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "/home/tony/GitHub/Capacinator/test-results",
-        "repeatEach": 1,
-        "retries": 1,
-        "metadata": {},
-        "id": "api",
-        "name": "api",
-        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-        "testIgnore": [
-          "**/archived/**/*.spec.ts"
-        ],
-        "testMatch": [
-          "/.*api.*\\.spec\\.ts$/"
-        ],
-        "timeout": 60000
-      },
-      {
-        "outputDir": "/home/tony/GitHub/Capacinator/test-results",
-        "repeatEach": 1,
-        "retries": 1,
-        "metadata": {},
-        "id": "scenarios",
-        "name": "scenarios",
-        "testDir": "/home/tony/GitHub/Capacinator/tests/e2e",
-        "testIgnore": [
-          "**/archived/**/*.spec.ts"
-        ],
-        "testMatch": [
-          "/.*scenario.*\\.spec\\.ts$/"
-        ],
-        "timeout": 120000
-      }
-    ],
-    "shard": null,
-    "updateSnapshots": "missing",
-    "updateSourceMethod": "patch",
-    "version": "1.55.0",
-    "workers": 4,
-    "webServer": null
-  },
-  "suites": [],
-  "errors": [
-    {
-      "message": "SyntaxError: /home/tony/GitHub/Capacinator/tests/e2e/utilization-modals-comprehensive.spec.ts: Unexpected token (574:0)\n\n  572 |     });\n  573 |   });\n> 574 | });\n      | ^\n  575 |",
-      "stack": "SyntaxError: /home/tony/GitHub/Capacinator/tests/e2e/utilization-modals-comprehensive.spec.ts: Unexpected token (574:0)\n\n  572 |     });\n  573 |   });\n> 574 | });\n      | ^\n  575 |",
-      "location": {
-        "file": "/home/tony/GitHub/Capacinator/tests/e2e/utilization-modals-comprehensive.spec.ts",
-        "line": 574,
-        "column": 0
-      },
-      "snippet": "\u001b[90m   at \u001b[39mutilization-modals-comprehensive.spec.ts:574\n\n  572 |     });\n  573 |   });\n> 574 | });\n  575 |"
-    }
-  ],
-  "stats": {
-    "startTime": "2025-09-19T19:52:17.263Z",
-    "duration": 105671.26599999999,
-    "expected": 0,
-    "skipped": 0,
-    "unexpected": 0,
-    "flaky": 0
-  }
-}

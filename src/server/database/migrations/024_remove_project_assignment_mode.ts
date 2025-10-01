@@ -58,6 +58,10 @@ export async function up(knex: Knex): Promise<void> {
     project_health_view: await knex.raw(`
       SELECT sql FROM sqlite_master 
       WHERE type='view' AND name='project_health_view'
+    `).then(result => result[0]?.sql || null),
+    scenario_assignments_view: await knex.raw(`
+      SELECT sql FROM sqlite_master 
+      WHERE type='view' AND name='scenario_assignments_view'
     `).then(result => result[0]?.sql || null)
   };
 
@@ -184,6 +188,10 @@ export async function down(knex: Knex): Promise<void> {
     project_health_view: await knex.raw(`
       SELECT sql FROM sqlite_master 
       WHERE type='view' AND name='project_health_view'
+    `).then(result => result[0]?.sql || null),
+    scenario_assignments_view: await knex.raw(`
+      SELECT sql FROM sqlite_master 
+      WHERE type='view' AND name='scenario_assignments_view'
     `).then(result => result[0]?.sql || null)
   };
 

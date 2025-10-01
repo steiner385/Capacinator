@@ -75,17 +75,21 @@ export function getWeekNumber(date: string | Date): number {
 }
 
 /**
- * Get the default date range for reports: today to 3 months from now
+ * Get the default date range for reports: current month to 3 months from now
  * This focuses on actionable future periods rather than historical data
  */
 export function getDefaultReportDateRange(): { startDate: string; endDate: string } {
   const today = new Date();
-  const threeMonthsFromNow = new Date();
-  threeMonthsFromNow.setMonth(today.getMonth() + 3);
+  
+  // Start from the beginning of current month
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  // End at the end of 3 months from now
+  const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0); // Last day of the month 3 months from now
   
   return {
-    startDate: today.toISOString().split('T')[0],
-    endDate: threeMonthsFromNow.toISOString().split('T')[0]
+    startDate: startOfMonth.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0]
   };
 }
 

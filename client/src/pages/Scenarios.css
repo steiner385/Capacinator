@@ -309,8 +309,10 @@
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
+  overflow: visible;
 }
 
 .modal-header {
@@ -351,7 +353,277 @@
 }
 
 .modal-body {
-  padding: 0 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Comparison Modal Styles */
+.comparison-setup {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comparison-scenarios {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .comparison-scenarios {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+.scenario-selector {
+  flex: 1;
+}
+
+.scenario-selector h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.comparison-arrow {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.scenario-card-mini {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+
+.scenario-card-mini.selected {
+  border-color: var(--primary);
+  border-width: 2px;
+  background: var(--bg-tertiary);
+}
+
+/* Force proper colors on badges inside scenario-card-mini */
+.scenario-card-mini .scenario-type,
+.scenario-card-mini .scenario-status {
+  /* Default style */
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 4px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+}
+
+/* SANDBOX type */
+.scenario-card-mini .scenario-type.sandbox {
+  background-color: #fed7aa !important;
+  color: #92400e !important;
+}
+
+/* ACTIVE status */  
+.scenario-card-mini .scenario-status.active {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+/* BRANCH type */
+.scenario-card-mini .scenario-type.branch {
+  background-color: #e0e7ff !important;
+  color: #4338ca !important;
+}
+
+/* BASELINE type */
+.scenario-card-mini .scenario-type.baseline {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .scenario-card-mini .scenario-type.sandbox {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  color: #fde047 !important;
+}
+
+[data-theme="dark"] .scenario-card-mini .scenario-status.active {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #86efac !important;
+}
+
+[data-theme="dark"] .scenario-card-mini .scenario-type.branch {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  color: #c7d2fe !important;
+}
+
+[data-theme="dark"] .scenario-card-mini .scenario-type.baseline {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #86efac !important;
+}
+
+.scenario-name {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+/* Fix scenario name contrast in modal */
+.modal-content .scenario-card-mini .scenario-name,
+.comparison-setup .scenario-card-mini .scenario-name {
+  color: #111827 !important; /* Dark gray for light mode */
+}
+
+[data-theme="dark"] .modal-content .scenario-card-mini .scenario-name,
+[data-theme="dark"] .comparison-setup .scenario-card-mini .scenario-name {
+  color: #f9fafb !important; /* Light gray for dark mode */
+}
+
+.scenario-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Fix contrast in scenario comparison modal */
+.comparison-setup .scenario-type,
+.comparison-setup .scenario-status,
+.comparison-scenarios .scenario-type,
+.comparison-scenarios .scenario-status {
+  /* Force proper backgrounds */
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+.comparison-setup .scenario-type.sandbox,
+.comparison-scenarios .scenario-type.sandbox {
+  background: var(--badge-warning-bg) !important;
+  color: var(--badge-warning-text) !important;
+}
+
+.comparison-setup .scenario-status.active,
+.comparison-scenarios .scenario-status.active {
+  background: var(--badge-success-bg) !important;
+  color: var(--badge-success-text) !important;
+}
+
+.comparison-setup .scenario-type.branch,
+.comparison-scenarios .scenario-type.branch {
+  background: var(--badge-primary-bg) !important;
+  color: var(--badge-primary-text) !important;
+}
+
+/* Ensure scenario badges in modal have proper contrast */
+.modal-content .scenario-type,
+.modal-content .scenario-status,
+.scenario-card-mini .scenario-type,
+.scenario-card-mini .scenario-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.modal-content .scenario-type.baseline,
+.scenario-card-mini .scenario-type.baseline {
+  background: var(--badge-success-bg) !important;
+  color: var(--badge-success-text) !important;
+}
+
+.modal-content .scenario-type.branch,
+.scenario-card-mini .scenario-type.branch {
+  background: var(--badge-primary-bg) !important;
+  color: var(--badge-primary-text) !important;
+}
+
+.modal-content .scenario-type.sandbox,
+.scenario-card-mini .scenario-type.sandbox {
+  background: var(--badge-warning-bg) !important;
+  color: var(--badge-warning-text) !important;
+}
+
+.modal-content .scenario-status.active,
+.scenario-card-mini .scenario-status.active {
+  background: var(--badge-success-bg) !important;
+  color: var(--badge-success-text) !important;
+}
+
+.modal-content .scenario-status.draft,
+.scenario-card-mini .scenario-status.draft {
+  background: var(--badge-warning-bg) !important;
+  color: var(--badge-warning-text) !important;
+}
+
+.modal-content .scenario-status.archived,
+.scenario-card-mini .scenario-status.archived {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-tertiary) !important;
+}
+
+.scenario-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.comparison-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  background: var(--primary);
+  border-radius: 8px;
+  min-height: 60px;
+}
+
+.comparison-actions .btn-primary {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--bg-primary);
+  color: var(--primary);
+  border: 2px solid var(--bg-primary);
+}
+
+.comparison-actions .btn-primary:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--bg-secondary);
+}
+
+.comparison-actions .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Ensure modal-large is properly sized */
+.modal-large {
+  max-width: 900px !important;
+  width: 90vw !important;
+  height: auto !important;
+  max-height: 90vh !important;
+}
+
+.modal-large .modal-body {
+  min-height: 300px;
+  max-height: calc(90vh - 160px);
+  overflow-y: auto;
 }
 
 .parent-info {

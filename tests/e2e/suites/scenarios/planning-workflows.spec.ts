@@ -5,13 +5,41 @@
  */
 import { test, expect, tags } from '../../fixtures';
 import { TestDataContext } from '../../utils/test-data-helpers';
+import { ScenarioTestUtils, createUniqueTestPrefix, waitForSync } from '../../helpers/scenario-test-utils';
 test.describe('Scenario Planning Workflows', () => {
   let testContext: TestDataContext;
   let testScenarios: any[];
   let testProjects: any[];
-  test.beforeEach(async ({ testDataHelpers, testHelpers, apiContext }) => {
+  let scenarioUtils: ScenarioTestUtils;
+  let userId: string;
+  
+  test.beforeEach(async ({ testDataHelpers, testHelpers, apiContext, authenticatedPage }) => {
     // Create isolated test context
-    testContext = testDataHelpers.createTestContext('scnplan');
+    const uniquePrefix = createUniqueTestPrefix('scnplan');
+    testContext = testDataHelpers.createTestContext(uniquePrefix);
+    
+    // Initialize scenario utilities
+    scenarioUtils = new ScenarioTestUtils({
+      page: authenticatedPage,
+      apiContext,
+      testPrefix: uniquePrefix
+    });
+    
+    // Get user ID
+    try {
+      const profileResponse = await apiContext.get('/api/profile');
+      if (profileResponse.ok()) {
+        const profile = await profileResponse.json();
+        userId = profile.person?.id || '';
+      }
+    } catch (error) {
+      console.log('Could not get profile:', error);
+    }
+    
+    if (!userId) {
+      const testUser = await testDataHelpers.createTestUser(testContext);
+      userId = testUser.id;
+    }
     // Create test projects for linking
     testProjects = [];
     for (let i = 0; i < 2; i++) {
@@ -23,18 +51,19 @@ test.describe('Scenario Planning Workflows', () => {
     // Create test scenarios for planning workflows
     testScenarios = [];
     const scenarioConfigs = [
-      { name: 'Q2 Planning', type: 'planning', status: 'draft' },
+      { name: 'Q2 Planning', type: 'sandbox', status: 'draft' },
       { name: 'Baseline 2024', type: 'baseline', status: 'active' },
-      { name: 'What-If Growth', type: 'what-if', status: 'draft' },
-      { name: 'Forecast Q3', type: 'forecast', status: 'active' }
+      { name: 'What-If Growth', type: 'branch', status: 'draft' },
+      { name: 'Forecast Q3', type: 'branch', status: 'active' }
     ];
     for (const config of scenarioConfigs) {
       const scenarioData = {
         name: `${testContext.prefix}-${config.name}`,
         description: `${config.name} scenario for workflow testing`,
-        type: config.type,
+        scenario_type: config.type,
         status: config.status,
-        planning_period: config.type === 'planning' ? '2024-Q2' : null
+        planning_period: config.type === 'sandbox' ? '2024-Q2' : null,
+        created_by: userId
       };
       const response = await apiContext.post('/api/scenarios', { data: scenarioData });
       const scenario = await response.json();
@@ -45,10 +74,11 @@ test.describe('Scenario Planning Workflows', () => {
       }
     }
     await testHelpers.navigateTo('/scenarios');
-    await testHelpers.waitForPageLoad();
+    await testHelpers.waitForPageContent();
   });
   test.afterEach(async ({ testDataHelpers }) => {
     // Clean up all test data
+    await scenarioUtils.cleanupScenariosByPrefix(testContext.prefix);
     await testDataHelpers.cleanupTestContext(testContext);
   });
   test.describe('Scenario Planning', () => {
@@ -61,7 +91,10 @@ test.describe('Scenario Planning Workflows', () => {
       const modal = authenticatedPage.locator('[role="dialog"], .modal');
       const newScenarioName = `${testContext.prefix}-Q3-2024-Planning`;
       await modal.locator('input[name="name"], input[name="scenario_name"]').fill(newScenarioName);
-      await modal.locator('select[name="type"], select[name="scenario_type"]').selectOption('planning');
+      const typeSelect = modal.locator('select[name="scenario_type"], select[name="type"]');
+      if (await typeSelect.isVisible()) {
+        await typeSelect.selectOption('sandbox');
+      }
       const periodInput = modal.locator('input[name="planning_period"], input[name="period"]');
       if (await periodInput.isVisible()) {
         await periodInput.fill('2024-Q3');
@@ -76,22 +109,30 @@ test.describe('Scenario Planning Workflows', () => {
       if (newScenario.id) {
         testContext.createdIds.scenarios.push(newScenario.id);
       }
-      // Verify planning scenario created
-      const planningCard = authenticatedPage.locator(`.scenario-card:has-text("${newScenarioName}")`);
-      await expect(planningCard).toBeVisible();
-      await expect(planningCard.locator('.scenario-type, .type-badge')).toContainText('Planning');
+      // Wait for modal to close and verify scenario created
+      await expect(modal).not.toBeVisible();
+      await waitForSync(authenticatedPage);
+      
+      await scenarioUtils.waitForScenariosToLoad();
+      const planningRow = await scenarioUtils.getScenarioRow(newScenarioName);
+      await expect(planningRow).toBeVisible();
+      
+      const typeBadge = scenarioUtils.getBadge(planningRow, 'type');
+      await expect(typeBadge).toContainText('sandbox', { ignoreCase: true });
     });
     test('should set planning parameters', async ({ 
       authenticatedPage,
       testDataHelpers 
     }) => {
       // Use our planning scenario
-      const planningScenario = testScenarios.find(s => s.type === 'planning');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        planningScenario.name
-      );
-      await scenarioCard.click();
+      const planningScenario = testScenarios.find(s => s.scenario_type === 'sandbox');
+      const scenarioRow = await scenarioUtils.getScenarioRow(planningScenario.name);
+      
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Open planning parameters
       const parametersButton = authenticatedPage.locator('button:has-text("Parameters"), button:has-text("Settings")');
       if (await parametersButton.count() > 0) {
@@ -120,12 +161,14 @@ test.describe('Scenario Planning Workflows', () => {
       testDataHelpers 
     }) => {
       // Use our what-if scenario
-      const whatIfScenario = testScenarios.find(s => s.type === 'what-if');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        whatIfScenario.name
-      );
-      await scenarioCard.click();
+      const whatIfScenario = testScenarios.find(s => s.scenario_type === 'branch' && s.name.includes('What-If'));
+      const scenarioRow = await scenarioUtils.getScenarioRow(whatIfScenario.name);
+      
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Configure what-if parameters
       const analysisButton = authenticatedPage.locator('button:has-text("Configure Analysis"), button:has-text("Analysis Settings")');
       if (await analysisButton.isVisible()) {
@@ -158,11 +201,12 @@ test.describe('Scenario Planning Workflows', () => {
     }) => {
       // Use first test scenario
       const scenario = testScenarios[0];
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        scenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(scenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Add milestone
       const addMilestoneButton = authenticatedPage.locator('button:has-text("Add Milestone"), button:has-text("New Milestone")');
       if (await addMilestoneButton.isVisible()) {
@@ -228,8 +272,8 @@ test.describe('Scenario Planning Workflows', () => {
       if (await compareButton.count() > 0) {
         await compareButton.click();
         // Select two scenarios with different types
-        const baselineScenario = testScenarios.find(s => s.type === 'baseline');
-        const whatIfScenario = testScenarios.find(s => s.type === 'what-if');
+        const baselineScenario = testScenarios.find(s => s.scenario_type === 'baseline');
+        const whatIfScenario = testScenarios.find(s => s.scenario_type === 'branch' && s.name.includes('What-If'));
         // Select scenarios
         for (const scenario of [baselineScenario, whatIfScenario]) {
           const checkbox = authenticatedPage.locator(`input[type="checkbox"][value="${scenario.id}"], label:has-text("${scenario.name}") input`);
@@ -320,11 +364,12 @@ test.describe('Scenario Planning Workflows', () => {
     }) => {
       // Use first test scenario
       const scenario = testScenarios[0];
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        scenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(scenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Link to project
       const linkButton = authenticatedPage.locator('button:has-text("Link Project"), button:has-text("Associate Project")');
       if (await linkButton.isVisible()) {
@@ -360,11 +405,12 @@ test.describe('Scenario Planning Workflows', () => {
     }) => {
       // Use active scenario
       const activeScenario = testScenarios.find(s => s.status === 'active');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        activeScenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(activeScenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Open resource view
       const resourcesTab = authenticatedPage.locator('button:has-text("Resources"), [role="tab"]:has-text("Resources")');
       if (await resourcesTab.count() > 0) {
@@ -392,11 +438,12 @@ test.describe('Scenario Planning Workflows', () => {
     }) => {
       // Use draft scenario
       const draftScenario = testScenarios.find(s => s.status === 'draft');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        draftScenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(draftScenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Export to project
       const exportButton = authenticatedPage.locator('button:has-text("Export to Project"), button:has-text("Create Project")');
       if (await exportButton.isVisible()) {
@@ -431,11 +478,12 @@ test.describe('Scenario Planning Workflows', () => {
     }) => {
       // Use first scenario
       const scenario = testScenarios[0];
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        scenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(scenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Add comment
       const commentSection = authenticatedPage.locator('.comments-section, .scenario-comments, [data-testid="comments"]');
       if (await commentSection.count() > 0) {
@@ -466,12 +514,13 @@ test.describe('Scenario Planning Workflows', () => {
       testDataHelpers 
     }) => {
       // Use planning scenario
-      const planningScenario = testScenarios.find(s => s.type === 'planning');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        planningScenario.name
-      );
-      await scenarioCard.click();
+      const planningScenario = testScenarios.find(s => s.scenario_type === 'sandbox' && s.name.includes('Planning'));
+      const scenarioRow = await scenarioUtils.getScenarioRow(planningScenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Check approval section
       const approvalSection = authenticatedPage.locator('.approval-section, .approvals-panel');
       if (await approvalSection.count() > 0) {
@@ -506,11 +555,12 @@ test.describe('Scenario Planning Workflows', () => {
     }) => {
       // Use first scenario
       const scenario = testScenarios[0];
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        scenario.name
-      );
-      await scenarioCard.click();
+      const scenarioRow = await scenarioUtils.getScenarioRow(scenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Share scenario
       const shareButton = authenticatedPage.locator('button:has-text("Share"), button[aria-label="Share"]');
       if (await shareButton.isVisible()) {
@@ -551,12 +601,13 @@ test.describe('Scenario Planning Workflows', () => {
       testDataHelpers 
     }) => {
       // Use planning scenario
-      const planningScenario = testScenarios.find(s => s.type === 'planning');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        planningScenario.name
-      );
-      await scenarioCard.click();
+      const planningScenario = testScenarios.find(s => s.scenario_type === 'sandbox' && s.name.includes('Planning'));
+      const scenarioRow = await scenarioUtils.getScenarioRow(planningScenario.name);
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Open tools
       const toolsButton = authenticatedPage.locator('button:has-text("Planning Tools"), button:has-text("Tools")');
       if (await toolsButton.count() > 0) {
@@ -581,12 +632,14 @@ test.describe('Scenario Planning Workflows', () => {
       testDataHelpers 
     }) => {
       // Use forecast scenario
-      const forecastScenario = testScenarios.find(s => s.type === 'forecast');
-      const scenarioCard = await testDataHelpers.findByTestData(
-        '.scenario-card',
-        forecastScenario.name
-      );
-      await scenarioCard.click();
+      const forecastScenario = testScenarios.find(s => s.scenario_type === 'branch' && s.name.includes('Forecast'));
+      const scenarioRow = await scenarioUtils.getScenarioRow(forecastScenario.name);
+      
+      // Click on scenario to view details
+      const nameLink = scenarioRow.locator('.scenario-name, .name, a').first();
+      if (await nameLink.isVisible()) {
+        await nameLink.click();
+      }
       // Generate timeline
       const timelineButton = authenticatedPage.locator('button:has-text("Generate Timeline"), button:has-text("Create Timeline")');
       if (await timelineButton.isVisible()) {

@@ -12,6 +12,20 @@ import { Knex } from 'knex';
 export async function seed(knex: Knex): Promise<void> {
   console.log('🌱 Seeding consolidated E2E test data...');
   
+  // Set up dates for timeline - Use relative dates from today
+  // This ensures our test data is always relevant to the current date
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(today.getDate() + 7);
+  const nextTwoWeeks = new Date(today);
+  nextTwoWeeks.setDate(today.getDate() + 14);
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(today.getMonth() + 1);
+  const nextTwoMonths = new Date(today);
+  nextTwoMonths.setMonth(today.getMonth() + 2);
+  const nextThreeMonths = new Date(today);
+  nextThreeMonths.setMonth(today.getMonth() + 3);
+  
   // First check if we have any existing people
   const existingPeople = await knex('people').select('id', 'name').limit(10);
   console.log('Existing people before clear:', existingPeople.map(p => p.name).join(', '));
@@ -291,6 +305,8 @@ export async function seed(knex: Knex): Promise<void> {
       location_id: 'loc-e2e-office',
       priority: 1,
       description: 'High priority E2E test project',
+      aspiration_start: today.toISOString().split('T')[0],
+      aspiration_finish: nextThreeMonths.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -301,6 +317,8 @@ export async function seed(knex: Knex): Promise<void> {
       location_id: 'loc-e2e-office',
       priority: 2,
       description: 'Medium priority E2E test project',
+      aspiration_start: today.toISOString().split('T')[0],
+      aspiration_finish: nextThreeMonths.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -311,21 +329,14 @@ export async function seed(knex: Knex): Promise<void> {
       location_id: 'loc-e2e-remote',
       priority: 3,
       description: 'Low priority E2E test project',
+      aspiration_start: nextMonth.toISOString().split('T')[0],
+      aspiration_finish: nextThreeMonths.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     }
   ]);
   
-  // Set up dates for timeline
-  const today = new Date();
-  const nextWeek = new Date(today);
-  nextWeek.setDate(nextWeek.getDate() + 7);
-  const nextTwoWeeks = new Date(today);
-  nextTwoWeeks.setDate(nextTwoWeeks.getDate() + 14);
-  const nextMonth = new Date(today);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  const nextTwoMonths = new Date(today);
-  nextTwoMonths.setMonth(nextTwoMonths.getMonth() + 2);
+  // Dates have already been set up at the beginning of the function
   
   // Seed project phases timeline
   await knex('project_phases_timeline').insert([
@@ -334,8 +345,8 @@ export async function seed(knex: Knex): Promise<void> {
       id: 'timeline-e2e-critical-1',
       project_id: 'project-e2e-critical',
       phase_id: 'phase-e2e-planning',
-      start_date: today,
-      end_date: nextWeek,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextWeek.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -343,8 +354,8 @@ export async function seed(knex: Knex): Promise<void> {
       id: 'timeline-e2e-critical-2',
       project_id: 'project-e2e-critical',
       phase_id: 'phase-e2e-development',
-      start_date: nextWeek,
-      end_date: nextMonth,
+      start_date: nextWeek.toISOString().split('T')[0],
+      end_date: nextMonth.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -353,8 +364,8 @@ export async function seed(knex: Knex): Promise<void> {
       id: 'timeline-e2e-normal-1',
       project_id: 'project-e2e-normal',
       phase_id: 'phase-e2e-development',
-      start_date: today,
-      end_date: nextTwoMonths,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     },
@@ -363,8 +374,8 @@ export async function seed(knex: Knex): Promise<void> {
       id: 'timeline-e2e-backlog-1',
       project_id: 'project-e2e-backlog',
       phase_id: 'phase-e2e-planning',
-      start_date: nextMonth,
-      end_date: nextTwoMonths,
+      start_date: nextMonth.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       created_at: new Date(),
       updated_at: new Date()
     }
@@ -375,8 +386,8 @@ export async function seed(knex: Knex): Promise<void> {
     {
       id: 'avail-e2e-001',
       person_id: 'person-e2e-overutil',
-      start_date: today,
-      end_date: nextTwoMonths,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       availability_percentage: 100,
       created_at: new Date(),
       updated_at: new Date()
@@ -384,8 +395,8 @@ export async function seed(knex: Knex): Promise<void> {
     {
       id: 'avail-e2e-002',
       person_id: 'person-e2e-normal',
-      start_date: today,
-      end_date: nextTwoMonths,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       availability_percentage: 100,
       created_at: new Date(),
       updated_at: new Date()
@@ -393,8 +404,8 @@ export async function seed(knex: Knex): Promise<void> {
     {
       id: 'avail-e2e-003',
       person_id: 'person-e2e-underutil',
-      start_date: today,
-      end_date: nextTwoMonths,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       availability_percentage: 100,
       created_at: new Date(),
       updated_at: new Date()
@@ -402,8 +413,8 @@ export async function seed(knex: Knex): Promise<void> {
     {
       id: 'avail-e2e-004',
       person_id: 'person-e2e-zero',
-      start_date: today,
-      end_date: nextTwoMonths,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       availability_percentage: 80,
       created_at: new Date(),
       updated_at: new Date()
@@ -418,8 +429,8 @@ export async function seed(knex: Knex): Promise<void> {
       project_id: 'project-e2e-critical',
       person_id: 'person-e2e-overutil',
       role_id: 'role-e2e-dev',
-      start_date: today,
-      end_date: nextMonth,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       allocation_percentage: 80,
       created_at: new Date(),
       updated_at: new Date()
@@ -429,8 +440,8 @@ export async function seed(knex: Knex): Promise<void> {
       project_id: 'project-e2e-normal',
       person_id: 'person-e2e-overutil',
       role_id: 'role-e2e-dev',
-      start_date: today,
-      end_date: nextMonth,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       allocation_percentage: 40,
       created_at: new Date(),
       updated_at: new Date()
@@ -441,8 +452,8 @@ export async function seed(knex: Knex): Promise<void> {
       project_id: 'project-e2e-critical',
       person_id: 'person-e2e-normal',
       role_id: 'role-e2e-designer',
-      start_date: today,
-      end_date: nextMonth,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       allocation_percentage: 80,
       created_at: new Date(),
       updated_at: new Date()
@@ -453,8 +464,8 @@ export async function seed(knex: Knex): Promise<void> {
       project_id: 'project-e2e-normal',
       person_id: 'person-e2e-underutil',
       role_id: 'role-e2e-manager',
-      start_date: today,
-      end_date: nextTwoMonths,
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
       allocation_percentage: 40,
       created_at: new Date(),
       updated_at: new Date()
@@ -462,11 +473,11 @@ export async function seed(knex: Knex): Promise<void> {
     // person-e2e-zero has no assignments (0% utilization)
   ]);
   
-  // Seed baseline scenario
+  // Seed baseline scenario with the specific ID expected by the system
   await knex('scenarios').insert([
     {
-      id: 'scenario-e2e-baseline',
-      name: 'E2E Baseline Plan',
+      id: 'baseline-0000-0000-0000-000000000000',
+      name: 'Baseline',
       description: 'Baseline scenario for E2E testing',
       parent_scenario_id: null,
       created_by: 'person-e2e-normal',

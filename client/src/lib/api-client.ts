@@ -10,13 +10,27 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor for auth token (when implemented)
+// Request interceptor for auth token and scenario context
 apiClient.interceptors.request.use((config) => {
   // TODO: Add auth token when authentication is implemented
   // const token = localStorage.getItem('auth_token');
   // if (token) {
   //   config.headers.Authorization = `Bearer ${token}`;
   // }
+  
+  // Add scenario context from localStorage
+  const scenarioContext = localStorage.getItem('currentScenario');
+  if (scenarioContext) {
+    try {
+      const scenario = JSON.parse(scenarioContext);
+      if (scenario?.id) {
+        config.headers['X-Scenario-Id'] = scenario.id;
+      }
+    } catch (error) {
+      console.error('Failed to parse scenario context:', error);
+    }
+  }
+  
   return config;
 });
 

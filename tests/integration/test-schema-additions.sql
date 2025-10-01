@@ -109,15 +109,17 @@ ALTER TABLE project_assignments_new RENAME TO project_assignments;
 
 -- Update people table
 ALTER TABLE people ADD COLUMN default_hours_per_day REAL DEFAULT 8;
+ALTER TABLE people ADD COLUMN worker_type TEXT DEFAULT 'employee';
 
 -- Person roles table
 CREATE TABLE IF NOT EXISTS person_roles (
+  id TEXT PRIMARY KEY,
   person_id TEXT NOT NULL,
   role_id TEXT NOT NULL,
   proficiency_level TEXT DEFAULT 'Intermediate',
+  is_primary INTEGER DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  PRIMARY KEY (person_id, role_id),
   FOREIGN KEY (person_id) REFERENCES people(id),
   FOREIGN KEY (role_id) REFERENCES roles(id)
 );
@@ -138,6 +140,38 @@ SELECT
   p.default_hours_per_day as effective_hours_per_day
 FROM people p
 WHERE p.is_active = 1;
+
+-- Scenarios table
+CREATE TABLE IF NOT EXISTS scenarios (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  status TEXT DEFAULT 'active',
+  description TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Scenario project assignments table
+CREATE TABLE IF NOT EXISTS scenario_project_assignments (
+  id TEXT PRIMARY KEY,
+  scenario_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  person_id TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  phase_id TEXT,
+  allocation_percentage INTEGER NOT NULL DEFAULT 100,
+  assignment_date_mode TEXT DEFAULT 'fixed',
+  start_date TEXT,
+  end_date TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (scenario_id) REFERENCES scenarios(id),
+  FOREIGN KEY (person_id) REFERENCES people(id),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (role_id) REFERENCES roles(id),
+  FOREIGN KEY (phase_id) REFERENCES project_phases(id)
+);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(project_type_id);

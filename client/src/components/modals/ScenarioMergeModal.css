@@ -1,4 +1,6 @@
 /* Scenario Merge Modal Styles */
+@import "../../styles/modal-common.css";
+
 .scenario-merge-modal {
   max-width: 1000px;
   width: 90vw;
