@@ -212,6 +212,31 @@ export class ScenarioTestUtils {
   }
 
   /**
+   * Switch to a specific scenario using the header dropdown
+   */
+  async switchToScenario(scenarioName: string) {
+    const { page } = this.options;
+    
+    // Click on the scenario selector button
+    await page.click('.scenario-button');
+    await page.waitForSelector('.scenario-dropdown', { state: 'visible' });
+    
+    // Find and click the scenario option
+    const scenarioOption = page.locator('.scenario-option').filter({ hasText: scenarioName }).first();
+    await scenarioOption.click();
+    
+    // Wait for dropdown to close and data to refresh
+    await page.waitForSelector('.scenario-dropdown', { state: 'hidden' });
+    await page.waitForLoadState('networkidle');
+    
+    // Verify scenario is now selected
+    const selectedScenario = await page.locator('.scenario-button .scenario-name').textContent();
+    if (!selectedScenario?.includes(scenarioName)) {
+      throw new Error(`Failed to switch to scenario: ${scenarioName}`);
+    }
+  }
+  
+  /**
    * Cleanup scenarios by prefix
    */
   async cleanupScenariosByPrefix(prefix: string) {

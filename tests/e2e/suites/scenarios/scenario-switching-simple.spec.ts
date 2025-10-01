@@ -11,15 +11,15 @@ test.describe('Scenario Switching', () => {
     await authenticatedPage.waitForLoadState('networkidle');
     
     // Wait for initial data to load
-    await authenticatedPage.waitForSelector('.stat-card, [data-testid="dashboard-loaded"]');
+    await authenticatedPage.waitForSelector('text=Current Projects');
     
     // Get the current scenario name
-    const initialScenario = await authenticatedPage.locator('.scenario-name, .scenario-selector-trigger .scenario-details').textContent();
+    const initialScenario = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();
     console.log('Initial scenario:', initialScenario);
     
     // Click on scenario selector
-    await authenticatedPage.click('.scenario-selector-trigger');
-    await authenticatedPage.waitForSelector('.scenario-selector-dropdown', { state: 'visible' });
+    await authenticatedPage.click('.scenario-button');
+    await authenticatedPage.waitForSelector('.scenario-dropdown', { state: 'visible' });
     
     // Get available scenarios
     const scenarioOptions = await authenticatedPage.locator('.scenario-option').count();
@@ -28,7 +28,7 @@ test.describe('Scenario Switching', () => {
     // If there are multiple scenarios, switch to a different one
     if (scenarioOptions > 1) {
       // Click on a different scenario (not the currently selected one)
-      await authenticatedPage.click('.scenario-option:not(.selected)').first();
+      await authenticatedPage.locator('.scenario-option:not(.selected)').first().click();
       
       // Wait for the dropdown to close
       await authenticatedPage.waitForSelector('.scenario-selector-dropdown', { state: 'hidden' });
@@ -37,7 +37,7 @@ test.describe('Scenario Switching', () => {
       await authenticatedPage.waitForLoadState('networkidle');
       
       // Verify scenario has changed
-      const newScenario = await authenticatedPage.locator('.scenario-name, .scenario-selector-trigger .scenario-details').textContent();
+      const newScenario = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();
       console.log('New scenario:', newScenario);
       
       expect(newScenario).not.toBe(initialScenario);
@@ -52,14 +52,14 @@ test.describe('Scenario Switching', () => {
     await authenticatedPage.waitForLoadState('networkidle');
     
     // Get current scenario
-    const projectsScenario = await authenticatedPage.locator('.scenario-name, .scenario-selector-trigger .scenario-details').textContent();
+    const projectsScenario = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();
     
     // Navigate to assignments
     await testHelpers.navigateTo('/assignments');
     await authenticatedPage.waitForLoadState('networkidle');
     
     // Get scenario on assignments page
-    const assignmentsScenario = await authenticatedPage.locator('.scenario-name, .scenario-selector-trigger .scenario-details').textContent();
+    const assignmentsScenario = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();
     
     // Should be the same scenario
     expect(assignmentsScenario).toBe(projectsScenario);

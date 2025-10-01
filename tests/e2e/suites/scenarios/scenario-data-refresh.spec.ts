@@ -8,8 +8,12 @@ import { ScenarioTestUtils } from '../../helpers/scenario-test-utils';
 test.describe('Scenario Data Refresh', () => {
   let scenarioUtils: ScenarioTestUtils;
 
-  test.beforeEach(async ({ authenticatedPage, testHelpers, apiContext, testDataHelpers }) => {
-    scenarioUtils = new ScenarioTestUtils(authenticatedPage, testHelpers, apiContext);
+  test.beforeEach(async ({ authenticatedPage, testHelpers, apiContext }) => {
+    scenarioUtils = new ScenarioTestUtils({
+      page: authenticatedPage,
+      apiContext: apiContext,
+      testPrefix: 'test-data-refresh'
+    });
     
     // Create test scenarios with different data
     const baselineScenario = await apiContext.post('/api/scenarios', {
@@ -45,11 +49,11 @@ test.describe('Scenario Data Refresh', () => {
     await authenticatedPage.waitForLoadState('networkidle');
 
     // Get initial project count
-    const initialProjectCount = await authenticatedPage.locator('[data-testid="projects-count"], .stat-card:has-text("Total Projects") .stat-value').textContent();
+    const initialProjectCount = await authenticatedPage.locator('text=Current Projects').locator('..').locator('p.text-2xl').textContent();
     
     // Open scenario dropdown
-    await authenticatedPage.click('.scenario-selector-trigger');
-    await authenticatedPage.waitForSelector('.scenario-selector-dropdown');
+    await authenticatedPage.click('.scenario-button');
+    await authenticatedPage.waitForSelector('.scenario-dropdown');
 
     // Switch to branch scenario
     await authenticatedPage.click('.scenario-option:has-text("Test Branch - Data Refresh")');
@@ -59,7 +63,7 @@ test.describe('Scenario Data Refresh', () => {
     await authenticatedPage.waitForTimeout(500); // Allow time for React Query to update
 
     // Get updated project count
-    const updatedProjectCount = await authenticatedPage.locator('[data-testid="projects-count"], .stat-card:has-text("Total Projects") .stat-value').textContent();
+    const updatedProjectCount = await authenticatedPage.locator('text=Current Projects').locator('..').locator('p.text-2xl').textContent();
     
     // Project count should have changed
     expect(initialProjectCount).not.toBe(updatedProjectCount);
@@ -74,8 +78,8 @@ test.describe('Scenario Data Refresh', () => {
     const initialRows = await authenticatedPage.locator('tbody tr, [data-testid="assignment-row"]').count();
     
     // Open scenario dropdown
-    await authenticatedPage.click('.scenario-selector-trigger');
-    await authenticatedPage.waitForSelector('.scenario-selector-dropdown');
+    await authenticatedPage.click('.scenario-button');
+    await authenticatedPage.waitForSelector('.scenario-dropdown');
 
     // Switch scenario
     await authenticatedPage.click('.scenario-option:has-text("Test Branch - Data Refresh")');
@@ -104,8 +108,8 @@ test.describe('Scenario Data Refresh', () => {
     const initialDemandData = await authenticatedPage.locator('.demand-summary, [data-testid="total-demands"]').textContent().catch(() => '0');
     
     // Open scenario dropdown
-    await authenticatedPage.click('.scenario-selector-trigger');
-    await authenticatedPage.waitForSelector('.scenario-selector-dropdown');
+    await authenticatedPage.click('.scenario-button');
+    await authenticatedPage.waitForSelector('.scenario-dropdown');
 
     // Switch to different scenario
     await authenticatedPage.click('.scenario-option:has-text("Test Baseline - Data Refresh")');
@@ -136,8 +140,8 @@ test.describe('Scenario Data Refresh', () => {
     const initialProjectNames = await authenticatedPage.locator('tbody tr td:first-child, [data-testid="project-name"]').allTextContents();
     
     // Open scenario dropdown
-    await authenticatedPage.click('.scenario-selector-trigger');
-    await authenticatedPage.waitForSelector('.scenario-selector-dropdown');
+    await authenticatedPage.click('.scenario-button');
+    await authenticatedPage.waitForSelector('.scenario-dropdown');
 
     // Switch to branch scenario that has additional project
     await authenticatedPage.click('.scenario-option:has-text("Test Branch - Data Refresh")');
@@ -170,7 +174,7 @@ test.describe('Scenario Data Refresh', () => {
     await authenticatedPage.waitForLoadState('networkidle');
     
     // Verify scenario is still selected
-    const selectedScenarioProjects = await authenticatedPage.locator('.scenario-name:visible, .scenario-selector-trigger .scenario-name').textContent();
+    const selectedScenarioProjects = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();
     expect(selectedScenarioProjects).toContain('Test Branch - Data Refresh');
     
     // Navigate to assignments
@@ -178,7 +182,7 @@ test.describe('Scenario Data Refresh', () => {
     await authenticatedPage.waitForLoadState('networkidle');
     
     // Verify scenario is still selected
-    const selectedScenarioAssignments = await authenticatedPage.locator('.scenario-name:visible, .scenario-selector-trigger .scenario-name').textContent();
+    const selectedScenarioAssignments = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();
     expect(selectedScenarioAssignments).toContain('Test Branch - Data Refresh');
   });
 
@@ -188,15 +192,15 @@ test.describe('Scenario Data Refresh', () => {
     await authenticatedPage.waitForLoadState('networkidle');
     
     // Set up promise to catch loading states
-    const loadingPromise = authenticatedPage.waitForSelector('.loading-spinner, [data-testid="loading"], .skeleton', { 
+    const loadingPromise = authenticatedPage.waitForSelector('.animate-spin, [data-testid="loading"], .animate-pulse', { 
       state: 'visible',
       timeout: 5000 
     }).catch(() => null);
     
     // Switch scenario
-    await authenticatedPage.click('.scenario-selector-trigger');
-    await authenticatedPage.waitForSelector('.scenario-selector-dropdown');
-    await authenticatedPage.click('.scenario-option:not(.selected)').first();
+    await authenticatedPage.click('.scenario-button');
+    await authenticatedPage.waitForSelector('.scenario-dropdown');
+    await authenticatedPage.locator('.scenario-option:not(.selected)').first().click();
     
     // Check if loading state appeared
     const loadingElement = await loadingPromise;
