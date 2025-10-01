@@ -7,12 +7,12 @@ import { test, expect, tags } from '../../fixtures';
 
 test.describe('Demand Report - Assignment Based', () => {
   test(`${tags.critical} should show demand data when using actual assignments (no resource templates)`, async ({ 
-    api,
+    apiContext,
     authenticatedPage,
     testHelpers
   }) => {
     // Create a scenario with actual assignments but no resource templates
-    const scenario = await api.request.post('/api/scenarios', {
+    const scenario = await apiContext.post('/api/scenarios', {
       data: {
         name: 'Test Scenario - Assignments Only',
         scenario_type: 'baseline',
@@ -22,12 +22,12 @@ test.describe('Demand Report - Assignment Based', () => {
     const scenarioData = await scenario.json();
     
     // Create a project
-    const project = await api.request.post('/api/projects', {
+    const project = await apiContext.post('/api/projects', {
       data: {
         name: 'Test Project for Demand',
-        project_type_id: (await api.request.get('/api/project-types').then(r => r.json()))[0].id,
-        project_sub_type_id: (await api.request.get('/api/project-sub-types').then(r => r.json()))[0].id,
-        location_id: (await api.request.get('/api/locations').then(r => r.json()))[0].id,
+        project_type_id: (await apiContext.get('/api/project-types').then(r => r.json()))[0].id,
+        project_sub_type_id: (await apiContext.get('/api/project-sub-types').then(r => r.json()))[0].id,
+        location_id: (await apiContext.get('/api/locations').then(r => r.json()))[0].id,
         priority: 1,
         include_in_demand: true,
         aspiration_start: new Date().toISOString().split('T')[0],
@@ -37,7 +37,7 @@ test.describe('Demand Report - Assignment Based', () => {
     const projectData = await project.json();
     
     // Add project to scenario
-    await api.request.post('/api/scenario-projects', {
+    await apiContext.post('/api/scenario-projects', {
       data: {
         scenario_id: scenarioData.id,
         project_id: projectData.id
@@ -45,13 +45,13 @@ test.describe('Demand Report - Assignment Based', () => {
     });
     
     // Get a person and role
-    const people = await api.request.get('/api/people').then(r => r.json());
-    const roles = await api.request.get('/api/roles').then(r => r.json());
+    const people = await apiContext.get('/api/people').then(r => r.json());
+    const roles = await apiContext.get('/api/roles').then(r => r.json());
     const person = people[0];
     const role = roles.find((r: any) => r.name === 'Software Developer') || roles[0];
     
     // Create an assignment directly in the scenario (no resource template)
-    await api.request.post('/api/assignments', {
+    await apiContext.post('/api/assignments', {
       data: {
         scenario_id: scenarioData.id,
         project_id: projectData.id,
@@ -102,14 +102,14 @@ test.describe('Demand Report - Assignment Based', () => {
     await expect(projectInDemand).toBeVisible();
     
     // Clean up
-    await api.request.delete(`/api/scenarios/${scenarioData.id}`);
-    await api.request.delete(`/api/projects/${projectData.id}`);
+    await apiContext.delete(`/api/scenarios/${scenarioData.id}`);
+    await apiContext.delete(`/api/projects/${projectData.id}`);
     
     console.log('✅ Demand report correctly shows data from actual assignments');
   });
 
   test(`${tags.critical} should handle mixed scenarios with both templates and assignments`, async ({ 
-    api,
+    apiContext,
     authenticatedPage,
     testHelpers
   }) => {
@@ -127,7 +127,7 @@ test.describe('Demand Report - Assignment Based', () => {
       // Check that we're showing assignment-based demand
       if (summaryText?.includes('0 hours') || summaryText?.includes('No demand')) {
         // Check if there are actually assignments in the system
-        const assignmentsResponse = await api.request.get('/api/assignments');
+        const assignmentsResponse = await apiContext.get('/api/assignments');
         const assignments = await assignmentsResponse.json();
         
         if (assignments.length > 0) {

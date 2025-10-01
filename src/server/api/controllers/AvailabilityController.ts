@@ -327,7 +327,7 @@ export class AvailabilityController extends BaseController {
 
       // Get availability overrides for date range
       let overridesQuery = this.db('person_availability_overrides')
-        .whereIn('person_id', people.map(p => p.id))
+        .whereIn('person_id', people.map((p: any) => p.id))
         .where('is_approved', true);
 
       if (start_date) {
@@ -340,14 +340,14 @@ export class AvailabilityController extends BaseController {
       const overrides = await overridesQuery.select('*');
 
       // Build calendar data
-      const calendar = people.map(person => {
-        const personOverrides = overrides.filter(o => o.person_id === person.id);
+      const calendar = people.map((person: any) => {
+        const personOverrides = overrides.filter((o: any) => o.person_id === person.id);
         
         return {
           person_id: person.id,
           person_name: person.name,
           default_availability: person.default_availability_percentage,
-          overrides: personOverrides.map(o => ({
+          overrides: personOverrides.map((o: any) => ({
             id: o.id,
             start_date: o.start_date,
             end_date: o.end_date,
@@ -420,7 +420,7 @@ export class AvailabilityController extends BaseController {
 
         // Calculate capacity for this week
         for (const person of people) {
-          const personOverrides = overrides.filter(o => 
+          const personOverrides = overrides.filter((o: any) => 
             o.person_id === person.id &&
             o.start_date <= weekEnd.toISOString().split('T')[0] &&
             o.end_date >= weekStart.toISOString().split('T')[0]
@@ -430,7 +430,7 @@ export class AvailabilityController extends BaseController {
           
           if (personOverrides.length > 0) {
             // Use the most restrictive override
-            availability = Math.min(...personOverrides.map(o => o.availability_percentage));
+            availability = Math.min(...personOverrides.map((o: any) => o.availability_percentage));
             
             if (availability === 0) {
               weekData.people_on_leave++;

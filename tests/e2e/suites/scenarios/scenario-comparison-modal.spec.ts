@@ -4,10 +4,12 @@
  */
 import { test, expect } from '../../fixtures';
 import { ScenarioTestUtils, createUniqueTestPrefix, waitForSync } from '../../helpers/scenario-test-utils';
+import { TestDataContext } from '../../utils/test-data-helpers';
 
 test.describe('Scenario Comparison Modal Styling', () => {
   let scenarioUtils: ScenarioTestUtils;
   let testScenarioIds: string[] = [];
+  let testContext: TestDataContext | null = null;
 
   test.beforeEach(async ({ authenticatedPage, apiContext, testDataHelpers, testHelpers }) => {
     const prefix = createUniqueTestPrefix('modaltest');
@@ -31,8 +33,20 @@ test.describe('Scenario Comparison Modal Styling', () => {
     }
     
     if (!userId) {
-      const testUser = await testDataHelpers.createTestUser({ prefix });
+      const context: TestDataContext = {
+        prefix,
+        createdIds: {
+          projects: [],
+          people: [],
+          assignments: [],
+          scenarios: [],
+          projectPhases: [],
+          availabilityOverrides: []
+        }
+      };
+      const testUser = await testDataHelpers.createTestUser(context);
       userId = testUser.id;
+      testContext = context; // Store for cleanup
     }
 
     // Create test scenarios for comparison
@@ -88,7 +102,7 @@ test.describe('Scenario Comparison Modal Styling', () => {
     }
 
     // Wait for modal to appear
-    const modal = authenticatedPage.locator('.scenario-comparison-modal, [role="dialog"]').first();
+    const modal = authenticatedPage.locator('.modal-content, .modal-large').first();
     await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Check overlay background

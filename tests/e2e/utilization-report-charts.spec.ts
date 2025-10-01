@@ -1,128 +1,86 @@
-import { test, expect } from '@playwright/test';
-import { setupTestData, cleanupTestData } from './fixtures';
+import { test, expect } from './fixtures';
 
 test.describe('Utilization Report Charts E2E Tests', () => {
-  test.beforeEach(async ({ page }) => {
-    // Set up test data with reasonable allocations
-    await setupTestData({
-      assignments: [
-        {
-          personName: 'Alice Johnson',
-          projectName: 'Mobile App',
-          allocation: 40,
-          startDate: '2025-09-01',
-          endDate: '2025-12-31'
-        },
-        {
-          personName: 'Alice Johnson',
-          projectName: 'Web Platform',
-          allocation: 35,
-          startDate: '2025-10-01',
-          endDate: '2025-11-30'
-        },
-        {
-          personName: 'Bob Smith',
-          projectName: 'Mobile App',
-          allocation: 60,
-          startDate: '2025-09-01',
-          endDate: '2025-12-31'
-        },
-        {
-          personName: 'Charlie Brown',
-          projectName: 'API Development',
-          allocation: 80,
-          startDate: '2025-09-15',
-          endDate: '2025-11-15'
-        },
-        {
-          personName: 'Diana Prince',
-          projectName: 'Cloud Migration',
-          allocation: 100,
-          startDate: '2025-10-01',
-          endDate: '2025-12-15'
-        },
-        {
-          personName: 'Eve Davis',
-          projectName: 'Security Audit',
-          allocation: 120, // Overallocated
-          startDate: '2025-09-01',
-          endDate: '2025-10-31'
-        }
-      ]
-    });
-
+  test.beforeEach(async ({ authenticatedPage, testHelpers }) => {
     // Navigate to utilization report
-    await page.goto('/reports');
-    await page.click('text=Utilization Report');
-    await page.waitForSelector('[data-testid="utilization-report-page"]');
+    await testHelpers.navigateTo('/reports');
+    
+    // The test data is already set up by the E2E global setup
+    // We have the following test users with allocations:
+    // - E2E Over Utilized: 120% (80% + 40%)
+    // - E2E Normal Utilized: 80%
+    // - E2E Under Utilized: 40%
+    // - E2E Zero Utilized: 0%
+    
+    // Click on utilization report tab
+    await authenticatedPage.click('text=Utilization Report');
+    await authenticatedPage.waitForSelector('.utilization-report, [data-testid="utilization-report"]');
   });
 
-  test.afterEach(async () => {
-    await cleanupTestData();
-  });
+  // No cleanup needed - test data is managed by E2E global setup
 
-  test('should display utilization charts with data', async ({ page }) => {
+  test('should display utilization charts with data', async ({ authenticatedPage }) => {
     // Wait for charts to load
-    await page.waitForSelector('[data-testid="utilization-by-person-chart"]');
-    await page.waitForSelector('[data-testid="utilization-by-role-chart"]');
-    await page.waitForSelector('[data-testid="utilization-distribution-chart"]');
+    await authenticatedPage.waitForSelector('[data-testid="utilization-by-person-chart"]');
+    await authenticatedPage.waitForSelector('[data-testid="utilization-by-role-chart"]');
+    await authenticatedPage.waitForSelector('[data-testid="utilization-distribution-chart"]');
     
     // Verify summary cards show correct values
-    const utilizationPercentage = await page.textContent('[data-testid="overall-utilization-percentage"]');
+    const utilizationPercentage = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
     expect(parseInt(utilizationPercentage)).toBeGreaterThan(0);
     expect(parseInt(utilizationPercentage)).toBeLessThan(200); // Reasonable range
     
-    const overutilizedCount = await page.textContent('[data-testid="people-overutilized-count"]');
+    const overutilizedCount = await authenticatedPage.textContent('[data-testid="people-overutilized-count"]');
     expect(parseInt(overutilizedCount)).toBe(1); // Eve Davis
     
-    const underutilizedCount = await page.textContent('[data-testid="people-underutilized-count"]');
+    const underutilizedCount = await authenticatedPage.textContent('[data-testid="people-underutilized-count"]');
     expect(parseInt(underutilizedCount)).toBeGreaterThan(0);
   });
 
-  test('should update charts when date range changes', async ({ page }) => {
+  test('should update charts when date range changes', async ({ authenticatedPage }) => {
     // Set initial date range
-    await page.fill('[data-testid="start-date-input"]', '2025-09-01');
-    await page.fill('[data-testid="end-date-input"]', '2025-09-30');
-    await page.click('[data-testid="apply-filters-button"]');
+    await authenticatedPage.fill('[data-testid="start-date-input"]', '2025-09-01');
+    await authenticatedPage.fill('[data-testid="end-date-input"]', '2025-09-30');
+    await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Wait for charts to update
-    await page.waitForTimeout(500);
+    await authenticatedPage.waitForTimeout(500);
     
     // Get initial utilization value
-    const initialUtilization = await page.textContent('[data-testid="overall-utilization-percentage"]');
+    const initialUtilization = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
     
     // Change date range to include more assignments
-    await page.fill('[data-testid="end-date-input"]', '2025-12-31');
-    await page.click('[data-testid="apply-filters-button"]');
+    await authenticatedPage.fill('[data-testid="end-date-input"]', '2025-12-31');
+    await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Wait for charts to update
-    await page.waitForTimeout(500);
+    await authenticatedPage.waitForTimeout(500);
     
     // Verify utilization changed
-    const updatedUtilization = await page.textContent('[data-testid="overall-utilization-percentage"]');
+    const updatedUtilization = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
     expect(parseInt(updatedUtilization)).not.toBe(parseInt(initialUtilization));
   });
 
-  test('should display person utilization table with correct data', async ({ page }) => {
+  test('should display person utilization table with correct data', async ({ authenticatedPage }) => {
     // Wait for table to load
-    await page.waitForSelector('[data-testid="utilization-table"]');
+    await authenticatedPage.waitForSelector('[data-testid="utilization-table"]');
     
     // Verify table headers
-    await expect(page.locator('th:text("Name")')).toBeVisible();
-    await expect(page.locator('th:text("Role")')).toBeVisible();
-    await expect(page.locator('th:text("Utilization (%)")')).toBeVisible();
-    await expect(page.locator('th:text("Available Capacity (%)")')).toBeVisible();
-    await expect(page.locator('th:text("Available Hours (Daily)")')).toBeVisible();
+    await expect(authenticatedPage.locator('th:text("Name")')).toBeVisible();
+    await expect(authenticatedPage.locator('th:text("Role")')).toBeVisible();
+    await expect(authenticatedPage.locator('th:text("Utilization (%)")')).toBeVisible();
+    await expect(authenticatedPage.locator('th:text("Available Capacity (%)")')).toBeVisible();
+    await expect(authenticatedPage.locator('th:text("Available Hours (Daily)")')).toBeVisible();
     
     // Verify Alice's row
-    const aliceRow = page.locator('tr', { has: page.locator('text="Alice Johnson"') });
+    const aliceRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="Alice Johnson"') });
     await expect(aliceRow).toBeVisible();
     
     const aliceUtilization = await aliceRow.locator('[data-testid="utilization-percentage"]').textContent();
     expect(parseInt(aliceUtilization)).toBe(75); // 40% + 35%
     
     // Verify Eve's overallocation is highlighted
-    const eveRow = page.locator('tr', { has: page.locator('text="Eve Davis"') });
+    const eveRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="Eve Davis"') });
     await expect(eveRow).toBeVisible();
     await expect(eveRow.locator('[data-testid="overallocation-indicator"]')).toBeVisible();
     
@@ -130,28 +88,29 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     expect(parseInt(eveUtilization)).toBe(120);
   });
 
-  test('should handle edge cases gracefully', async ({ page }) => {
+  test('should handle edge cases gracefully', async ({ authenticatedPage }) => {
     // Test with no date range (should use defaults)
-    await page.fill('[data-testid="start-date-input"]', '');
-    await page.fill('[data-testid="end-date-input"]', '');
-    await page.click('[data-testid="apply-filters-button"]');
+    await authenticatedPage.fill('[data-testid="start-date-input"]', '');
+    await authenticatedPage.fill('[data-testid="end-date-input"]', '');
+    await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Should still display charts
-    await expect(page.locator('[data-testid="utilization-by-person-chart"]')).toBeVisible();
+    await expect(authenticatedPage.locator('[data-testid="utilization-by-person-chart"]')).toBeVisible();
     
     // Test with date range that has no assignments
-    await page.fill('[data-testid="start-date-input"]', '2024-01-01');
-    await page.fill('[data-testid="end-date-input"]', '2024-01-31');
-    await page.click('[data-testid="apply-filters-button"]');
+    await authenticatedPage.fill('[data-testid="start-date-input"]', '2024-01-01');
+    await authenticatedPage.fill('[data-testid="end-date-input"]', '2024-01-31');
+    await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Should show "No assignments found" message
-    await expect(page.locator('text=No Project Assignments Found')).toBeVisible();
-    await expect(page.locator('text=Utilization is 0%')).toBeVisible();
+    await expect(authenticatedPage.locator('text=No Project Assignments Found')).toBeVisible();
+    await expect(authenticatedPage.locator('text=Utilization is 0%')).toBeVisible();
   });
 
-  test('should display charts properly with high utilization values', async ({ page }) => {
+  test('should display charts properly with high utilization values', async ({ authenticatedPage }) => {
     // Add assignments with very high percentages
-    await setupTestData({
+    // Additional test setup would go here if needed
+    /*await setupTestData({
       assignments: [
         {
           personName: 'Frank Test',
@@ -168,13 +127,13 @@ test.describe('Utilization Report Charts E2E Tests', () => {
           endDate: '2025-12-31'
         }
       ]
-    });
+    });*/
     
-    await page.reload();
-    await page.waitForSelector('[data-testid="utilization-report-page"]');
+    await authenticatedPage.reload();
+    await authenticatedPage.waitForSelector('[data-testid="utilization-report-page"]');
     
     // Verify charts still render (not blank)
-    const chartCanvas = page.locator('[data-testid="utilization-by-person-chart"] canvas');
+    const chartCanvas = authenticatedPage.locator('[data-testid="utilization-by-person-chart"] canvas');
     await expect(chartCanvas).toBeVisible();
     
     // Get canvas dimensions to ensure it's rendered
@@ -183,7 +142,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     expect(canvasBox.height).toBeGreaterThan(0);
     
     // Verify Frank Test appears in the table with high utilization
-    const frankRow = page.locator('tr', { has: page.locator('text="Frank Test"') });
+    const frankRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="Frank Test"') });
     await expect(frankRow).toBeVisible();
     
     const frankUtilization = await frankRow.locator('[data-testid="utilization-percentage"]').textContent();
@@ -191,17 +150,17 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     
     // Verify the chart Y-axis can accommodate high values
     // This would depend on your chart implementation
-    await expect(page.locator('[data-testid="chart-y-axis-max"]')).toHaveText(/[2-3][0-9][0-9]/); // Should show 200-399 range
+    await expect(authenticatedPage.locator('[data-testid="chart-y-axis-max"]')).toHaveText(/[2-3][0-9][0-9]/); // Should show 200-399 range
   });
 
-  test('should export utilization data correctly', async ({ page }) => {
+  test('should export utilization data correctly', async ({ authenticatedPage }) => {
     // Click export button
-    await page.click('[data-testid="export-utilization-button"]');
+    await authenticatedPage.click('[data-testid="export-utilization-button"]');
     
     // Wait for download
     const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.click('text=Export to Excel')
+      authenticatedPage.waitForEvent('download'),
+      authenticatedPage.click('text=Export to Excel')
     ]);
     
     // Verify download
@@ -209,51 +168,51 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     expect(download.suggestedFilename()).toContain('.xlsx');
   });
 
-  test('should filter by location and project type', async ({ page }) => {
+  test('should filter by location and project type', async ({ authenticatedPage }) => {
     // Apply location filter
-    await page.selectOption('[data-testid="location-filter"]', 'New York');
-    await page.click('[data-testid="apply-filters-button"]');
+    await authenticatedPage.selectOption('[data-testid="location-filter"]', 'New York');
+    await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Wait for update
-    await page.waitForTimeout(500);
+    await authenticatedPage.waitForTimeout(500);
     
     // Verify only people from New York are shown
-    const tableRows = await page.locator('[data-testid="utilization-table"] tbody tr').count();
+    const tableRows = await authenticatedPage.locator('[data-testid="utilization-table"] tbody tr').count();
     expect(tableRows).toBeGreaterThan(0);
     
     // Apply project type filter
-    await page.selectOption('[data-testid="project-type-filter"]', 'Development');
-    await page.click('[data-testid="apply-filters-button"]');
+    await authenticatedPage.selectOption('[data-testid="project-type-filter"]', 'Development');
+    await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Verify filtered results
-    await page.waitForTimeout(500);
-    const filteredRows = await page.locator('[data-testid="utilization-table"] tbody tr').count();
+    await authenticatedPage.waitForTimeout(500);
+    const filteredRows = await authenticatedPage.locator('[data-testid="utilization-table"] tbody tr').count();
     expect(filteredRows).toBeLessThanOrEqual(tableRows);
   });
 
-  test('should navigate to person details from utilization table', async ({ page }) => {
+  test('should navigate to person details from utilization table', async ({ authenticatedPage }) => {
     // Click on a person's name
-    await page.click('text=Alice Johnson');
+    await authenticatedPage.click('text=Alice Johnson');
     
     // Should navigate to person details page
-    await page.waitForURL(/\/people\/[a-f0-9-]+$/);
-    await expect(page.locator('h1:text("Alice Johnson")')).toBeVisible();
+    await authenticatedPage.waitForURL(/\/people\/[a-f0-9-]+$/);
+    await expect(authenticatedPage.locator('h1:text("Alice Johnson")')).toBeVisible();
     
     // Verify assignment details are shown
-    await expect(page.locator('text=Mobile App')).toBeVisible();
-    await expect(page.locator('text=40%')).toBeVisible();
+    await expect(authenticatedPage.locator('text=Mobile App')).toBeVisible();
+    await expect(authenticatedPage.locator('text=40%')).toBeVisible();
   });
 
-  test('should show tooltips on chart hover', async ({ page }) => {
+  test('should show tooltips on chart hover', async ({ authenticatedPage }) => {
     // Hover over a bar in the utilization chart
-    const chart = page.locator('[data-testid="utilization-by-person-chart"]');
+    const chart = authenticatedPage.locator('[data-testid="utilization-by-person-chart"]');
     await chart.hover({ position: { x: 100, y: 100 } });
     
     // Wait for tooltip
-    await page.waitForSelector('[data-testid="chart-tooltip"]', { timeout: 2000 });
+    await authenticatedPage.waitForSelector('[data-testid="chart-tooltip"]', { timeout: 2000 });
     
     // Verify tooltip content
-    const tooltipText = await page.textContent('[data-testid="chart-tooltip"]');
+    const tooltipText = await authenticatedPage.textContent('[data-testid="chart-tooltip"]');
     expect(tooltipText).toContain('%');
     expect(tooltipText).toMatch(/\d+ hours/);
   });

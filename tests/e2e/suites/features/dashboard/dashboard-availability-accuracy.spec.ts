@@ -54,7 +54,7 @@ test.describe('Dashboard Availability Accuracy', () => {
   test(`${tags.critical} should update availability count when assignments change`, async ({ 
     authenticatedPage,
     testHelpers,
-    api 
+    apiContext 
   }) => {
     // Navigate to dashboard and get initial count
     await testHelpers.navigateTo('/dashboard');
@@ -67,23 +67,23 @@ test.describe('Dashboard Availability Accuracy', () => {
     console.log(`Initial available count: ${initialAvailableCount}`);
     
     // Get a person and project for assignment
-    const people = await api.request.get('/api/people');
+    const people = await apiContext.get('/api/people');
     const peopleData = await people.json();
     const availablePerson = peopleData.find((p: any) => p.is_active);
     
-    const projects = await api.request.get('/api/projects');
+    const projects = await apiContext.get('/api/projects');
     const projectsData = await projects.json();
     const activeProject = projectsData[0];
     
     if (availablePerson && activeProject) {
       // Create an assignment
-      const scenarios = await api.request.get('/api/scenarios');
+      const scenarios = await apiContext.get('/api/scenarios');
       const scenariosData = await scenarios.json();
       const activeScenario = scenariosData.find((s: any) => s.status === 'active');
       
       if (activeScenario) {
         // Create assignment in the active scenario
-        await api.request.post('/api/assignments', {
+        await apiContext.post('/api/assignments', {
           data: {
             scenario_id: activeScenario.id,
             project_id: activeProject.id,

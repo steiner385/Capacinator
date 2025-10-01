@@ -7,8 +7,7 @@ import { test, expect, tags } from '../../fixtures';
 test.describe('Capacity Report with Availability Overrides', () => {
   test(`${tags.reports} should reduce capacity when person has availability override`, async ({ 
     apiContext,
-    testDataHelpers,
-    api
+    testDataHelpers
   }) => {
     const testContext = testDataHelpers.createTestContext('capacity-override');
     
@@ -26,7 +25,7 @@ test.describe('Capacity Report with Availability Overrides', () => {
     });
     
     // Create availability override for person2 (50% availability due to training)
-    await api.request.post('/api/availability', {
+    await apiContext.post('/api/availability', {
       data: {
         person_id: person2.id,
         start_date: new Date().toISOString().split('T')[0],
@@ -66,8 +65,7 @@ test.describe('Capacity Report with Availability Overrides', () => {
 
   test(`${tags.reports} should show zero capacity for person on vacation`, async ({ 
     apiContext,
-    testDataHelpers,
-    api
+    testDataHelpers
   }) => {
     const testContext = testDataHelpers.createTestContext('capacity-vacation');
     
@@ -78,7 +76,7 @@ test.describe('Capacity Report with Availability Overrides', () => {
     });
     
     // Create vacation override
-    await api.request.post('/api/availability', {
+    await apiContext.post('/api/availability', {
       data: {
         person_id: person.id,
         start_date: new Date().toISOString().split('T')[0],
@@ -108,13 +106,12 @@ test.describe('Capacity Report with Availability Overrides', () => {
 
   test(`${tags.reports} role capacity should reflect availability overrides`, async ({ 
     apiContext,
-    testDataHelpers,
-    api
+    testDataHelpers
   }) => {
     const testContext = testDataHelpers.createTestContext('role-capacity');
     
     // Get a specific role
-    const rolesResponse = await api.request.get('/api/roles');
+    const rolesResponse = await apiContext.get('/api/roles');
     const roles = await rolesResponse.json();
     const devRole = roles.find((r: any) => r.name === 'Software Developer') || roles[0];
     
@@ -141,7 +138,7 @@ test.describe('Capacity Report with Availability Overrides', () => {
     ]);
     
     // Put one dev on vacation
-    await api.request.post('/api/availability', {
+    await apiContext.post('/api/availability', {
       data: {
         person_id: devs[1].id,
         start_date: new Date().toISOString().split('T')[0],
@@ -179,15 +176,14 @@ test.describe('Capacity Report with Availability Overrides', () => {
 
   test(`${tags.reports} ${tags.api} availability override API endpoint`, async ({ 
     apiContext,
-    testDataHelpers,
-    api
+    testDataHelpers
   }) => {
     const testContext = testDataHelpers.createTestContext('availability-api');
     const person = await testDataHelpers.createPerson(testContext);
     
     try {
       // Test creating availability override
-      const createResponse = await api.request.post('/api/availability', {
+      const createResponse = await apiContext.post('/api/availability', {
         data: {
           person_id: person.id,
           start_date: new Date().toISOString().split('T')[0],

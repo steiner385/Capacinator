@@ -604,19 +604,20 @@ test.describe('Scenario Edge Cases', () => {
             await checkbox.check();
           }
         }
-      // Try bulk delete
-      const bulkDeleteButton = authenticatedPage.locator('.bulk-actions-toolbar button:has-text("Delete"), .bulk-actions button:has-text("Delete")');
-      if (await bulkDeleteButton.count() > 0) {
-        await bulkDeleteButton.click();
-        await authenticatedPage.locator('button:has-text("Delete"), button:has-text("Confirm")').last().click();
-        // Wait for operation to complete
-        await authenticatedPage.waitForTimeout(1000);
-        // Should show some kind of result message
-        const notification = authenticatedPage.locator('.toast, .notification, .alert');
-        if (await notification.count() > 0) {
-          const notificationText = await notification.textContent();
-          // Should indicate partial success or failure
-          expect(notificationText?.toLowerCase()).toMatch(/partial|failed|error|success/);
+        // Try bulk delete
+        const bulkDeleteButton = authenticatedPage.locator('.bulk-actions-toolbar button:has-text("Delete"), .bulk-actions button:has-text("Delete")');
+        if (await bulkDeleteButton.count() > 0) {
+          await bulkDeleteButton.click();
+          await authenticatedPage.locator('button:has-text("Delete"), button:has-text("Confirm")').last().click();
+          // Wait for operation to complete
+          await authenticatedPage.waitForTimeout(1000);
+          // Should show some kind of result message
+          const notification = authenticatedPage.locator('.toast, .notification, .alert');
+          if (await notification.count() > 0) {
+            const notificationText = await notification.textContent();
+            // Should indicate partial success or failure
+            expect(notificationText?.toLowerCase()).toMatch(/partial|failed|error|success/);
+          }
         }
       }
     });

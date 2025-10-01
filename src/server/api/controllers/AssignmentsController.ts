@@ -54,18 +54,18 @@ export class AssignmentsController extends BaseController {
 
       // Add date range filter using computed dates
       if (req.query.start_date) {
-        query = query.where(function() {
+        query = query.where(function(this: any) {
           this.where('assignments_view.computed_end_date', '>=', req.query.start_date as string)
-            .orWhere(function() {
+            .orWhere(function(this: any) {
               this.whereNull('assignments_view.computed_end_date')
                 .andWhere('assignments_view.end_date', '>=', req.query.start_date as string);
             });
         });
       }
       if (req.query.end_date) {
-        query = query.where(function() {
+        query = query.where(function(this: any) {
           this.where('assignments_view.computed_start_date', '<=', req.query.end_date as string)
-            .orWhere(function() {
+            .orWhere(function(this: any) {
               this.whereNull('assignments_view.computed_start_date')
                 .andWhere('assignments_view.start_date', '<=', req.query.end_date as string);
             });
@@ -81,7 +81,7 @@ export class AssignmentsController extends BaseController {
 
       // Compute dates for each assignment
       const assignmentsWithComputedDates = await Promise.all(
-        assignments.map(async (assignment) => {
+        assignments.map(async (assignment: any) => {
           const computedDates = await this.computeAssignmentDates(assignment);
           return { ...assignment, ...computedDates };
         })
@@ -227,7 +227,7 @@ export class AssignmentsController extends BaseController {
       ]);
       
       // Add warning if person is overallocated
-      if (warning) {
+      if (warning && conflicts) {
         return {
           ...response,
           warning,
@@ -610,7 +610,7 @@ export class AssignmentsController extends BaseController {
       'projects.name as project_name'
     );
 
-    const total_allocation = overlapping.reduce((sum, assignment) => 
+    const total_allocation = overlapping.reduce((sum: number, assignment: any) => 
       sum + assignment.allocation_percentage, allocation_percentage
     );
 
@@ -625,7 +625,7 @@ export class AssignmentsController extends BaseController {
       return {
         person_id,
         person_name: person.name,
-        conflicting_projects: overlapping.map(a => ({
+        conflicting_projects: overlapping.map((a: any) => ({
           project_name: a.project_name,
           start_date: a.start_date,
           end_date: a.end_date,

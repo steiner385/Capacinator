@@ -58,14 +58,14 @@ export class DemandController extends BaseController {
         .orderBy('project_demands_view.start_date', 'project_phases.order_index', 'roles.name');
 
       // Calculate FTE for each demand
-      const demandsWithFte = demands.map(demand => ({
+      const demandsWithFte = demands.map((demand: any) => ({
         ...demand,
         demand_fte: this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date)
       }));
 
       // Group by phase
       const phaseMap = new Map();
-      demandsWithFte.forEach(demand => {
+      demandsWithFte.forEach((demand: any) => {
         if (!phaseMap.has(demand.phase_id)) {
           phaseMap.set(demand.phase_id, {
             phase_id: demand.phase_id,
@@ -91,10 +91,10 @@ export class DemandController extends BaseController {
       const summary = {
         total_phases: phases.length,
         total_demands: demandsWithFte.length,
-        total_hours: demandsWithFte.reduce((sum, d) => sum + d.demand_hours, 0),
-        total_fte: demandsWithFte.reduce((sum, d) => sum + d.demand_fte, 0),
-        override_count: demandsWithFte.filter(d => d.is_override).length,
-        roles_needed: new Set(demandsWithFte.map(d => d.role_id)).size
+        total_hours: demandsWithFte.reduce((sum: number, d: any) => sum + d.demand_hours, 0),
+        total_fte: demandsWithFte.reduce((sum: number, d: any) => sum + d.demand_fte, 0),
+        override_count: demandsWithFte.filter((d: any) => d.is_override).length,
+        roles_needed: new Set(demandsWithFte.map((d: any) => d.role_id)).size
       };
 
       return {
