@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
+import { useScenario } from '../contexts/ScenarioContext';
 import { getDefaultReportDateRange } from '../utils/date';
 
 // Helper function to format month-year string
@@ -67,6 +68,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Reports() {
+  const { currentScenario } = useScenario();
   const [activeReport, setActiveReport] = useState<'capacity' | 'utilization' | 'demand' | 'gaps'>('demand');
   const [filters, setFilters] = useState<ReportFilters>(getDefaultReportDateRange());
   const [showExportDropdown, setShowExportDropdown] = useState(false);
@@ -88,7 +90,7 @@ export default function Reports() {
 
   // Fetch report data
   const { data: capacityReport, isLoading: capacityLoading, refetch: refetchCapacity } = useQuery({
-    queryKey: ['report-capacity', filters],
+    queryKey: ['report-capacity', filters, currentScenario?.id],
     queryFn: async () => {
       const [capacityResponse, peopleResponse] = await Promise.all([
         api.reporting.getCapacity(filters),
@@ -151,11 +153,11 @@ export default function Reports() {
       }
       return data;
     },
-    enabled: activeReport === 'capacity'
+    enabled: activeReport === 'capacity' && !!currentScenario
   });
 
   const { data: utilizationReport, isLoading: utilizationLoading, refetch: refetchUtilization } = useQuery({
-    queryKey: ['report-utilization', filters],
+    queryKey: ['report-utilization', filters, currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getUtilization(filters);
       const data = response.data;
@@ -210,11 +212,11 @@ export default function Reports() {
       
       return data;
     },
-    enabled: activeReport === 'utilization'
+    enabled: activeReport === 'utilization' && !!currentScenario
   });
 
   const { data: demandReport, isLoading: demandLoading } = useQuery({
-    queryKey: ['report-demand', filters],
+    queryKey: ['report-demand', filters, currentScenario?.id],
     queryFn: async () => {
       console.log('Fetching demand report with filters:', filters);
       const response = await api.reporting.getDemand(filters);
@@ -286,11 +288,11 @@ export default function Reports() {
       
       return data;
     },
-    enabled: activeReport === 'demand'
+    enabled: activeReport === 'demand' && !!currentScenario
   });
 
   const { data: gapsReport, isLoading: gapsLoading } = useQuery({
-    queryKey: ['report-gaps', filters],
+    queryKey: ['report-gaps', filters, currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getGaps(filters);
       const data = response.data;
@@ -333,12 +335,12 @@ export default function Reports() {
       
       return data;
     },
-    enabled: activeReport === 'gaps'
+    enabled: activeReport === 'gaps' && !!currentScenario
   });
 
   // Fetch person's assignments for modals
   const { data: personAssignments = [], refetch: refetchPersonAssignments } = useQuery({
-    queryKey: ['person-assignments', selectedPerson?.id],
+    queryKey: ['person-assignments', selectedPerson?.id, currentScenario?.id],
     queryFn: async () => {
       const response = await api.assignments.list({ person_id: selectedPerson.id });
       return response.data?.data || [];
@@ -348,7 +350,7 @@ export default function Reports() {
 
   // Fetch available projects with gaps for recommendations
   const { data: availableProjects = [], refetch: refetchAvailableProjects } = useQuery({
-    queryKey: ['available-projects', selectedPerson?.id],
+    queryKey: ['available-projects', selectedPerson?.id, currentScenario?.id],
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data?.data || [];

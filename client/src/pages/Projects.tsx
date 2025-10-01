@@ -10,6 +10,7 @@ import { ErrorMessage } from '../components/ui/ErrorMessage';
 import ProjectModal from '../components/modals/ProjectModal';
 import ProjectAllocations from '../components/ProjectAllocations';
 import { useModal } from '../hooks/useModal';
+import { useScenario } from '../contexts/ScenarioContext';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
 import type { Project, Location, ProjectType } from '../types';
 import './Projects.css';
@@ -17,6 +18,7 @@ import './Projects.css';
 export function Projects() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentScenario } = useScenario();
   const [filters, setFilters] = useState({
     search: '',
     location_id: '',
@@ -30,9 +32,9 @@ export function Projects() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [selectedProjectForAllocations, setSelectedProjectForAllocations] = useState<Project | null>(null);
 
-  // Fetch projects
+  // Fetch projects - will refetch when scenario changes
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useQuery({
-    queryKey: ['projects', filters],
+    queryKey: ['projects', filters, currentScenario?.id],
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
@@ -49,7 +51,8 @@ export function Projects() {
           color_code: project.project_type_color_code
         } : undefined
       })) as Project[];
-    }
+    },
+    enabled: !!currentScenario
   });
 
   // Fetch locations for filter

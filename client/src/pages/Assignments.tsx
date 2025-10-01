@@ -11,6 +11,7 @@ import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
 import { TestModal } from '../components/modals/TestModal';
 import { InlineEdit } from '../components/ui/InlineEdit';
 import { useModal } from '../hooks/useModal';
+import { useScenario } from '../contexts/ScenarioContext';
 import type { ProjectAssignment, Project, Person, Role } from '../types';
 import './Assignments.css';
 
@@ -21,6 +22,7 @@ export default function Assignments() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
+  const { currentScenario } = useScenario();
   const [contextMessage, setContextMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'assignments' | 'recommendations'>('assignments');
   const [filters, setFilters] = useState({
@@ -65,25 +67,27 @@ export default function Assignments() {
     }
   }, [searchParams]);
 
-  // Fetch assignments
+  // Fetch assignments - will refetch when scenario changes
   const { data: assignments, isLoading: assignmentsLoading, error: assignmentsError } = useQuery({
-    queryKey: ['assignments', filters],
+    queryKey: ['assignments', filters, currentScenario?.id],
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       const response = await api.assignments.list(params);
       return response.data.data as ProjectAssignment[];
-    }
+    },
+    enabled: !!currentScenario // Only fetch when a scenario is selected
   });
 
-  // Fetch projects for filter
+  // Fetch projects for filter - will refetch when scenario changes
   const { data: projects } = useQuery({
-    queryKey: ['projects'],
+    queryKey: ['projects', currentScenario?.id],
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data;
-    }
+    },
+    enabled: !!currentScenario
   });
 
   // Fetch people for filter

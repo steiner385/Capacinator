@@ -11,6 +11,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { useScenario } from '../contexts/ScenarioContext';
 import { DashboardSummary } from '../types';
 import { Card } from '../components/ui/CustomCard';
 import { StatCard } from '../components/ui/StatCard';
@@ -30,13 +31,15 @@ const COLORS = {
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { currentScenario } = useScenario();
   
   const { data: dashboard, isLoading, error } = useQuery({
-    queryKey: ['dashboard'],
+    queryKey: ['dashboard', currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getDashboard();
       return response.data as DashboardSummary;
     },
+    enabled: !!currentScenario
   });
 
   if (isLoading) return <LoadingSpinner />;
