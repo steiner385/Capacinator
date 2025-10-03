@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { db } from '../../database/index.js';
 import { emailService } from '../../services/EmailService.js';
 

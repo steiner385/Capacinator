@@ -1,5 +1,5 @@
 export const config = {
   features: {
-    audit: false // Disable audit for now to avoid build errors
+    audit: process.env.AUDIT_ENABLED === 'true' || process.env.NODE_ENV === 'e2e'
   }
 };

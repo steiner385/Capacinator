@@ -27,7 +27,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. */
   use: {
     /* Base URL to use in actions like await page.goto('/') */
-    baseURL: 'https://localhost:3121', // E2E-specific port
+    baseURL: 'http://localhost:3120', // E2E-specific port
     
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
@@ -116,7 +116,7 @@ export default defineConfig({
   /* Run your local e2e server before starting the tests */
   // webServer: {
   //   command: './scripts/start-e2e-server.sh',
-  //   url: 'https://localhost:3121',
+  //   url: 'http://localhost:3120',
   //   reuseExistingServer: !process.env.CI,
   //   timeout: 120 * 1000, // 2 minutes to start e2e environment
   //   env: {

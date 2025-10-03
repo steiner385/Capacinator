@@ -1,13 +1,13 @@
 import { Express } from 'express';
+import { AuditService } from '../services/audit/AuditService.js';
+import { createAuditRoutes } from '../api/routes/audit.js';
 
 export class AuditRouteHandler {
-  constructor(private auditService: any) {}
+  constructor(private auditService: AuditService) {}
 
   register(app: Express) {
-    // Register audit routes
-    app.get('/api/audit/:table/:id', (req, res) => {
-      // Audit endpoint implementation
-      res.json({ message: 'Audit endpoint' });
-    });
+    // Create and mount audit routes
+    const auditRoutes = createAuditRoutes(this.auditService);
+    app.use('/api/audit', auditRoutes);
   }
 }

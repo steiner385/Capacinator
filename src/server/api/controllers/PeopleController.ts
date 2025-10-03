@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 import { isTableAudited } from '../../config/auditConfig.js';

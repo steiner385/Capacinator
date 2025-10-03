@@ -30,6 +30,18 @@ describe('AssignmentsController Integration Tests', () => {
       id: testData.person_id,
       name: 'Test Person',
       email: 'test@example.com',
+      default_availability_percentage: 100,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    // Create baseline scenario
+    await db('scenarios').insert({
+      id: 'baseline-0000-0000-0000-000000000000',
+      name: 'Baseline',
+      status: 'active',
+      scenario_type: 'baseline',
+      created_by: testData.person_id,
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -68,6 +80,7 @@ describe('AssignmentsController Integration Tests', () => {
     // Note: person_roles table may not exist in test schema
     try {
       await db('person_roles').insert({
+        id: randomUUID(),
         person_id: testData.person_id,
         role_id: testData.role_id,
         proficiency_level: 'Expert',
@@ -79,27 +92,36 @@ describe('AssignmentsController Integration Tests', () => {
     }
 
     // Set person availability to 100%
-    await db('person_availability_overrides').insert({
-      id: randomUUID(),
-      person_id: testData.person_id,
-      availability_percentage: 100,
-      override_type: 'available',
-      start_date: '2024-01-01',
-      end_date: '2024-12-31',
-      created_at: new Date(),
-      updated_at: new Date()
-    });
+    try {
+      await db('person_availability_overrides').insert({
+        id: randomUUID(),
+        person_id: testData.person_id,
+        availability_percentage: 100,
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    } catch (error) {
+      // Table might not exist - skip
+    }
   });
 
   afterAll(async () => {
     // Clean up test data
-    await db('person_availability_overrides').where('person_id', testData.person_id).del();
+    try {
+      await db('person_availability_overrides').where('person_id', testData.person_id).del();
+    } catch (error) {
+      // Table might not exist - skip
+    }
     try {
       await db('person_roles').where('person_id', testData.person_id).del();
     } catch (error) {
       // person_roles table doesn't exist in test schema - skip
     }
+    await db('scenario_project_assignments').where('person_id', testData.person_id).del();
     await db('project_assignments').where('person_id', testData.person_id).del();
+    await db('scenarios').where('id', 'baseline-0000-0000-0000-000000000000').del();
     await db('roles').where('id', testData.role_id).del();
     await db('projects').whereIn('id', [testData.project1_id, testData.project2_id]).del();
     await db('people').where('id', testData.person_id).del();
@@ -107,17 +129,21 @@ describe('AssignmentsController Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean assignments between tests
+    await db('scenario_project_assignments').where('person_id', testData.person_id).del();
     await db('project_assignments').where('person_id', testData.person_id).del();
   });
 
   describe('Critical Business Logic: Allocation Percentage Validation', () => {
     it('should prevent assignments that exceed 100% capacity', async () => {
       // Create first assignment: 80% allocation
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 80,
         start_date: '2024-02-01',
         end_date: '2024-04-30',
@@ -143,11 +169,14 @@ describe('AssignmentsController Integration Tests', () => {
 
     it('should allow assignments within available capacity', async () => {
       // Create first assignment: 60% allocation
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 60,
         start_date: '2024-02-01',
         end_date: '2024-04-30',
@@ -168,11 +197,14 @@ describe('AssignmentsController Integration Tests', () => {
 
     it('should handle exact 100% allocation correctly', async () => {
       // Create first assignment: 70% allocation
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 70,
         start_date: '2024-02-01',
         end_date: '2024-04-30',
@@ -193,11 +225,14 @@ describe('AssignmentsController Integration Tests', () => {
 
     it('should prevent even 1% over capacity', async () => {
       // Create first assignment: 99% allocation
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 99,
         start_date: '2024-02-01',
         end_date: '2024-04-30',
@@ -221,11 +256,14 @@ describe('AssignmentsController Integration Tests', () => {
   describe('Critical Business Logic: Date Range Validation', () => {
     it('should detect overlapping date ranges correctly', async () => {
       // Create assignment: Jan 15 - Mar 15
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 50,
         start_date: '2024-01-15',
         end_date: '2024-03-15',
@@ -270,11 +308,14 @@ describe('AssignmentsController Integration Tests', () => {
 
     it('should handle same-day assignments correctly', async () => {
       // Create assignment for a single day
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 80,
         start_date: '2024-03-15',
         end_date: '2024-03-15', // Same day
@@ -306,11 +347,14 @@ describe('AssignmentsController Integration Tests', () => {
         });
 
       // Create assignment at 60%
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 60,
         start_date: '2024-02-01',
         end_date: '2024-04-30',
@@ -359,11 +403,14 @@ describe('AssignmentsController Integration Tests', () => {
     it('should exclude current assignment from conflict checking during updates', async () => {
       // Create assignment
       const assignmentId = randomUUID();
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: assignmentId,
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testData.project1_id,
         person_id: testData.person_id,
         role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
         allocation_percentage: 80,
         start_date: '2024-02-01',
         end_date: '2024-04-30',
@@ -388,12 +435,15 @@ describe('AssignmentsController Integration Tests', () => {
       const assignment1Id = randomUUID();
       const assignment2Id = randomUUID();
       
-      await db('project_assignments').insert([
+      await db('scenario_project_assignments').insert([
         {
           id: assignment1Id,
+          scenario_id: 'baseline-0000-0000-0000-000000000000',
           project_id: testData.project1_id,
           person_id: testData.person_id,
           role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
           allocation_percentage: 60,
           start_date: '2024-02-01',
           end_date: '2024-04-30',
@@ -402,9 +452,12 @@ describe('AssignmentsController Integration Tests', () => {
         },
         {
           id: assignment2Id,
+          scenario_id: 'baseline-0000-0000-0000-000000000000',
           project_id: testData.project2_id,
           person_id: testData.person_id,
           role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
           allocation_percentage: 30,
           start_date: '2024-03-01',
           end_date: '2024-05-31',
@@ -494,11 +547,14 @@ describe('AssignmentsController Integration Tests', () => {
       // Create the assignments
       for (let i = 0; i < assignments.length; i++) {
         const assignment = assignments[i];
-        await db('project_assignments').insert({
+        await db('scenario_project_assignments').insert({
           id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
           project_id: i === 0 ? testData.project1_id : testData.project2_id,
           person_id: testData.person_id,
           role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
           allocation_percentage: assignment.allocation,
           start_date: assignment.start,
           end_date: assignment.end,
@@ -522,12 +578,15 @@ describe('AssignmentsController Integration Tests', () => {
 
     it('should validate assignment timeline gaps and overlaps', async () => {
       // Create assignments with specific gaps to test timeline logic
-      await db('project_assignments').insert([
+      await db('scenario_project_assignments').insert([
         {
           id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
           project_id: testData.project1_id,
           person_id: testData.person_id,
           role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
           allocation_percentage: 100,
           start_date: '2024-01-01',
           end_date: '2024-01-31', // January
@@ -536,9 +595,12 @@ describe('AssignmentsController Integration Tests', () => {
         },
         {
           id: randomUUID(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
           project_id: testData.project2_id,
           person_id: testData.person_id,
           role_id: testData.role_id,
+        assignment_date_mode: 'fixed',
+        
           allocation_percentage: 100,
           start_date: '2024-03-01',
           end_date: '2024-03-31', // March (gap in February)

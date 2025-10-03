@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
+import type { Request, Response } from 'express';
+import { EnhancedBaseController } from './EnhancedBaseController.js';
+import { RequestWithLogging } from '../../middleware/requestLogger.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
 
-export class ProjectsController extends BaseController {
+export class ProjectsController extends EnhancedBaseController {
   /**
    * Validates that a project has a mandatory project subtype.
    * Projects must be associated with active project sub-types.
@@ -51,7 +52,7 @@ export class ProjectsController extends BaseController {
     res.json({ debug: testQuery });
   }
 
-  async getAll(req: Request, res: Response) {
+  getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const filters = {
@@ -99,7 +100,7 @@ export class ProjectsController extends BaseController {
         .select('id', 'name')
         .select(this.db.raw('(SELECT MIN(start_date) FROM project_phases_timeline WHERE project_id = projects.id) as start_date'))
         .limit(1);
-      console.log('DEBUG - Test query result:', JSON.stringify(testQuery[0], null, 2));
+      req.logger.debug('Test query result', { testQuery: testQuery[0] });
       
       const total = await this.db('projects').count('* as count').first();
 
@@ -112,14 +113,14 @@ export class ProjectsController extends BaseController {
           totalPages: Math.ceil((Number(total?.count) || 0) / limit)
         }
       };
-    }, res, 'Failed to fetch projects');
+    }, req, res, 'Failed to fetch projects');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
-  async getById(req: Request, res: Response) {
+  getById = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -153,7 +154,7 @@ export class ProjectsController extends BaseController {
         .first();
 
       if (!project) {
-        this.handleNotFound(res, 'Project');
+        this.handleNotFound(req, res, 'Project');
         return null;
       }
 
@@ -196,37 +197,56 @@ export class ProjectsController extends BaseController {
         assignments,
         planners
       };
-    }, res, 'Failed to fetch project');
+    }, req, res, 'Failed to fetch project');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async create(req: Request, res: Response) {
+  create = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const projectData = req.body;
 
     const result = await this.executeQuery(async () => {
       // Validate project type and sub-type relationship
       await this.validateProjectSubType(projectData.project_type_id, projectData.project_sub_type_id);
 
-      const [project] = await this.db('projects')
-        .insert({
-          ...projectData,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('*');
+      // Generate ID for SQLite compatibility
+      const projectId = projectData.id || `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const projectToInsert = {
+        id: projectId,
+        ...projectData,
+        project_type_id: projectData.project_sub_type_id ? 
+          (await this.db('project_sub_types').where('id', projectData.project_sub_type_id).first())?.project_type_id :
+          projectData.project_type_id,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      await this.db('projects').insert(projectToInsert);
+      
+      // Fetch the created project
+      const project = await this.db('projects').where('id', projectId).first();
+
+      // Log audit event for project creation
+      if (project) {
+        await (req as any).logAuditEvent('projects', project.id, 'CREATE', undefined, project);
+        this.logBusinessOperation(req, 'CREATE', 'project', project.id, {
+          projectName: project.name,
+          projectType: projectData.project_type_id
+        });
+      }
 
       return project;
-    }, res, 'Failed to create project');
+    }, req, res, 'Failed to create project');
 
     if (result) {
-      res.status(201).json(result);
+      this.sendSuccess(req, res, result, 'Project created successfully');
     }
-  }
+  })
 
-  async update(req: Request, res: Response) {
+  update = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
@@ -242,16 +262,18 @@ export class ProjectsController extends BaseController {
         await this.validateProjectSubType(typeId, subTypeId);
       }
 
-      const [project] = await this.db('projects')
+      await this.db('projects')
         .where('id', id)
         .update({
           ...updateData,
           updated_at: new Date()
-        })
-        .returning('*');
+        });
+
+      // Fetch the updated project
+      const project = await this.db('projects').where('id', id).first();
 
       if (!project) {
-        this.handleNotFound(res, 'Project');
+        this.handleNotFound(req, res, 'Project');
         return null;
       }
 
@@ -274,51 +296,72 @@ export class ProjectsController extends BaseController {
             );
           }
         } catch (error) {
-          console.error('Failed to send project timeline notification:', error);
+          req.logger.error('Failed to send project timeline notification', error, {
+            projectId: id,
+            userId: (req as any).user?.id
+          });
         }
       }
 
+      // Log audit event for project update
+      if (project) {
+        await (req as any).logAuditEvent('projects', id, 'UPDATE', currentProject, project);
+        this.logBusinessOperation(req, 'UPDATE', 'project', id, {
+          projectName: project.name,
+          fieldsUpdated: Object.keys(updateData)
+        });
+      }
+
       return project;
-    }, res, 'Failed to update project');
+    }, req, res, 'Failed to update project');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result, 'Project updated successfully');
     }
-  }
+  })
 
-  async delete(req: Request, res: Response) {
+  delete = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
+      // Get project data before deletion for audit
+      const project = await this.db('projects').where('id', id).first();
+      
+      if (!project) {
+        this.handleNotFound(req, res, 'Project');
+        return null;
+      }
+
       const deletedCount = await this.db('projects')
         .where('id', id)
         .del();
 
-      if (deletedCount === 0) {
-        this.handleNotFound(res, 'Project');
-        return null;
-      }
+      // Log audit event for project deletion
+      await (req as any).logAuditEvent('projects', id, 'DELETE', project, undefined);
+      this.logBusinessOperation(req, 'DELETE', 'project', id, {
+        projectName: project.name
+      });
 
       return { message: 'Project deleted successfully' };
-    }, res, 'Failed to delete project');
+    }, req, res, 'Failed to delete project');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result, result.message);
     }
-  }
+  })
 
-  async getHealth(req: Request, res: Response) {
+  getHealth = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {
       const healthData = await this.db('project_health_view').select('*');
       return healthData;
-    }, res, 'Failed to fetch project health data');
+    }, req, res, 'Failed to fetch project health data');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getDemands(req: Request, res: Response) {
+  getDemands = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -332,14 +375,14 @@ export class ProjectsController extends BaseController {
         .orderBy('project_demands_view.start_date');
 
       return demands;
-    }, res, 'Failed to fetch project demands');
+    }, req, res, 'Failed to fetch project demands');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async deleteTestData(req: Request, res: Response) {
+  deleteTestData = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {
       // Delete test projects (ones with "Test_" in name)
       const deleted = await this.db('projects')
@@ -347,10 +390,10 @@ export class ProjectsController extends BaseController {
         .del();
 
       return { message: `Deleted ${deleted} test projects` };
-    }, res, 'Failed to delete test data');
+    }, req, res, 'Failed to delete test data');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 }

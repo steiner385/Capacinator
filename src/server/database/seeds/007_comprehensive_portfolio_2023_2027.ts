@@ -413,8 +413,34 @@ export async function seed(knex: Knex): Promise<void> {
     });
   }
 
-  console.log(`👥 Inserting ${assignments.length} project assignments...`);
-  await knex('project_assignments').insert(assignments);
+  // Create baseline scenario if it doesn't exist
+  const baselineScenario = await knex('scenarios')
+    .where('id', 'baseline-0000-0000-0000-000000000000')
+    .first();
+    
+  if (!baselineScenario) {
+    await knex('scenarios').insert({
+      id: 'baseline-0000-0000-0000-000000000000',
+      name: 'Baseline',
+      description: 'Current state baseline scenario',
+      parent_scenario_id: null,
+      created_by: people[0]?.id || uuidv4(),
+      status: 'active',
+      scenario_type: 'baseline',
+      branch_point: null,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+  }
+
+  // Convert assignments to scenario_project_assignments
+  const scenarioAssignments = assignments.map(assignment => ({
+    ...assignment,
+    scenario_id: 'baseline-0000-0000-0000-000000000000'
+  }));
+
+  console.log(`👥 Inserting ${scenarioAssignments.length} scenario project assignments...`);
+  await knex('scenario_project_assignments').insert(scenarioAssignments);
 
   // Generate availability overrides (vacations, training, etc.)
   const availabilityOverrides = [];

@@ -138,24 +138,138 @@ export class AuditService {
     undoneBy: string,
     comment?: string
   ): Promise<boolean> {
-    const lastChangeRaw = await this.db('audit_log')
+    // Get all undo operations to track what has been specifically undone
+    const undoEntries = await this.db('audit_log')
       .where('table_name', tableName)
       .where('record_id', recordId)
-      .orderBy('changed_at', 'desc')
-      .first();
+      .where(function() {
+        this.where('comment', 'like', '%Undo UPDATE operation (audit_id:%')
+          .orWhere('comment', 'like', '%Undo CREATE operation (audit_id:%')
+          .orWhere('comment', 'like', '%Undo DELETE operation (audit_id:%');
+      });
+
+    const undoneAuditIds = new Set(
+      undoEntries.map(entry => {
+        const match = entry.comment?.match(/audit_id:\s*([^)]+)\)/);
+        return match ? match[1] : null;
+      }).filter(Boolean)
+    );
+
+    // Find the last change that hasn't been specifically undone
+    // This includes both original operations and undo operations (undo operations can themselves be undone)
+    const candidates = await this.db('audit_log')
+      .where('table_name', tableName)
+      .where('record_id', recordId)
+      .orderBy('changed_at', 'desc');
+
+    // Find the first candidate that either:
+    // 1. Is an undo operation (can always be undone), OR
+    // 2. Is an original operation that hasn't been undone yet
+    const lastChangeRaw = candidates.find(entry => {
+      const isUndoOperation = entry.comment && entry.comment.includes('Undo');
+      const hasBeenUndone = undoneAuditIds.has(entry.id);
+      return isUndoOperation || !hasBeenUndone;
+    });
+    
 
     if (!lastChangeRaw) {
       throw new Error('No changes found to undo');
     }
 
     const lastChange = this.parseAuditEntry(lastChangeRaw);
+    return this.undoSpecificChange(lastChange, undoneBy, comment);
+  }
 
-    if (lastChange.action === 'DELETE') {
-      throw new Error('Cannot undo DELETE operations');
+  // New method to undo a specific change
+  async undoSpecificChange(
+    change: AuditLogEntry,
+    undoneBy: string,
+    comment?: string
+  ): Promise<boolean> {
+    const { table_name: tableName, record_id: recordId } = change;
+
+    // If this is an undo operation, we need to restore the original change
+    if (change.comment && change.comment.includes('Undo')) {
+      // For undoing an undo operation, we apply the inverse of what the undo did
+      if (change.action === 'DELETE' && change.old_values) {
+        // This was an undo of CREATE - restore by recreating
+        await this.db(tableName).insert({
+          id: recordId,
+          ...change.old_values
+        });
+
+        await this.logChange({
+          tableName,
+          recordId,
+          action: 'CREATE',
+          changedBy: undoneBy,
+          newValues: change.old_values,
+          comment: comment || `Undo ${change.comment} (audit_id: ${change.id})`
+        });
+
+        return true;
+      } else if (change.action === 'UPDATE' && change.old_values && change.new_values) {
+        // This was an undo of UPDATE - restore by applying original change
+        await this.db(tableName)
+          .where('id', recordId)
+          .update(change.old_values);
+
+        await this.logChange({
+          tableName,
+          recordId,
+          action: 'UPDATE',
+          changedBy: undoneBy,
+          oldValues: change.new_values,
+          newValues: change.old_values,
+          comment: comment || `Undo ${change.comment} (audit_id: ${change.id})`
+        });
+
+        return true;
+      } else if (change.action === 'CREATE' && change.new_values) {
+        // This was an undo of DELETE - restore by deleting again
+        await this.db(tableName).where('id', recordId).del();
+
+        await this.logChange({
+          tableName,
+          recordId,
+          action: 'DELETE',
+          changedBy: undoneBy,
+          oldValues: change.new_values,
+          comment: comment || `Undo ${change.comment} (audit_id: ${change.id})`
+        });
+
+        return true;
+      }
+    }
+
+    // Handle regular (non-undo) operations
+    if (change.action === 'DELETE') {
+      // For DELETE operations, we could recreate the record if we have the old values
+      if (change.old_values) {
+        await this.db(tableName).insert({
+          id: recordId,
+          ...change.old_values
+        });
+
+        await this.logChange({
+          tableName,
+          recordId,
+          action: 'CREATE',
+          changedBy: undoneBy,
+          newValues: change.old_values,
+          comment: comment || `Undo DELETE operation (audit_id: ${change.id})`
+        });
+
+        return true;
+      }
+      throw new Error('Cannot undo DELETE operations without old values');
     }
 
     // For CREATE operations, delete the record
-    if (lastChange.action === 'CREATE') {
+    if (change.action === 'CREATE') {
+      // Get current record state before deleting
+      const currentRecord = await this.db(tableName).where('id', recordId).first();
+      
       await this.db(tableName).where('id', recordId).del();
       
       await this.logChange({
@@ -163,27 +277,30 @@ export class AuditService {
         recordId,
         action: 'DELETE',
         changedBy: undoneBy,
-        oldValues: lastChange.new_values || undefined,
-        comment: comment || `Undo CREATE operation (audit_id: ${lastChange.id})`
+        oldValues: currentRecord || change.new_values || undefined,
+        comment: comment || `Undo CREATE operation (audit_id: ${change.id})`
       });
       
       return true;
     }
 
     // For UPDATE operations, restore old values
-    if (lastChange.action === 'UPDATE' && lastChange.old_values) {
+    if (change.action === 'UPDATE' && change.old_values) {
+      // Get current state before reverting
+      const currentRecord = await this.db(tableName).where('id', recordId).first();
+      
       await this.db(tableName)
         .where('id', recordId)
-        .update(lastChange.old_values);
+        .update(change.old_values);
       
       await this.logChange({
         tableName,
         recordId,
         action: 'UPDATE',
         changedBy: undoneBy,
-        oldValues: lastChange.new_values || undefined,
-        newValues: lastChange.old_values,
-        comment: comment || `Undo UPDATE operation (audit_id: ${lastChange.id})`
+        oldValues: currentRecord || change.new_values || undefined,
+        newValues: change.old_values,
+        comment: comment || `Undo UPDATE operation (audit_id: ${change.id})`
       });
       
       return true;
@@ -198,8 +315,13 @@ export class AuditService {
     undoneBy: string,
     comment?: string
   ): Promise<{ undone: number; errors: string[] }> {
+    // Get only non-undo changes by the specified user
     const changes = await this.db('audit_log')
       .where('changed_by', changedBy)
+      .where(function() {
+        this.whereNull('comment')
+          .orWhere('comment', 'not like', '%Undo%');
+      })
       .orderBy('changed_at', 'desc')
       .limit(count);
 
@@ -209,9 +331,9 @@ export class AuditService {
     // Process in reverse order (oldest first) to maintain consistency
     for (const change of changes.reverse()) {
       try {
-        await this.undoLastChange(
-          change.table_name,
-          change.record_id,
+        const parsedChange = this.parseAuditEntry(change);
+        await this.undoSpecificChange(
+          parsedChange,
           undoneBy,
           comment || `Bulk undo operation (${count} changes)`
         );
@@ -370,6 +492,29 @@ export class AuditService {
     };
   }
 
+  // Get the history of actual changes (excluding undo operations)
+  async getActualChangeHistory(
+    tableName: string,
+    recordId: string,
+    limit?: number
+  ): Promise<AuditLogEntry[]> {
+    const query = this.db('audit_log')
+      .where('table_name', tableName)
+      .where('record_id', recordId)
+      .where(function() {
+        this.whereNull('comment')
+          .orWhere('comment', 'not like', '%Undo%');
+      })
+      .orderBy('changed_at', 'desc');
+    
+    if (limit) {
+      query.limit(limit);
+    }
+    
+    const results = await query;
+    return results.map(this.parseAuditEntry);
+  }
+
   private parseAuditEntry(entry: AuditLogDbEntry): AuditLogEntry {
     return {
       ...entry,
@@ -377,5 +522,100 @@ export class AuditService {
       new_values: entry.new_values ? JSON.parse(entry.new_values) : null,
       changed_fields: entry.changed_fields ? JSON.parse(entry.changed_fields) : null
     };
+  }
+
+  // NEW METHODS FOR E2E TESTS
+
+  async getAuditEntryById(auditId: string): Promise<AuditLogEntry | null> {
+    const entry = await this.db('audit_log')
+      .where('id', auditId)
+      .first();
+    
+    return entry ? this.parseAuditEntry(entry) : null;
+  }
+
+  async getAuditSummaryByTable(): Promise<Record<string, Record<string, number>>> {
+    const results = await this.db('audit_log')
+      .select('table_name', 'action')
+      .count('* as count')
+      .groupBy('table_name', 'action');
+
+    const summary: Record<string, Record<string, number>> = {};
+
+    // Initialize all audited tables with zero counts
+    this.config.enabledTables.forEach(table => {
+      summary[table] = {
+        CREATE: 0,
+        UPDATE: 0,
+        DELETE: 0
+      };
+    });
+
+    // Fill in actual counts
+    results.forEach((row: any) => {
+      if (!summary[row.table_name]) {
+        summary[row.table_name] = {
+          CREATE: 0,
+          UPDATE: 0,
+          DELETE: 0
+        };
+      }
+      summary[row.table_name][row.action] = Number(row.count);
+    });
+
+    return summary;
+  }
+
+  async getAuditTimeline(
+    startDate: Date,
+    endDate: Date,
+    interval: 'hour' | 'day' | 'week' = 'hour'
+  ): Promise<Array<{ timestamp: string; action_count: number }>> {
+    // SQLite datetime formatting based on interval
+    let dateFormat: string;
+    switch (interval) {
+      case 'hour':
+        dateFormat = '%Y-%m-%d %H:00:00';
+        break;
+      case 'day':
+        dateFormat = '%Y-%m-%d';
+        break;
+      case 'week':
+        dateFormat = '%Y-W%W';
+        break;
+    }
+
+    const results = await this.db('audit_log')
+      .select(this.db.raw(`strftime('${dateFormat}', changed_at) as period`))
+      .count('* as action_count')
+      .where('changed_at', '>=', startDate)
+      .where('changed_at', '<=', endDate)
+      .groupBy('period')
+      .orderBy('period', 'asc');
+
+    return results.map((row: any) => ({
+      timestamp: row.period,
+      action_count: Number(row.action_count)
+    }));
+  }
+
+  async getUserActivity(): Promise<Record<string, { total_actions: number; last_activity: Date | null }>> {
+    const results = await this.db('audit_log')
+      .select('changed_by')
+      .count('* as total_actions')
+      .max('changed_at as last_activity')
+      .whereNotNull('changed_by')
+      .groupBy('changed_by');
+
+    const activity: Record<string, { total_actions: number; last_activity: Date | null }> = {};
+
+    results.forEach((row: any) => {
+      activity[row.changed_by] = {
+        total_actions: Number(row.total_actions),
+        last_activity: row.last_activity ? new Date(row.last_activity) : null
+      };
+    });
+
+    return activity;
   }
 }

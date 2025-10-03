@@ -84,12 +84,25 @@ describe('Allocation Validation Tests', () => {
       created_at: new Date(),
       updated_at: new Date()
     });
+
+    // Create baseline scenario
+    await db('scenarios').insert({
+      id: 'baseline-0000-0000-0000-000000000000',
+      name: 'Baseline',
+      status: 'active',
+      scenario_type: 'baseline',
+      created_by: testPersonId,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
   });
 
   afterEach(async () => {
     // Clean up in reverse order due to foreign keys
+    await db('scenario_project_assignments').delete();
     await db('project_assignments').delete();
     await db('person_roles').delete();
+    await db('scenarios').delete();
     if (testPersonId) await db('people').where('id', testPersonId).delete();
     if (testProjectId) await db('projects').where('id', testProjectId).delete();
     if (testRoleId) await db('roles').where('id', testRoleId).delete();
@@ -161,7 +174,8 @@ describe('Allocation Validation Tests', () => {
           end_date: '2025-06-30',
           assignment_date_mode: 'fixed'
         },
-        params: { id: uuidv4() }
+        params: { id: uuidv4() },
+        headers: { 'x-scenario-id': 'baseline-0000-0000-0000-000000000000' }
       };
       const res = {
         json: jest.fn(),
@@ -180,8 +194,9 @@ describe('Allocation Validation Tests', () => {
     test('should warn about overallocation but still create assignment', async () => {
       // First assignment - 80%
       const assignment1Id = uuidv4();
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: assignment1Id,
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testProjectId,
         person_id: testPersonId,
         role_id: testRoleId,
@@ -204,7 +219,8 @@ describe('Allocation Validation Tests', () => {
           end_date: '2025-05-31',
           assignment_date_mode: 'fixed'
         },
-        params: { id: uuidv4() }
+        params: { id: uuidv4() },
+        headers: { 'x-scenario-id': 'baseline-0000-0000-0000-000000000000' }
       };
       const res = {
         json: jest.fn(),
@@ -220,8 +236,9 @@ describe('Allocation Validation Tests', () => {
       expect(response.allocation_percentage).toBe(50);
       
       // Verify total allocation is now 130%
-      const totalAllocation = await db('project_assignments')
+      const totalAllocation = await db('scenario_project_assignments')
         .where('person_id', testPersonId)
+        .where('scenario_id', 'baseline-0000-0000-0000-000000000000')
         .where(function() {
           this.where('start_date', '<=', '2025-05-31')
             .andWhere('end_date', '>=', '2025-03-01');
@@ -239,8 +256,9 @@ describe('Allocation Validation Tests', () => {
     beforeEach(async () => {
       // Create an existing assignment
       existingAssignmentId = uuidv4();
-      await db('project_assignments').insert({
+      await db('scenario_project_assignments').insert({
         id: existingAssignmentId,
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testProjectId,
         person_id: testPersonId,
         role_id: testRoleId,
@@ -298,7 +316,8 @@ describe('Allocation Validation Tests', () => {
         params: { id: existingAssignmentId },
         body: {
           allocation_percentage: 75
-        }
+        },
+        headers: { 'x-scenario-id': 'baseline-0000-0000-0000-000000000000' }
       };
       const res = {
         json: jest.fn(),
@@ -326,7 +345,8 @@ describe('Allocation Validation Tests', () => {
           end_date: '2025-06-30',
           assignment_date_mode: 'fixed'
         },
-        params: { id: uuidv4() }
+        params: { id: uuidv4() },
+        headers: { 'x-scenario-id': 'baseline-0000-0000-0000-000000000000' }
       };
       const res = {
         json: jest.fn(),

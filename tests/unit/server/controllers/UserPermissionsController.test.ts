@@ -1,7 +1,7 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
 import { UserPermissionsController } from '../../../../src/server/api/controllers/UserPermissionsController';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 // Mock database
 const createMockQuery = (returnValue: any = []) => {

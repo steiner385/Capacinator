@@ -4,8 +4,8 @@
  */
 
 import { FullConfig, chromium } from '@playwright/test';
-// E2E database cleanup removed - server handles it
-import { ChildProcess } from 'child_process';
+import type { E2EProcessManager } from './process-manager.js';
+import { portCleanup, E2E_PORTS } from './port-cleanup.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -14,6 +14,7 @@ async function globalTeardown(config: FullConfig) {
   
   const baseURL = config.projects[0]?.use?.baseURL || 'http://localhost:3120';
   const testRunId = process.env.TEST_RUN_ID;
+  const processManager = (global as any).__E2E_PROCESS_MANAGER__ as E2EProcessManager | undefined;
   
   try {
     // Step 1: Clean up test data if we have a test run ID
@@ -25,64 +26,32 @@ async function globalTeardown(config: FullConfig) {
     // Step 2: E2E database cleanup handled by server shutdown
     console.log('🗄️ E2E database will be cleaned up with server...');
     
-    // Step 3: Stop development servers if we started them
-    const serverProcess = (global as any).__SERVER_PROCESS__ as ChildProcess | undefined;
-    const clientProcess = (global as any).__CLIENT_PROCESS__ as ChildProcess | undefined;
-    
-    // Stop client process first
-    if (clientProcess && !clientProcess.killed) {
-      console.log('🛑 Stopping development client...');
+    // Step 3: Stop all managed processes
+    if (processManager) {
+      console.log('🛑 Stopping all E2E processes...');
+      await processManager.stopAll();
       
-      clientProcess.kill('SIGTERM');
+      // Release the lock
+      await processManager.releaseLock();
       
-      // Wait up to 3 seconds for client shutdown
-      let clientShutdown = false;
-      const clientTimeout = setTimeout(() => {
-        if (!clientShutdown) {
-          console.log('⚠️ Client did not shut down gracefully, forcing...');
-          clientProcess.kill('SIGKILL');
-        }
-      }, 3000);
+      // Clean up reference
+      delete (global as any).__E2E_PROCESS_MANAGER__;
+    } else {
+      console.warn('⚠️ No process manager found, attempting direct cleanup...');
       
-      await new Promise<void>((resolve) => {
-        clientProcess.on('exit', () => {
-          clientShutdown = true;
-          clearTimeout(clientTimeout);
-          console.log('✅ Client stopped');
-          resolve();
-        });
-      });
-      
-      delete (global as any).__CLIENT_PROCESS__;
+      // Fallback: Try to clean up ports directly
+      await portCleanup.cleanupE2EPorts();
     }
     
-    // Then stop server process
-    if (serverProcess && !serverProcess.killed) {
-      console.log('🛑 Stopping development server...');
-      
-      // Try graceful shutdown first
-      serverProcess.kill('SIGTERM');
-      
-      // Wait up to 5 seconds for graceful shutdown
-      let shutdownComplete = false;
-      const shutdownTimeout = setTimeout(() => {
-        if (!shutdownComplete) {
-          console.log('⚠️ Server did not shut down gracefully, forcing...');
-          serverProcess.kill('SIGKILL');
-        }
-      }, 5000);
-      
-      await new Promise<void>((resolve) => {
-        serverProcess.on('exit', () => {
-          shutdownComplete = true;
-          clearTimeout(shutdownTimeout);
-          console.log('✅ Server stopped');
-          resolve();
-        });
-      });
-      
-      // Clear the global reference
-      delete (global as any).__SERVER_PROCESS__;
+    // Step 3.5: Double-check port cleanup
+    console.log('🔍 Verifying E2E ports are free...');
+    const portResults = await portCleanup.verifyPortsAvailable([E2E_PORTS.backend, E2E_PORTS.frontend]);
+    
+    for (const [port, available] of portResults.entries()) {
+      if (!available) {
+        console.warn(`⚠️ Port ${port} is still in use after cleanup, forcing cleanup...`);
+        await portCleanup.cleanupPort(port);
+      }
     }
     
     // Step 4: Clean up authentication state
@@ -92,7 +61,18 @@ async function globalTeardown(config: FullConfig) {
       fs.unlinkSync(authPath);
     }
     
-    // Step 5: Clear environment variables
+    // Step 5: Clean up PID files directory
+    const pidDir = path.join(process.cwd(), '.e2e-pids');
+    if (fs.existsSync(pidDir)) {
+      console.log('🗑️ Cleaning up PID files...');
+      try {
+        fs.rmSync(pidDir, { recursive: true, force: true });
+      } catch (error) {
+        console.warn('⚠️ Failed to remove PID directory:', error);
+      }
+    }
+    
+    // Step 6: Clear environment variables
     delete process.env.TEST_BASE_URL;
     delete process.env.TEST_RUN_ID;
     delete process.env.TEST_SETUP_COMPLETE;
@@ -103,6 +83,15 @@ async function globalTeardown(config: FullConfig) {
     
   } catch (error) {
     console.error('❌ Error during E2E global teardown:', error);
+    
+    // Last resort: Force cleanup of E2E ports
+    console.log('🔨 Attempting force cleanup of E2E ports...');
+    try {
+      await portCleanup.cleanupE2EPorts();
+    } catch (cleanupError) {
+      console.error('❌ Force cleanup also failed:', cleanupError);
+    }
+    
     // Don't fail the test run due to cleanup issues
   }
 }

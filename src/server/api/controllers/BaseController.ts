@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { db } from '../../database/index.js';
 
 export abstract class BaseController {
@@ -6,6 +6,9 @@ export abstract class BaseController {
 
   protected handleError(error: any, res: Response, message = 'Internal server error') {
     console.error('Controller error:', error);
+    if (error.code === 'SQLITE_ERROR') {
+      console.error('SQL Error details:', error.message);
+    }
     res.status(500).json({
       error: message,
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

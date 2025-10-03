@@ -1,5 +1,5 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { PeopleController } from '../../../../src/server/api/controllers/PeopleController';
 
 // Mock the database module

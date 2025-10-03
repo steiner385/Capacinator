@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ExcelImporter } from '../../services/import/ExcelImporter.js';
 import { ExcelImporterV2 } from '../../services/import/ExcelImporterV2.js';

@@ -48,7 +48,7 @@ jest.mock('../../../../src/server/database/index', () => ({
 }));
 
 import { NotificationsController } from '../../../../src/server/api/controllers/NotificationsController';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;

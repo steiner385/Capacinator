@@ -1,5 +1,6 @@
-import { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
+import type { Request, Response } from 'express';
+import { EnhancedBaseController } from './EnhancedBaseController.js';
+import { RequestWithLogging } from '../../middleware/requestLogger.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
 
@@ -16,8 +17,8 @@ interface AssignmentConflict {
   available_capacity: number;
 }
 
-export class AssignmentsController extends BaseController {
-  async getAll(req: Request, res: Response) {
+export class AssignmentsController extends EnhancedBaseController {
+  getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const filters = {
@@ -105,35 +106,29 @@ export class AssignmentsController extends BaseController {
           totalPages: Math.ceil((Number(total?.count) || 0) / limit)
         }
       };
-    }, res, 'Failed to fetch assignments');
+    }, req, res, 'Failed to fetch assignments');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
-  async create(req: Request, res: Response) {
+  create = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const assignmentData = req.body;
 
     const result = await this.executeQuery(async () => {
       // Validate required fields
       if (!assignmentData.project_id || !assignmentData.person_id || !assignmentData.role_id) {
-        return res.status(400).json({
-          error: 'Missing required fields: project_id, person_id, and role_id are required'
-        });
+        throw this.createOperationalError('Missing required fields: project_id, person_id, and role_id are required', 400);
       }
 
       // Validate allocation percentage
       const allocation = assignmentData.allocation_percentage || 0;
       if (allocation <= 0) {
-        return res.status(400).json({
-          error: 'Allocation percentage must be positive'
-        });
+        throw this.createOperationalError('Allocation percentage must be positive', 400);
       }
       if (allocation > 200) {
-        return res.status(400).json({
-          error: 'Allocation percentage cannot exceed 200%'
-        });
+        throw this.createOperationalError('Allocation percentage cannot exceed 200%', 400);
       }
 
       // Validate assignment_date_mode
@@ -184,23 +179,29 @@ export class AssignmentsController extends BaseController {
         });
       }
 
+      // Get scenario from header
+      const scenarioId = req.headers['x-scenario-id'] as string || 'baseline-0000-0000-0000-000000000000';
+
       // Check for conflicts before creating
       const conflicts = await this.checkConflicts(
         assignmentData.person_id,
         effectiveStartDate,
         effectiveEndDate,
-        assignmentData.allocation_percentage
+        assignmentData.allocation_percentage,
+        undefined,
+        scenarioId
       );
 
       let warning = null;
       if (conflicts && conflicts.total_allocation > 100) {
         warning = `Person will be overallocated at ${conflicts.total_allocation}% during this period`;
       }
-
-      const [assignment] = await this.db('project_assignments')
+      
+      const [assignment] = await this.db('scenario_project_assignments')
         .insert({
           ...assignmentData,
           ...computedDates,
+          scenario_id: scenarioId,
           created_at: new Date(),
           updated_at: new Date()
         })
@@ -217,8 +218,17 @@ export class AssignmentsController extends BaseController {
           assignmentData
         );
       } catch (error) {
-        console.error('Failed to send assignment notification:', error);
+        req.logger.error('Failed to send assignment notification:', error);
       }
+
+      // Log audit event for assignment creation
+      await (req as any).logAuditEvent('scenario_project_assignments', assignment.id, 'CREATE', undefined, assignment);
+      this.logBusinessOperation(req, 'CREATE', 'assignment', assignment.id, {
+        projectId: assignmentData.project_id,
+        personId: assignmentData.person_id,
+        roleId: assignmentData.role_id,
+        allocation: assignmentData.allocation_percentage
+      });
       
       const response = transformDates(assignmentWithDates, [
         ...COMMON_DATE_FIELDS,
@@ -236,14 +246,14 @@ export class AssignmentsController extends BaseController {
       }
       
       return response;
-    }, res, 'Failed to create assignment');
+    }, req, res, 'Failed to create assignment');
 
     if (result) {
-      res.status(201).json(result);
+      this.sendSuccess(req, res, result, 'Assignment created successfully');
     }
-  }
+  })
 
-  async getById(req: Request, res: Response) {
+  getById = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -300,31 +310,35 @@ export class AssignmentsController extends BaseController {
       }
 
       return transformDates(assignment, COMMON_DATE_FIELDS);
-    }, res, 'Failed to fetch assignment');
+    }, req, res, 'Failed to fetch assignment');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
-  async update(req: Request, res: Response) {
+  update = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
-      // Check if this is a scenario assignment
-      const isScenarioAssignment = id.startsWith('spa-');
+      // Check for assignment in scenario table first, then fall back to legacy table
       let existing;
-      let tableName;
-      let actualId;
+      let tableName = 'scenario_project_assignments';
+      let actualId = id;
+      let isScenarioAssignment = true;
       
-      if (isScenarioAssignment) {
-        actualId = id.substring(4); // Remove 'spa-' prefix
-        tableName = 'scenario_project_assignments';
-        existing = await this.db(tableName).where('id', actualId).first();
-      } else {
-        actualId = id;
+      // Remove 'spa-' prefix if present for backward compatibility
+      if (id.startsWith('spa-')) {
+        actualId = id.substring(4);
+      }
+      
+      existing = await this.db(tableName).where('id', actualId).first();
+      
+      // If not found in scenario table, check legacy table
+      if (!existing) {
         tableName = 'project_assignments';
+        isScenarioAssignment = false;
         existing = await this.db(tableName).where('id', actualId).first();
       }
       
@@ -415,6 +429,9 @@ export class AssignmentsController extends BaseController {
       let warning = null;
       let totalAllocation = null;
       
+      // Get scenario from existing assignment or header
+      const scenarioId = existing.scenario_id || req.headers['x-scenario-id'] as string || 'baseline-0000-0000-0000-000000000000';
+      
       if (updateData.start_date || updateData.end_date || updateData.allocation_percentage || 
           updateData.assignment_date_mode || updateData.phase_id) {
         const conflict = await this.checkConflicts(
@@ -422,7 +439,8 @@ export class AssignmentsController extends BaseController {
           effectiveStartDate,
           effectiveEndDate,
           updateData.allocation_percentage || existing.allocation_percentage,
-          id // Exclude current assignment
+          id, // Exclude current assignment
+          scenarioId
         );
 
         if (conflict && conflict.total_allocation > 100) {
@@ -453,8 +471,16 @@ export class AssignmentsController extends BaseController {
           { ...existing, ...updateData }
         );
       } catch (error) {
-        console.error('Failed to send assignment notification:', error);
+        req.logger.error('Failed to send assignment notification:', error);
       }
+
+      // Log audit event for assignment update
+      await (req as any).logAuditEvent(tableName, actualId, 'UPDATE', existing, updated);
+      this.logBusinessOperation(req, 'UPDATE', 'assignment', actualId, {
+        projectId: updated.project_id,
+        personId: updated.person_id,
+        fieldsUpdated: Object.keys(updateData)
+      });
 
       const response = transformDates(updated, COMMON_DATE_FIELDS);
       
@@ -468,46 +494,60 @@ export class AssignmentsController extends BaseController {
       }
       
       return response;
-    }, res, 'Failed to update assignment');
+    }, req, res, 'Failed to update assignment');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result, 'Assignment updated successfully');
     }
-  }
+  })
 
-  async delete(req: Request, res: Response) {
+  delete = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
       // Check if this is a scenario assignment
       const isScenarioAssignment = id.startsWith('spa-');
       let deleted;
+      let assignment;
+      let tableName;
+      let actualId = id;
       
       if (isScenarioAssignment) {
-        const actualId = id.substring(4); // Remove 'spa-' prefix
-        deleted = await this.db('scenario_project_assignments')
+        actualId = id.substring(4); // Remove 'spa-' prefix
+        tableName = 'scenario_project_assignments';
+        assignment = await this.db(tableName).where('id', actualId).first();
+        deleted = await this.db(tableName)
           .where('id', actualId)
           .del();
       } else {
-        deleted = await this.db('project_assignments')
+        tableName = 'project_assignments';
+        assignment = await this.db(tableName).where('id', id).first();
+        deleted = await this.db(tableName)
           .where('id', id)
           .del();
       }
 
-      if (deleted === 0) {
+      if (!assignment || deleted === 0) {
         this.handleNotFound(res, 'Assignment');
         return null;
       }
 
+      // Log audit event for assignment deletion
+      await (req as any).logAuditEvent(tableName, actualId, 'DELETE', assignment, undefined);
+      this.logBusinessOperation(req, 'DELETE', 'assignment', actualId, {
+        projectId: assignment.project_id,
+        personId: assignment.person_id
+      });
+
       return { message: 'Assignment deleted successfully' };
-    }, res, 'Failed to delete assignment');
+    }, req, res, 'Failed to delete assignment');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result, result.message);
     }
-  }
+  })
 
-  async bulkAssign(req: Request, res: Response) {
+  bulkAssign = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { project_id, assignments } = req.body;
 
     const result = await this.executeQuery(async () => {
@@ -516,6 +556,9 @@ export class AssignmentsController extends BaseController {
         failed: [] as any[],
         conflicts: [] as AssignmentConflict[]
       };
+
+      // Get scenario from header
+      const scenarioId = req.headers['x-scenario-id'] as string || 'baseline-0000-0000-0000-000000000000';
 
       // Process each assignment
       for (const assignment of assignments) {
@@ -526,7 +569,8 @@ export class AssignmentsController extends BaseController {
             assignment.start_date,
             assignment.end_date,
             assignment.allocation_percentage,
-            assignment.id // Exclude current assignment if updating
+            assignment.id, // Exclude current assignment if updating
+            scenarioId
           );
 
           if (conflict && conflict.total_allocation > 100) {
@@ -540,7 +584,7 @@ export class AssignmentsController extends BaseController {
           }
 
           // Create assignment
-          const [created] = await this.db('project_assignments')
+          const [created] = await this.db('scenario_project_assignments')
             .insert({
               project_id,
               person_id: assignment.person_id,
@@ -549,6 +593,7 @@ export class AssignmentsController extends BaseController {
               start_date: assignment.start_date,
               end_date: assignment.end_date,
               notes: assignment.notes,
+              scenario_id: scenarioId,
               created_at: new Date(),
               updated_at: new Date()
             })
@@ -573,19 +618,20 @@ export class AssignmentsController extends BaseController {
         },
         results
       };
-    }, res, 'Failed to create bulk assignments');
+    }, req, res, 'Failed to create bulk assignments');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
   async checkConflicts(
     person_id: string,
     start_date: string,
     end_date: string,
     allocation_percentage: number,
-    exclude_assignment_id?: string
+    exclude_assignment_id?: string,
+    scenarioId?: string
   ): Promise<AssignmentConflict | null> {
     // Get person details
     const person = await this.db('people')
@@ -594,19 +640,37 @@ export class AssignmentsController extends BaseController {
 
     if (!person) return null;
 
-    // Get overlapping assignments
-    let query = this.db('project_assignments')
-      .join('projects', 'project_assignments.project_id', 'projects.id')
-      .where('project_assignments.person_id', person_id)
-      .where('project_assignments.start_date', '<=', end_date)
-      .where('project_assignments.end_date', '>=', start_date);
+    // Get scenario from header if not provided
+    if (!scenarioId) {
+      scenarioId = (this as any).req?.headers?.['x-scenario-id'] as string || 'baseline-0000-0000-0000-000000000000';
+    }
+
+    // Get overlapping assignments from assignments_view (includes both direct and scenario assignments)
+    let query = this.db('assignments_view')
+      .join('projects', 'assignments_view.project_id', 'projects.id')
+      .where('assignments_view.person_id', person_id)
+      .where('assignments_view.scenario_id', scenarioId)
+      .where(function() {
+        this.where('assignments_view.computed_start_date', '<=', end_date)
+          .orWhere(function() {
+            this.whereNull('assignments_view.computed_start_date')
+              .andWhere('assignments_view.start_date', '<=', end_date);
+          });
+      })
+      .where(function() {
+        this.where('assignments_view.computed_end_date', '>=', start_date)
+          .orWhere(function() {
+            this.whereNull('assignments_view.computed_end_date')
+              .andWhere('assignments_view.end_date', '>=', start_date);
+          });
+      });
 
     if (exclude_assignment_id) {
-      query = query.where('project_assignments.id', '!=', exclude_assignment_id);
+      query = query.where('assignments_view.id', '!=', exclude_assignment_id);
     }
 
     const overlapping = await query.select(
-      'project_assignments.*',
+      'assignments_view.*',
       'projects.name as project_name'
     );
 
@@ -627,8 +691,8 @@ export class AssignmentsController extends BaseController {
         person_name: person.name,
         conflicting_projects: overlapping.map((a: any) => ({
           project_name: a.project_name,
-          start_date: a.start_date,
-          end_date: a.end_date,
+          start_date: a.computed_start_date || a.start_date,
+          end_date: a.computed_end_date || a.end_date,
           allocation_percentage: a.allocation_percentage
         })),
         total_allocation,
@@ -639,23 +703,39 @@ export class AssignmentsController extends BaseController {
     return null;
   }
 
-  async getConflicts(req: Request, res: Response) {
+  getConflicts = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { person_id } = req.params;
     const { start_date, end_date } = req.query;
 
     const result = await this.executeQuery(async () => {
-      let query = this.db('project_assignments')
-        .join('projects', 'project_assignments.project_id', 'projects.id')
-        .where('project_assignments.person_id', person_id);
+      // Get scenario from header
+      const scenarioId = req.headers['x-scenario-id'] as string || 'baseline-0000-0000-0000-000000000000';
+      
+      let query = this.db('assignments_view')
+        .join('projects', 'assignments_view.project_id', 'projects.id')
+        .where('assignments_view.person_id', person_id)
+        .where('assignments_view.scenario_id', scenarioId);
 
       if (start_date && end_date) {
         query = query
-          .where('project_assignments.start_date', '<=', end_date)
-          .where('project_assignments.end_date', '>=', start_date);
+          .where(function() {
+            this.where('assignments_view.computed_start_date', '<=', end_date)
+              .orWhere(function() {
+                this.whereNull('assignments_view.computed_start_date')
+                  .andWhere('assignments_view.start_date', '<=', end_date);
+              });
+          })
+          .where(function() {
+            this.where('assignments_view.computed_end_date', '>=', start_date)
+              .orWhere(function() {
+                this.whereNull('assignments_view.computed_end_date')
+                  .andWhere('assignments_view.end_date', '>=', start_date);
+              });
+          });
       }
 
       const assignments = await query.select(
-        'project_assignments.*',
+        'assignments_view.*',
         'projects.name as project_name'
       );
 
@@ -666,14 +746,14 @@ export class AssignmentsController extends BaseController {
       const conflicts = this.groupOverlappingAssignments(transformedAssignments);
 
       return conflicts;
-    }, res, 'Failed to check conflicts');
+    }, req, res, 'Failed to check conflicts');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
-  async getSuggestions(req: Request, res: Response) {
+  getSuggestions = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { role_id, start_date, end_date, required_allocation } = req.query;
 
     const result = await this.executeQuery(async () => {
@@ -730,37 +810,55 @@ export class AssignmentsController extends BaseController {
         required_allocation,
         suggestions: suggestions.slice(0, 10) // Top 10 suggestions
       };
-    }, res, 'Failed to get assignment suggestions');
+    }, req, res, 'Failed to get assignment suggestions');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
-  async getTimeline(req: Request, res: Response) {
+  getTimeline = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { person_id } = req.params;
     const { start_date, end_date } = req.query;
 
     const result = await this.executeQuery(async () => {
-      let query = this.db('project_assignments')
-        .join('projects', 'project_assignments.project_id', 'projects.id')
-        .join('roles', 'project_assignments.role_id', 'roles.id')
-        .where('project_assignments.person_id', person_id)
+      // Get scenario from header
+      const scenarioId = req.headers['x-scenario-id'] as string || 'baseline-0000-0000-0000-000000000000';
+      
+      let query = this.db('assignments_view')
+        .join('projects', 'assignments_view.project_id', 'projects.id')
+        .join('roles', 'assignments_view.role_id', 'roles.id')
+        .where('assignments_view.person_id', person_id)
+        .where('assignments_view.scenario_id', scenarioId)
         .select(
-          'project_assignments.*',
+          'assignments_view.*',
           'projects.name as project_name',
           'projects.priority as project_priority',
           'roles.name as role_name'
         );
 
       if (start_date) {
-        query = query.where('project_assignments.end_date', '>=', start_date);
+        query = query.where(function() {
+          this.where('assignments_view.computed_end_date', '>=', start_date)
+            .orWhere(function() {
+              this.whereNull('assignments_view.computed_end_date')
+                .andWhere('assignments_view.end_date', '>=', start_date);
+            });
+        });
       }
       if (end_date) {
-        query = query.where('project_assignments.start_date', '<=', end_date);
+        query = query.where(function() {
+          this.where('assignments_view.computed_start_date', '<=', end_date)
+            .orWhere(function() {
+              this.whereNull('assignments_view.computed_start_date')
+                .andWhere('assignments_view.start_date', '<=', end_date);
+            });
+        });
       }
 
-      const assignments = await query.orderBy('project_assignments.start_date');
+      const assignments = await query.orderBy(
+        this.db.raw('COALESCE(assignments_view.computed_start_date, assignments_view.start_date)')
+      );
 
       // Get availability overrides in the same period
       let availabilityQuery = this.db('person_availability_overrides')
@@ -787,12 +885,12 @@ export class AssignmentsController extends BaseController {
           summary: this.calculateTimelineSummary(transformedAssignments, transformedOverrides)
         }
       };
-    }, res, 'Failed to get assignment timeline');
+    }, req, res, 'Failed to get assignment timeline');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
   private groupOverlappingAssignments(assignments: any[]) {
     // Group assignments that overlap in time
@@ -928,7 +1026,7 @@ export class AssignmentsController extends BaseController {
     return summary;
   }
 
-  async deleteTestData(req: Request, res: Response) {
+  deleteTestData = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {
       // Delete test assignments (ones with "Test_" in related entities)
       const deleted = await this.db('project_assignments')
@@ -941,12 +1039,12 @@ export class AssignmentsController extends BaseController {
         .del();
 
       return { message: `Deleted ${deleted} test assignments` };
-    }, res, 'Failed to delete test data');
+    }, req, res, 'Failed to delete test data');
 
     if (result) {
-      res.json(result);
+      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
     }
-  }
+  })
 
   private daysBetween(date1: string, date2: string): number {
     const d1 = new Date(date1);

@@ -436,6 +436,9 @@ describe('AssignmentsController', () => {
           body: {
             project_id: 'project-1',
             assignments: assignments
+          },
+          headers: {
+            'x-scenario-id': 'test-scenario-id'
           }
         };
         
@@ -520,6 +523,9 @@ describe('AssignmentsController', () => {
           body: {
             project_id: 'project-1',
             assignments: assignments
+          },
+          headers: {
+            'x-scenario-id': 'test-scenario-id'
           }
         };
         

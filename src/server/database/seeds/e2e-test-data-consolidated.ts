@@ -421,59 +421,7 @@ export async function seed(knex: Knex): Promise<void> {
     }
   ]);
   
-  // Seed project assignments to create various utilization scenarios
-  await knex('project_assignments').insert([
-    // Over-utilized person: 80% + 40% = 120%
-    {
-      id: 'assign-e2e-overutil-1',
-      project_id: 'project-e2e-critical',
-      person_id: 'person-e2e-overutil',
-      role_id: 'role-e2e-dev',
-      start_date: today.toISOString().split('T')[0],
-      end_date: nextThreeMonths.toISOString().split('T')[0],
-      allocation_percentage: 80,
-      created_at: new Date(),
-      updated_at: new Date()
-    },
-    {
-      id: 'assign-e2e-overutil-2',
-      project_id: 'project-e2e-normal',
-      person_id: 'person-e2e-overutil',
-      role_id: 'role-e2e-dev',
-      start_date: today.toISOString().split('T')[0],
-      end_date: nextThreeMonths.toISOString().split('T')[0],
-      allocation_percentage: 40,
-      created_at: new Date(),
-      updated_at: new Date()
-    },
-    // Normal utilization: 80%
-    {
-      id: 'assign-e2e-normal-1',
-      project_id: 'project-e2e-critical',
-      person_id: 'person-e2e-normal',
-      role_id: 'role-e2e-designer',
-      start_date: today.toISOString().split('T')[0],
-      end_date: nextThreeMonths.toISOString().split('T')[0],
-      allocation_percentage: 80,
-      created_at: new Date(),
-      updated_at: new Date()
-    },
-    // Under-utilized: 40%
-    {
-      id: 'assign-e2e-underutil-1',
-      project_id: 'project-e2e-normal',
-      person_id: 'person-e2e-underutil',
-      role_id: 'role-e2e-manager',
-      start_date: today.toISOString().split('T')[0],
-      end_date: nextThreeMonths.toISOString().split('T')[0],
-      allocation_percentage: 40,
-      created_at: new Date(),
-      updated_at: new Date()
-    }
-    // person-e2e-zero has no assignments (0% utilization)
-  ]);
-  
-  // Seed baseline scenario with the specific ID expected by the system
+  // Seed baseline scenario BEFORE assignments to satisfy foreign key constraints
   await knex('scenarios').insert([
     {
       id: 'baseline-0000-0000-0000-000000000000',
@@ -487,6 +435,66 @@ export async function seed(knex: Knex): Promise<void> {
       created_at: new Date(),
       updated_at: new Date()
     }
+  ]);
+  
+  // Seed scenario project assignments to create various utilization scenarios
+  await knex('scenario_project_assignments').insert([
+    // Over-utilized person: 80% + 40% = 120%
+    {
+      id: 'assign-e2e-overutil-1',
+      project_id: 'project-e2e-critical',
+      person_id: 'person-e2e-overutil',
+      role_id: 'role-e2e-dev',
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
+      allocation_percentage: 80,
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
+      assignment_date_mode: 'fixed',
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id: 'assign-e2e-overutil-2',
+      project_id: 'project-e2e-normal',
+      person_id: 'person-e2e-overutil',
+      role_id: 'role-e2e-dev',
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
+      allocation_percentage: 40,
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
+      assignment_date_mode: 'fixed',
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Normal utilization: 80%
+    {
+      id: 'assign-e2e-normal-1',
+      project_id: 'project-e2e-critical',
+      person_id: 'person-e2e-normal',
+      role_id: 'role-e2e-designer',
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
+      allocation_percentage: 80,
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
+      assignment_date_mode: 'fixed',
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Under-utilized: 40%
+    {
+      id: 'assign-e2e-underutil-1',
+      project_id: 'project-e2e-normal',
+      person_id: 'person-e2e-underutil',
+      role_id: 'role-e2e-manager',
+      start_date: today.toISOString().split('T')[0],
+      end_date: nextThreeMonths.toISOString().split('T')[0],
+      allocation_percentage: 40,
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
+      assignment_date_mode: 'fixed',
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+    // person-e2e-zero has no assignments (0% utilization)
   ]);
   
   // Seed resource templates for automatic assignments

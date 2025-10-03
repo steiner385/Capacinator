@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { UserPermissionsController } from '../api/controllers/UserPermissionsController.js';
 
 // Extend Request interface to include user info

@@ -75,7 +75,7 @@ export function getAuditConfig(): AuditConfig {
 }
 
 export function isAuditEnabled(): boolean {
-  return process.env.AUDIT_ENABLED?.toLowerCase() === 'true';
+  return process.env.AUDIT_ENABLED?.toLowerCase() === 'true' || process.env.NODE_ENV === 'e2e';
 }
 
 export function isTableAudited(tableName: string): boolean {

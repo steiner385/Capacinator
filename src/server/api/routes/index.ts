@@ -25,6 +25,7 @@ import notificationsRoutes from './notifications.js';
 import recommendationsRoutes from './recommendations.js';
 import { createAuditRoutes } from './audit.js';
 import { getAuditService } from '../../services/audit/index.js';
+import { RequestWithLogging } from '../../middleware/requestLogger.js';
 
 const router = Router();
 
@@ -55,6 +56,53 @@ router.use('/recommendations', recommendationsRoutes);
 
 // Test data cleanup routes (for e2e tests)
 router.use('/test-data', testDataRoutes);
+
+// Client logging endpoint for remote logging
+router.post('/client-logs', (req: RequestWithLogging, res) => {
+  const { logs } = req.body;
+  
+  if (!Array.isArray(logs)) {
+    return res.status(400).json({ error: 'Invalid logs format' });
+  }
+
+  // Log each client log entry with proper context
+  logs.forEach((logEntry: any) => {
+    const level = logEntry.level?.toLowerCase() || 'info';
+    const message = `[CLIENT] ${logEntry.message}`;
+    const metadata = {
+      component: logEntry.component,
+      sessionId: logEntry.sessionId,
+      userId: logEntry.userId,
+      clientTimestamp: logEntry.timestamp,
+      ...logEntry.metadata
+    };
+
+    // Add error details if present
+    if (logEntry.error) {
+      metadata.clientError = logEntry.error;
+    }
+
+    switch (level) {
+      case 'error':
+        req.logger.error(message, undefined, metadata);
+        break;
+      case 'warn':
+        req.logger.warn(message, metadata);
+        break;
+      case 'debug':
+        req.logger.debug(message, metadata);
+        break;
+      default:
+        req.logger.info(message, metadata);
+    }
+  });
+
+  res.json({ 
+    success: true, 
+    processed: logs.length,
+    requestId: req.requestId 
+  });
+});
 
 // Audit routes will be mounted dynamically after service initialization
 

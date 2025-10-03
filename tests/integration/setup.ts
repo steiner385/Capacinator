@@ -12,6 +12,13 @@ const testDb = knex({
     filename: ':memory:' // Use in-memory database for tests
   },
   useNullAsDefault: true,
+  pool: {
+    afterCreate: (conn: any, done: any) => {
+      // Enable foreign keys for each connection
+      conn.pragma('foreign_keys = ON');
+      done();
+    }
+  },
   migrations: {
     directory: path.resolve('src/server/database/migrations'),
     loadExtensions: ['.ts', '.js'] // Support both TS and JS files

@@ -1,18 +1,19 @@
-import { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
+import type { Request, Response } from 'express';
+import { EnhancedBaseController } from './EnhancedBaseController.js';
+import { RequestWithLogging } from '../../middleware/requestLogger.js';
 
-export class ReportingController extends BaseController {
-  async getDashboard(req: Request, res: Response) {
-    console.log('📊 Dashboard endpoint called');
+export class ReportingController extends EnhancedBaseController {
+  getDashboard = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    req.logger.info('Dashboard endpoint called');
     const result = await this.executeQuery(async () => {
-      console.log('📊 Starting database queries...');
+      req.logger.info('Starting database queries...');
       
       // Get current date for filtering projects that are in progress 
       // (start date in past, end date in future)
       const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       
       // Get summary stats - count projects that have active phases
-      console.log('📊 Getting current project count...');
+      req.logger.info('Getting current project count...');
       const projectCount = await this.db('projects')
         .join('project_phases_timeline', 'projects.id', 'project_phases_timeline.project_id')
         .where('project_phases_timeline.start_date', '<=', currentDate)
@@ -20,18 +21,18 @@ export class ReportingController extends BaseController {
         .where('projects.include_in_demand', true)
         .countDistinct('projects.id as count')
         .first();
-      console.log('📊 Current project count result:', projectCount);
+      req.logger.info('Current project count result:', projectCount);
       
-      console.log('📊 Getting people count...');
+      req.logger.info('Getting people count...');
       const peopleCount = await this.db('people').count('* as count').first();
-      console.log('📊 People count result:', peopleCount);
+      req.logger.info('People count result:', peopleCount);
       
-      console.log('📊 Getting roles count...');
+      req.logger.info('Getting roles count...');
       const rolesCount = await this.db('roles').count('* as count').first();
-      console.log('📊 Roles count result:', rolesCount);
+      req.logger.info('Roles count result:', rolesCount);
       
       // Get project health overview - focus on current projects only
-      console.log('📊 Getting current project health status...');
+      req.logger.info('Getting current project health status...');
       
       // Get current projects and their phase status
       const currentProjects = await this.db('projects')
@@ -70,10 +71,10 @@ export class ReportingController extends BaseController {
         return acc;
       }, {} as Record<string, number>);
       
-      console.log('📊 Project health result:', projectHealth);
+      req.logger.info('Project health result:', projectHealth);
 
       // Calculate capacity gaps - use comprehensive capacity gaps view
-      console.log('📊 Calculating capacity gaps from capacity_gaps_view...');
+      req.logger.info('Calculating capacity gaps from capacity_gaps_view...');
       
       const capacityGapsData = await this.db('capacity_gaps_view').select('*');
       
@@ -99,16 +100,16 @@ export class ReportingController extends BaseController {
         OK: okRoles 
       };
       
-      console.log('📊 Capacity gaps from view:', capacityGaps);
+      req.logger.info('Capacity gaps from view:', capacityGaps);
 
       // Get utilization overview - use comprehensive person utilization view
-      console.log('📊 Calculating utilization from person_utilization_view...');
+      req.logger.info('Calculating utilization from person_utilization_view...');
       
       const personUtilizationData = await this.db('person_utilization_view').select('*');
       
       // Debug log the first person to see column names
       if (personUtilizationData.length > 0) {
-        console.log('📊 Sample person data:', JSON.stringify(personUtilizationData[0]));
+        req.logger.info('Sample person data:', JSON.stringify(personUtilizationData[0]));
       }
       
       // Categorize utilization levels
@@ -122,10 +123,10 @@ export class ReportingController extends BaseController {
         ? utilizationStats 
         : { 'NO_DATA': 0 };
       
-      console.log('📊 Person utilization from view:', utilization);
+      req.logger.info('Person utilization from view:', utilization);
 
       // Get availability overview from person utilization view
-      console.log('📊 Calculating availability from person_utilization_view...');
+      req.logger.info('Calculating availability from person_utilization_view...');
       
       const availablePeople = personUtilizationData.filter(person => person.utilization_status === 'Available').length;
       const assignedPeople = personUtilizationData.filter(person => person.utilization_status !== 'Available').length;
@@ -135,7 +136,7 @@ export class ReportingController extends BaseController {
         ASSIGNED: assignedPeople
       };
       
-      console.log('📊 Person availability from view:', availability);
+      req.logger.info('Person availability from view:', availability);
 
       return {
         summary: {
@@ -151,23 +152,23 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch dashboard data');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getTest(req: Request, res: Response) {
-    console.log('🧪 Test endpoint called');
+  getTest = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    req.logger.info('Test endpoint called');
     try {
       const projects = await this.db('projects').select('*').limit(1);
-      console.log('🧪 Projects query successful:', projects);
-      res.json({ status: 'ok', data: projects });
+      req.logger.info('Projects query successful', { projects });
+      this.sendSuccess(req, res, { status: 'ok', data: projects });
     } catch (error) {
-      console.error('🧪 Test endpoint error:', error);
-      res.status(500).json({ error: 'Test failed', details: error });
+      req.logger.error('Test endpoint error', error);
+      this.handleError(error, req, res, 'Test failed');
     }
-  }
+  })
 
-  async getCapacityReport(req: Request, res: Response) {
+  getCapacityReport = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { startDate, endDate } = req.query;
 
     const result = await this.executeQuery(async () => {
@@ -260,11 +261,11 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch capacity report');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getProjectReport(req: Request, res: Response) {
+  getProjectReport = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { status, priority, projectType, location } = req.query;
 
     const result = await this.executeQuery(async () => {
@@ -314,11 +315,11 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch project report');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getTimelineReport(req: Request, res: Response) {
+  getTimelineReport = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { startDate, endDate } = req.query;
 
     const result = await this.executeQuery(async () => {
@@ -371,12 +372,12 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch timeline report');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getDemandReport(req: Request, res: Response) {
-    console.log('📊 Demand report endpoint called');
+  getDemandReport = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    req.logger.info('Demand report endpoint called');
     const { startDate, endDate } = req.query;
 
     // Get scenario from header
@@ -384,7 +385,7 @@ export class ReportingController extends BaseController {
     const includeAllScenarios = req.query.includeAllScenarios === 'true';
 
     const result = await this.executeQuery(async () => {
-      console.log('📊 Getting demand data from project_demands_view...');
+      req.logger.info('Getting demand data from project_demands_view...');
       
       // Get demand data from the corrected view with proper date filtering
       let demandQuery = this.db('project_demands_view')
@@ -408,7 +409,7 @@ export class ReportingController extends BaseController {
       }
       
       const demandData = await demandQuery;
-      console.log(`📊 Found ${demandData.length} demand records`);
+      req.logger.info(`Found ${demandData.length} demand records`);
       
       // Aggregate by project using the improved view with hour calculations
       let projectQuery = this.db('project_demands_view')
@@ -507,7 +508,7 @@ export class ReportingController extends BaseController {
       const timeline = [];
       
       if (startDate && endDate) {
-        console.log(`📊 Timeline generation - startDate: ${startDate}, endDate: ${endDate}`);
+        req.logger.info(`Timeline generation - startDate: ${startDate}, endDate: ${endDate}`);
         
         // Parse dates and calculate month difference
         const start = new Date(startDate as string + 'T00:00:00');
@@ -520,7 +521,7 @@ export class ReportingController extends BaseController {
         const endMonth = end.getMonth();
         
         const monthsDiff = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
-        console.log(`📊 Months difference: ${monthsDiff} months from ${startYear}-${startMonth + 1} to ${endYear}-${endMonth + 1}`);
+        req.logger.info(`Months difference: ${monthsDiff} months from ${startYear}-${startMonth + 1} to ${endYear}-${endMonth + 1}`);
         
         // Generate all months in range
         const months = [];
@@ -534,10 +535,10 @@ export class ReportingController extends BaseController {
             monthEnd: new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0]
           };
           months.push(monthData);
-          console.log(`📊 Added month: ${monthData.monthKey} (${monthData.monthStart} to ${monthData.monthEnd})`);
+          req.logger.info(`Added month: ${monthData.monthKey} (${monthData.monthStart} to ${monthData.monthEnd})`);
         }
         
-        console.log(`📊 Total months to process: ${months.length}`);
+        req.logger.info(`Total months to process: ${months.length}`);
         
         // Now query demand for each month
         for (const month of months) {
@@ -559,7 +560,7 @@ export class ReportingController extends BaseController {
           });
         }
         
-        console.log(`📊 Generated timeline with ${timeline.length} months:`, timeline);
+        req.logger.info(`Generated timeline with ${timeline.length} months:`, timeline);
       } else {
         // Fallback to the original query if no date range specified
         let timelineQuery = this.db('project_demands_view')
@@ -615,18 +616,18 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch demand report');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getUtilizationReport(req: Request, res: Response) {
-    console.log('📊 Utilization report endpoint called');
+  getUtilizationReport = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    req.logger.info('Utilization report endpoint called');
     
     const { startDate, endDate } = req.query;
-    console.log('📊 Date filters:', { startDate, endDate });
+    req.logger.info('Date filters:', { startDate, endDate });
 
     const result = await this.executeQuery(async () => {
-      console.log('📊 Calculating date-aware utilization data...');
+      req.logger.info('Calculating date-aware utilization data...');
       
       // Use current date as endDate if not provided
       const effectiveEndDate = endDate || (startDate ? 
@@ -635,7 +636,7 @@ export class ReportingController extends BaseController {
       
       const effectiveStartDate = startDate || new Date().toISOString().split('T')[0];
       
-      console.log('📊 Using effective dates:', { effectiveStartDate, effectiveEndDate });
+      req.logger.info('Using effective dates:', { effectiveStartDate, effectiveEndDate });
       
       // Get utilization data with proper date filtering
       const utilizationQuery = `
@@ -727,9 +728,9 @@ export class ReportingController extends BaseController {
         };
       });
       
-      console.log(`📊 Found ${utilizationData.length} people with date-filtered utilization`);
+      req.logger.info(`Found ${utilizationData.length} people with date-filtered utilization`);
       if (utilizationData.length > 0) {
-        console.log(`📊 Sample utilization - ${utilizationData[0].person_name}: ${utilizationData[0].total_allocation_percentage}% (${utilizationData[0].project_count} projects)`);
+        req.logger.info(`Sample utilization - ${utilizationData[0].person_name}: ${utilizationData[0].total_allocation_percentage}% (${utilizationData[0].project_count} projects)`);
       }
       
       // Get people by utilization status
@@ -775,21 +776,21 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch utilization report');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
-  async getGapsAnalysis(req: Request, res: Response) {
-    console.log('📊 Gaps analysis endpoint called');
+  getGapsAnalysis = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    req.logger.info('Gaps analysis endpoint called');
 
     const result = await this.executeQuery(async () => {
-      console.log('📊 Getting gaps data from capacity_gaps_view and project_health_view...');
+      req.logger.info('Getting gaps data from capacity_gaps_view and project_health_view...');
       
       // Get capacity gaps data
       const capacityGapsRaw = await this.db('capacity_gaps_view')
         .select('*');
       
-      console.log(`📊 Found ${capacityGapsRaw.length} capacity gap records`);
+      req.logger.info(`Found ${capacityGapsRaw.length} capacity gap records`);
       
       // Calculate gap percentage and status for each role
       const capacityGaps = capacityGapsRaw.map(gap => {
@@ -820,7 +821,7 @@ export class ReportingController extends BaseController {
         .select('*')
         .orderBy('total_allocation_percentage', 'asc');
       
-      console.log(`📊 Found ${projectHealth.length} project health records`);
+      req.logger.info(`Found ${projectHealth.length} project health records`);
       
       // Identify critical gaps (>50% gap)
       const criticalRoleGaps = capacityGaps.filter(gap => gap.status === 'GAP' && gap.gap_percentage > 50);
@@ -853,9 +854,9 @@ export class ReportingController extends BaseController {
     }, res, 'Failed to fetch gaps analysis');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result);
     }
-  }
+  })
 
   private async calculateCapacityTimeline(startDate?: string, endDate?: string): Promise<any[]> {
     // Get all people with their default hours and availability

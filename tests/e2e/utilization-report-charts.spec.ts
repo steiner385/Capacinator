@@ -31,7 +31,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     expect(parseInt(utilizationPercentage)).toBeLessThan(200); // Reasonable range
     
     const overutilizedCount = await authenticatedPage.textContent('[data-testid="people-overutilized-count"]');
-    expect(parseInt(overutilizedCount)).toBe(1); // Eve Davis
+    expect(parseInt(overutilizedCount)).toBe(1); // E2E Over Utilized
     
     const underutilizedCount = await authenticatedPage.textContent('[data-testid="people-underutilized-count"]');
     expect(parseInt(underutilizedCount)).toBeGreaterThan(0);
@@ -72,20 +72,20 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await expect(authenticatedPage.locator('th:text("Available Capacity (%)")')).toBeVisible();
     await expect(authenticatedPage.locator('th:text("Available Hours (Daily)")')).toBeVisible();
     
-    // Verify Alice's row
-    const aliceRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="Alice Johnson"') });
-    await expect(aliceRow).toBeVisible();
+    // Verify E2E Normal Utilized row
+    const normalRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="E2E Normal Utilized"') });
+    await expect(normalRow).toBeVisible();
     
-    const aliceUtilization = await aliceRow.locator('[data-testid="utilization-percentage"]').textContent();
-    expect(parseInt(aliceUtilization)).toBe(75); // 40% + 35%
+    const normalUtilization = await normalRow.locator('[data-testid="utilization-percentage"]').textContent();
+    expect(parseInt(normalUtilization)).toBe(80); // 80% allocation
     
-    // Verify Eve's overallocation is highlighted
-    const eveRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="Eve Davis"') });
-    await expect(eveRow).toBeVisible();
-    await expect(eveRow.locator('[data-testid="overallocation-indicator"]')).toBeVisible();
+    // Verify E2E Over Utilized overallocation is highlighted
+    const overRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="E2E Over Utilized"') });
+    await expect(overRow).toBeVisible();
+    await expect(overRow.locator('[data-testid="overallocation-indicator"]')).toBeVisible();
     
-    const eveUtilization = await eveRow.locator('[data-testid="utilization-percentage"]').textContent();
-    expect(parseInt(eveUtilization)).toBe(120);
+    const overUtilization = await overRow.locator('[data-testid="utilization-percentage"]').textContent();
+    expect(parseInt(overUtilization)).toBe(120); // 80% + 40% = 120%
   });
 
   test('should handle edge cases gracefully', async ({ authenticatedPage }) => {
@@ -192,15 +192,15 @@ test.describe('Utilization Report Charts E2E Tests', () => {
 
   test('should navigate to person details from utilization table', async ({ authenticatedPage }) => {
     // Click on a person's name
-    await authenticatedPage.click('text=Alice Johnson');
+    await authenticatedPage.click('text=E2E Normal Utilized');
     
     // Should navigate to person details page
     await authenticatedPage.waitForURL(/\/people\/[a-f0-9-]+$/);
-    await expect(authenticatedPage.locator('h1:text("Alice Johnson")')).toBeVisible();
+    await expect(authenticatedPage.locator('h1:text("E2E Normal Utilized")')).toBeVisible();
     
     // Verify assignment details are shown
-    await expect(authenticatedPage.locator('text=Mobile App')).toBeVisible();
-    await expect(authenticatedPage.locator('text=40%')).toBeVisible();
+    await expect(authenticatedPage.locator('text=E2E Critical Project')).toBeVisible();
+    await expect(authenticatedPage.locator('text=80%')).toBeVisible();
   });
 
   test('should show tooltips on chart hover', async ({ authenticatedPage }) => {

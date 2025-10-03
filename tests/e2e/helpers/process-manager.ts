@@ -2,6 +2,7 @@ import { ChildProcess, spawn } from 'child_process';
 import * as net from 'net';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { PortCleanupUtility } from './port-cleanup.js';
 
 interface ProcessInfo {
   process: ChildProcess;
@@ -13,7 +14,100 @@ interface ProcessInfo {
 export class E2EProcessManager {
   private processes = new Map<string, ProcessInfo>();
   private lockFile = path.join(process.cwd(), '.e2e-lock');
+  private pidDir = path.join(process.cwd(), '.e2e-pids');
+  private portCleanup: PortCleanupUtility;
   
+  constructor() {
+    this.portCleanup = new PortCleanupUtility({ verbose: true });
+    // Ensure PID directory exists
+    this.ensurePidDirectory();
+  }
+
+  private async ensurePidDirectory(): Promise<void> {
+    try {
+      await fs.mkdir(this.pidDir, { recursive: true });
+    } catch (error) {
+      console.error('Failed to create PID directory:', error);
+    }
+  }
+
+  /**
+   * Write PID file for a process
+   */
+  private async writePidFile(name: string, pid: number, port?: number): Promise<void> {
+    const pidFile = path.join(this.pidDir, `${name}.pid`);
+    const pidData = {
+      pid,
+      name,
+      port,
+      startTime: Date.now(),
+      command: process.argv.join(' ')
+    };
+    
+    try {
+      await fs.writeFile(pidFile, JSON.stringify(pidData, null, 2));
+      console.log(`📝 Wrote PID file for ${name}: ${pidFile}`);
+    } catch (error) {
+      console.error(`Failed to write PID file for ${name}:`, error);
+    }
+  }
+
+  /**
+   * Read PID file
+   */
+  private async readPidFile(name: string): Promise<any | null> {
+    const pidFile = path.join(this.pidDir, `${name}.pid`);
+    try {
+      const content = await fs.readFile(pidFile, 'utf-8');
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Remove PID file
+   */
+  private async removePidFile(name: string): Promise<void> {
+    const pidFile = path.join(this.pidDir, `${name}.pid`);
+    try {
+      await fs.unlink(pidFile);
+      console.log(`🗑️ Removed PID file for ${name}`);
+    } catch {
+      // File might not exist
+    }
+  }
+
+  /**
+   * Clean up stale PID files on startup
+   */
+  async cleanupStalePidFiles(): Promise<void> {
+    try {
+      // Ensure PID directory exists before trying to read it
+      await fs.mkdir(this.pidDir, { recursive: true });
+      
+      const files = await fs.readdir(this.pidDir);
+      const pidFiles = files.filter(f => f.endsWith('.pid'));
+      
+      for (const file of pidFiles) {
+        const name = file.replace('.pid', '');
+        const pidData = await this.readPidFile(name);
+        
+        if (pidData && !this.isProcessRunning(pidData.pid)) {
+          console.log(`🧹 Removing stale PID file for ${name} (PID ${pidData.pid})`);
+          await this.removePidFile(name);
+          
+          // Also try to clean up the port if specified
+          if (pidData.port) {
+            await this.portCleanup.cleanupPort(pidData.port);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to cleanup stale PID files:', error);
+    }
+  }
+
   /**
    * Acquire a lock to prevent concurrent E2E test runs
    */
@@ -104,34 +198,7 @@ export class E2EProcessManager {
    * Kill any process using a specific port
    */
   async killProcessOnPort(port: number): Promise<void> {
-    try {
-      const { execSync } = await import('child_process');
-      
-      // Try to find and kill process on the port
-      if (process.platform === 'linux' || process.platform === 'darwin') {
-        try {
-          execSync(`lsof -ti:${port} | xargs -r kill -9`, { stdio: 'ignore' });
-        } catch {
-          // No process found on port, that's fine
-        }
-      } else if (process.platform === 'win32') {
-        try {
-          execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, { stdio: 'pipe' });
-          const output = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`).toString();
-          const pid = output.trim().split(/\s+/).pop();
-          if (pid) {
-            execSync(`taskkill /PID ${pid} /F`, { stdio: 'ignore' });
-          }
-        } catch {
-          // No process found on port
-        }
-      }
-      
-      // Wait a bit for the port to be freed
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      console.warn(`⚠️ Failed to kill process on port ${port}:`, error);
-    }
+    await this.portCleanup.cleanupPort(port);
   }
   
   /**
@@ -156,15 +223,10 @@ export class E2EProcessManager {
     // If port is specified, ensure it's available
     if (port) {
       console.log(`🔍 Checking port ${port} for ${name}...`);
-      if (!(await this.isPortAvailable(port))) {
-        console.log(`⚠️ Port ${port} is in use, attempting to free it...`);
-        await this.killProcessOnPort(port);
-        
-        if (!(await this.waitForPortAvailable(port))) {
-          throw new Error(`Port ${port} is still in use after cleanup attempts`);
-        }
+      const success = await this.portCleanup.cleanupPort(port);
+      if (!success) {
+        throw new Error(`Failed to cleanup port ${port} for ${name}`);
       }
-      console.log(`✅ Port ${port} is available`);
     }
     
     console.log(`🚀 Starting ${name}: ${command.join(' ')}`);
@@ -183,6 +245,9 @@ export class E2EProcessManager {
       port,
       startTime: Date.now()
     });
+    
+    // Write PID file
+    await this.writePidFile(name, proc.pid!, port);
     
     // Handle process output
     let output = '';
@@ -209,6 +274,10 @@ export class E2EProcessManager {
     proc.on('exit', (code, signal) => {
       console.log(`📴 ${name} exited with code ${code}, signal ${signal}`);
       this.processes.delete(name);
+      // Remove PID file when process exits
+      this.removePidFile(name).catch(err => 
+        console.error(`Failed to remove PID file for ${name}:`, err)
+      );
     });
     
     proc.on('error', (error) => {
@@ -307,6 +376,7 @@ export class E2EProcessManager {
     }
     
     this.processes.delete(name);
+    await this.removePidFile(name);
     console.log(`✅ ${name} stopped`);
   }
   
@@ -326,6 +396,17 @@ export class E2EProcessManager {
     );
     
     this.processes.clear();
+    
+    // Clean up all PID files
+    try {
+      const files = await fs.readdir(this.pidDir).catch(() => []);
+      const pidFiles = files.filter(f => f.endsWith('.pid'));
+      for (const file of pidFiles) {
+        await fs.unlink(path.join(this.pidDir, file)).catch(() => {});
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
   }
   
   /**
@@ -353,5 +434,48 @@ export class E2EProcessManager {
   isRunning(name: string): boolean {
     const info = this.processes.get(name);
     return !!info && !info.process.killed;
+  }
+  
+  /**
+   * Kill all processes from PID files (for recovery)
+   */
+  async killAllFromPidFiles(): Promise<void> {
+    try {
+      await this.ensurePidDirectory();
+      const files = await fs.readdir(this.pidDir).catch(() => []);
+      const pidFiles = files.filter(f => f.endsWith('.pid'));
+      
+      console.log(`🔍 Found ${pidFiles.length} PID files to check`);
+      
+      for (const file of pidFiles) {
+        const name = file.replace('.pid', '');
+        const pidData = await this.readPidFile(name);
+        
+        if (pidData && pidData.pid) {
+          if (this.isProcessRunning(pidData.pid)) {
+            console.log(`🛑 Killing process ${name} (PID ${pidData.pid})`);
+            try {
+              process.kill(pidData.pid, 'SIGTERM');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              if (this.isProcessRunning(pidData.pid)) {
+                process.kill(pidData.pid, 'SIGKILL');
+              }
+            } catch (error) {
+              console.error(`Failed to kill ${name}:`, error);
+            }
+          }
+          
+          // Clean up the port if specified
+          if (pidData.port) {
+            await this.portCleanup.cleanupPort(pidData.port);
+          }
+          
+          await this.removePidFile(name);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to kill processes from PID files:', error);
+    }
   }
 }

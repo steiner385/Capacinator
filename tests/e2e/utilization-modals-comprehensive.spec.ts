@@ -12,35 +12,57 @@ test.describe('Utilization Report Modals', () => {
   test.beforeEach(async ({ authenticatedPage, testHelpers }) => {
     await testHelpers.navigateTo('/reports');
     await testHelpers.setupPage();
-    await authenticatedPage.click('button:has-text("Utilization Report")');
-    await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")');
+    await authenticatedPage.click('button:has-text("Utilization")');
+    // Wait for utilization report to load
+    await authenticatedPage.waitForSelector('text="Team Utilization Details"', { timeout: 10000 });
     await authenticatedPage.waitForTimeout(2000);
+    
+    // Scroll down to ensure table is visible
+    await authenticatedPage.evaluate(() => {
+      const tableElement = document.querySelector('table');
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+    await authenticatedPage.waitForTimeout(500);
   });
 
   // Helper function to find the utilization table
   async function getUtilizationTable(authenticatedPage) {
-    // Try multiple table selectors since we're not sure of the exact structure
+    // The table with utilization data has headers: Name, Role, Utilization (%), etc.
     const selectors = [
-      'table:has(th:has-text("Team Member"))',
-      'table:has(th:has-text("Member"))', 
-      'table:has(th:has-text("Name"))',
-      'table:has(th:has-text("Person"))',
-      'h2:has-text("Team Utilization Overview") + table',
-      'h2:has-text("Team Utilization Overview") ~ table',
-      'h2:has-text("Team Utilization Overview") ~ div table',
-      'div:has(h2:has-text("Team Utilization Overview")) table'
+      'table:has(th:has-text("Name")):has(th:has-text("Role")):has(th:has-text("Utilization"))',
+      'h3:has-text("Team Utilization Details") + table',
+      'h3:has-text("Team Utilization Details") ~ table',
+      '.report-table-container:has(h3:has-text("Team Utilization Details")) table',
+      'table.report-table'
     ];
     
     for (const selector of selectors) {
-      const table = authenticatedPage.locator(selector);
-      if (await table.isVisible()) {
-        console.log(`Found utilization table with selector: ${selector}`);
+      try {
+        const table = authenticatedPage.locator(selector).first();
+        const count = await table.count();
+        if (count > 0 && await table.isVisible()) {
+          console.log(`Found utilization table with selector: ${selector}`);
+          return table;
+        }
+      } catch (e) {
+        // Continue to next selector
+      }
+    }
+    
+    // If no specific table found, look for any table with the right headers
+    console.log('Looking for table with utilization data...');
+    const allTables = await authenticatedPage.locator('table').all();
+    for (const table of allTables) {
+      const headers = await table.locator('th').allTextContents();
+      if (headers.includes('Name') && headers.includes('Role') && headers.some(h => h.includes('Utilization'))) {
+        console.log('Found utilization table by headers:', headers);
         return table;
       }
     }
     
-    // If no table found, return a generic table selector
-    console.log('No specific utilization table found, using generic table selector');
+    console.log('No specific utilization table found, using first table');
     return authenticatedPage.locator('table').first();
   }
 
@@ -50,12 +72,16 @@ test.describe('Utilization Report Modals', () => {
     const rows = await table.locator('tbody tr').all();
     
     for (const row of rows) {
-      const utilizationText = await row.locator('td:nth-child(3)').textContent();
+      // Utilization (%) is in the 3rd column (0-indexed: Name, Role, Utilization)
+      const utilizationCell = row.locator('td:nth-child(3)');
+      const utilizationText = await utilizationCell.textContent();
       const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+      console.log(`Person utilization: ${utilizationText} -> ${utilization}%`);
+      
       
       if (utilization > 100) { // Over-utilized
-        const actionsCell = row.locator('td:nth-child(5)');
-        const reduceButton = actionsCell.locator('button:has-text("🔻 Reduce Load")');
+        const actionsCell = row.locator('td:last-child'); // Actions are in the last column
+        const reduceButton = actionsCell.locator('button:has-text("Reduce Load")');
         
         if (await reduceButton.isVisible()) {
           return { row, button: reduceButton, utilization };
@@ -71,12 +97,16 @@ test.describe('Utilization Report Modals', () => {
     const rows = await table.locator('tbody tr').all();
     
     for (const row of rows) {
-      const utilizationText = await row.locator('td:nth-child(3)').textContent();
+      // Utilization (%) is in the 3rd column (0-indexed: Name, Role, Utilization)
+      const utilizationCell = row.locator('td:nth-child(3)');
+      const utilizationText = await utilizationCell.textContent();
       const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+      console.log(`Person utilization: ${utilizationText} -> ${utilization}%`);
+      
       
       if (utilization < 80) { // Under-utilized
-        const actionsCell = row.locator('td:nth-child(5)');
-        const addButton = actionsCell.locator('button:has-text("➕ Add Projects")');
+        const actionsCell = row.locator('td:last-child'); // Actions are in the last column
+        const addButton = actionsCell.locator('button:has-text("Add Projects")');
         
         if (await addButton.isVisible()) {
           return { row, button: addButton, utilization };
@@ -91,8 +121,8 @@ test.describe('Utilization Report Modals', () => {
       // Debug what's actually on the page
       console.log('=== DEBUGGING PAGE CONTENT ===');
       
-      // Check for utilization heading
-      const headingExists = await authenticatedPage.locator('h2:has-text("Team Utilization Overview")').isVisible();
+      // Check for utilization heading (it's h3, not h2)
+      const headingExists = await authenticatedPage.locator('h3:has-text("Team Utilization Details")').isVisible();
       console.log(`Utilization heading visible: ${headingExists}`);
       
       // Count all tables on the page
@@ -132,8 +162,8 @@ test.describe('Utilization Report Modals', () => {
         console.log(`Found ${buttonsInTable} buttons in the table`);
         
         // Look for specific button types
-        const reduceButtons = await table.locator('button:has-text("🔻"), button:has-text("Reduce")').count();
-        const addButtons = await table.locator('button:has-text("➕"), button:has-text("Add")').count();
+        const reduceButtons = await table.locator('button:has-text("Reduce Load")').count();
+        const addButtons = await table.locator('button:has-text("Add Projects")').count();
         console.log(`Found ${reduceButtons} reduce buttons and ${addButtons} add buttons`);
       }
     });
@@ -176,8 +206,20 @@ test.describe('Utilization Report Modals', () => {
       let initialUtilization = 0;
       
       for (const row of personRows) {
-        const utilizationText = await row.locator('td:nth-child(3)').textContent(); // Utilization & Projects column
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        // Utilization (%) is in the 3rd column (0-indexed: Name, Role, Utilization)
+        const utilizationCell = await row.locator('td:nth-child(3)').first();
+        const progressBar = await utilizationCell.locator('.report-progress-bar').count();
+        let utilization = 0;
+        
+        if (progressBar > 0) {
+          // Extract from progress bar if present
+          const progressValue = await utilizationCell.locator('.report-progress-bar').getAttribute('data-value');
+          utilization = parseInt(progressValue || '0');
+        } else {
+          // Otherwise extract from text
+          const utilizationText = await utilizationCell.textContent(); // Utilization & Projects column
+          utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        }
         
         if (utilization > 0) {
           selectedRow = row;
@@ -187,7 +229,8 @@ test.describe('Utilization Report Modals', () => {
       }
 
       if (!selectedRow) {
-        test.skip('No person with assignments found in test data');
+        console.log('No person with assignments found in test data - skipping test');
+        test.skip();
         return;
       }
       
@@ -255,7 +298,8 @@ test.describe('Utilization Report Modals', () => {
       }
       
       if (!foundPersonWithAssignments) {
-        test.skip('No person with assignments found in test data');
+        console.log('No person with assignments found in test data - skipping test');
+        test.skip();
         return;
       }
       
@@ -311,8 +355,20 @@ test.describe('Utilization Report Modals', () => {
       let foundPerson = false;
       
       for (const row of personRows) {
-        const utilizationText = await row.locator('td:nth-child(3)').textContent(); // Utilization & Projects column
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        // Utilization (%) is in the 3rd column (0-indexed: Name, Role, Utilization)
+        const utilizationCell = await row.locator('td:nth-child(3)').first();
+        const progressBar = await utilizationCell.locator('.report-progress-bar').count();
+        let utilization = 0;
+        
+        if (progressBar > 0) {
+          // Extract from progress bar if present
+          const progressValue = await utilizationCell.locator('.report-progress-bar').getAttribute('data-value');
+          utilization = parseInt(progressValue || '0');
+        } else {
+          // Otherwise extract from text
+          const utilizationText = await utilizationCell.textContent(); // Utilization & Projects column
+          utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        }
         
         if (utilization < 100) {
           selectedPersonName = await row.locator('td:nth-child(1)').textContent() || ''; // Team Member column
@@ -326,7 +382,8 @@ test.describe('Utilization Report Modals', () => {
       }
       
       if (!foundPerson) {
-        test.skip('No person with available capacity found');
+        console.log('No person with available capacity found - skipping test');
+        test.skip();
         return;
       }
 
@@ -380,7 +437,8 @@ test.describe('Utilization Report Modals', () => {
       }
 
       if (!selectedRow) {
-        test.skip('No person with available capacity found');
+        console.log('No person with available capacity found - skipping test');
+        test.skip();
         return;
       }
       
@@ -399,7 +457,8 @@ test.describe('Utilization Report Modals', () => {
         // If no projects available, check for appropriate message
         await expect(modal).toContainText('No suitable projects');
         await modal.locator('button[aria-label="Close"], button:has-text("×")').click();
-        test.skip('No projects available for assignment');
+        console.log('No projects available for assignment - skipping test');
+        test.skip();
         return;
       }
       
@@ -536,7 +595,8 @@ test.describe('Utilization Report Modals', () => {
       }
       
       if (!testPersonRow) {
-        test.skip('No suitable person found for integration test');
+        console.log('No suitable person found for integration test - skipping test');
+        test.skip();
         return;
       }
       
@@ -574,7 +634,8 @@ test.describe('Utilization Report Modals', () => {
       const personRows = await authenticatedPage.locator('.team-utilization-overview tbody tr').all();
       
       if (personRows.length === 0) {
-        test.skip('No people found for rapid interaction test');
+        console.log('No people found for rapid interaction test - skipping test');
+        test.skip();
         return;
       }
       
@@ -627,7 +688,8 @@ test.describe('Utilization Report Modals', () => {
       }
       
       if (!testRow) {
-        test.skip('No suitable person found for database persistence test');
+        console.log('No suitable person found for database persistence test - skipping test');
+        test.skip();
         return;
       }
       
@@ -674,7 +736,8 @@ test.describe('Utilization Report Modals', () => {
       } else {
         // If no projects available, just close modal
         await modal.locator('button[aria-label="Close"], button:has-text("×")').click();
-        test.skip('No projects available for database persistence test');
+        console.log('No projects available for database persistence test - skipping test');
+        test.skip();
       }
     });
   });

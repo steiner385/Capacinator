@@ -165,7 +165,7 @@ export async function up(knex: Knex): Promise<void> {
     LEFT JOIN scenario_project_assignments spa ON p.id = spa.person_id
     LEFT JOIN scenarios s ON spa.scenario_id = s.id
     -- Join with current availability
-    LEFT JOIN availability av ON p.id = av.person_id 
+    LEFT JOIN person_availability_overrides av ON p.id = av.person_id 
       AND av.start_date <= date('now') 
       AND av.end_date >= date('now')
     WHERE p.is_active = true

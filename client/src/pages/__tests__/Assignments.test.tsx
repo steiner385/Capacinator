@@ -1,11 +1,18 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import Assignments from '../Assignments';
 import { api } from '../../lib/api-client';
+import { ScenarioProvider, useScenario } from '../../contexts/ScenarioContext';
+
+// Mock the Scenario Context
+jest.mock('../../contexts/ScenarioContext', () => ({
+  ...jest.requireActual('../../contexts/ScenarioContext'),
+  useScenario: jest.fn(),
+}));
 
 // Mock the API client
 jest.mock('../../lib/api-client', () => ({
@@ -28,6 +35,9 @@ jest.mock('../../lib/api-client', () => ({
     recommendations: {
       list: jest.fn(),
       execute: jest.fn(),
+    },
+    scenarios: {
+      list: jest.fn(),
     },
   },
 }));
@@ -235,6 +245,25 @@ describe('Assignments Page', () => {
     });
     jest.clearAllMocks();
 
+    // Mock the scenario context
+    (useScenario as jest.Mock).mockReturnValue({
+      currentScenario: {
+        id: 'baseline',
+        name: 'Baseline',
+        status: 'active',
+        scenario_type: 'baseline'
+      },
+      scenarios: [{
+        id: 'baseline',
+        name: 'Baseline', 
+        status: 'active',
+        scenario_type: 'baseline'
+      }],
+      setCurrentScenario: jest.fn(),
+      isLoading: false,
+      error: null
+    });
+
     // Setup default mock responses
     (api.assignments.list as jest.Mock).mockResolvedValue({
       data: { data: mockAssignments },
@@ -244,6 +273,14 @@ describe('Assignments Page', () => {
     (api.roles.list as jest.Mock).mockResolvedValue({ data: mockRoles });
     (api.recommendations.list as jest.Mock).mockResolvedValue({
       data: mockRecommendations,
+    });
+    (api.scenarios.list as jest.Mock).mockResolvedValue({
+      data: [{
+        id: 'baseline',
+        name: 'Baseline',
+        status: 'active',
+        scenario_type: 'baseline'
+      }],
     });
   });
 
@@ -273,18 +310,30 @@ describe('Assignments Page', () => {
       expect(headers[4]).toHaveTextContent('Start Date');
       expect(headers[5]).toHaveTextContent('End Date');
       expect(headers[6]).toHaveTextContent('Duration');
-      expect(headers[7]).toHaveTextContent('Actions');
+      expect(headers[7]).toHaveTextContent('Notes');
+      expect(headers[8]).toHaveTextContent('Actions');
     });
 
     test('displays assignment data correctly', async () => {
       renderComponent();
 
       await waitFor(() => {
-        // There are multiple "Project Alpha" elements (in filter and table)
-        const projectAlphaElements = screen.getAllByText('Project Alpha');
-        expect(projectAlphaElements.length).toBeGreaterThan(0);
+        expect(screen.getByTestId('data-table')).toBeInTheDocument();
       });
 
+      // Debug: Check if API was called
+      await waitFor(() => {
+        expect(api.assignments.list).toHaveBeenCalled();
+      });
+
+      // Wait for table rows to appear
+      await waitFor(() => {
+        const rows = screen.getAllByRole('row');
+        // Should have header row + 3 data rows
+        expect(rows.length).toBe(4);
+      });
+
+      // Now check for specific content
       expect(screen.getByText('John Doe')).toBeInTheDocument();
       expect(screen.getByText('Jane Smith')).toBeInTheDocument();
       expect(screen.getByText('Bob Johnson')).toBeInTheDocument();
@@ -294,9 +343,14 @@ describe('Assignments Page', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Fixed')).toBeInTheDocument();
+        expect(screen.getByTestId('data-table')).toBeInTheDocument();
       });
 
+      // The component capitalizes the assignment date mode
+      // mockAssignments has 'fixed', 'phase', and 'project' modes
+      await waitFor(() => {
+        expect(screen.getByText('Fixed')).toBeInTheDocument();
+      });
       expect(screen.getByText('Phase')).toBeInTheDocument();
       // 'Project' appears both in header and badge, use getAllByText
       const projectElements = screen.getAllByText('Project');
@@ -578,7 +632,10 @@ describe('Assignments Page', () => {
 
       expect(screen.getByText(/Consider hiring for Developer role/)).toBeInTheDocument();
 
-      jest.advanceTimersByTime(5000);
+      // Use act to wrap timer advancement to avoid warnings
+      await act(async () => {
+        jest.advanceTimersByTime(5000);
+      });
 
       await waitFor(() => {
         expect(screen.queryByText(/Consider hiring for Developer role/)).not.toBeInTheDocument();

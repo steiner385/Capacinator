@@ -442,7 +442,12 @@ const CompareModal: React.FC<CompareModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content modal-large">
         <div className="modal-header">
-          <h2>Compare Scenarios</h2>
+          <h2>
+            {comparisonResults 
+              ? `Comparing: ${scenario.name} vs ${selectedScenario?.name || ''}`
+              : 'Compare Scenarios'
+            }
+          </h2>
           <button onClick={onClose} className="modal-close">×</button>
         </div>
         
@@ -521,32 +526,65 @@ const CompareModal: React.FC<CompareModalProps> = ({
               
               <div className="comparison-summary">
                 <div className="summary-item">
-                  <div className="summary-label">Assignment Changes</div>
-                  <div className="summary-value">{comparisonResults.assignment_changes || 0}</div>
+                  <div className="summary-label">Assignments Added</div>
+                  <div className="summary-value">{comparisonResults?.differences?.assignments?.added?.length || 0}</div>
                 </div>
                 <div className="summary-item">
-                  <div className="summary-label">Resource Differences</div>
-                  <div className="summary-value">{comparisonResults.resource_differences || 0}</div>
+                  <div className="summary-label">Assignments Modified</div>
+                  <div className="summary-value">{comparisonResults?.differences?.assignments?.modified?.length || 0}</div>
                 </div>
                 <div className="summary-item">
-                  <div className="summary-label">Timeline Variations</div>
-                  <div className="summary-value">{comparisonResults.timeline_variations || 0}</div>
+                  <div className="summary-label">Assignments Removed</div>
+                  <div className="summary-value">{comparisonResults?.differences?.assignments?.removed?.length || 0}</div>
                 </div>
               </div>
               
               <div className="comparison-details">
                 <div className="details-section">
-                  <h5>Key Differences</h5>
+                  <h5>Assignment Differences</h5>
                   <div className="differences-list">
-                    {Array.isArray(comparisonResults.differences) && comparisonResults.differences.length > 0 ? (
-                      comparisonResults.differences.map((diff: any, index: number) => (
-                        <div key={index} className="difference-item">
-                          <div className="difference-type">{diff.type}</div>
-                          <div className="difference-description">{diff.description}</div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="no-differences">No significant differences found</div>
+                    {comparisonResults?.differences?.assignments?.added?.length > 0 && (
+                      <div className="difference-group">
+                        <h6 style={{color: '#10b981'}}>+ Added ({comparisonResults.differences.assignments.added.length})</h6>
+                        {comparisonResults.differences.assignments.added.slice(0, 5).map((item: any, index: number) => (
+                          <div key={`added-${index}`} className="difference-item">
+                            <div className="difference-description">{item.details || `${item.person_name} → ${item.project_name}`}</div>
+                          </div>
+                        ))}
+                        {comparisonResults.differences.assignments.added.length > 5 && (
+                          <div className="difference-item">
+                            <div className="difference-description">...and {comparisonResults.differences.assignments.added.length - 5} more</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {comparisonResults?.differences?.assignments?.modified?.length > 0 && (
+                      <div className="difference-group">
+                        <h6 style={{color: '#3b82f6'}}>≈ Modified ({comparisonResults.differences.assignments.modified.length})</h6>
+                        {comparisonResults.differences.assignments.modified.slice(0, 5).map((item: any, index: number) => (
+                          <div key={`modified-${index}`} className="difference-item">
+                            <div className="difference-description">{item.details}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {comparisonResults?.differences?.assignments?.removed?.length > 0 && (
+                      <div className="difference-group">
+                        <h6 style={{color: '#ef4444'}}>- Removed ({comparisonResults.differences.assignments.removed.length})</h6>
+                        {comparisonResults.differences.assignments.removed.slice(0, 5).map((item: any, index: number) => (
+                          <div key={`removed-${index}`} className="difference-item">
+                            <div className="difference-description">{item.details || `${item.person_name} → ${item.project_name}`}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {(!comparisonResults?.differences?.assignments?.added?.length && 
+                      !comparisonResults?.differences?.assignments?.modified?.length && 
+                      !comparisonResults?.differences?.assignments?.removed?.length) && (
+                      <div className="no-differences">No assignment differences found</div>
                     )}
                   </div>
                 </div>
@@ -555,16 +593,24 @@ const CompareModal: React.FC<CompareModalProps> = ({
                   <h5>Impact Analysis</h5>
                   <div className="impact-metrics">
                     <div className="metric">
-                      <span className="metric-label">Utilization Impact:</span>
-                      <span className="metric-value">{comparisonResults.utilization_impact || 'Minimal'}</span>
+                      <span className="metric-label">Total Allocation Change:</span>
+                      <span className="metric-value">
+                        {comparisonResults?.metrics?.utilization_impact?.total_allocation_change > 0 ? '+' : ''}
+                        {comparisonResults?.metrics?.utilization_impact?.total_allocation_change || 0}%
+                      </span>
                     </div>
                     <div className="metric">
-                      <span className="metric-label">Resource Efficiency:</span>
-                      <span className="metric-value">{comparisonResults.efficiency_score || 'Similar'}</span>
+                      <span className="metric-label">Net Assignment Change:</span>
+                      <span className="metric-value">
+                        {comparisonResults?.metrics?.capacity_impact?.net_change > 0 ? '+' : ''}
+                        {comparisonResults?.metrics?.capacity_impact?.net_change || 0}
+                      </span>
                     </div>
                     <div className="metric">
-                      <span className="metric-label">Timeline Risk:</span>
-                      <span className="metric-value">{comparisonResults.timeline_risk || 'Low'}</span>
+                      <span className="metric-label">Projects Affected:</span>
+                      <span className="metric-value">
+                        {comparisonResults?.metrics?.timeline_impact?.projects_affected || 0}
+                      </span>
                     </div>
                   </div>
                 </div>

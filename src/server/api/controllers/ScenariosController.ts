@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { randomUUID } from 'crypto';
 
@@ -333,39 +333,162 @@ export class ScenariosController extends BaseController {
 
       // Get assignments for both scenarios
       const [assignments1, assignments2] = await Promise.all([
-        this.db('scenario_project_assignments').where('scenario_id', id),
-        this.db('scenario_project_assignments').where('scenario_id', compare_to)
+        this.db('scenario_project_assignments as spa')
+          .leftJoin('projects as p', 'spa.project_id', 'p.id')
+          .leftJoin('people as pe', 'spa.person_id', 'pe.id')
+          .leftJoin('roles as r', 'spa.role_id', 'r.id')
+          .where('spa.scenario_id', id)
+          .select(
+            'spa.*',
+            'p.name as project_name',
+            'pe.name as person_name',
+            'r.name as role_name'
+          ),
+        this.db('scenario_project_assignments as spa')
+          .leftJoin('projects as p', 'spa.project_id', 'p.id')
+          .leftJoin('people as pe', 'spa.person_id', 'pe.id')
+          .leftJoin('roles as r', 'spa.role_id', 'r.id')
+          .where('spa.scenario_id', compare_to)
+          .select(
+            'spa.*',
+            'p.name as project_name',
+            'pe.name as person_name',
+            'r.name as role_name'
+          )
       ]);
 
-      // TODO: Implement detailed comparison logic
-      const differences = {
-        assignments: {
-          added: [],
-          modified: [],
-          removed: []
-        },
-        phases: {
-          added: [],
-          modified: [],
-          removed: []
-        },
-        projects: {
-          added: [],
-          modified: [],
-          removed: []
-        }
+      // Create maps for easier comparison
+      const assignments1Map = new Map();
+      const assignments2Map = new Map();
+
+      // Key format: project_id:person_id:role_id:phase_id
+      assignments1.forEach(a => {
+        const key = `${a.project_id}:${a.person_id}:${a.role_id}:${a.phase_id || 'null'}`;
+        assignments1Map.set(key, a);
+      });
+
+      assignments2.forEach(a => {
+        const key = `${a.project_id}:${a.person_id}:${a.role_id}:${a.phase_id || 'null'}`;
+        assignments2Map.set(key, a);
+      });
+
+      // Find differences
+      const assignmentDifferences = {
+        added: [] as any[],
+        modified: [] as any[],
+        removed: [] as any[]
       };
 
+      // Find added and modified assignments in scenario2
+      assignments2Map.forEach((assignment2, key) => {
+        const assignment1 = assignments1Map.get(key);
+        
+        if (!assignment1) {
+          // Assignment exists in scenario2 but not in scenario1 (added)
+          assignmentDifferences.added.push({
+            ...assignment2,
+            difference: 'Added',
+            details: `${assignment2.person_name} assigned to ${assignment2.project_name} as ${assignment2.role_name} (${assignment2.allocation_percentage}%)`
+          });
+        } else if (assignment1.allocation_percentage !== assignment2.allocation_percentage ||
+                   assignment1.start_date !== assignment2.start_date ||
+                   assignment1.end_date !== assignment2.end_date) {
+          // Assignment exists in both but with different values (modified)
+          assignmentDifferences.modified.push({
+            original: assignment1,
+            modified: assignment2,
+            changes: {
+              allocation: {
+                from: assignment1.allocation_percentage,
+                to: assignment2.allocation_percentage
+              },
+              dates: {
+                start: {
+                  from: assignment1.start_date,
+                  to: assignment2.start_date
+                },
+                end: {
+                  from: assignment1.end_date,
+                  to: assignment2.end_date
+                }
+              }
+            },
+            details: `${assignment2.person_name} on ${assignment2.project_name}: allocation ${assignment1.allocation_percentage}% → ${assignment2.allocation_percentage}%`
+          });
+        }
+      });
+
+      // Find removed assignments (in scenario1 but not in scenario2)
+      assignments1Map.forEach((assignment1, key) => {
+        if (!assignments2Map.has(key)) {
+          assignmentDifferences.removed.push({
+            ...assignment1,
+            difference: 'Removed',
+            details: `${assignment1.person_name} removed from ${assignment1.project_name} as ${assignment1.role_name}`
+          });
+        }
+      });
+
+      // Get projects for both scenarios
+      const [projects1, projects2] = await Promise.all([
+        this.db('scenario_projects').where('scenario_id', id),
+        this.db('scenario_projects').where('scenario_id', compare_to)
+      ]);
+
+      // Get phase timelines for both scenarios
+      const [phases1, phases2] = await Promise.all([
+        this.db('scenario_project_phases').where('scenario_id', id),
+        this.db('scenario_project_phases').where('scenario_id', compare_to)
+      ]);
+
+      // Calculate metrics
+      const totalAllocation1 = assignments1.reduce((sum, a) => sum + (a.allocation_percentage || 0), 0);
+      const totalAllocation2 = assignments2.reduce((sum, a) => sum + (a.allocation_percentage || 0), 0);
+      
+      const peopleCount1 = new Set(assignments1.map(a => a.person_id)).size;
+      const peopleCount2 = new Set(assignments2.map(a => a.person_id)).size;
+      
+      const projectCount1 = new Set(assignments1.map(a => a.project_id)).size;
+      const projectCount2 = new Set(assignments2.map(a => a.project_id)).size;
+
       const metrics = {
-        utilization_impact: {},
-        capacity_impact: {},
-        timeline_impact: {}
+        utilization_impact: {
+          total_allocation_change: totalAllocation2 - totalAllocation1,
+          total_allocation_percent_change: totalAllocation1 > 0 
+            ? ((totalAllocation2 - totalAllocation1) / totalAllocation1 * 100).toFixed(1)
+            : 0,
+          people_count_change: peopleCount2 - peopleCount1,
+          scenario1_total: totalAllocation1,
+          scenario2_total: totalAllocation2
+        },
+        capacity_impact: {
+          assignments_added: assignmentDifferences.added.length,
+          assignments_modified: assignmentDifferences.modified.length,
+          assignments_removed: assignmentDifferences.removed.length,
+          net_change: assignmentDifferences.added.length - assignmentDifferences.removed.length
+        },
+        timeline_impact: {
+          projects_affected: projectCount2 - projectCount1,
+          phases_modified: phases2.length - phases1.length
+        }
       };
 
       return {
         scenario1,
         scenario2,
-        differences,
+        differences: {
+          assignments: assignmentDifferences,
+          phases: {
+            added: [],
+            modified: [],
+            removed: []
+          },
+          projects: {
+            added: projects2.filter(p2 => !projects1.find(p1 => p1.project_id === p2.project_id)),
+            modified: [],
+            removed: projects1.filter(p1 => !projects2.find(p2 => p2.project_id === p1.project_id))
+          }
+        },
         metrics
       };
     }, res, 'Failed to compare scenarios');

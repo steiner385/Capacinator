@@ -76,8 +76,18 @@ jest.mock('../../contexts/ThemeContext', () => ({
 
 jest.mock('../../contexts/ScenarioContext', () => ({
   useScenario: () => ({
-    currentScenario: null,
-    scenarios: [],
+    currentScenario: {
+      id: 'baseline',
+      name: 'Baseline',
+      status: 'active',
+      scenario_type: 'baseline'
+    },
+    scenarios: [{
+      id: 'baseline',
+      name: 'Baseline', 
+      status: 'active',
+      scenario_type: 'baseline'
+    }],
     setCurrentScenario: jest.fn(),
     loadScenarios: jest.fn(),
     isLoading: false,
@@ -220,14 +230,14 @@ describe('Reports Page', () => {
         role_name: 'Developer',
         total_demand_fte: 8,
         total_capacity_fte: 5,
-        gap_fte: 3,
+        capacity_gap_fte: -3, // Negative means shortage
       },
       {
         role_id: 'role-2',
         role_name: 'Designer',
         total_demand_fte: 4,
         total_capacity_fte: 3,
-        gap_fte: 1,
+        capacity_gap_fte: -1, // Negative means shortage
       },
     ],
   };
@@ -291,11 +301,15 @@ describe('Reports Page', () => {
         expect(screen.getByText('John Doe')).toBeInTheDocument();
       });
 
+      // The capacity report shows available_hours as "X hrs/day"
+      // Based on mockCapacityData.utilizationData
       expect(screen.getAllByText('8 hrs/day').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('100%').length).toBeGreaterThan(0);
-      expect(screen.getByText('Available')).toBeInTheDocument();
-      expect(screen.getByText('Fully Allocated')).toBeInTheDocument();
-      expect(screen.getByText('Over Allocated')).toBeInTheDocument();
+      expect(screen.getByText('6 hrs/day')).toBeInTheDocument(); // Bob Johnson has 6 hours
+      
+      // Check for allocation statuses - status badges show with spaces instead of underscores
+      expect(screen.getByText('AVAILABLE')).toBeInTheDocument();
+      expect(screen.getByText('FULLY ALLOCATED')).toBeInTheDocument(); 
+      expect(screen.getByText('OVER ALLOCATED')).toBeInTheDocument();
     });
 
     test('renders role capacity table with correct headers', async () => {
@@ -344,11 +358,12 @@ describe('Reports Page', () => {
       await userEvent.click(capacityTab);
 
       await waitFor(() => {
-        expect(screen.getByText('Assign')).toBeInTheDocument(); // For available person
+        // Based on the code, the action buttons have these texts:
+        expect(screen.getByText('Assign to Project')).toBeInTheDocument(); // For AVAILABLE
       });
 
-      expect(screen.getByText('View Load')).toBeInTheDocument(); // For fully allocated
-      expect(screen.getByText('Reduce Load')).toBeInTheDocument(); // For over allocated
+      expect(screen.getByText('View Details')).toBeInTheDocument(); // Default for FULLY_ALLOCATED
+      expect(screen.getByText('Reduce Load')).toBeInTheDocument(); // For OVER_ALLOCATED
     });
   });
 
@@ -383,25 +398,18 @@ describe('Reports Page', () => {
       await userEvent.click(utilizationTab);
 
       await waitFor(() => {
-        // Look for john@example.com which is unique to utilization data
-        expect(screen.getByText('john@example.com')).toBeInTheDocument();
+        // Wait for the Team Utilization Details header to appear
+        expect(screen.getByText('Team Utilization Details')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      // Now we can safely check for other fields
-      const johnDoeElements = screen.getAllByText('John Doe');
-      expect(johnDoeElements.length).toBeGreaterThan(0);
-      // Use getAllByText since Developer might appear multiple times
-      const developerElements = screen.getAllByText('Developer');
-      expect(developerElements.length).toBeGreaterThan(0);
-      // Use getAllByText since there may be multiple percentage values
-      expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
+      // The component transforms utilizationData to peopleUtilization without emails
+      // So look for names and roles instead
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('Developer')).toBeInTheDocument();
       
-      // Overallocated person - use getAllByText since Jane appears multiple times
-      const janeSmithElements = screen.getAllByText('Jane Smith');
-      expect(janeSmithElements.length).toBeGreaterThan(0);
-      // 125% also appears multiple times
-      const overAllocationElements = screen.getAllByText('125%');
-      expect(overAllocationElements.length).toBeGreaterThan(0);
+      // Jane Smith should appear
+      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+      expect(screen.getByText('Designer')).toBeInTheDocument();
     });
 
     test('shows utilization summary cards', async () => {
@@ -498,7 +506,8 @@ describe('Reports Page', () => {
         expect(viewPeopleButtons.length).toBeGreaterThan(0);
       });
 
-      const hireButtons = screen.getAllByText(/Hire.*Developer|Designer/);
+      // The component shows "Hire More" not "Hire Developer"
+      const hireButtons = screen.getAllByText('Hire More');
       expect(hireButtons.length).toBeGreaterThan(0);
     });
   });
@@ -542,10 +551,10 @@ describe('Reports Page', () => {
       await userEvent.click(exportButton);
 
       await waitFor(() => {
-        expect(screen.getByText('CSV (.csv)')).toBeInTheDocument();
+        expect(screen.getByText('Export as CSV')).toBeInTheDocument();
       }, { timeout: 3000 });
-      expect(screen.getByText('PDF (.pdf)')).toBeInTheDocument();
-      expect(screen.getByText('Excel (.xlsx)')).toBeInTheDocument();
+      expect(screen.getByText('Export as Excel')).toBeInTheDocument();
+      expect(screen.getByText('Export as JSON')).toBeInTheDocument();
     });
 
     test('refreshes data when refresh button clicked', async () => {

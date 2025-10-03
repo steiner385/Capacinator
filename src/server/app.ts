@@ -6,9 +6,13 @@ import morgan from 'morgan';
 import { AuditRouteHandler } from './utils/AuditRouteHandler.js';
 import apiRoutes from './api/routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { enhancedErrorHandler } from './middleware/enhancedErrorHandler.js';
+import { requestLoggerMiddleware, userContextMiddleware } from './middleware/requestLogger.js';
+import { enhancedAuditMiddleware } from './middleware/enhancedAuditMiddleware.js';
 import { initializeNotificationScheduler } from './services/notifications/scheduler.js';
 import { initializeAutomaticBackups } from './services/backup/scheduler.js';
 import { config } from './config/index.js';
+import { logger } from './services/logging/config.js';
 
 export async function createExpressApp() {
   const app = express();
@@ -42,26 +46,33 @@ export async function createExpressApp() {
   // Compression
   app.use(compression());
 
-  // Logging
+  // Enhanced request logging
+  app.use(requestLoggerMiddleware);
+  
+  // Legacy HTTP logging (kept for backward compatibility during migration)
   if (process.env.NODE_ENV !== 'test') {
     app.use(morgan('dev'));
   }
 
+  // Add user context and enhanced audit middleware
+  app.use(userContextMiddleware);
+  app.use(enhancedAuditMiddleware);
+  
   // Audit routes if enabled
   if (config.features.audit) {
     const { getAuditService } = await import('./services/audit/index.js');
-    console.log('🔍 Getting audit service...');
+    logger.info('Getting audit service');
     
     const auditService = getAuditService();
     if (auditService) {
       const auditHandler = new AuditRouteHandler(auditService);
       auditHandler.register(app);
-      console.log('✅ Audit service and routes enabled');
+      logger.info('Audit service and routes enabled');
     }
   }
 
   // API routes
-  console.log('🔗 Mounting API routes...');
+  logger.info('Mounting API routes');
   app.use('/api', apiRoutes);
 
   // Health check endpoint
@@ -73,17 +84,17 @@ export async function createExpressApp() {
     });
   });
 
-  // Error handling
-  app.use(errorHandler);
+  // Enhanced error handling (replaces legacy errorHandler)
+  app.use(enhancedErrorHandler);
 
   // Initialize background services
   if (process.env.NODE_ENV !== 'test') {
-    console.log('📧 Initializing notification scheduler...');
+    logger.info('Initializing notification scheduler');
     initializeNotificationScheduler();
-    console.log('✅ Notification scheduler started');
+    logger.info('Notification scheduler started');
     
     initializeAutomaticBackups();
-    console.log('⏰ Automatic backups scheduled (daily)');
+    logger.info('Automatic backups scheduled', { frequency: 'daily' });
   }
 
   return app;

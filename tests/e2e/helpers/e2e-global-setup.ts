@@ -4,10 +4,13 @@ import fs from 'fs';
 import { spawn, ChildProcess, execSync } from 'child_process';
 // Import E2E database initialization
 import { initializeE2EDatabase } from '../../../src/server/database/init-e2e.js';
+import { E2EProcessManager } from './process-manager.js';
+import { portCleanup, E2E_PORTS } from './port-cleanup.js';
+import { EnvironmentValidator } from './environment-validator.js';
+import { registerE2ECleanup } from './cleanup-hook.js';
 
-// Store processes globally so teardown can access them
-let serverProcess: ChildProcess | null = null;
-let clientProcess: ChildProcess | null = null;
+// Use process manager for better process lifecycle management
+const processManager = new E2EProcessManager();
 
 async function globalSetup(config: FullConfig) {
   console.log('🚀 Starting E2E global setup...');
@@ -21,6 +24,42 @@ async function globalSetup(config: FullConfig) {
   let page: Page | null = null;
   
   try {
+    // Step 0: Validate and prepare environment
+    console.log('🔍 Validating E2E environment...');
+    const validator = new EnvironmentValidator({ verbose: true });
+    let validationResult = await validator.validate();
+    
+    if (!validationResult.valid) {
+      console.log('🔧 Environment validation failed, attempting auto-fix...');
+      await validator.autoFix();
+      
+      // Re-validate after auto-fix
+      validationResult = await validator.validate();
+      if (!validationResult.valid) {
+        throw new Error(`Environment validation failed: ${validationResult.errors.join(', ')}`);
+      }
+    }
+    
+    // Clean up any stale processes and ports
+    console.log('🧹 Cleaning up stale processes and ports...');
+    await processManager.cleanupStalePidFiles();
+    await processManager.killAllFromPidFiles();
+    
+    // Ensure E2E ports are free
+    const cleanupSuccess = await portCleanup.cleanupE2EPorts();
+    if (!cleanupSuccess) {
+      throw new Error('Failed to cleanup E2E ports');
+    }
+    
+    // Acquire lock to prevent concurrent test runs
+    const lockAcquired = await processManager.acquireLock();
+    if (!lockAcquired) {
+      throw new Error('Another E2E test run is in progress');
+    }
+    
+    // Register cleanup hook to ensure cleanup happens even on unexpected exit
+    registerE2ECleanup(processManager);
+    
     // Step 1: Initialize E2E database
     console.log('🗄️ Initializing E2E database...');
     try {
@@ -40,9 +79,9 @@ async function globalSetup(config: FullConfig) {
       console.log('   E2E tests will use the existing server and database.');
       console.log('   For isolated testing, stop the dev server first.');
     } else {
-      // Step 3: Start E2E server
+      // Step 3: Start E2E server using process manager
       console.log('🚀 Starting E2E server...');
-      await startDevServer();
+      await startDevServerWithProcessManager();
       
       // Wait for server to be ready
       await waitForServer(baseURL, 60); // 60 second timeout
@@ -82,26 +121,16 @@ async function globalSetup(config: FullConfig) {
     
     console.log('✅ E2E global setup completed successfully');
     
-    // Store server and client process references for teardown
-    if (serverProcess) {
-      (global as any).__SERVER_PROCESS__ = serverProcess;
-    }
-    if (clientProcess) {
-      (global as any).__CLIENT_PROCESS__ = clientProcess;
-    }
+    // Store process manager reference for teardown
+    (global as any).__E2E_PROCESS_MANAGER__ = processManager;
     
   } catch (error) {
     console.error('❌ E2E global setup failed:', error);
     
     // Clean up on failure
-    if (serverProcess) {
-      console.log('🛑 Stopping server due to setup failure...');
-      serverProcess.kill('SIGTERM');
-    }
-    if (clientProcess) {
-      console.log('🛑 Stopping client due to setup failure...');
-      clientProcess.kill('SIGTERM');
-    }
+    console.log('🛑 Cleaning up due to setup failure...');
+    await processManager.stopAll();
+    await processManager.releaseLock();
     
     throw error;
   } finally {
@@ -130,101 +159,41 @@ async function checkServerRunning(url: string): Promise<boolean> {
   }
 }
 
-async function startDevServer(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const env = {
-      ...process.env,
-      NODE_ENV: 'e2e',
-      DATABASE_URL: ':memory:', // Use in-memory database for tests
-      PORT: '3110',
-      CLIENT_PORT: '3120',
-      FORCE_COLOR: '0',
-      // Force the server to re-read the database config
-      DB_FILENAME: ':memory:'
-    };
-    
-    // Start both server and client
-    console.log('🚀 Starting server...');
-    
-    // Start the server directly with tsx
-    serverProcess = spawn('npx', ['tsx', 'src/server/index.ts'], {
+async function startDevServerWithProcessManager(): Promise<void> {
+  const env = {
+    NODE_ENV: 'e2e',
+    PORT: String(E2E_PORTS.backend),
+    CLIENT_PORT: String(E2E_PORTS.frontend),
+    FORCE_COLOR: '0',
+    // Enable audit service for E2E tests
+    AUDIT_ENABLED: 'true',
+    AUDIT_MAX_HISTORY_ENTRIES: '1000',
+    AUDIT_RETENTION_DAYS: '365',
+    AUDIT_ENABLED_TABLES: 'people,projects,roles,assignments,availability,project_assignments,scenario_project_assignments',
+    AUDIT_SENSITIVE_FIELDS: 'password,token,secret,key,hash'
+  };
+  
+  // Start backend server
+  await processManager.startProcess('e2e-backend', 
+    ['npx', 'tsx', 'src/server/index.ts'],
+    {
       env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      detached: false,
-      cwd: process.cwd()
-    });
-    (global as any).__SERVER_PROCESS__ = serverProcess;
-    
-    // Capture server output for debugging
-    let serverStarted = false;
-    
-    serverProcess.stdout?.on('data', (data) => {
-      const output = data.toString();
-      if (!serverStarted && (output.includes('Server running') || output.includes('on port 3110'))) {
-        serverStarted = true;
-        console.log('✅ Server started successfully');
-        
-        // Now start the client
-        console.log('🚀 Starting client...');
-        clientProcess = spawn('npx', ['vite', '--config', 'client-vite.config.ts'], {
-          env,
-          stdio: ['ignore', 'pipe', 'pipe'],
-          detached: false,
-          cwd: process.cwd()
-        });
-        (global as any).__CLIENT_PROCESS__ = clientProcess;
-        
-        clientProcess.stdout?.on('data', (data) => {
-          const output = data.toString();
-          if (output.includes('ready in') || output.includes('Local:')) {
-            console.log('✅ Client started successfully');
-            resolve();
-          }
-        });
-        
-        clientProcess.stderr?.on('data', (data) => {
-          const error = data.toString();
-          if (!error.includes('WARNING')) {
-            console.error('Client error:', error);
-          }
-        });
-        
-        clientProcess.on('error', (err) => {
-          console.error('Failed to start client:', err);
-          reject(err);
-        });
-      }
-    });
-    
-    serverProcess.stderr?.on('data', (data) => {
-      const error = data.toString();
-      // Ignore certain warnings
-      if (!error.includes('WARNING') && !error.includes('Duplicate key')) {
-        console.error('Server error:', error);
-      }
-    });
-    
-    serverProcess.on('error', (err) => {
-      console.error('Failed to start server:', err);
-      reject(err);
-    });
-    
-    serverProcess.on('exit', (code, signal) => {
-      if (code !== 0 && !signal) {
-        console.error('Server exited with code:', code);
-        reject(new Error(`Server exited with code ${code}`));
-      }
-    });
-    
-    // Timeout if server doesn't start
-    setTimeout(() => {
-      if (!serverStarted) {
-        if (serverProcess) serverProcess.kill('SIGTERM');
-        if (clientProcess) clientProcess.kill('SIGTERM');
-        reject(new Error('Server startup timeout'));
-      }
-    }, 30000); // 30 second timeout
-  });
+      port: E2E_PORTS.backend,
+      waitForOutput: /Server running|Production mode/,
+      timeout: 30000
+    }
+  );
+  
+  // Start frontend server
+  await processManager.startProcess('e2e-frontend',
+    ['npx', 'vite', '--config', 'client-vite.config.ts'],
+    {
+      env,
+      port: E2E_PORTS.frontend,
+      waitForOutput: /ready in|Local:/,
+      timeout: 30000
+    }
+  );
 }
 
 async function waitForServer(url: string, maxSeconds: number): Promise<void> {

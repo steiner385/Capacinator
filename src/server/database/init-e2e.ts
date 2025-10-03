@@ -3,6 +3,7 @@ import knex from 'knex';
 import path from 'path';
 import fs from 'fs/promises';
 import e2eConfig, { E2E_DB_FILE, E2E_DB_DIR } from './knexfile.e2e.js';
+import { initializeAuditService } from '../services/audit/index.js';
 
 let e2eDb: Knex | null = null;
 
@@ -16,6 +17,16 @@ export async function initializeE2EDatabase(): Promise<Knex> {
   // Close existing connection if any
   if (e2eDb) {
     await e2eDb.destroy();
+  }
+
+  // Ensure E2E database directory exists
+  try {
+    await fs.mkdir(E2E_DB_DIR, { recursive: true });
+  } catch (err: any) {
+    if (err.code !== 'EEXIST') {
+      console.error('❌ Failed to create E2E database directory:', err);
+      throw err;
+    }
   }
 
   // Delete existing E2E database file if it exists for a clean slate
@@ -40,6 +51,10 @@ export async function initializeE2EDatabase(): Promise<Knex> {
     // Run E2E specific seeds only - it includes all necessary data
     console.log('🌱 Seeding E2E test data...');
     await e2eDb.seed.run({ specific: 'e2e-test-data-consolidated.ts' });
+    
+    // Initialize audit service for E2E tests
+    console.log('🔍 Initializing audit service for E2E...');
+    initializeAuditService(e2eDb);
     
     // Set global E2E database for server to use
     (global as any).__E2E_DB__ = e2eDb;

@@ -1,6 +1,6 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 /**
  * Simplified PeopleController Unit Tests

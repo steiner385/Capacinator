@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { AuditService } from '../../services/audit/AuditService.js';
 
@@ -97,7 +97,7 @@ export class AuditController extends BaseController {
     await this.executeQuery(async () => {
       const { tableName, recordId } = req.params;
       const { comment } = req.body;
-      const undoneBy = req.audit?.userId;
+      const undoneBy = (req as any).user?.id || 'system';
 
       if (!tableName || !recordId) {
         return res.status(400).json({
@@ -141,7 +141,7 @@ export class AuditController extends BaseController {
     await this.executeQuery(async () => {
       const { changedBy, count } = req.params;
       const { comment } = req.body;
-      const undoneBy = req.audit?.userId;
+      const undoneBy = (req as any).user?.id || 'system';
 
       if (!changedBy || !count) {
         return res.status(400).json({
@@ -205,6 +205,85 @@ export class AuditController extends BaseController {
           message: `Cleaned up ${deletedCount} expired audit entries`
         }
       });
+    }, res);
+  };
+
+  // NEW: Undo a specific audit entry by ID
+  undoSpecificAuditEntry = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const { auditId } = req.params;
+      const undoneBy = (req as any).user?.id || 'system';
+
+      if (!auditId) {
+        return res.status(400).json({
+          error: 'auditId is required'
+        });
+      }
+
+      try {
+        // Get the audit entry
+        const auditEntry = await this.auditService.getAuditEntryById(auditId);
+        if (!auditEntry) {
+          return res.status(404).json({
+            error: 'Audit entry not found'
+          });
+        }
+
+        // Undo the specific change
+        const success = await this.auditService.undoSpecificChange(
+          auditEntry,
+          undoneBy,
+          `Undo operation via API (audit_id: ${auditId})`
+        );
+
+        return res.json({
+          success: true,
+          data: {
+            undone: success,
+            auditId,
+            undoneBy
+          }
+        });
+      } catch (error) {
+        return res.status(400).json({
+          error: (error as Error).message
+        });
+      }
+    }, res);
+  };
+
+  // NEW: Get audit summary by table
+  getAuditSummaryByTable = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const summary = await this.auditService.getAuditSummaryByTable();
+      
+      return res.json(summary);
+    }, res);
+  };
+
+  // NEW: Get audit timeline
+  getAuditTimeline = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+      const interval = (req.query.interval as string) || 'hour';
+
+      const timeline = await this.auditService.getAuditTimeline(
+        startDate,
+        endDate,
+        interval as 'hour' | 'day' | 'week'
+      );
+      
+      return res.json(timeline);
+    }, res);
+  };
+
+  // NEW: Get user activity
+  getUserActivity = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const activity = await this.auditService.getUserActivity();
+      
+      return res.json(activity);
     }, res);
   };
 }

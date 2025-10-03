@@ -11,11 +11,6 @@ import fs from 'fs';
 const E2E_DB_DIR = path.join(process.cwd(), '.e2e-data');
 const E2E_DB_FILE = path.join(E2E_DB_DIR, 'e2e-test.db');
 
-// Ensure E2E data directory exists
-if (!fs.existsSync(E2E_DB_DIR)) {
-  fs.mkdirSync(E2E_DB_DIR, { recursive: true });
-}
-
 const e2eConfig: Knex.Config = {
   client: 'better-sqlite3',
   connection: {

@@ -7,12 +7,8 @@ export function createAuditRoutes(auditService: AuditService): Router {
   const router = Router();
   const auditController = new AuditController(auditService);
 
-  // Get audit history for a specific record
-  router.get(
-    '/history/:tableName/:recordId',
-    auditableController(auditController.getAuditHistory)
-  );
-
+  // Static routes first (before parameterized routes)
+  
   // Get recent changes (optionally filtered by user)
   router.get(
     '/recent',
@@ -25,16 +21,22 @@ export function createAuditRoutes(auditService: AuditService): Router {
     auditableController(auditController.searchAuditLog)
   );
 
-  // Undo last change for a specific record
-  router.post(
-    '/undo/:tableName/:recordId',
-    auditableController(auditController.undoLastChange)
+  // Get audit summary by table - NEW for E2E tests
+  router.get(
+    '/summary/by-table',
+    auditableController(auditController.getAuditSummaryByTable)
   );
 
-  // Undo last N changes by a specific user
-  router.post(
-    '/undo-batch/:changedBy/:count',
-    auditableController(auditController.undoLastNChanges)
+  // Get audit timeline - NEW for E2E tests
+  router.get(
+    '/timeline',
+    auditableController(auditController.getAuditTimeline)
+  );
+
+  // Get user activity - NEW for E2E tests
+  router.get(
+    '/users/activity',
+    auditableController(auditController.getUserActivity)
   );
 
   // Get audit statistics
@@ -43,10 +45,38 @@ export function createAuditRoutes(auditService: AuditService): Router {
     auditableController(auditController.getAuditStats)
   );
 
+  // POST routes
+  
   // Cleanup expired audit entries (admin only)
   router.post(
     '/cleanup',
     auditableController(auditController.cleanupExpiredEntries)
+  );
+
+  // Undo last N changes by a specific user
+  router.post(
+    '/undo-batch/:changedBy/:count',
+    auditableController(auditController.undoLastNChanges)
+  );
+
+  // Parameterized routes last
+  
+  // Get audit history for a specific record - matches /api/audit/:tableName/:recordId
+  router.get(
+    '/:tableName/:recordId',
+    auditableController(auditController.getAuditHistory)
+  );
+
+  // Undo a specific audit entry - NEW for E2E tests
+  router.post(
+    '/:auditId/undo',
+    auditableController(auditController.undoSpecificAuditEntry)
+  );
+
+  // Undo last change for a specific record
+  router.post(
+    '/undo/:tableName/:recordId',
+    auditableController(auditController.undoLastChange)
   );
 
   return router;

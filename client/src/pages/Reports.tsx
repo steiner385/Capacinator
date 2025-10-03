@@ -215,7 +215,7 @@ export default function Reports() {
     enabled: activeReport === 'utilization' && !!currentScenario
   });
 
-  const { data: demandReport, isLoading: demandLoading } = useQuery({
+  const { data: demandReport, isLoading: demandLoading, refetch: refetchDemand } = useQuery({
     queryKey: ['report-demand', filters, currentScenario?.id],
     queryFn: async () => {
       console.log('Fetching demand report with filters:', filters);
@@ -291,7 +291,7 @@ export default function Reports() {
     enabled: activeReport === 'demand' && !!currentScenario
   });
 
-  const { data: gapsReport, isLoading: gapsLoading } = useQuery({
+  const { data: gapsReport, isLoading: gapsLoading, refetch: refetchGaps } = useQuery({
     queryKey: ['report-gaps', filters, currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getGaps(filters);
@@ -1156,6 +1156,8 @@ export default function Reports() {
           onClick={() => {
             if (activeReport === 'capacity') refetchCapacity();
             else if (activeReport === 'utilization') refetchUtilization();
+            else if (activeReport === 'demand') refetchDemand();
+            else if (activeReport === 'gaps') refetchGaps();
           }}
           disabled={isLoading}
         >

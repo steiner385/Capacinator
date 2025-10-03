@@ -1,5 +1,5 @@
 import { db } from './setup';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 
 // Mock Express request/response for controller tests
 export function createMockRequest(overrides: Partial<Request> = {}): Partial<Request> {

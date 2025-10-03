@@ -15,7 +15,6 @@ describe('Utilization Report Simple Tests', () => {
     await db('locations').insert({
       id: testLocationId,
       name: 'Test Location',
-      timezone: 'UTC',
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -32,7 +31,6 @@ describe('Utilization Report Simple Tests', () => {
     await db('roles').insert({
       id: testRoleId,
       name: 'Developer',
-      level: 3,
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -63,13 +61,29 @@ describe('Utilization Report Simple Tests', () => {
       created_at: new Date(),
       updated_at: new Date()
     });
+    
+    // Ensure baseline scenario exists
+    const baselineExists = await db('scenarios').where('id', 'baseline-0000-0000-0000-000000000000').first();
+    if (!baselineExists) {
+      await db('scenarios').insert({
+        id: 'baseline-0000-0000-0000-000000000000',
+        name: 'Baseline',
+        description: 'Baseline scenario',
+        status: 'active',
+        scenario_type: 'baseline',
+        created_by: testPersonId, // Use the test person as creator
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
   });
   
   afterEach(async () => {
     // Clean up in reverse order due to foreign keys
-    await db('project_assignments').delete();
+    await db('scenario_project_assignments').delete();
+    await db('scenarios').where('created_by', testPersonId).delete();
     await db('people').where('id', testPersonId).delete();
-    await db('projects').where('id', testProjectId).delete();
+    await db('projects').delete(); // Delete all test projects
     await db('roles').where('id', testRoleId).delete();
     await db('project_types').where('id', testProjectTypeId).delete();
     await db('locations').where('id', testLocationId).delete();
@@ -77,7 +91,8 @@ describe('Utilization Report Simple Tests', () => {
   
   test('should calculate utilization correctly with single assignment', async () => {
     // Create assignment
-    await db('project_assignments').insert({
+    await db('scenario_project_assignments').insert({
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
       id: uuidv4(),
       project_id: testProjectId,
       person_id: testPersonId,
@@ -100,10 +115,11 @@ describe('Utilization Report Simple Tests', () => {
           pa.allocation_percentage,
           COALESCE(pa.start_date, p.aspiration_start) as computed_start_date,
           COALESCE(pa.end_date, p.aspiration_finish) as computed_end_date
-        FROM project_assignments pa
+        FROM scenario_project_assignments pa
         JOIN projects p ON pa.project_id = p.id
         WHERE 
-          COALESCE(pa.start_date, p.aspiration_start) <= '2025-12-31'
+          pa.scenario_id = 'baseline-0000-0000-0000-000000000000'
+          AND COALESCE(pa.start_date, p.aspiration_start) <= '2025-12-31'
           AND COALESCE(pa.end_date, p.aspiration_finish) >= '2025-09-01'
       )
       SELECT 
@@ -140,9 +156,10 @@ describe('Utilization Report Simple Tests', () => {
     });
     
     // Create two assignments
-    await db('project_assignments').insert([
+    await db('scenario_project_assignments').insert([
       {
         id: uuidv4(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: testProjectId,
         person_id: testPersonId,
         role_id: testRoleId,
@@ -155,6 +172,7 @@ describe('Utilization Report Simple Tests', () => {
       },
       {
         id: uuidv4(),
+        scenario_id: 'baseline-0000-0000-0000-000000000000',
         project_id: secondProjectId,
         person_id: testPersonId,
         role_id: testRoleId,
@@ -174,10 +192,11 @@ describe('Utilization Report Simple Tests', () => {
           pa.person_id,
           pa.project_id,
           pa.allocation_percentage
-        FROM project_assignments pa
+        FROM scenario_project_assignments pa
         JOIN projects p ON pa.project_id = p.id
         WHERE 
-          COALESCE(pa.start_date, p.aspiration_start) <= '2025-12-31'
+          pa.scenario_id = 'baseline-0000-0000-0000-000000000000'
+          AND COALESCE(pa.start_date, p.aspiration_start) <= '2025-12-31'
           AND COALESCE(pa.end_date, p.aspiration_finish) >= '2025-09-01'
       )
       SELECT 
@@ -196,13 +215,13 @@ describe('Utilization Report Simple Tests', () => {
     expect(personUtilization.total_allocation_percentage).toBe(100);
     expect(personUtilization.project_count).toBe(2);
     
-    // Clean up second project
-    await db('projects').where('id', secondProjectId).delete();
+    // Second project will be cleaned up in afterEach
   });
   
   test('should handle assignments with null dates', async () => {
     // Create assignment with null dates (should use project dates)
-    await db('project_assignments').insert({
+    await db('scenario_project_assignments').insert({
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
       id: uuidv4(),
       project_id: testProjectId,
       person_id: testPersonId,
@@ -222,9 +241,10 @@ describe('Utilization Report Simple Tests', () => {
         pa.allocation_percentage,
         COALESCE(pa.start_date, p.aspiration_start) as computed_start_date,
         COALESCE(pa.end_date, p.aspiration_finish) as computed_end_date
-      FROM project_assignments pa
+      FROM scenario_project_assignments pa
       JOIN projects p ON pa.project_id = p.id
-      WHERE pa.person_id = ?
+      WHERE pa.scenario_id = 'baseline-0000-0000-0000-000000000000'
+        AND pa.person_id = ?
     `;
     
     const result = await db.raw(query, [testPersonId]);
@@ -237,7 +257,8 @@ describe('Utilization Report Simple Tests', () => {
   
   test('should validate allocation percentage limits', async () => {
     // Test that allocations are stored correctly even when high
-    await db('project_assignments').insert({
+    await db('scenario_project_assignments').insert({
+      scenario_id: 'baseline-0000-0000-0000-000000000000',
       id: uuidv4(),
       project_id: testProjectId,
       person_id: testPersonId,
@@ -250,7 +271,8 @@ describe('Utilization Report Simple Tests', () => {
       updated_at: new Date()
     });
     
-    const assignment = await db('project_assignments')
+    const assignment = await db('scenario_project_assignments')
+      .where('scenario_id', 'baseline-0000-0000-0000-000000000000')
       .where('person_id', testPersonId)
       .first();
     
