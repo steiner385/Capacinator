@@ -387,13 +387,25 @@ export class ReportingController extends EnhancedBaseController {
     const result = await this.executeQuery(async () => {
       req.logger.info('Getting demand data from project_demands_view...');
       
-      // Get demand data from the corrected view with proper date filtering
+      // Get demand data from the corrected view with proper scenario filtering
       let demandQuery = this.db('project_demands_view')
         .select('*');
       
-      // Filter by scenario if provided and not including all scenarios
+      // Apply unified scenario filtering that handles baseline scenarios
       if (scenarioId && !includeAllScenarios) {
-        demandQuery = demandQuery.where('scenario_id', scenarioId);
+        // For baseline scenarios, include both base assignments and scenario overrides
+        // For branch/sandbox scenarios, only include scenario-specific assignments
+        const scenario = await this.db('scenarios').where('id', scenarioId).first();
+        
+        if (scenario?.scenario_type === 'baseline') {
+          // Include base assignments (scenario_id is null) AND scenario-specific assignments for this baseline
+          demandQuery = demandQuery.where(function() {
+            this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+          });
+        } else {
+          // For branch/sandbox scenarios, only include scenario-specific assignments
+          demandQuery = demandQuery.where('scenario_id', scenarioId);
+        }
       }
 
       // Fix date filtering to include projects that overlap with the date range
@@ -418,9 +430,17 @@ export class ReportingController extends EnhancedBaseController {
         .groupBy('project_id', 'project_name')
         .orderBy('total_hours', 'desc');
       
-      // Apply scenario filter
+      // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
-        projectQuery = projectQuery.where('scenario_id', scenarioId);
+        const scenario = await this.db('scenarios').where('id', scenarioId).first();
+        
+        if (scenario?.scenario_type === 'baseline') {
+          projectQuery = projectQuery.where(function() {
+            this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+          });
+        } else {
+          projectQuery = projectQuery.where('scenario_id', scenarioId);
+        }
       }
       
       if (startDate && endDate) {
@@ -450,9 +470,17 @@ export class ReportingController extends EnhancedBaseController {
         .groupBy('role_id', 'role_name')
         .orderBy('total_hours', 'desc');
         
-      // Apply scenario filter
+      // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
-        roleQuery = roleQuery.where('scenario_id', scenarioId);
+        const scenario = await this.db('scenarios').where('id', scenarioId).first();
+        
+        if (scenario?.scenario_type === 'baseline') {
+          roleQuery = roleQuery.where(function() {
+            this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+          });
+        } else {
+          roleQuery = roleQuery.where('scenario_id', scenarioId);
+        }
       }
         
       if (startDate && endDate) {
@@ -481,9 +509,17 @@ export class ReportingController extends EnhancedBaseController {
         .groupBy('project_type_id', 'project_type_name')
         .orderBy('total_hours', 'desc');
         
-      // Apply scenario filter
+      // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
-        projectTypeQuery = projectTypeQuery.where('scenario_id', scenarioId);
+        const scenario = await this.db('scenarios').where('id', scenarioId).first();
+        
+        if (scenario?.scenario_type === 'baseline') {
+          projectTypeQuery = projectTypeQuery.where(function() {
+            this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+          });
+        } else {
+          projectTypeQuery = projectTypeQuery.where('scenario_id', scenarioId);
+        }
       }
         
       if (startDate && endDate) {
@@ -547,9 +583,17 @@ export class ReportingController extends EnhancedBaseController {
             .where('start_date', '<=', month.monthEnd)
             .andWhere('end_date', '>=', month.monthStart);
             
-          // Apply scenario filter
+          // Apply unified scenario filter
           if (scenarioId && !includeAllScenarios) {
-            monthQuery = monthQuery.where('scenario_id', scenarioId);
+            const scenario = await this.db('scenarios').where('id', scenarioId).first();
+            
+            if (scenario?.scenario_type === 'baseline') {
+              monthQuery = monthQuery.where(function() {
+                this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+              });
+            } else {
+              monthQuery = monthQuery.where('scenario_id', scenarioId);
+            }
           }
           
           const monthData = await monthQuery.first();
@@ -569,9 +613,17 @@ export class ReportingController extends EnhancedBaseController {
           .groupBy(this.db.raw("strftime('%Y-%m', start_date)"))
           .orderBy('month');
           
-        // Apply scenario filter
+        // Apply unified scenario filter
         if (scenarioId && !includeAllScenarios) {
-          timelineQuery = timelineQuery.where('scenario_id', scenarioId);
+          const scenario = await this.db('scenarios').where('id', scenarioId).first();
+          
+          if (scenario?.scenario_type === 'baseline') {
+            timelineQuery = timelineQuery.where(function() {
+              this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+            });
+          } else {
+            timelineQuery = timelineQuery.where('scenario_id', scenarioId);
+          }
         }
         
         const timelineData = await timelineQuery;
@@ -592,10 +644,21 @@ export class ReportingController extends EnhancedBaseController {
       let roleCountQuery = this.db('project_demands_view')
         .countDistinct('role_id as count');
         
-      // Apply scenario filter
+      // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
-        projectCountQuery = projectCountQuery.where('scenario_id', scenarioId);
-        roleCountQuery = roleCountQuery.where('scenario_id', scenarioId);
+        const scenario = await this.db('scenarios').where('id', scenarioId).first();
+        
+        if (scenario?.scenario_type === 'baseline') {
+          projectCountQuery = projectCountQuery.where(function() {
+            this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+          });
+          roleCountQuery = roleCountQuery.where(function() {
+            this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
+          });
+        } else {
+          projectCountQuery = projectCountQuery.where('scenario_id', scenarioId);
+          roleCountQuery = roleCountQuery.where('scenario_id', scenarioId);
+        }
       }
       
       const projectsWithDemand = await projectCountQuery.first();
@@ -823,9 +886,20 @@ export class ReportingController extends EnhancedBaseController {
       
       req.logger.info(`Found ${projectHealth.length} project health records`);
       
+      // Get project demands to compare against assignments
+      const projectDemands = await this.db('project_demands_view')
+        .select('*')
+        .where('time_status', '!=', 'PAST'); // Only consider current and future demands
+      
+      req.logger.info(`Found ${projectDemands.length} project demand records`);
+      
+      // Calculate projects with unmet demands (true project gaps)
+      const projectsWithUnmetDemands = this.calculateProjectsWithUnmetDemands(projectDemands, projectHealth);
+      req.logger.info(`Found ${projectsWithUnmetDemands.length} projects with unmet role demands`);
+      
       // Identify critical gaps (>50% gap)
       const criticalRoleGaps = capacityGaps.filter(gap => gap.status === 'GAP' && gap.gap_percentage > 50);
-      const criticalProjectGaps = projectHealth.filter(p => p.allocation_health === 'UNDER_ALLOCATED');
+      const criticalProjectGaps = projectsWithUnmetDemands;
       
       // Calculate summary metrics
       const totalGapHours = capacityGaps.reduce((sum, gap) => {
@@ -907,6 +981,63 @@ export class ReportingController extends EnhancedBaseController {
       period: month,
       capacity: Math.round(capacity)
     }));
+  }
+
+  /**
+   * Calculate which projects have unmet demands by comparing project demands vs assignments
+   * A project has gaps if it has role demands that aren't covered by assignments
+   */
+  private calculateProjectsWithUnmetDemands(projectDemands: any[], projectHealth: any[]): any[] {
+    const projectsWithGaps: any[] = [];
+    
+    // Group demands by project_id
+    const demandsByProject = projectDemands.reduce((acc, demand) => {
+      if (!acc[demand.project_id]) {
+        acc[demand.project_id] = [];
+      }
+      acc[demand.project_id].push(demand);
+      return acc;
+    }, {} as Record<string, any[]>);
+    
+    // Check each project for unmet demands
+    Object.entries(demandsByProject).forEach(([projectId, demands]) => {
+      const projectHealthRecord = projectHealth.find(p => p.project_id === projectId);
+      
+      // If project has no assignments at all but has demands, it has gaps
+      if (!projectHealthRecord || projectHealthRecord.allocation_health === 'UNASSIGNED') {
+        const project = {
+          project_id: projectId,
+          project_name: demands[0]?.project_name || 'Unknown',
+          gap_type: 'UNASSIGNED',
+          unmet_demands: demands.length,
+          total_demand_percentage: demands.reduce((sum, d) => sum + (d.allocation_percentage || 0), 0)
+        };
+        projectsWithGaps.push(project);
+        return;
+      }
+      
+      // For projects with assignments, check if demands are covered
+      // This is a simplified check - in reality you'd need to compare role-by-role and time period by time period
+      // For now, we'll flag projects that are significantly under-allocated relative to their demands
+      const totalDemandPercentage = demands.reduce((sum, d) => sum + (d.allocation_percentage || 0), 0);
+      const actualAllocation = projectHealthRecord.total_allocation_percentage || 0;
+      
+      // If actual allocation is significantly less than demanded (>20% gap), consider it a gap
+      if (totalDemandPercentage > 0 && (actualAllocation / totalDemandPercentage) < 0.8) {
+        const project = {
+          project_id: projectId,
+          project_name: demands[0]?.project_name || 'Unknown',
+          gap_type: 'UNDER_COVERED',
+          unmet_demands: demands.length,
+          total_demand_percentage: totalDemandPercentage,
+          actual_allocation_percentage: actualAllocation,
+          coverage_ratio: actualAllocation / totalDemandPercentage
+        };
+        projectsWithGaps.push(project);
+      }
+    });
+    
+    return projectsWithGaps;
   }
 }
 // Force reload 2

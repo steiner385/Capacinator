@@ -36,7 +36,7 @@ export const GapsReport: React.FC<GapsReportProps> = ({
         />
         <ReportSummaryCard
           title="# Projects with Gaps"
-          metric={data.summary?.project_gaps || 0}
+          metric={data.summary?.projectsWithGaps || 0}
           actionLink={{
             to: `/projects?from=demand-report&action=view-high-demand&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`,
             icon: ExternalLink,
