@@ -523,7 +523,7 @@ export function ProjectDetail() {
           
           {expandedSections.assignments && (
             <div className="section-content">
-              {project.assignments.length > 0 ? (
+              {project.assignments && project.assignments.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>

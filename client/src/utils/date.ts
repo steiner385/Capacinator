@@ -75,20 +75,20 @@ export function getWeekNumber(date: string | Date): number {
 }
 
 /**
- * Get the default date range for reports: current month to 3 months from now
- * This focuses on actionable future periods rather than historical data
+ * Get the default date range for reports: broader range to include historical and future projects
+ * This ensures test data and real projects across different timeframes are visible
  */
 export function getDefaultReportDateRange(): { startDate: string; endDate: string } {
   const today = new Date();
   
-  // Start from the beginning of current month
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  // Start from 2023 to capture all baseline scenario historical projects
+  const startDate = new Date(2023, 0, 1); // January 1, 2023
   
-  // End at the end of 3 months from now
-  const endDate = new Date(today.getFullYear(), today.getMonth() + 3, 0); // Last day of the month 3 months from now
+  // End at 12 months from now to capture future projects
+  const endDate = new Date(today.getFullYear() + 1, today.getMonth(), 0); // Last day of current month next year
   
   return {
-    startDate: startOfMonth.toISOString().split('T')[0],
+    startDate: startDate.toISOString().split('T')[0],
     endDate: endDate.toISOString().split('T')[0]
   };
 }

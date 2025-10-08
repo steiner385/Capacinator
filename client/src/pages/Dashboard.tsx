@@ -37,7 +37,8 @@ export function Dashboard() {
     queryKey: ['dashboard', currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getDashboard();
-      return response.data as DashboardSummary;
+      // Handle the nested response structure: response.data.data
+      return response.data.data as DashboardSummary;
     },
     enabled: !!currentScenario
   });
@@ -46,8 +47,8 @@ export function Dashboard() {
   if (error) return <ErrorMessage message="Failed to load dashboard data" />;
   if (!dashboard) return null;
 
-  // Prepare data for charts
-  const projectHealthData = Object.keys(dashboard.projectHealth).length > 0
+  // Prepare data for charts with defensive checks
+  const projectHealthData = dashboard.projectHealth && Object.keys(dashboard.projectHealth).length > 0
     ? Object.entries(dashboard.projectHealth).map(([status, count]) => ({
         name: status.replace('_', ' '),
         value: count,
@@ -55,18 +56,20 @@ export function Dashboard() {
     : [{ name: 'No Projects', value: 0 }];
 
   // Handle empty utilization data gracefully
-  const utilizationData = Object.keys(dashboard.utilization).length > 0 
+  const utilizationData = dashboard.utilization && Object.keys(dashboard.utilization).length > 0 
     ? Object.entries(dashboard.utilization).map(([status, count]) => ({
         name: status === 'NO_ASSIGNMENTS' ? 'No Assignments Yet' : status.replace(/_/g, ' '),
         value: count,
       }))
     : [{ name: 'No Data', value: 0 }];
 
-  const capacityData = Object.entries(dashboard.capacityGaps).map(([status, count]) => ({
-    name: status,
-    value: count,
-    color: status === 'GAP' ? COLORS.danger : status === 'TIGHT' ? COLORS.warning : COLORS.success,
-  }));
+  const capacityData = dashboard.capacityGaps && Object.keys(dashboard.capacityGaps).length > 0
+    ? Object.entries(dashboard.capacityGaps).map(([status, count]) => ({
+        name: status,
+        value: count,
+        color: status === 'GAP' ? COLORS.danger : status === 'TIGHT' ? COLORS.warning : COLORS.success,
+      }))
+    : [{ name: 'No Data', value: 0, color: COLORS.primary }];
 
   return (
     <div className="dashboard">
@@ -99,7 +102,7 @@ export function Dashboard() {
         />
         <StatCard
           title="Capacity Gaps"
-          value={dashboard.capacityGaps.GAP || 0}
+          value={dashboard.capacityGaps?.GAP || 0}
           icon={AlertTriangle}
           color="danger"
           onClick={() => navigate('/reports')}
@@ -198,7 +201,7 @@ export function Dashboard() {
             >
               <UserCheck className="stat-icon" color={COLORS.success} />
               <div>
-                <div className="stat-value">{dashboard.availability.AVAILABLE || 0}</div>
+                <div className="stat-value">{dashboard.availability?.AVAILABLE || 0}</div>
                 <div className="stat-label">Available</div>
               </div>
             </div>
@@ -208,7 +211,7 @@ export function Dashboard() {
             >
               <UserX className="stat-icon" color={COLORS.danger} />
               <div>
-                <div className="stat-value">{dashboard.availability.UNAVAILABLE || 0}</div>
+                <div className="stat-value">{dashboard.availability?.UNAVAILABLE || 0}</div>
                 <div className="stat-label">On Leave</div>
               </div>
             </div>
@@ -218,7 +221,7 @@ export function Dashboard() {
             >
               <Activity className="stat-icon" color={COLORS.warning} />
               <div>
-                <div className="stat-value">{dashboard.availability.LIMITED || 0}</div>
+                <div className="stat-value">{dashboard.availability?.LIMITED || 0}</div>
                 <div className="stat-label">Limited Capacity</div>
               </div>
             </div>
@@ -228,7 +231,7 @@ export function Dashboard() {
             >
               <TrendingUp className="stat-icon" color={COLORS.primary} />
               <div>
-                <div className="stat-value">{dashboard.utilization.OVER_ALLOCATED || 0}</div>
+                <div className="stat-value">{dashboard.utilization?.OVER_ALLOCATED || 0}</div>
                 <div className="stat-label">Over Allocated</div>
               </div>
             </div>

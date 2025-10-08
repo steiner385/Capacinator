@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import ExcelJS from 'exceljs';
 
 export class ExportController extends BaseController {
   
@@ -11,7 +12,6 @@ export class ExportController extends BaseController {
         return res.status(400).json({ error: 'Report type is required' });
       }
       
-      const ExcelJS = await import('exceljs');
       const workbook = new ExcelJS.Workbook();
       
       // Set workbook properties

@@ -313,7 +313,7 @@ export class AssignmentsController extends EnhancedBaseController {
     }, req, res, 'Failed to fetch assignment');
 
     if (result) {
-      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
+      this.sendSuccess(req, res, result, 'Assignment fetched successfully');
     }
   })
 
@@ -621,7 +621,7 @@ export class AssignmentsController extends EnhancedBaseController {
     }, req, res, 'Failed to create bulk assignments');
 
     if (result) {
-      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
+      this.sendSuccess(req, res, result, 'Bulk assignments created successfully');
     }
   })
 
@@ -749,7 +749,7 @@ export class AssignmentsController extends EnhancedBaseController {
     }, req, res, 'Failed to check conflicts');
 
     if (result) {
-      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
+      this.sendSuccess(req, res, result, 'Conflicts checked successfully');
     }
   })
 
@@ -813,7 +813,7 @@ export class AssignmentsController extends EnhancedBaseController {
     }, req, res, 'Failed to get assignment suggestions');
 
     if (result) {
-      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
+      this.sendSuccess(req, res, result, 'Assignment suggestions fetched successfully');
     }
   })
 
@@ -888,7 +888,7 @@ export class AssignmentsController extends EnhancedBaseController {
     }, req, res, 'Failed to get assignment timeline');
 
     if (result) {
-      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
+      this.sendSuccess(req, res, result, 'Assignment timeline fetched successfully');
     }
   })
 
@@ -1042,7 +1042,7 @@ export class AssignmentsController extends EnhancedBaseController {
     }, req, res, 'Failed to delete test data');
 
     if (result) {
-      this.sendPaginatedResponse(req, res, result.data, result.pagination.total, result.pagination.page, result.pagination.limit);
+      this.sendSuccess(req, res, result, 'Test assignments deleted successfully');
     }
   })
 

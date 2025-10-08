@@ -4,17 +4,7 @@ import type { Express, Request, Response } from 'express';
 import request from 'supertest';
 import knex, { Knex } from 'knex';
 import { Logger } from '../../../src/server/services/logging/Logger.js';
-import { AuditService } from '../../../src/server/services/AuditService.js';
-
-// Create a test database instance
-let testDb: Knex;
-
-// Mock the database module
-jest.mock('../../../src/server/database/index.js', () => ({
-  get db() {
-    return testDb;
-  }
-}));
+import { createEnhancedAuditMiddleware, createAutoAuditMiddleware } from '../../../src/server/middleware/enhancedAuditMiddleware.js';
 
 // Mock the config module
 jest.mock('../../../src/server/config/auditConfig.js', () => ({
@@ -29,11 +19,9 @@ jest.mock('../../../src/server/config/auditConfig.js', () => ({
   }
 }));
 
-// Import middleware after mocking
-import { enhancedAuditMiddleware, autoAuditMiddleware } from '../../../src/server/middleware/enhancedAuditMiddleware.js';
-
 describe('Enhanced Audit Middleware Integration Tests - Clean', () => {
   let app: Express;
+  let testDb: Knex;
   let testProjectId: string;
   let testPersonId: string;
 
@@ -147,8 +135,8 @@ describe('Enhanced Audit Middleware Integration Tests - Clean', () => {
       next();
     });
 
-    // Add enhanced audit middleware
-    app.use(enhancedAuditMiddleware);
+    // Add enhanced audit middleware with dependency injection
+    app.use(createEnhancedAuditMiddleware(testDb));
   });
 
   afterEach(async () => {
@@ -157,7 +145,7 @@ describe('Enhanced Audit Middleware Integration Tests - Clean', () => {
   });
 
   test('should audit project creation through API', async () => {
-    app.post('/projects', autoAuditMiddleware('projects'), async (req: any, res: Response) => {
+    app.post('/projects', createAutoAuditMiddleware(testDb, 'projects'), async (req: any, res: Response) => {
       const projectData = {
         id: 'new-proj-' + Date.now(),
         ...req.body,
@@ -203,7 +191,7 @@ describe('Enhanced Audit Middleware Integration Tests - Clean', () => {
   });
 
   test('should audit project updates with field tracking', async () => {
-    app.put('/projects/:id', autoAuditMiddleware('projects'), async (req: any, res: Response) => {
+    app.put('/projects/:id', createAutoAuditMiddleware(testDb, 'projects'), async (req: any, res: Response) => {
       const { id } = req.params;
 
       // Get current values
@@ -260,7 +248,7 @@ describe('Enhanced Audit Middleware Integration Tests - Clean', () => {
   });
 
   test('should redact sensitive fields', async () => {
-    app.post('/people', autoAuditMiddleware('people'), async (req: any, res: Response) => {
+    app.post('/people', createAutoAuditMiddleware(testDb, 'people'), async (req: any, res: Response) => {
       const personData = {
         id: 'person-' + Date.now(),
         ...req.body,
@@ -371,7 +359,7 @@ describe('Enhanced Audit Middleware Integration Tests - Clean', () => {
   });
 
   test('should track request metadata', async () => {
-    app.post('/projects', autoAuditMiddleware('projects'), async (req: any, res: Response) => {
+    app.post('/projects', createAutoAuditMiddleware(testDb, 'projects'), async (req: any, res: Response) => {
       const projectData = {
         id: 'meta-proj-' + Date.now(),
         ...req.body

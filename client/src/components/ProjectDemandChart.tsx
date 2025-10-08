@@ -259,7 +259,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     queryFn: async () => {
       const response = await api.demands.getProjectDemands(projectId);
       return response.data;
-    }
+    },
+    enabled: !!projectId
   });
 
   // Get project assignments for capacity calculation
@@ -268,7 +269,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     queryFn: async () => {
       const response = await api.assignments.list({ project_id: projectId });
       return response.data;
-    }
+    },
+    enabled: !!projectId
   });
 
   // Callback to refetch demand data when phases change
@@ -285,7 +287,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data;
-    }
+    },
+    enabled: !!projectId
   });
 
   // Phase colors matching the existing system

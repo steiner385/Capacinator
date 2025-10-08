@@ -108,7 +108,7 @@ export const DemandReport: React.FC<DemandReportProps> = ({
         />
         <ReportSummaryCard
           title="# Roles with Demand"
-          metric={data.by_role?.length || 0}
+          metric={data.summary?.roles_with_demand || 0}
         />
         <ReportSummaryCard
           title="Peak Month"

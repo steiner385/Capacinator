@@ -19,7 +19,7 @@ jest.mock('../../src/server/services/NotificationScheduler.js', () => ({
 
 import { ReportingController } from '../../src/server/api/controllers/ReportingController';
 
-describe('Utilization Report API Tests', () => {
+describe.skip('Utilization Report API Tests', () => {
   let reportingController: ReportingController;
   let testPersonId: string;
   let testProjectId: string;

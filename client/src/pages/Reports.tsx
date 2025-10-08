@@ -97,7 +97,7 @@ export default function Reports() {
         api.people.list()
       ]);
       
-      const data = capacityResponse.data;
+      const data = capacityResponse.data.data;
       const peopleData = peopleResponse.data?.data || [];
       
       // Transform the API data to match chart requirements
@@ -160,7 +160,7 @@ export default function Reports() {
     queryKey: ['report-utilization', filters, currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getUtilization(filters);
-      const data = response.data;
+      const data = response.data.data;
       
       if (data) {
         // Transform the data to match what the UtilizationReport component expects
@@ -218,9 +218,8 @@ export default function Reports() {
   const { data: demandReport, isLoading: demandLoading, refetch: refetchDemand } = useQuery({
     queryKey: ['report-demand', filters, currentScenario?.id],
     queryFn: async () => {
-      console.log('Fetching demand report with filters:', filters);
       const response = await api.reporting.getDemand(filters);
-      const data = response.data;
+      const data = response.data.data;
       
       // Transform data for charts
       if (data) {
@@ -270,8 +269,6 @@ export default function Reports() {
           }
         }
         
-        console.log('Generated trendOverTime:', trendOverTime);
-        
         // Find peak month from timeline data
         const peakMonth = trendOverTime.reduce((peak: any, current: any) => 
           current.total_hours > (peak?.total_hours || 0) ? current : peak, 
@@ -295,7 +292,7 @@ export default function Reports() {
     queryKey: ['report-gaps', filters, currentScenario?.id],
     queryFn: async () => {
       const response = await api.reporting.getGaps(filters);
-      const data = response.data;
+      const data = response.data.data;
       
       if (data) {
         // Transform capacity gaps data for charts
@@ -480,11 +477,36 @@ export default function Reports() {
         return;
       }
 
-      const response = await api.reporting.export({
-        reportType: endpoint,
-        format,
-        filters
-      });
+      let response;
+      
+      // Call the appropriate export function based on format
+      switch (format) {
+        case 'xlsx':
+          response = await api.export.reportAsExcel(endpoint, filters);
+          break;
+        case 'csv':
+          response = await api.export.reportAsCSV(endpoint, filters);
+          break;
+        case 'pdf':
+          response = await api.export.reportAsPDF(endpoint, filters);
+          break;
+        case 'json':
+          // For JSON, we'll use the current report data
+          const jsonBlob = new Blob([JSON.stringify(data, null, 2)], {
+            type: 'application/json'
+          });
+          const jsonUrl = URL.createObjectURL(jsonBlob);
+          const jsonLink = document.createElement('a');
+          jsonLink.href = jsonUrl;
+          jsonLink.download = `${endpoint}-report.json`;
+          document.body.appendChild(jsonLink);
+          jsonLink.click();
+          document.body.removeChild(jsonLink);
+          URL.revokeObjectURL(jsonUrl);
+          return;
+        default:
+          throw new Error(`Unsupported export format: ${format}`);
+      }
 
       // Handle file download
       const blob = new Blob([response.data], {

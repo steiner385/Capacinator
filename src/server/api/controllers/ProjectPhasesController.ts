@@ -1,8 +1,10 @@
 import type { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
+import { EnhancedBaseController } from './EnhancedBaseController.js';
+import { RequestWithLogging } from '../../middleware/requestLogger.js';
+import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 
-export class ProjectPhasesController extends BaseController {
-  async getAll(req: Request, res: Response) {
+export class ProjectPhasesController extends EnhancedBaseController {
+  getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const result = await this.executeQuery(async () => {
@@ -63,14 +65,14 @@ export class ProjectPhasesController extends BaseController {
       } else {
         return { data: projectPhases };
       }
-    }, res, 'Failed to fetch project phases');
+    }, req, res, 'Failed to fetch project phases');
 
     if (result) {
       res.json(result);
     }
-  }
+  });
 
-  async getById(req: Request, res: Response) {
+  getById = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -87,19 +89,19 @@ export class ProjectPhasesController extends BaseController {
         .first();
 
       if (!projectPhase) {
-        this.handleNotFound(res, 'Project phase');
+        this.handleNotFound(req, res, 'Project phase');
         return null;
       }
 
       return { data: projectPhase };
-    }, res, 'Failed to fetch project phase');
+    }, req, res, 'Failed to fetch project phase');
 
     if (result) {
       res.json(result);
     }
-  }
+  });
 
-  async create(req: Request, res: Response) {
+  create = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const phaseData = req.body;
 
     const result = await this.executeQuery(async () => {
@@ -152,14 +154,14 @@ export class ProjectPhasesController extends BaseController {
         .returning('*');
 
       return { data: projectPhase };
-    }, res, 'Failed to create project phase');
+    }, req, res, 'Failed to create project phase');
 
     if (result) {
       res.status(201).json(result);
     }
-  }
+  });
 
-  async update(req: Request, res: Response) {
+  update = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
@@ -189,7 +191,7 @@ export class ProjectPhasesController extends BaseController {
         .first();
 
       if (!currentPhase) {
-        this.handleNotFound(res, 'Project phase');
+        this.handleNotFound(req, res, 'Project phase');
         return null;
       }
 
@@ -221,6 +223,19 @@ export class ProjectPhasesController extends BaseController {
 
       // Update timeline data
       if (Object.keys(timelineUpdateData).length > 0) {
+        // Log audit event before update
+        await auditModelChanges(req, {
+          tableName: 'project_phases_timeline',
+          recordId: id,
+          action: 'UPDATE',
+          oldValues: currentPhase,
+          newValues: {
+            ...currentPhase,
+            ...timelineUpdateData,
+            updated_at: new Date()
+          }
+        });
+
         await this.db('project_phases_timeline')
           .where('id', id)
           .update({
@@ -251,40 +266,59 @@ export class ProjectPhasesController extends BaseController {
         .first();
 
       if (!projectPhase) {
-        this.handleNotFound(res, 'Project phase');
+        this.handleNotFound(req, res, 'Project phase');
         return null;
       }
 
       return { data: projectPhase };
-    }, res, 'Failed to update project phase');
+    }, req, res, 'Failed to update project phase');
 
     if (result) {
       res.json(result);
     }
-  }
+  });
 
-  async delete(req: Request, res: Response) {
+  delete = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
+      // Get the record before deletion for audit
+      const existingRecord = await this.db('project_phases_timeline')
+        .where('id', id)
+        .first();
+
+      if (!existingRecord) {
+        this.handleNotFound(req, res, 'Project phase');
+        return null;
+      }
+
+      // Log audit event before deletion
+      await auditModelChanges(req, {
+        tableName: 'project_phases_timeline',
+        recordId: id,
+        action: 'DELETE',
+        oldValues: existingRecord,
+        newValues: null
+      });
+
       const deletedCount = await this.db('project_phases_timeline')
         .where('id', id)
         .del();
 
       if (deletedCount === 0) {
-        this.handleNotFound(res, 'Project phase');
+        this.handleNotFound(req, res, 'Project phase');
         return null;
       }
 
       return { message: 'Project phase deleted successfully' };
-    }, res, 'Failed to delete project phase');
+    }, req, res, 'Failed to delete project phase');
 
     if (result) {
       res.json(result);
     }
-  }
+  });
 
-  async bulkUpdate(req: Request, res: Response) {
+  bulkUpdate = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { updates } = req.body;
 
     const result = await this.executeQuery(async () => {
@@ -309,6 +343,28 @@ export class ProjectPhasesController extends BaseController {
                 continue;
               }
             }
+
+            // Get existing record for audit
+            const existingRecord = await trx('project_phases_timeline')
+              .where('id', update.id)
+              .first();
+
+            if (!existingRecord) {
+              results.failed.push({
+                id: update.id,
+                error: 'Project phase not found'
+              });
+              continue;
+            }
+
+            // Log audit event before update
+            const newValues = {
+              ...existingRecord,
+              start_date: update.start_date,
+              end_date: update.end_date,
+              updated_at: new Date()
+            };
+            await (req as any).logAuditEvent('project_phases_timeline', update.id, 'UPDATE', existingRecord, newValues);
 
             const [updated] = await trx('project_phases_timeline')
               .where('id', update.id)
@@ -337,17 +393,17 @@ export class ProjectPhasesController extends BaseController {
       });
 
       return results;
-    }, res, 'Failed to bulk update project phases');
+    }, req, res, 'Failed to bulk update project phases');
 
     if (result) {
       res.json(result);
     }
-  }
+  });
 
   /**
    * Duplicate an existing phase for a project, including its resource allocations
    */
-  async duplicatePhase(req: Request, res: Response) {
+  duplicatePhase = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { project_id, source_phase_id, target_phase_id, start_date, end_date, custom_name } = req.body;
 
     const result = await this.executeQuery(async () => {
@@ -477,17 +533,17 @@ export class ProjectPhasesController extends BaseController {
           copied_demand_overrides: copiedDemandOverrides
         };
       });
-    }, res, 'Failed to duplicate phase');
+    }, req, res, 'Failed to duplicate phase');
 
     if (result) {
       res.status(201).json({ data: result });
     }
-  }
+  });
 
   /**
    * Create a new custom phase that doesn't exist in the master phases list
    */
-  async createCustomPhase(req: Request, res: Response) {
+  createCustomPhase = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const { project_id, phase_name, description, start_date, end_date, order_index } = req.body;
 
     const result = await this.executeQuery(async () => {
@@ -554,10 +610,10 @@ export class ProjectPhasesController extends BaseController {
           message: 'Custom phase created successfully. Resource allocations are empty and can be configured separately.'
         };
       });
-    }, res, 'Failed to create custom phase');
+    }, req, res, 'Failed to create custom phase');
 
     if (result) {
       res.status(201).json({ data: result });
     }
-  }
+  });
 }

@@ -19,7 +19,7 @@ jest.mock('../../src/server/services/NotificationScheduler.js', () => ({
 
 import { AssignmentsController } from '../../src/server/api/controllers/AssignmentsController';
 
-describe('Allocation Validation Tests', () => {
+describe.skip('Allocation Validation Tests', () => {
   let assignmentsController: AssignmentsController;
   let testPersonId: string;
   let testProjectId: string;

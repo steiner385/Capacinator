@@ -16,6 +16,6 @@ router.post('/duplicate', (req, res) => controller.duplicatePhase(req, res));
 router.post('/create-custom', (req, res) => controller.createCustomPhase(req, res));
 
 // Bulk corrections endpoint for Fix All functionality
-router.post('/bulk-corrections', (req, res) => controller.applyBulkCorrections(req, res));
+// router.post('/bulk-corrections', (req, res) => controller.applyBulkCorrections(req, res));
 
 export default router;

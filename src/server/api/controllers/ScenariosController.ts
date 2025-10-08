@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { randomUUID } from 'crypto';
+import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 
 export class ScenariosController extends BaseController {
   // Get all scenarios
@@ -106,6 +107,15 @@ export class ScenariosController extends BaseController {
         .where('scenarios.id', scenarioId)
         .first();
 
+      // Audit log
+      await auditModelChanges(req, {
+        tableName: 'scenarios',
+        recordId: scenarioId,
+        action: 'INSERT',
+        oldValues: null,
+        newValues: newScenario
+      });
+
       return newScenario;
     }, res, 'Failed to create scenario');
 
@@ -120,6 +130,15 @@ export class ScenariosController extends BaseController {
     const { name, description, status } = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Get existing scenario for audit
+      const existingScenario = await this.db('scenarios')
+        .where('id', id)
+        .first();
+
+      if (!existingScenario) {
+        return res.status(404).json({ error: 'Scenario not found' });
+      }
+
       const updateData: any = { updated_at: new Date() };
       
       if (name !== undefined) updateData.name = name;
@@ -141,6 +160,15 @@ export class ScenariosController extends BaseController {
         )
         .where('scenarios.id', id)
         .first();
+
+      // Audit log
+      await auditModelChanges(req, {
+        tableName: 'scenarios',
+        recordId: id,
+        action: 'UPDATE',
+        oldValues: existingScenario,
+        newValues: scenario
+      });
 
       return scenario;
     }, res, 'Failed to update scenario');
@@ -175,6 +203,15 @@ export class ScenariosController extends BaseController {
       if (childCount && Number(childCount.count) > 0) {
         throw new Error('Cannot delete scenario with child scenarios');
       }
+
+      // Audit log before deletion
+      await auditModelChanges(req, {
+        tableName: 'scenarios',
+        recordId: id,
+        action: 'DELETE',
+        oldValues: scenario,
+        newValues: null
+      });
 
       await this.db('scenarios').where('id', id).del();
       return { success: true };
@@ -249,20 +286,33 @@ export class ScenariosController extends BaseController {
 
       if (existing) {
         // Update existing assignment
+        const updatedData = {
+          allocation_percentage,
+          assignment_date_mode,
+          start_date,
+          end_date,
+          notes,
+          change_type,
+          base_assignment_id,
+          updated_at: now
+        };
+
         await this.db('scenario_project_assignments')
           .where('id', existing.id)
-          .update({
-            allocation_percentage,
-            assignment_date_mode,
-            start_date,
-            end_date,
-            notes,
-            change_type,
-            base_assignment_id,
-            updated_at: now
-          });
+          .update(updatedData);
 
-        return { ...existing, allocation_percentage, assignment_date_mode, start_date, end_date, notes };
+        const result = { ...existing, ...updatedData };
+
+        // Audit log for update
+        await auditModelChanges(req, {
+          tableName: 'scenario_project_assignments',
+          recordId: existing.id,
+          action: 'UPDATE',
+          oldValues: existing,
+          newValues: result
+        });
+
+        return result;
       } else {
         // Create new assignment
         const assignmentData = {
@@ -284,6 +334,16 @@ export class ScenariosController extends BaseController {
         };
 
         await this.db('scenario_project_assignments').insert(assignmentData);
+
+        // Audit log for create
+        await auditModelChanges(req, {
+          tableName: 'scenario_project_assignments',
+          recordId: assignmentId,
+          action: 'INSERT',
+          oldValues: null,
+          newValues: assignmentData
+        });
+
         return assignmentData;
       }
     }, res, 'Failed to create/update scenario assignment');
@@ -298,6 +358,25 @@ export class ScenariosController extends BaseController {
     const { id, assignmentId } = req.params;
 
     const result = await this.executeQuery(async () => {
+      // Get existing assignment for audit
+      const existingAssignment = await this.db('scenario_project_assignments')
+        .where('id', assignmentId)
+        .where('scenario_id', id)
+        .first();
+
+      if (!existingAssignment) {
+        throw new Error('Assignment not found');
+      }
+
+      // Audit log before deletion
+      await auditModelChanges(req, {
+        tableName: 'scenario_project_assignments',
+        recordId: assignmentId,
+        action: 'DELETE',
+        oldValues: existingAssignment,
+        newValues: null
+      });
+
       await this.db('scenario_project_assignments')
         .where('id', assignmentId)
         .where('scenario_id', id)
@@ -331,30 +410,66 @@ export class ScenariosController extends BaseController {
         throw new Error('One or both scenarios not found');
       }
 
+      // Helper function to get effective assignments for a scenario
+      const getEffectiveAssignments = async (scenarioId: string, scenario: any) => {
+        const effectiveMap = new Map();
+        
+        // For baseline scenarios, always start with base project_assignments
+        const needsBaseAssignments = scenario.scenario_type === 'baseline';
+        
+        if (needsBaseAssignments) {
+          // Start with base project_assignments
+          const baseAssignments = await this.db('project_assignments as pa')
+            .leftJoin('projects as p', 'pa.project_id', 'p.id')
+            .leftJoin('people as pe', 'pa.person_id', 'pe.id')
+            .leftJoin('roles as r', 'pa.role_id', 'r.id')
+            .select(
+              'pa.*',
+              'p.name as project_name',
+              'pe.name as person_name',
+              'r.name as role_name'
+            );
+
+          // Add base assignments to the map
+          baseAssignments.forEach(a => {
+            const key = `${a.project_id}:${a.person_id}:${a.role_id}:${a.phase_id || 'null'}`;
+            effectiveMap.set(key, a);
+          });
+        }
+
+        // Get scenario-specific assignments
+        const scenarioAssignments = await this.db('scenario_project_assignments as spa')
+          .leftJoin('projects as p', 'spa.project_id', 'p.id')
+          .leftJoin('people as pe', 'spa.person_id', 'pe.id')
+          .leftJoin('roles as r', 'spa.role_id', 'r.id')
+          .where('spa.scenario_id', scenarioId)
+          .select(
+            'spa.*',
+            'p.name as project_name',
+            'pe.name as person_name',
+            'r.name as role_name'
+          );
+
+        // Apply scenario-specific changes
+        scenarioAssignments.forEach(assignment => {
+          const key = `${assignment.project_id}:${assignment.person_id}:${assignment.role_id}:${assignment.phase_id || 'null'}`;
+          
+          if (assignment.change_type === 'removed' || assignment.allocation_percentage === 0) {
+            // Remove assignment
+            effectiveMap.delete(key);
+          } else if (assignment.change_type === 'added' || assignment.change_type === 'modified') {
+            // Add or update assignment
+            effectiveMap.set(key, assignment);
+          }
+        });
+
+        return Array.from(effectiveMap.values());
+      };
+
       // Get assignments for both scenarios
       const [assignments1, assignments2] = await Promise.all([
-        this.db('scenario_project_assignments as spa')
-          .leftJoin('projects as p', 'spa.project_id', 'p.id')
-          .leftJoin('people as pe', 'spa.person_id', 'pe.id')
-          .leftJoin('roles as r', 'spa.role_id', 'r.id')
-          .where('spa.scenario_id', id)
-          .select(
-            'spa.*',
-            'p.name as project_name',
-            'pe.name as person_name',
-            'r.name as role_name'
-          ),
-        this.db('scenario_project_assignments as spa')
-          .leftJoin('projects as p', 'spa.project_id', 'p.id')
-          .leftJoin('people as pe', 'spa.person_id', 'pe.id')
-          .leftJoin('roles as r', 'spa.role_id', 'r.id')
-          .where('spa.scenario_id', compare_to)
-          .select(
-            'spa.*',
-            'p.name as project_name',
-            'pe.name as person_name',
-            'r.name as role_name'
-          )
+        getEffectiveAssignments(id, scenario1),
+        getEffectiveAssignments(compare_to as string, scenario2)
       ]);
 
       // Create maps for easier comparison
@@ -517,14 +632,25 @@ export class ScenariosController extends BaseController {
         throw new Error('Cannot merge baseline scenario');
       }
 
+      // Audit log - merge initiation
+      await auditModelChanges(req, {
+        tableName: 'scenarios',
+        recordId: id,
+        action: 'UPDATE',
+        oldValues: scenario,
+        newValues: { ...scenario, status: 'merging' },
+        comment: `Merge initiated from ${scenario.name} to parent scenario ${scenario.parent_scenario_id} with conflict resolution: ${resolve_conflicts_as}`
+      });
+
       // Detect conflicts first
       const conflicts = await this.detectMergeConflicts(id, scenario.parent_scenario_id);
 
       if (conflicts.length > 0 && resolve_conflicts_as === 'manual') {
         // Save conflicts for manual resolution
         for (const conflict of conflicts) {
+          const conflictId = randomUUID();
           await this.db('scenario_merge_conflicts').insert({
-            id: randomUUID(),
+            id: conflictId,
             source_scenario_id: id,
             target_scenario_id: scenario.parent_scenario_id,
             conflict_type: conflict.type,
@@ -534,7 +660,33 @@ export class ScenariosController extends BaseController {
             resolution: 'pending',
             created_at: new Date()
           });
+
+          // Audit log - conflict detection
+          await auditModelChanges(req, {
+            tableName: 'scenario_merge_conflicts',
+            recordId: conflictId,
+            action: 'INSERT',
+            oldValues: null,
+            newValues: {
+              id: conflictId,
+              source_scenario_id: id,
+              target_scenario_id: scenario.parent_scenario_id,
+              conflict_type: conflict.type,
+              entity_id: conflict.entity_id
+            },
+            comment: `Merge conflict detected: ${conflict.type} for entity ${conflict.entity_id}`
+          });
         }
+
+        // Audit log - merge failed due to conflicts
+        await auditModelChanges(req, {
+          tableName: 'scenarios',
+          recordId: id,
+          action: 'UPDATE',
+          oldValues: scenario,
+          newValues: { ...scenario, status: 'conflict' },
+          comment: `Merge failed: ${conflicts.length} conflicts require manual resolution`
+        });
 
         return {
           success: false,
@@ -543,13 +695,24 @@ export class ScenariosController extends BaseController {
         };
       }
 
-      // Perform the merge
+      // Perform the merge (this will handle individual table audit logging)
       await this.performMerge(id, scenario.parent_scenario_id, resolve_conflicts_as);
 
       // Mark scenario as merged
+      const mergedScenario = { ...scenario, status: 'merged', updated_at: new Date() };
       await this.db('scenarios')
         .where('id', id)
         .update({ status: 'merged', updated_at: new Date() });
+
+      // Audit log - merge completion
+      await auditModelChanges(req, {
+        tableName: 'scenarios',
+        recordId: id,
+        action: 'UPDATE',
+        oldValues: scenario,
+        newValues: mergedScenario,
+        comment: `Merge completed successfully from ${scenario.name} to parent scenario ${scenario.parent_scenario_id}`
+      });
 
       return {
         success: true,

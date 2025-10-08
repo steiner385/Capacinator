@@ -68,7 +68,11 @@ export async function createExpressApp() {
       const auditHandler = new AuditRouteHandler(auditService);
       auditHandler.register(app);
       logger.info('Audit service and routes enabled');
+    } else {
+      logger.warn('Audit service is enabled but service instance is null');
     }
+  } else {
+    logger.info('Audit service is disabled in config');
   }
 
   // API routes

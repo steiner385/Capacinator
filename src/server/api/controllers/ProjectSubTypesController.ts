@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../../database/index.js';
-import { getAuditService } from '../../services/audit/index.js';
+import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 
 // Get all project sub-types (optionally filtered by project type)
 export const getProjectSubTypes = async (req: Request, res: Response) => {
@@ -183,15 +183,13 @@ export const createProjectSubType = async (req: Request, res: Response) => {
     await inheritFromProjectType(created.id, project_type_id);
 
     // Audit log
-    const auditService = getAuditService();
-    await auditService.logChange(
-      'project_sub_types',
-      created.id,
-      'INSERT',
-      null,
-      created,
-      req.user?.id || 'system'
-    );
+    await auditModelChanges(req, {
+      tableName: 'project_sub_types',
+      recordId: created.id,
+      action: 'INSERT',
+      oldValues: null,
+      newValues: created
+    });
 
     res.status(201).json({
       success: true,
@@ -253,15 +251,13 @@ export const updateProjectSubType = async (req: Request, res: Response) => {
       .returning('*');
 
     // Audit log
-    const auditService = getAuditService();
-    await auditService.logChange(
-      'project_sub_types',
-      id,
-      'UPDATE',
-      existingSubType,
-      updated,
-      req.user?.id || 'system'
-    );
+    await auditModelChanges(req, {
+      tableName: 'project_sub_types',
+      recordId: id,
+      action: 'UPDATE',
+      oldValues: existingSubType,
+      newValues: updated
+    });
 
     res.json({
       success: true,
@@ -322,15 +318,13 @@ export const deleteProjectSubType = async (req: Request, res: Response) => {
     });
 
     // Audit log
-    const auditService = getAuditService();
-    await auditService.logChange(
-      'project_sub_types',
-      id,
-      'DELETE',
-      existingSubType,
-      null,
-      req.user?.id || 'system'
-    );
+    await auditModelChanges(req, {
+      tableName: 'project_sub_types',
+      recordId: id,
+      action: 'DELETE',
+      oldValues: existingSubType,
+      newValues: null
+    });
 
     res.json({
       success: true,
