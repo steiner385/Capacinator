@@ -39,7 +39,7 @@ describe('Enhanced Audit Middleware', () => {
   });
 
   describe('enhancedAuditMiddleware', () => {
-    test('should initialize audit service and add helper functions to request', () => {
+    test('should initialize audit service and add helper functions to request', async () => {
       const mockAuditConfig = {
         maxHistoryEntries: 1000,
         retentionDays: 365,
@@ -49,7 +49,7 @@ describe('Enhanced Audit Middleware', () => {
 
       (getAuditConfig as jest.Mock).mockReturnValue(mockAuditConfig);
 
-      enhancedAuditMiddleware(mockReq, mockRes, mockNext);
+      await enhancedAuditMiddleware(mockReq, mockRes, mockNext);
 
       expect(mockReq.auditService).toBeInstanceOf(AuditService);
       expect(mockReq.auditContext).toEqual({});
@@ -70,7 +70,7 @@ describe('Enhanced Audit Middleware', () => {
       (getAuditConfig as jest.Mock).mockReturnValue(mockAuditConfig);
       (isTableAudited as jest.Mock).mockReturnValue(false);
 
-      enhancedAuditMiddleware(mockReq, mockRes, mockNext);
+      await enhancedAuditMiddleware(mockReq, mockRes, mockNext);
 
       await mockReq.logAuditEvent('non_audited_table', '123', 'CREATE', {}, { name: 'Test' });
 
@@ -93,7 +93,7 @@ describe('Enhanced Audit Middleware', () => {
       (getAuditConfig as jest.Mock).mockReturnValue(mockAuditConfig);
       (isTableAudited as jest.Mock).mockReturnValue(true);
 
-      enhancedAuditMiddleware(mockReq, mockRes, mockNext);
+      await enhancedAuditMiddleware(mockReq, mockRes, mockNext);
       mockReq.auditService.logChange = mockLogChange;
 
       const oldValues = { name: 'Old Project' };
@@ -146,7 +146,7 @@ describe('Enhanced Audit Middleware', () => {
       (getAuditConfig as jest.Mock).mockReturnValue(mockAuditConfig);
       (isTableAudited as jest.Mock).mockReturnValue(true);
 
-      enhancedAuditMiddleware(mockReq, mockRes, mockNext);
+      await enhancedAuditMiddleware(mockReq, mockRes, mockNext);
       mockReq.auditService.logChange = mockLogChange;
 
       await expect(
@@ -180,7 +180,7 @@ describe('Enhanced Audit Middleware', () => {
       (getAuditConfig as jest.Mock).mockReturnValue(mockAuditConfig);
       (isTableAudited as jest.Mock).mockReturnValue(true);
 
-      enhancedAuditMiddleware(mockReq, mockRes, mockNext);
+      await enhancedAuditMiddleware(mockReq, mockRes, mockNext);
       mockReq.auditService.logChange = mockLogChange;
 
       const events = [
@@ -216,7 +216,7 @@ describe('Enhanced Audit Middleware', () => {
       });
     });
 
-    test('trackEntityChange should update audit context', () => {
+    test('trackEntityChange should update audit context', async () => {
       const mockAuditConfig = {
         maxHistoryEntries: 1000,
         retentionDays: 365,
@@ -226,7 +226,7 @@ describe('Enhanced Audit Middleware', () => {
 
       (getAuditConfig as jest.Mock).mockReturnValue(mockAuditConfig);
 
-      enhancedAuditMiddleware(mockReq, mockRes, mockNext);
+      await enhancedAuditMiddleware(mockReq, mockRes, mockNext);
 
       const oldValues = { name: 'Old Name', status: 'active' };
       const newValues = { name: 'New Name', status: 'inactive' };

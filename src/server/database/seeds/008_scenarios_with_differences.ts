@@ -86,7 +86,7 @@ export async function seed(knex: Knex): Promise<void> {
     description: 'Experimental R&D focus with new tech stack projects',
     parent_scenario_id: null,
     created_by: frank.id,
-    status: 'draft',
+    status: 'active', // Fixed: changed from 'draft' to 'active' to match CHECK constraint
     scenario_type: 'sandbox',
     branch_point: null,
     created_at: new Date().toISOString(),

@@ -206,9 +206,9 @@ export function createEnhancedAuditMiddleware(database: Knex) {
 }
 
 // Backward compatibility: export a default middleware that uses the global database
-export function enhancedAuditMiddleware(req: RequestWithAudit, res: Response, next: NextFunction) {
+export async function enhancedAuditMiddleware(req: RequestWithAudit, res: Response, next: NextFunction) {
   // Import database dynamically to avoid import issues in tests
-  const { getDb } = require('../database/index.js');
+  const { getDb } = await import('../database/index.js');
   const database = getDb();
   
   const middleware = createEnhancedAuditMiddleware(database);
