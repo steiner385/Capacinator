@@ -1145,8 +1145,9 @@ export class ImportController extends BaseController {
     // Style the header row
     this.styleHeaderRow(allocationsSheet);
 
-    // Get standard allocations - these are typically global, not scenario-specific
-    const allocations = await this.db('standard_allocations')
+    try {
+      // Get standard allocations - these are typically global, not scenario-specific
+      const allocations = await this.db('standard_allocations')
       .leftJoin('project_types', 'standard_allocations.project_type_id', 'project_types.id')
       .leftJoin('project_sub_types', 'standard_allocations.project_sub_type_id', 'project_sub_types.id')
       .leftJoin('project_phases', 'standard_allocations.phase_id', 'project_phases.id')
@@ -1159,16 +1160,29 @@ export class ImportController extends BaseController {
         'roles.name as role_name'
       );
 
-    // Add allocation data
-    allocations.forEach(allocation => {
-      allocationsSheet.addRow({
-        project_type: allocation.project_type_name,
-        project_sub_type: allocation.project_sub_type_name,
-        phase: allocation.phase_name,
-        role: allocation.role_name,
-        allocation: allocation.allocation_percentage
+      // Add allocation data
+      allocations.forEach(allocation => {
+        allocationsSheet.addRow({
+          project_type: allocation.project_type_name,
+          project_sub_type: allocation.project_sub_type_name,
+          phase: allocation.phase_name,
+          role: allocation.role_name,
+          allocation: allocation.allocation_percentage
+        });
       });
-    });
+    } catch (error: any) {
+      // Handle missing standard_allocations table gracefully
+      console.log('Standard allocations table not found, skipping allocation data export:', error.message);
+      
+      // Add a note in the sheet that standard allocations are not available
+      allocationsSheet.addRow({
+        project_type: 'Standard allocations data not available',
+        project_sub_type: 'Table not found in database',
+        phase: 'This feature may not be implemented yet',
+        role: 'N/A',
+        allocation: 'N/A'
+      });
+    }
   }
 
   private async addAssignmentsToWorkbook(workbook: any, scenarioId: string, scenarioType: string) {
