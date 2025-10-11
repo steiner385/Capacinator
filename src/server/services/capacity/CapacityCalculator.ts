@@ -1,4 +1,4 @@
-import { db } from '../../database/index.js';
+import { getAuditedDb } from '../../database/index.js';
 
 export interface CapacityResult {
   role_id: string;
@@ -20,19 +20,25 @@ export interface CapacityResult {
 }
 
 export class CapacityCalculator {
+  private db: any;
+
+  constructor() {
+    this.db = getAuditedDb();
+  }
+
   async calculateCapacityByRole(
     startDate: string,
     endDate: string,
     location_id?: string
   ): Promise<CapacityResult[]> {
     // Get all roles
-    const roles = await db('roles').select('*');
+    const roles = await this.db('roles').select('*');
     
     const results: CapacityResult[] = [];
 
     for (const role of roles) {
       // Get people with this role
-      let peopleQuery = db('person_roles')
+      let peopleQuery = this.db('person_roles')
         .join('people', 'person_roles.person_id', 'people.id')
         .where('person_roles.role_id', role.id)
         .select(
@@ -104,14 +110,14 @@ export class CapacityCalculator {
     endDate: string
   ): Promise<number> {
     // Get person's default availability
-    const person = await db('people')
+    const person = await this.db('people')
       .where('id', personId)
       .first();
 
     if (!person) return 0;
 
     // Get availability overrides in the period
-    const overrides = await db('person_availability_overrides')
+    const overrides = await this.db('person_availability_overrides')
       .where('person_id', personId)
       .where('start_date', '<=', endDate)
       .where('end_date', '>=', startDate)
@@ -149,7 +155,7 @@ export class CapacityCalculator {
     endDate: string
   ): Promise<number> {
     // Get assignments in the period
-    const assignments = await db('project_assignments')
+    const assignments = await this.db('project_assignments')
       .where('person_id', personId)
       .where('start_date', '<=', endDate)
       .where('end_date', '>=', startDate)
@@ -187,7 +193,7 @@ export class CapacityCalculator {
   ): Promise<any> {
     // TODO: Implement when teams table exists
     // For now, calculate for all people
-    const people = await db('people').select('*');
+    const people = await this.db('people').select('*');
     
     let totalCapacity = 0;
     let totalAllocated = 0;
@@ -235,7 +241,7 @@ export class CapacityCalculator {
     const capacityByRole = await this.calculateCapacityByRole(startDate, endDate);
 
     // Get demand by role
-    const demandByRole = await db('project_demands_view')
+    const demandByRole = await this.db('project_demands_view')
       .join('projects', 'project_demands_view.project_id', 'projects.id')
       .join('roles', 'project_demands_view.role_id', 'roles.id')
       .where('projects.include_in_demand', true)

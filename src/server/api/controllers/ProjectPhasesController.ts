@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { EnhancedBaseController } from './EnhancedBaseController.js';
 import { RequestWithLogging } from '../../middleware/requestLogger.js';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
+import { validateDateRange, formatDateForDB } from '../../utils/dateValidation.js';
 
 export class ProjectPhasesController extends EnhancedBaseController {
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
@@ -129,6 +130,21 @@ export class ProjectPhasesController extends EnhancedBaseController {
         return null;
       }
 
+      // Validate dates
+      if (phaseData.start_date && phaseData.end_date) {
+        const dateValidation = validateDateRange(phaseData.start_date, phaseData.end_date);
+        if (!dateValidation.isValid) {
+          res.status(400).json({
+            error: dateValidation.error
+          });
+          return null;
+        }
+        
+        // Normalize dates for database storage
+        phaseData.start_date = formatDateForDB(dateValidation.startDate!);
+        phaseData.end_date = formatDateForDB(dateValidation.endDate!);
+      }
+
       // Check for duplicate
       const existing = await this.db('project_phases_timeline')
         .where({
@@ -166,20 +182,7 @@ export class ProjectPhasesController extends EnhancedBaseController {
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
-      // Validate dates
-      if (updateData.start_date && updateData.end_date) {
-        const startDate = new Date(updateData.start_date);
-        const endDate = new Date(updateData.end_date);
-        
-        if (startDate >= endDate) {
-          res.status(400).json({
-            error: 'Start date must be before end date'
-          });
-          return null;
-        }
-      }
-
-      // Get the current phase info to determine if it's custom
+      // Get the current phase info first
       const currentPhase = await this.db('project_phases_timeline')
         .leftJoin('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
         .select(
@@ -193,6 +196,29 @@ export class ProjectPhasesController extends EnhancedBaseController {
       if (!currentPhase) {
         this.handleNotFound(req, res, 'Project phase');
         return null;
+      }
+
+      // Validate dates with improved validation
+      if (updateData.start_date || updateData.end_date) {
+        // Use existing dates if only one is being updated
+        const startDateToValidate = updateData.start_date || currentPhase.start_date;
+        const endDateToValidate = updateData.end_date || currentPhase.end_date;
+        
+        const dateValidation = validateDateRange(startDateToValidate, endDateToValidate);
+        if (!dateValidation.isValid) {
+          res.status(400).json({
+            error: dateValidation.error
+          });
+          return null;
+        }
+        
+        // Normalize dates to consistent format for database storage
+        if (updateData.start_date) {
+          updateData.start_date = formatDateForDB(dateValidation.startDate!);
+        }
+        if (updateData.end_date) {
+          updateData.end_date = formatDateForDB(dateValidation.endDate!);
+        }
       }
 
       // Check if this is a custom phase (has the is_custom_phase flag)

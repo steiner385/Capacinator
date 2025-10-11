@@ -98,7 +98,7 @@ export default function ProjectTypes() {
   const columns: Column<ProjectType>[] = [
     {
       key: 'name',
-      header: 'Name',
+      header: 'Project Type',
       sortable: true,
       render: (value, row) => (
         <div className="project-type-name">
@@ -106,29 +106,47 @@ export default function ProjectTypes() {
             className="project-type-color"
             style={{ backgroundColor: row.color_code || '#6b7280' }}
           />
-          <span className="name">{value}</span>
+          <div>
+            <span className="name">{value}</span>
+            {row.description && (
+              <span className="description text-muted">{row.description}</span>
+            )}
+          </div>
         </div>
       )
     },
     {
-      key: 'description',
-      header: 'Description',
+      key: 'projects_count',
+      header: 'Projects',
+      sortable: true,
       render: (value) => (
-        <span className="text-muted">
-          {value || 'No description'}
+        <span className="count-badge">
+          {value || 0} project{(value || 0) !== 1 ? 's' : ''}
         </span>
       )
     },
     {
       key: 'created_at',
       header: 'Created',
+      sortable: true,
       render: (value) => new Date(value).toLocaleDateString()
     },
     {
       key: 'actions',
       header: 'Actions',
+      width: '140px',
       render: (_, row) => (
-        <div className="actions">
+        <div className="table-actions">
+          <button
+            className="btn btn-icon btn-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/project-types/${row.id}`);
+            }}
+            title="View Details"
+          >
+            <Eye size={16} />
+          </button>
           <button
             className="btn btn-icon btn-sm"
             onClick={(e) => {

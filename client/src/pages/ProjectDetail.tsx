@@ -9,7 +9,8 @@ import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
-import PhaseTimeline from '../components/PhaseTimeline';
+import EnhancedProjectTimeline from '../components/EnhancedProjectTimeline';
+import '../components/EnhancedProjectTimeline.css';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table';
 import type { Project } from '../types';
 import './PersonDetails.css'; // Reuse existing styles
@@ -97,7 +98,7 @@ export function ProjectDetail() {
     queryKey: ['project', id],
     queryFn: async () => {
       const response = await api.projects.get(id!);
-      return response.data as ProjectDetail;
+      return response.data.data as ProjectDetail;
     },
     enabled: !!id
   });
@@ -124,7 +125,7 @@ export function ProjectDetail() {
   const updateProjectFieldMutation = useMutation({
     mutationFn: async ({ field, value }: { field: string; value: any }) => {
       const response = await api.projects.update(id!, { [field]: value });
-      return response.data;
+      return response.data.data || response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
@@ -489,7 +490,7 @@ export function ProjectDetail() {
           
           {expandedSections.phases && (
             <div className="section-content">
-              <PhaseTimeline projectId={project.id} projectName={project.name} />
+              <EnhancedProjectTimeline projectId={project.id} />
             </div>
           )}
         </div>

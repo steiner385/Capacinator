@@ -197,11 +197,14 @@ export class TestDataHelpers {
         throw new Error(`Failed to create project: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
-      const project = await response.json();
-      console.log('Project creation response:', JSON.stringify(project, null, 2));
+      const responseData = await response.json();
+      console.log('Project creation response:', JSON.stringify(responseData, null, 2));
+      
+      // Handle both old format (direct project data) and new format ({success: true, data: project})
+      const project = responseData.data || responseData;
       
       if (!project || !project.id) {
-        console.error('Project response structure:', project);
+        console.error('Project response structure:', responseData);
         throw new Error('Project creation did not return a valid project with ID');
       }
       

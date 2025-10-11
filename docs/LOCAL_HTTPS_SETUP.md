@@ -68,6 +68,73 @@ If the certificate expires or needs regeneration:
 sudo ./scripts/setup-nginx.sh
 ```
 
+### Eliminating Browser Security Warnings
+
+To completely eliminate Chrome's security warnings for the self-signed certificate:
+
+1. **Regenerate certificate with proper SAN (Subject Alternative Names):**
+   ```bash
+   # Remove old certificate
+   sudo rm -f /etc/nginx/ssl/local.capacinator.com.crt /etc/nginx/ssl/local.capacinator.com.key
+   
+   # Create temporary config file
+   cat > /tmp/local.capacinator.com.conf << EOF
+   [req]
+   distinguished_name = req_distinguished_name
+   req_extensions = v3_req
+   prompt = no
+
+   [req_distinguished_name]
+   C = US
+   ST = State
+   L = City
+   O = Organization
+   CN = local.capacinator.com
+
+   [v3_req]
+   keyUsage = keyEncipherment, dataEncipherment
+   extendedKeyUsage = serverAuth
+   subjectAltName = @alt_names
+
+   [alt_names]
+   DNS.1 = local.capacinator.com
+   DNS.2 = *.local.capacinator.com
+   IP.1 = 127.0.0.1
+   IP.2 = ::1
+   EOF
+   
+   # Generate new certificate with SAN
+   sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+       -keyout /etc/nginx/ssl/local.capacinator.com.key \
+       -out /etc/nginx/ssl/local.capacinator.com.crt \
+       -config /tmp/local.capacinator.com.conf \
+       -extensions v3_req
+   
+   # Clean up
+   rm -f /tmp/local.capacinator.com.conf
+   ```
+
+2. **Add certificate to system trust store:**
+   ```bash
+   sudo cp /etc/nginx/ssl/local.capacinator.com.crt /usr/local/share/ca-certificates/
+   sudo update-ca-certificates
+   ```
+
+3. **Add certificate to Chrome's trust store (optional, for complete elimination of warnings):**
+   - Open Chrome and go to `chrome://settings/certificates`
+   - Click "Authorities" tab
+   - Click "Import"
+   - Select `/etc/nginx/ssl/local.capacinator.com.crt`
+   - Check "Trust this certificate for identifying websites"
+   - Click "OK"
+
+4. **Restart nginx and test:**
+   ```bash
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+After these steps, Chrome should show a green lock icon for `https://local.capacinator.com`.
+
 ### Nginx Issues
 To test nginx configuration:
 ```bash

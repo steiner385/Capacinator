@@ -85,6 +85,18 @@ export class RolesController extends BaseController {
         })
         .returning('*');
 
+      // Log audit event for role creation
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'roles',
+          role.id,
+          'CREATE',
+          null,
+          role,
+          `Role created: ${role.name}`
+        );
+      }
+
       return role;
     }, res, 'Failed to create role');
 
@@ -98,6 +110,16 @@ export class RolesController extends BaseController {
     const updateData = req.body;
 
     const result = await this.executeQuery(async () => {
+      // Get existing role for audit trail
+      const existingRole = await this.db('roles')
+        .where('id', id)
+        .first();
+
+      if (!existingRole) {
+        this.handleNotFound(res, 'Role');
+        return null;
+      }
+
       const [role] = await this.db('roles')
         .where('id', id)
         .update({
@@ -109,6 +131,18 @@ export class RolesController extends BaseController {
       if (!role) {
         this.handleNotFound(res, 'Role');
         return null;
+      }
+
+      // Log audit event for role update
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'roles',
+          id,
+          'UPDATE',
+          existingRole,
+          role,
+          `Role updated: ${role.name}`
+        );
       }
 
       return role;
@@ -123,6 +157,16 @@ export class RolesController extends BaseController {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
+      // Get existing role for audit trail
+      const existingRole = await this.db('roles')
+        .where('id', id)
+        .first();
+
+      if (!existingRole) {
+        this.handleNotFound(res, 'Role');
+        return null;
+      }
+
       const deletedCount = await this.db('roles')
         .where('id', id)
         .del();
@@ -130,6 +174,18 @@ export class RolesController extends BaseController {
       if (deletedCount === 0) {
         this.handleNotFound(res, 'Role');
         return null;
+      }
+
+      // Log audit event for role deletion
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'roles',
+          id,
+          'DELETE',
+          existingRole,
+          null,
+          `Role deleted: ${existingRole.name}`
+        );
       }
 
       return { message: 'Role deleted successfully' };
@@ -153,6 +209,18 @@ export class RolesController extends BaseController {
         })
         .returning('*');
 
+      // Log audit event for role planner addition
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'role_planners',
+          `${id}-${rolePlanner.person_id}`,
+          'CREATE',
+          null,
+          rolePlanner,
+          `Role planner added to role ${id}`
+        );
+      }
+
       return rolePlanner;
     }, res, 'Failed to add role planner');
 
@@ -165,6 +233,17 @@ export class RolesController extends BaseController {
     const { id, plannerId } = req.params;
 
     const result = await this.executeQuery(async () => {
+      // Get existing role planner for audit trail
+      const existingPlanner = await this.db('role_planners')
+        .where('role_id', id)
+        .where('person_id', plannerId)
+        .first();
+
+      if (!existingPlanner) {
+        this.handleNotFound(res, 'Role planner assignment');
+        return null;
+      }
+
       const deletedCount = await this.db('role_planners')
         .where('role_id', id)
         .where('person_id', plannerId)
@@ -173,6 +252,18 @@ export class RolesController extends BaseController {
       if (deletedCount === 0) {
         this.handleNotFound(res, 'Role planner assignment');
         return null;
+      }
+
+      // Log audit event for role planner removal
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'role_planners',
+          `${id}-${plannerId}`,
+          'DELETE',
+          existingPlanner,
+          null,
+          `Role planner removed from role ${id}`
+        );
       }
 
       return { message: 'Role planner removed successfully' };

@@ -56,6 +56,13 @@ export const api = {
     update: (id: string, data: any) => apiClient.put(`/projects/${id}`, data),
     delete: (id: string) => apiClient.delete(`/projects/${id}`),
     getDemands: (id: string) => apiClient.get(`/projects/${id}/demands`),
+    // Phase management endpoints
+    validatePhaseUpdates: (id: string, data: any) => apiClient.post(`/projects/${id}/phases/validate-updates`, data),
+    validateCustomPhase: (id: string, data: any) => apiClient.post(`/projects/${id}/phases/validate-custom`, data),
+    getTemplateCompliance: (id: string) => apiClient.get(`/projects/${id}/template-compliance`),
+    addCustomPhase: (id: string, data: any) => apiClient.post(`/projects/${id}/phases/custom`, data),
+    updateProjectPhase: (id: string, phaseTimelineId: string, data: any) => apiClient.put(`/projects/${id}/phases/${phaseTimelineId}`, data),
+    deleteProjectPhase: (id: string, phaseTimelineId: string) => apiClient.delete(`/projects/${id}/phases/${phaseTimelineId}`),
     getHealth: () => apiClient.get('/projects/dashboard/health'),
   },
 
@@ -188,6 +195,65 @@ export const api = {
       responseType: 'blob',
     }),
     getHistory: () => apiClient.get('/import/history'),
+    analyzeImport: (file: File, options: {
+      clearExisting?: boolean;
+      useV2?: boolean;
+      validateDuplicates?: boolean;
+      autoCreateMissingRoles?: boolean;
+      autoCreateMissingLocations?: boolean;
+      defaultProjectPriority?: number;
+      dateFormat?: string;
+    } = {}) => {
+      const formData = new FormData();
+      formData.append('excelFile', file);
+      formData.append('clearExisting', (options.clearExisting || false).toString());
+      formData.append('useV2', (options.useV2 !== undefined ? options.useV2 : true).toString());
+      if (options.validateDuplicates !== undefined) {
+        formData.append('validateDuplicates', options.validateDuplicates.toString());
+      }
+      if (options.autoCreateMissingRoles !== undefined) {
+        formData.append('autoCreateMissingRoles', options.autoCreateMissingRoles.toString());
+      }
+      if (options.autoCreateMissingLocations !== undefined) {
+        formData.append('autoCreateMissingLocations', options.autoCreateMissingLocations.toString());
+      }
+      if (options.defaultProjectPriority !== undefined) {
+        formData.append('defaultProjectPriority', options.defaultProjectPriority.toString());
+      }
+      if (options.dateFormat) {
+        formData.append('dateFormat', options.dateFormat);
+      }
+      return apiClient.post('/import/analyze', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    exportScenario: (scenarioId: string, options: {
+      includeAssignments?: boolean;
+      includePhases?: boolean;
+    } = {}) => {
+      const params = new URLSearchParams({
+        scenarioId,
+        includeAssignments: (options.includeAssignments !== false).toString(),
+        includePhases: (options.includePhases !== false).toString(),
+      });
+      return apiClient.get(`/import/export/scenario?${params.toString()}`, {
+        responseType: 'blob',
+      });
+    },
+    exportTemplate: (options: {
+      templateType?: string;
+      includeAssignments?: boolean;
+      includePhases?: boolean;
+    } = {}) => {
+      const params = new URLSearchParams({
+        templateType: options.templateType || 'complete',
+        includeAssignments: (options.includeAssignments !== false).toString(),
+        includePhases: (options.includePhases !== false).toString(),
+      });
+      return apiClient.get(`/import/template?${params.toString()}`, {
+        responseType: 'blob',
+      });
+    },
   },
 
   // Export
@@ -226,6 +292,7 @@ export const api = {
     getPhases: (id: string) => apiClient.get(`/project-type-hierarchy/${id}/phases`),
     createSubType: (parentId: string, data: any) => apiClient.post(`/project-type-hierarchy/${parentId}/children`, data),
     addPhase: (id: string, data: any) => apiClient.post(`/project-type-hierarchy/${id}/phases`, data),
+    updatePhase: (id: string, phaseId: string, data: any) => apiClient.put(`/project-type-hierarchy/${id}/phases/${phaseId}`, data),
     removePhase: (id: string, phaseId: string) => apiClient.delete(`/project-type-hierarchy/${id}/phases/${phaseId}`),
     updateHierarchy: (id: string, data: any) => apiClient.put(`/project-type-hierarchy/${id}/hierarchy`, data),
   },

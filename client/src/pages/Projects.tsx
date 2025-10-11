@@ -284,7 +284,7 @@ export function Projects() {
   }
 
   return (
-    <div className="projects-page">
+    <div className="page-container">
       <div className="page-header">
         <div>
           <h1>Projects</h1>

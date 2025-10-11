@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { getAuditedDb } from '../database/index.js';
 import { DependencyType, ProjectPhaseTimeline, ProjectPhaseDependency } from '../types/project-phases.js';
 
 export interface CascadeCalculation {
@@ -21,7 +22,12 @@ export interface CascadeResult {
 }
 
 export class ProjectPhaseCascadeService {
-  constructor(private db: Knex) {}
+  private db: any;
+
+  constructor(database?: Knex) {
+    // Use provided database or default to audited database
+    this.db = database || getAuditedDb();
+  }
 
   /**
    * Format a Date object to YYYY-MM-DD string in a timezone-safe way

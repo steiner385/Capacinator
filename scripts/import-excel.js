@@ -182,15 +182,11 @@ async function importExcel(filePath, options) {
   try {
     // Initialize database connection
     console.log('📊 Initializing database connection...');
-    const db = await initializeDatabase();
+    await initializeDatabase();
     
     // Select appropriate importer
     const ImporterClass = options.useV2 ? ExcelImporterV2 : ExcelImporter;
-    const importer = new ImporterClass(db);
-    
-    // Read file
-    console.log('📖 Reading Excel file...');
-    const fileBuffer = readFileSync(filePath);
+    const importer = new ImporterClass();
     
     // Configure import options
     const importOptions = {
@@ -204,7 +200,7 @@ async function importExcel(filePath, options) {
     
     // Perform import
     console.log('⚙️  Processing import...');
-    const result = await importer.import(fileBuffer, importOptions);
+    const result = await importer.importFromFile(filePath, importOptions);
     
     // Display results
     console.log('');
@@ -228,6 +224,16 @@ async function importExcel(filePath, options) {
         });
       }
     } else {
+      // Handle duplicates found scenario
+      if (result.duplicatesFound) {
+        console.log('');
+        console.log('🔄 Duplicate Records Found:');
+        Object.entries(result.duplicatesFound).forEach(([type, duplicates]) => {
+          if (duplicates.length > 0) {
+            console.log(`   ${type}: ${duplicates.join(', ')}`);
+          }
+        });
+      }
       console.log('❌ Import failed!');
       console.log(`Error: ${result.message}`);
       

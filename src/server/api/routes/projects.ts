@@ -19,6 +19,17 @@ router.delete('/:id', (req, res) => controller.delete(req, res));
 
 // Project-specific endpoints
 router.get('/:id/demands', (req, res) => controller.getDemands(req, res));
+router.get('/:id/timeline', (req, res) => controller.getProjectTimeline(req, res));
+
+// Phase template validation endpoints
+router.post('/:id/phases/validate-updates', (req, res) => controller.validatePhaseUpdates(req, res));
+router.post('/:id/phases/validate-custom', (req, res) => controller.validateCustomPhase(req, res));
+router.get('/:id/template-compliance', (req, res) => controller.getTemplateCompliance(req, res));
+
+// Custom phase management endpoints
+router.post('/:id/phases/custom', (req, res) => controller.addCustomPhase(req, res));
+router.put('/:id/phases/:phaseTimelineId', (req, res) => controller.updateProjectPhase(req, res));
+router.delete('/:id/phases/:phaseTimelineId', (req, res) => controller.deleteProjectPhase(req, res));
 
 // Dashboard/reporting endpoints
 router.get('/dashboard/health', (req, res) => controller.getHealth(req, res));

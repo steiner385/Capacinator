@@ -14,7 +14,7 @@
   border-radius: 8px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  max-height: 70vh;
+  max-height: calc(100vh - 300px);
   overflow-y: auto;
 }
 
@@ -197,21 +197,47 @@
   font-size: 16px;
 }
 
-/* Ensure DataTable styles don't interfere with hierarchy view */
-.hierarchy-view .project-type-name {
+/* Project Type Name Styling for Both Views */
+.project-type-name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.75rem;
 }
 
-.hierarchy-view .project-type-color {
+.project-type-name > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.project-type-name .name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.project-type-name .description {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.project-type-color {
   width: 16px;
   height: 16px;
   border-radius: 3px;
   border: 1px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.count-badge {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* Ensure DataTable styles don't interfere with hierarchy view */
+.hierarchy-view .project-type-name {
+  gap: 8px;
 }
 
 .hierarchy-view .name {
-  font-weight: 500;
   color: #1e293b;
 }

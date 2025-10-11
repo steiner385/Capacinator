@@ -2,8 +2,111 @@ import type { Request, Response } from 'express';
 import { EnhancedBaseController } from './EnhancedBaseController.js';
 import { RequestWithLogging } from '../../middleware/requestLogger.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
+import { PhaseTemplateValidationService, type PhaseUpdateRequest } from '../../services/PhaseTemplateValidationService.js';
+import { CustomPhaseManagementService, type CustomPhaseData, type PhaseUpdateData } from '../../services/CustomPhaseManagementService.js';
 
 export class ProjectsController extends EnhancedBaseController {
+  /**
+   * Automatically inherits phases from project type template when creating a new project.
+   * Creates project_phases_timeline entries with template tracking and duration constraints.
+   */
+  private async inheritProjectPhases(projectId: string, projectTypeId: string): Promise<void> {
+    try {
+      // Get all template phases for the project type with enhanced template data
+      const projectTypePhases = await this.db('project_type_phases')
+        .select(
+          'project_type_phases.id as template_phase_id',
+          'project_type_phases.order_index',
+          'project_type_phases.is_mandatory',
+          'project_type_phases.min_duration_days',
+          'project_type_phases.max_duration_days', 
+          'project_type_phases.default_duration_days',
+          'project_type_phases.is_locked_order',
+          'project_type_phases.template_description',
+          'project_phases.id as phase_id',
+          'project_phases.name as phase_name'
+        )
+        .leftJoin('project_phases', 'project_type_phases.phase_id', 'project_phases.id')
+        .where('project_type_phases.project_type_id', projectTypeId)
+        .orderBy('project_type_phases.order_index');
+
+      if (projectTypePhases.length === 0) {
+        // No template phases defined for this project type
+        return;
+      }
+
+      // Get project aspiration dates for phase date calculation
+      const project = await this.db('projects')
+        .select('aspiration_start', 'aspiration_finish')
+        .where('id', projectId)
+        .first();
+
+      // Calculate phase dates using template durations when available
+      const now = new Date();
+      const projectStart = project?.aspiration_start ? new Date(project.aspiration_start) : now;
+      const projectEnd = project?.aspiration_finish ? new Date(project.aspiration_finish) : null;
+
+      // Calculate total template duration from default_duration_days
+      const totalTemplateDuration = projectTypePhases.reduce((sum, phase) => {
+        return sum + (phase.default_duration_days || 30); // Default to 30 days if not specified
+      }, 0);
+
+      let currentDate = new Date(projectStart);
+      
+      // Create timeline entries for each template phase
+      const timelineEntries = projectTypePhases.map((templatePhase, index) => {
+        const phaseDurationDays = templatePhase.default_duration_days || 30;
+        const phaseStart = new Date(currentDate);
+        const phaseEnd = new Date(currentDate.getTime() + (phaseDurationDays * 24 * 60 * 60 * 1000));
+        
+        // Move currentDate to start of next phase
+        currentDate = new Date(phaseEnd);
+
+        // Calculate actual duration in days for storage
+        const actualDurationDays = Math.round((phaseEnd.getTime() - phaseStart.getTime()) / (24 * 60 * 60 * 1000));
+
+        return {
+          id: `phase-timeline-${projectId}-${templatePhase.phase_id}-${Date.now()}-${index}`,
+          project_id: projectId,
+          phase_id: templatePhase.phase_id,
+          start_date: phaseStart.getTime(),
+          end_date: phaseEnd.getTime(),
+          duration_days: actualDurationDays,
+          // Template tracking fields from new schema
+          phase_source: 'template',
+          template_phase_id: templatePhase.template_phase_id,
+          is_deletable: !templatePhase.is_mandatory,
+          original_duration_days: templatePhase.default_duration_days,
+          template_min_duration_days: templatePhase.min_duration_days,
+          template_max_duration_days: templatePhase.max_duration_days,
+          is_duration_customized: false,
+          is_name_customized: false,
+          template_compliance_data: JSON.stringify({
+            is_mandatory: templatePhase.is_mandatory,
+            is_locked_order: templatePhase.is_locked_order,
+            template_description: templatePhase.template_description,
+            inherited_at: new Date().toISOString()
+          }),
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+      });
+
+      // Insert all template phase timeline entries
+      if (timelineEntries.length > 0) {
+        await this.db('project_phases_timeline').insert(timelineEntries);
+      }
+
+      // Log successful template inheritance for audit
+      console.log(`Successfully inherited ${timelineEntries.length} template phases for project ${projectId} from project type ${projectTypeId}`);
+      
+    } catch (error) {
+      // Log the error but don't fail project creation
+      console.error(`Failed to inherit template phases for project ${projectId}:`, error);
+      throw error; // Re-throw to ensure project creation fails if template inheritance fails
+    }
+  }
+
   /**
    * Validates that a project has a mandatory project subtype.
    * Projects must be associated with active project sub-types.
@@ -70,7 +173,22 @@ export class ProjectsController extends EnhancedBaseController {
         .leftJoin('people as owner', 'projects.owner_id', 'owner.id')
         .leftJoin('project_phases as current_phase', 'projects.current_phase_id', 'current_phase.id')
         .select(
-          'projects.*',
+          'projects.id',
+          'projects.name',
+          'projects.description',
+          'projects.priority',
+          'projects.project_type_id',
+          'projects.project_sub_type_id',
+          'projects.location_id',
+          'projects.owner_id',
+          'projects.current_phase_id',
+          'projects.aspiration_start',
+          'projects.aspiration_finish',
+          'projects.include_in_demand',
+          'projects.data_restrictions',
+          'projects.external_id',
+          'projects.created_at',
+          'projects.updated_at',
           'locations.name as location_name',
           'project_types.name as project_type_name',
           this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
@@ -90,7 +208,20 @@ export class ProjectsController extends EnhancedBaseController {
           ) as end_date`)
         );
 
-      query = this.buildFilters(query, filters);
+      // Apply filters manually to avoid ambiguous column names
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          if (key === 'project_type_id') {
+            query.where('projects.project_type_id', value);
+          } else if (key === 'location_id') {
+            query.where('projects.location_id', value);
+          } else if (typeof value === 'string' && value.includes('%')) {
+            query.where(`projects.${key}`, 'like', value);
+          } else {
+            query.where(`projects.${key}`, value);
+          }
+        }
+      });
       query = this.paginate(query, page, limit);
 
       const projects = await query;
@@ -131,7 +262,22 @@ export class ProjectsController extends EnhancedBaseController {
         .leftJoin('people as owner', 'projects.owner_id', 'owner.id')
         .leftJoin('project_phases as current_phase', 'projects.current_phase_id', 'current_phase.id')
         .select(
-          'projects.*',
+          'projects.id',
+          'projects.name',
+          'projects.description',
+          'projects.priority',
+          'projects.project_type_id',
+          'projects.project_sub_type_id',
+          'projects.location_id',
+          'projects.owner_id',
+          'projects.current_phase_id',
+          'projects.aspiration_start',
+          'projects.aspiration_finish',
+          'projects.include_in_demand',
+          'projects.data_restrictions',
+          'projects.external_id',
+          'projects.created_at',
+          'projects.updated_at',
           'locations.name as location_name',
           'project_types.name as project_type_name',
           this.db.raw('COALESCE(project_sub_types.color_code, project_types.color_code) as project_type_color_code'),
@@ -214,17 +360,30 @@ export class ProjectsController extends EnhancedBaseController {
       // Generate ID for SQLite compatibility
       const projectId = projectData.id || `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
+      // Sanitize foreign key fields - convert empty strings to null
+      const sanitizedData = { ...projectData };
+      const nullableForeignKeys = ['owner_id', 'project_sub_type_id', 'current_phase_id'];
+      
+      nullableForeignKeys.forEach(field => {
+        if (sanitizedData[field] === '') {
+          sanitizedData[field] = null;
+        }
+      });
+      
       const projectToInsert = {
         id: projectId,
-        ...projectData,
-        project_type_id: projectData.project_sub_type_id ? 
-          (await this.db('project_sub_types').where('id', projectData.project_sub_type_id).first())?.project_type_id :
-          projectData.project_type_id,
+        ...sanitizedData,
+        project_type_id: sanitizedData.project_sub_type_id ? 
+          (await this.db('project_sub_types').where('id', sanitizedData.project_sub_type_id).first())?.project_type_id :
+          sanitizedData.project_type_id,
         created_at: new Date(),
         updated_at: new Date()
       };
 
       await this.db('projects').insert(projectToInsert);
+      
+      // Auto-inherit phases from project type
+      await this.inheritProjectPhases(projectId, projectToInsert.project_type_id);
       
       // Fetch the created project
       const project = await this.db('projects').where('id', projectId).first();
@@ -262,10 +421,20 @@ export class ProjectsController extends EnhancedBaseController {
         await this.validateProjectSubType(typeId, subTypeId);
       }
 
+      // Sanitize foreign key fields - convert empty strings to null
+      const sanitizedData = { ...updateData };
+      const nullableForeignKeys = ['owner_id', 'project_sub_type_id', 'current_phase_id'];
+      
+      nullableForeignKeys.forEach(field => {
+        if (sanitizedData[field] === '') {
+          sanitizedData[field] = null;
+        }
+      });
+
       await this.db('projects')
         .where('id', id)
         .update({
-          ...updateData,
+          ...sanitizedData,
           updated_at: new Date()
         });
 
@@ -394,6 +563,174 @@ export class ProjectsController extends EnhancedBaseController {
 
     if (result) {
       this.sendSuccess(req, res, result);
+    }
+  })
+
+  /**
+   * Validates phase updates against template constraints
+   */
+  validatePhaseUpdates = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId } = req.params;
+    const { updates } = req.body as { updates: PhaseUpdateRequest[] };
+
+    if (!updates || !Array.isArray(updates)) {
+      return this.sendError(req, res, 'Invalid updates array provided', 400);
+    }
+
+    const result = await this.executeQuery(async () => {
+      const validationService = new PhaseTemplateValidationService(this.db);
+      return await validationService.validatePhaseUpdates(projectId, updates);
+    }, req, res, 'Failed to validate phase updates');
+
+    if (result) {
+      this.sendSuccess(req, res, result);
+    }
+  })
+
+  /**
+   * Validates adding a custom phase to a project
+   */
+  validateCustomPhase = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId } = req.params;
+    const { phaseName, insertIndex } = req.body as { phaseName: string; insertIndex?: number };
+
+    if (!phaseName) {
+      return this.sendError(req, res, 'Phase name is required', 400);
+    }
+
+    const result = await this.executeQuery(async () => {
+      const validationService = new PhaseTemplateValidationService(this.db);
+      return await validationService.validateCustomPhaseAddition(projectId, phaseName, insertIndex);
+    }, req, res, 'Failed to validate custom phase addition');
+
+    if (result) {
+      this.sendSuccess(req, res, result);
+    }
+  })
+
+  /**
+   * Gets template compliance summary for a project
+   */
+  getTemplateCompliance = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId } = req.params;
+
+    const result = await this.executeQuery(async () => {
+      const validationService = new PhaseTemplateValidationService(this.db);
+      return await validationService.getProjectTemplateCompliance(projectId);
+    }, req, res, 'Failed to get template compliance');
+
+    if (result) {
+      this.sendSuccess(req, res, result);
+    }
+  })
+
+  /**
+   * Gets project timeline with phases and their details
+   */
+  getProjectTimeline = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId } = req.params;
+
+    const result = await this.executeQuery(async () => {
+      // Get project phases timeline
+      const timeline = await this.db('project_phases_timeline')
+        .leftJoin('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
+        .select(
+          'project_phases_timeline.*',
+          'project_phases.name as phase_name',
+          'project_phases.description as phase_description'
+        )
+        .where('project_phases_timeline.project_id', projectId)
+        .orderBy('project_phases_timeline.start_date');
+
+      return {
+        projectId,
+        phases: timeline.map((phase: any) => ({
+          id: phase.id,
+          phase_id: phase.phase_id,
+          name: phase.phase_name,
+          description: phase.phase_description,
+          start_date: phase.start_date,
+          end_date: phase.end_date,
+          duration_days: phase.duration_days,
+          phase_source: phase.phase_source,
+          template_phase_id: phase.template_phase_id,
+          is_deletable: phase.is_deletable,
+          is_duration_customized: phase.is_duration_customized,
+          is_name_customized: phase.is_name_customized,
+          template_compliance_data: phase.template_compliance_data ? 
+            JSON.parse(phase.template_compliance_data) : null
+        }))
+      };
+    }, req, res, 'Failed to get project timeline');
+
+    if (result) {
+      this.sendSuccess(req, res, result);
+    }
+  })
+
+  /**
+   * Adds a custom phase to a project
+   */
+  addCustomPhase = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId } = req.params;
+    const phaseData = req.body as CustomPhaseData;
+
+    if (!phaseData.name) {
+      return this.sendError(req, res, 'Phase name is required', 400);
+    }
+
+    const result = await this.executeQuery(async () => {
+      const phaseService = new CustomPhaseManagementService(this.db);
+      return await phaseService.addCustomPhase(projectId, phaseData);
+    }, req, res, 'Failed to add custom phase');
+
+    if (result) {
+      if (result.success) {
+        this.sendSuccess(req, res, result);
+      } else {
+        this.sendError(req, res, result.message, 400);
+      }
+    }
+  })
+
+  /**
+   * Updates a project phase
+   */
+  updateProjectPhase = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId, phaseTimelineId } = req.params;
+    const updateData = req.body as PhaseUpdateData;
+
+    const result = await this.executeQuery(async () => {
+      const phaseService = new CustomPhaseManagementService(this.db);
+      return await phaseService.updatePhase(projectId, phaseTimelineId, updateData);
+    }, req, res, 'Failed to update project phase');
+
+    if (result) {
+      if (result.success) {
+        this.sendSuccess(req, res, result);
+      } else {
+        this.sendError(req, res, result.message, 400);
+      }
+    }
+  })
+
+  /**
+   * Deletes a project phase
+   */
+  deleteProjectPhase = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
+    const { id: projectId, phaseTimelineId } = req.params;
+
+    const result = await this.executeQuery(async () => {
+      const phaseService = new CustomPhaseManagementService(this.db);
+      return await phaseService.deletePhase(projectId, phaseTimelineId);
+    }, req, res, 'Failed to delete project phase');
+
+    if (result) {
+      if (result.success) {
+        this.sendSuccess(req, res, result);
+      } else {
+        this.sendError(req, res, result.message, 400);
+      }
     }
   })
 }

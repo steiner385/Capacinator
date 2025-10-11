@@ -244,7 +244,7 @@ export function AuditLog() {
   }
 
   return (
-    <div className="audit-log">
+    <div className="page-container">
       <div className="audit-log__header">
         <h1>Audit Log</h1>
         <p>Track and review all system changes with undo capability</p>

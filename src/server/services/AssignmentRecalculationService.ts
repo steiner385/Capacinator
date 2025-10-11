@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { getAuditedDb } from '../database/index.js';
 
 export interface AssignmentRecalculationResult {
   updated_assignments: Array<{
@@ -20,7 +21,12 @@ export interface AssignmentRecalculationResult {
 }
 
 export class AssignmentRecalculationService {
-  constructor(private db: Knex) {}
+  private db: any;
+
+  constructor(database?: Knex) {
+    // Use provided database or default to audited database
+    this.db = database || getAuditedDb();
+  }
 
   /**
    * Recalculate assignments affected by phase timeline changes

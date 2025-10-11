@@ -202,6 +202,121 @@ export function InteractiveTimeline({
     position: number;
   } | null>(null);
 
+  // Scroll state management for hiding handles during scroll
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Scroll event detection to hide handles during scrolling
+  useEffect(() => {
+    const handleScroll = (event?: Event) => {
+      // Debug logging to understand scroll detection
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Scroll detected:', {
+          target: event?.target instanceof Element ? event.target.className : 'window',
+          isScrolling: true,
+          handlesVisible: !isScrolling
+        });
+      }
+      
+      setIsScrolling(true);
+      
+      // Clear handle hover state during scrolling
+      setHoveredHandle(null);
+      
+      // Clear any existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Set timeout to detect when scrolling stops
+      scrollTimeoutRef.current = setTimeout(() => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Scroll stopped - showing handles');
+        }
+        setIsScrolling(false);
+      }, 150); // 150ms delay after scroll stops
+    };
+
+    // Helper function to check if an element is scrollable
+    const isScrollable = (element: Element): boolean => {
+      const style = window.getComputedStyle(element);
+      const hasOverflow = ['auto', 'scroll'].includes(style.overflow) ||
+                         ['auto', 'scroll'].includes(style.overflowX) ||
+                         ['auto', 'scroll'].includes(style.overflowY);
+      return hasOverflow;
+    };
+
+    // Find all scrollable containers up the DOM tree
+    const findScrollableContainers = (startElement: Element): Element[] => {
+      const scrollableContainers: Element[] = [];
+      let currentElement: Element | null = startElement;
+      
+      while (currentElement && currentElement !== document.body) {
+        if (isScrollable(currentElement)) {
+          scrollableContainers.push(currentElement);
+        }
+        currentElement = currentElement.parentElement;
+      }
+      
+      return scrollableContainers;
+    };
+
+    const scrollableContainers: Element[] = [];
+    
+    // Always listen to window scroll
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Find and listen to all scrollable containers
+    if (timelineRef.current) {
+      const containers = findScrollableContainers(timelineRef.current);
+      scrollableContainers.push(...containers);
+      
+      // Also check specific container classes that might be scrollable in roadmap
+      const timelineContainer = timelineRef.current.closest('.timeline-container');
+      if (timelineContainer && !containers.includes(timelineContainer)) {
+        containers.push(timelineContainer);
+        scrollableContainers.push(timelineContainer);
+      }
+      
+      const roadmapContent = timelineRef.current.closest('.roadmap-content');
+      if (roadmapContent && !containers.includes(roadmapContent)) {
+        containers.push(roadmapContent);
+        scrollableContainers.push(roadmapContent);
+      }
+      
+      // Debug logging for development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 InteractiveTimeline scroll containers detected:', {
+          totalContainers: containers.length,
+          containers: containers.map(c => ({
+            tagName: c.tagName,
+            className: c.className,
+            isScrollable: isScrollable(c)
+          }))
+        });
+      }
+      
+      // Add scroll listeners to all found containers
+      containers.forEach(container => {
+        container.addEventListener('scroll', handleScroll, { passive: true });
+      });
+    }
+
+    return () => {
+      // Clean up all event listeners
+      window.removeEventListener('scroll', handleScroll);
+      
+      scrollableContainers.forEach(container => {
+        container.removeEventListener('scroll', handleScroll);
+      });
+      
+      // Clean up timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []); // Empty dependency array since we want this to run once
+
   // Calculate timeline width - use container width when available for precise alignment
   const calculateTimelineWidth = () => {
     // If we have a container, use its actual width for perfect alignment
@@ -382,18 +497,7 @@ export function InteractiveTimeline({
     //   }))
     // });
 
-    // Add a test handle for debugging (always at position 100px)
-    if (sortedItems.length > 0) {
-      handles.push({
-        id: 'test-handle-always-visible',
-        phaseId: sortedItems[0].id,
-        handleType: 'adjust-both',
-        position: sortedItems[0].startDate.getTime(),
-        x: 100, // Always show at 100px from left
-        adjacentPhaseId: sortedItems.length > 1 ? sortedItems[1].id : undefined
-      });
-      // console.log('🧪 Added test handle for debugging');
-    }
+    // Debug handles removed - they were causing UI overlap issues
 
     for (let i = 0; i < sortedItems.length; i++) {
       const currentItem = sortedItems[i];
@@ -421,14 +525,17 @@ export function InteractiveTimeline({
           const gapStartX = calculateItemPosition(prevItem, viewport).left + calculateItemPosition(prevItem, viewport).width;
           const handleX = gapStartX + (currentPosition.left - gapStartX) / 2;
           
-          handles.push({
-            id: `extend-left-${currentItem.id}`,
-            phaseId: currentItem.id,
-            handleType: 'extend-left',
-            position: currentStartTime,
-            x: handleX,
-            adjacentPhaseId: prevItem.id
-          });
+          // Only show handle if it's within visible area and not overlapping with project panel
+          if (handleX >= 340 && handleX <= timelineWidth) {
+            handles.push({
+              id: `extend-left-${currentItem.id}`,
+              phaseId: currentItem.id,
+              handleType: 'extend-left',
+              position: currentStartTime,
+              x: handleX,
+              adjacentPhaseId: prevItem.id
+            });
+          }
           
           // console.log(`✅ Added extend-left handle for ${currentItem.name}`);
         }
@@ -454,28 +561,34 @@ export function InteractiveTimeline({
           const nextStartX = calculateItemPosition(nextItem, viewport).left;
           const handleX = currentEndX + (nextStartX - currentEndX) / 2;
           
-          handles.push({
-            id: `extend-right-${currentItem.id}`,
-            phaseId: currentItem.id,
-            handleType: 'extend-right',
-            position: currentEndTime,
-            x: handleX,
-            adjacentPhaseId: nextItem.id
-          });
+          // Only show handle if it's within visible area and not overlapping with project panel
+          if (handleX >= 340 && handleX <= timelineWidth) {
+            handles.push({
+              id: `extend-right-${currentItem.id}`,
+              phaseId: currentItem.id,
+              handleType: 'extend-right',
+              position: currentEndTime,
+              x: handleX,
+              adjacentPhaseId: nextItem.id
+            });
+          }
           
           // console.log(`✅ Added extend-right handle for ${currentItem.name}`);
         } else if (Math.abs(daysDiff) <= 7) { // Adjacent or overlapping within 7 days (temporary for testing)
           // Phases are adjacent or slightly overlapping - show adjust-both handle
           const boundaryX = currentPosition.left + currentPosition.width;
           
-          handles.push({
-            id: `adjust-both-${currentItem.id}-${nextItem.id}`,
-            phaseId: currentItem.id,
-            handleType: 'adjust-both',
-            position: currentEndTime,
-            x: boundaryX,
-            adjacentPhaseId: nextItem.id
-          });
+          // Only show handle if it's within visible area and not overlapping with project panel
+          if (boundaryX >= 340 && boundaryX <= timelineWidth) {
+            handles.push({
+              id: `adjust-both-${currentItem.id}-${nextItem.id}`,
+              phaseId: currentItem.id,
+              handleType: 'adjust-both',
+              position: currentEndTime,
+              x: boundaryX,
+              adjacentPhaseId: nextItem.id
+            });
+          }
           
           // console.log(`✅ Added adjust-both handle between ${currentItem.name} and ${nextItem.name}`);
         }
@@ -1016,12 +1129,29 @@ export function InteractiveTimeline({
       style={{ 
         position: 'relative', 
         width: '100%', 
-        height: height + 40, // Extra space for labels
+        height: mode === 'roadmap' ? height : height + 40, // Extra space for labels only in non-roadmap modes
         overflow: 'visible', // Allow handles to show above
         cursor: mode === 'brush' ? 'crosshair' : 'default',
         ...style 
       }}
     >
+      {/* Temporary scroll detection indicator */}
+      {process.env.NODE_ENV === 'development' && isScrolling && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          backgroundColor: 'red',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          fontWeight: 'bold',
+          zIndex: 10000,
+          fontSize: '12px'
+        }}>
+          SCROLLING DETECTED
+        </div>
+      )}
       {/* Timeline container */}
       <div
         ref={timelineRef}
@@ -1035,7 +1165,7 @@ export function InteractiveTimeline({
           border: '1px solid #e2e8f0',
           borderRadius: '6px',
           overflow: 'visible', // Allow handles to show above
-          paddingTop: (mode === 'phase-manager' || mode === 'roadmap') ? '30px' : '0px' // Space for handles
+          paddingTop: mode === 'phase-manager' ? '30px' : '0px' // Space for handles (not needed in roadmap mode)
         }}
         onMouseDown={(e) => handleMouseDown(e)}
         onDoubleClick={(e) => handleDoubleClick(e)}
@@ -1280,7 +1410,7 @@ export function InteractiveTimeline({
               onContextMenu={(e) => handleRightClick(e, item.id)}
               onMouseEnter={(e) => {
                 setHoverItemId(item.id);
-                if (mode === 'phase-manager' && item.data) {
+                if ((mode === 'phase-manager' || mode === 'roadmap') && item.data) {
                   const rect = timelineRef.current?.getBoundingClientRect();
                   if (rect) {
                     const phase = item.data as any;
@@ -1288,48 +1418,184 @@ export function InteractiveTimeline({
                     const endDate = new Date(phase.end_date);
                     const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                     
-                    // Calculate tooltip position with boundary checking
-                    const mouseX = e.clientX - rect.left;
-                    const mouseY = e.clientY - rect.top;
-                    const tooltipWidth = 200; // minWidth from style
-                    const tooltipHeight = 120; // estimated height
+                    // Calculate working days (excluding weekends)
+                    const workingDays = Math.ceil(duration * 5/7); // Rough estimate
+                    
+                    // Calculate tooltip position using viewport coordinates (fixed positioning)
+                    const tooltipWidth = 280; // Increased for more content
+                    const tooltipHeight = 250; // Increased for additional sections - was too small
+                    
+                    // Use global mouse coordinates for fixed positioning
+                    const tooltipX = e.clientX + 10;
+                    const tooltipY = e.clientY - 10;
+                    
+                    // Adjust if tooltip would go off-screen
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+                    
+                    let finalX = tooltipX;
+                    let finalY = tooltipY;
                     
                     // Position tooltip to the left if it would overflow on the right
-                    let tooltipX = mouseX + 10;
-                    if (tooltipX + tooltipWidth > rect.width) {
-                      tooltipX = mouseX - tooltipWidth - 10;
+                    if (tooltipX + tooltipWidth > viewportWidth) {
+                      finalX = e.clientX - tooltipWidth - 10;
                     }
                     
                     // Position tooltip below if it would overflow at the top
-                    let tooltipY = mouseY - 10;
-                    if (tooltipY < 0) {
-                      tooltipY = mouseY + 20;
+                    if (tooltipY + tooltipHeight > viewportHeight) {
+                      finalY = e.clientY - tooltipHeight - 10;
                     }
                     
-                    // Ensure tooltip doesn't go beyond container bounds
-                    tooltipX = Math.max(5, Math.min(tooltipX, rect.width - tooltipWidth - 5));
-                    tooltipY = Math.max(5, Math.min(tooltipY, rect.height - tooltipHeight - 5));
+                    // Ensure tooltip stays within viewport bounds
+                    finalX = Math.max(5, Math.min(finalX, viewportWidth - tooltipWidth - 5));
+                    finalY = Math.max(5, Math.min(finalY, viewportHeight - tooltipHeight - 5));
                     
                     setTooltip({
                       visible: true,
-                      x: tooltipX,
-                      y: tooltipY,
+                      x: finalX,
+                      y: finalY,
                       content: (
                         <div style={{
-                          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.92)',
                           color: 'white',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          minWidth: '200px',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                          padding: '12px 16px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          minWidth: '280px',
+                          maxWidth: '350px',
+                          minHeight: '200px',
+                          maxHeight: '400px',
+                          overflow: 'visible',
+                          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          lineHeight: '1.4'
                         }}>
-                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>{phase.phase_name}</div>
-                          <div>Start: {format(startDate, 'MMM dd, yyyy')}</div>
-                          <div>End: {format(endDate, 'MMM dd, yyyy')}</div>
-                          <div>Duration: {duration} days</div>
-                          <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>
-                            Double-click to edit • Right-click for options
+                          {/* Phase Header */}
+                          <div style={{ 
+                            fontWeight: 700, 
+                            marginBottom: '8px', 
+                            fontSize: '14px',
+                            color: '#ffffff',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                            paddingBottom: '6px'
+                          }}>
+                            {phase.phase_name}
+                          </div>
+                          
+                          {/* Project Context */}
+                          {phase.projectId && (
+                            <div style={{ 
+                              fontSize: '11px', 
+                              opacity: 0.8, 
+                              marginBottom: '8px',
+                              fontStyle: 'italic'
+                            }}>
+                              Project ID: {phase.projectId}
+                            </div>
+                          )}
+                          
+                          {/* Timeline Information */}
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ marginBottom: '2px' }}>
+                              <span style={{ opacity: 0.8 }}>Start:</span> {format(startDate, 'MMM dd, yyyy (EEE)')}
+                            </div>
+                            <div style={{ marginBottom: '2px' }}>
+                              <span style={{ opacity: 0.8 }}>End:</span> {format(endDate, 'MMM dd, yyyy (EEE)')}
+                            </div>
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              fontSize: '12px',
+                              marginTop: '4px'
+                            }}>
+                              <span><span style={{ opacity: 0.8 }}>Duration:</span> {duration} days</span>
+                              <span style={{ opacity: 0.7 }}>~{workingDays} work days</span>
+                            </div>
+                          </div>
+                          
+                          {/* Phase Description */}
+                          {(phase.phase_description || phase.description) && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <div style={{ 
+                                fontSize: '11px', 
+                                opacity: 0.8, 
+                                fontWeight: 600,
+                                marginBottom: '3px'
+                              }}>
+                                Description:
+                              </div>
+                              <div style={{ 
+                                fontSize: '12px',
+                                opacity: 0.9,
+                                fontStyle: 'italic'
+                              }}>
+                                {phase.phase_description || phase.description}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Phase Notes */}
+                          {phase.notes && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <div style={{ 
+                                fontSize: '11px', 
+                                opacity: 0.8, 
+                                fontWeight: 600,
+                                marginBottom: '3px'
+                              }}>
+                                Notes:
+                              </div>
+                              <div style={{ 
+                                fontSize: '12px',
+                                opacity: 0.9,
+                                fontStyle: 'italic'
+                              }}>
+                                {phase.notes}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Phase Order/Sequence */}
+                          {(phase.phase_order || phase.order_index) && (
+                            <div style={{ 
+                              fontSize: '11px', 
+                              opacity: 0.7,
+                              marginBottom: '8px'
+                            }}>
+                              Phase #{phase.phase_order || phase.order_index} in project sequence
+                            </div>
+                          )}
+                          
+                          {/* Dependencies Info */}
+                          {(phase.dependencies && phase.dependencies.length > 0) && (
+                            <div style={{ marginBottom: '8px' }}>
+                              <div style={{ 
+                                fontSize: '11px', 
+                                opacity: 0.8, 
+                                fontWeight: 600,
+                                marginBottom: '3px'
+                              }}>
+                                Dependencies:
+                              </div>
+                              <div style={{ fontSize: '11px', opacity: 0.7 }}>
+                                {phase.dependencies.length} dependency/dependencies
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Action Hints */}
+                          <div style={{ 
+                            fontSize: '10px', 
+                            opacity: 0.6, 
+                            marginTop: '10px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            paddingTop: '6px',
+                            textAlign: 'center'
+                          }}>
+                            {mode === 'phase-manager' ? 
+                              'Double-click to edit • Right-click for options' : 
+                              'Click to view project details'
+                            }
                           </div>
                         </div>
                       )
@@ -1342,37 +1608,41 @@ export function InteractiveTimeline({
                 setTooltip({ visible: false, x: 0, y: 0, content: null });
               }}
               onMouseMove={(e) => {
-                if (mode === 'phase-manager' && item.data && tooltip.visible) {
-                  const rect = timelineRef.current?.getBoundingClientRect();
-                  if (rect) {
-                    // Calculate tooltip position with boundary checking for mouse move
-                    const mouseX = e.clientX - rect.left;
-                    const mouseY = e.clientY - rect.top;
-                    const tooltipWidth = 200; // minWidth from style
-                    const tooltipHeight = 120; // estimated height
-                    
-                    // Position tooltip to the left if it would overflow on the right
-                    let tooltipX = mouseX + 10;
-                    if (tooltipX + tooltipWidth > rect.width) {
-                      tooltipX = mouseX - tooltipWidth - 10;
-                    }
-                    
-                    // Position tooltip below if it would overflow at the top
-                    let tooltipY = mouseY - 10;
-                    if (tooltipY < 0) {
-                      tooltipY = mouseY + 20;
-                    }
-                    
-                    // Ensure tooltip doesn't go beyond container bounds
-                    tooltipX = Math.max(5, Math.min(tooltipX, rect.width - tooltipWidth - 5));
-                    tooltipY = Math.max(5, Math.min(tooltipY, rect.height - tooltipHeight - 5));
-                    
-                    setTooltip(prev => ({
-                      ...prev,
-                      x: tooltipX,
-                      y: tooltipY
-                    }));
+                if ((mode === 'phase-manager' || mode === 'roadmap') && item.data && tooltip.visible) {
+                  // Calculate tooltip position using viewport coordinates (fixed positioning)
+                  const tooltipWidth = 280; // Updated for enhanced tooltip
+                  const tooltipHeight = 250; // Updated for enhanced tooltip - was too small
+                  
+                  // Use global mouse coordinates for fixed positioning
+                  const tooltipX = e.clientX + 10;
+                  const tooltipY = e.clientY - 10;
+                  
+                  // Adjust if tooltip would go off-screen
+                  const viewportWidth = window.innerWidth;
+                  const viewportHeight = window.innerHeight;
+                  
+                  let finalX = tooltipX;
+                  let finalY = tooltipY;
+                  
+                  // Position tooltip to the left if it would overflow on the right
+                  if (tooltipX + tooltipWidth > viewportWidth) {
+                    finalX = e.clientX - tooltipWidth - 10;
                   }
+                  
+                  // Position tooltip below if it would overflow at the top
+                  if (tooltipY + tooltipHeight > viewportHeight) {
+                    finalY = e.clientY - tooltipHeight - 10;
+                  }
+                  
+                  // Ensure tooltip stays within viewport bounds
+                  finalX = Math.max(5, Math.min(finalX, viewportWidth - tooltipWidth - 5));
+                  finalY = Math.max(5, Math.min(finalY, viewportHeight - tooltipHeight - 5));
+                  
+                  setTooltip(prev => ({
+                    ...prev,
+                    x: finalX,
+                    y: finalY
+                  }));
                 }
               }}
             >
@@ -1428,7 +1698,7 @@ export function InteractiveTimeline({
         })}
 
         {/* Visual handles for phase boundary actions - new intuitive approach */}
-        {(mode === 'phase-manager' || mode === 'roadmap') && phaseHandles.map((handle) => {
+        {(mode === 'phase-manager' || mode === 'roadmap') && !isScrolling && phaseHandles.map((handle) => {
           const isHovered = hoveredHandle && 
             hoveredHandle.phaseId === handle.phaseId && 
             hoveredHandle.handleType === handle.handleType;
@@ -1448,10 +1718,11 @@ export function InteractiveTimeline({
               justifyContent: 'center',
               cursor: 'pointer',
               zIndex: 25,
-              transition: 'all 0.2s ease',
+              transition: 'all 0.2s ease, opacity 0.15s ease-out',
               borderRadius: '6px',
               fontSize: '12px',
-              fontWeight: 600
+              fontWeight: 600,
+              opacity: 1
             };
             
             if (handle.handleType === 'extend-left') {
@@ -1564,11 +1835,12 @@ export function InteractiveTimeline({
       {tooltip.visible && (
         <div
           style={{
-            position: 'absolute',
+            position: 'fixed',
             left: tooltip.x,
             top: tooltip.y,
-            zIndex: 1000,
-            pointerEvents: 'none'
+            zIndex: 9999,
+            pointerEvents: 'none',
+            overflow: 'visible'
           }}
         >
           {tooltip.content}
@@ -1576,7 +1848,7 @@ export function InteractiveTimeline({
       )}
 
       {/* Handle tooltip - shows keyboard shortcut hint */}
-      {hoveredHandle && (
+      {hoveredHandle && !isScrolling && (
         <div
           style={{
             position: 'absolute',

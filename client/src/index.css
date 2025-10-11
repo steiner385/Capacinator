@@ -28,12 +28,11 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  overflow-x: hidden;
 }
 
 h1 {
@@ -729,9 +728,16 @@ input:focus, select:focus, textarea:focus {
   padding: 2rem;
 }
 
+.settings-section {
+  padding: 1.5rem 0;
+}
+
 .settings-section h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
   margin-top: 0;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
 }
 
 .settings-group {
@@ -745,38 +751,96 @@ input:focus, select:focus, textarea:focus {
 }
 
 .settings-group h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
   margin-bottom: 1rem;
   color: var(--text-primary);
-  font-size: 1.125rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
 }
 
 .setting-item {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .setting-item label {
   display: block;
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
+  font-size: 0.875rem;
   font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+/* Standardize input widths in settings */
+.settings-section .form-input,
+.settings-section .form-select {
+  max-width: 300px;
+}
+
+.settings-section .form-input[type="number"] {
+  max-width: 120px;
+}
+
+.theme-selector {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.theme-option.active {
+  background-color: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
 }
 
 .checkbox-label {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 1rem;
   cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  user-select: none;
+  line-height: 1.5;
+  margin-bottom: 1rem;
 }
 
-.checkbox-label input[type="checkbox"] {
+/* Aggressive checkbox sizing override to defeat design system */
+.settings-section .checkbox-label input[type="checkbox"],
+.checkbox-label input[type="checkbox"],
+input[type="checkbox"].settings-checkbox,
+.settings-section input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-top: 2px !important;
+  accent-color: var(--primary-color);
   cursor: pointer;
+  flex-shrink: 0;
+  transform: scale(1) !important;
+  border-radius: 3px !important;
+  appearance: auto !important;
 }
 
 .help-text {
   display: block;
-  font-size: 0.875rem;
-  color: var(--text-tertiary);
-  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+  margin-left: 1.25rem;
+}
+
+.setting-description {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  line-height: 1.4;
 }
 
 .recipients-list {
@@ -827,6 +891,355 @@ input:focus, select:focus, textarea:focus {
 .save-message.error {
   background: var(--danger-bg);
   color: var(--danger);
+}
+
+/* NUCLEAR OPTION: Override ALL checkbox sizing in settings with maximum specificity */
+html body div.page-container div.settings-content input[type="checkbox"],
+html body div.page-container div.settings-section input[type="checkbox"], 
+html body div.page-container label.checkbox-label input[type="checkbox"],
+html body div.page-container div.settings-content label.checkbox-label input[type="checkbox"],
+html body div.page-container div.settings-section label.checkbox-label input[type="checkbox"],
+html body div.page-container div.settings-content div.settings-section input[type="checkbox"],
+input[type="checkbox"][class*="checkbox"],
+input[type="checkbox"] {
+  min-width: 16px !important;
+  min-height: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-top: 2px !important;
+  flex-shrink: 0 !important;
+  transform: none !important;
+  box-sizing: border-box !important;
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  -moz-appearance: checkbox !important;
+}
+
+/* Force checkbox-label spacing */
+html body div.page-container label.checkbox-label,
+html body .settings-content .checkbox-label,
+html body .settings-section .checkbox-label,
+.checkbox-label {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.75rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  color: var(--text-primary) !important;
+  user-select: none !important;
+  line-height: 1.5 !important;
+  margin-bottom: 1.5rem !important;
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+}
+
+/* Enhanced settings layout with responsive grid */
+.settings-content {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 2rem !important;
+  margin-top: 1rem;
+  max-width: 1200px;
+}
+
+.settings-section {
+  padding: 1.5rem 0 !important;
+}
+
+/* Responsive grid layout for better space utilization */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.settings-grid.single-column {
+  grid-template-columns: 1fr;
+  max-width: 600px;
+}
+
+.settings-group {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem !important;
+}
+
+.settings-group:last-child {
+  margin-bottom: 0 !important;
+}
+
+.setting-item {
+  margin-bottom: 1.25rem !important;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Improved typography hierarchy */
+.settings-section h2 {
+  font-size: 1.75rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 1.5rem !important;
+  color: var(--text-primary) !important;
+  border-bottom: 3px solid var(--primary) !important;
+  padding-bottom: 0.75rem !important;
+}
+
+.settings-group h3 {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 1rem !important;
+  color: var(--text-primary) !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Form layout improvements */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.form-grid.two-column {
+  grid-template-columns: 1fr 1fr;
+}
+
+.form-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+/* Consistent input sizing */
+.settings-section .form-input,
+.settings-section .form-select {
+  width: 100%;
+  max-width: none;
+  min-width: 120px;
+}
+
+.settings-section .form-input[type="number"] {
+  max-width: 150px;
+}
+
+/* Alert/warning styling */
+.settings-alert {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-alert.warning {
+  background-color: color-mix(in srgb, #f59e0b 10%, var(--bg-secondary));
+  color: #d97706;
+  border: 1px solid color-mix(in srgb, #f59e0b 20%, transparent);
+}
+
+.settings-alert.info {
+  background-color: color-mix(in srgb, #3b82f6 10%, var(--bg-secondary));
+  color: #2563eb;
+  border: 1px solid color-mix(in srgb, #3b82f6 20%, transparent);
+}
+
+/* Additional settings components */
+.config-status {
+  margin-bottom: 1rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.success {
+  background-color: color-mix(in srgb, #10b981 15%, var(--bg-secondary));
+  color: #059669;
+}
+
+.status-badge.warning {
+  background-color: color-mix(in srgb, #f59e0b 15%, var(--bg-secondary));
+  color: #d97706;
+}
+
+.status-badge.error {
+  background-color: color-mix(in srgb, #ef4444 15%, var(--bg-secondary));
+  color: #dc2626;
+}
+
+.template-item {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.template-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.template-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.template-type {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.template-details p {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* User permissions cards */
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.role-card {
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  transition: box-shadow 0.2s ease;
+}
+
+.role-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.role-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: var(--text-primary);
+}
+
+.role-card p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.role-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.admin-badge {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--primary);
+  color: white;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.permission-category {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+}
+
+.permission-category h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.permission-item {
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.permission-item strong {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.permission-item span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .settings-content {
+    padding: 1rem !important;
+  }
+  
+  .roles-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .permissions-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .audit-filters {

@@ -1,18 +1,12 @@
-import knex, { Knex } from 'knex';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getAuditedDb } from '../src/server/database/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Database configuration for local development
-const db = knex({
-  client: 'better-sqlite3',
-  connection: {
-    filename: path.join(__dirname, '../data/capacinator.db')
-  },
-  useNullAsDefault: true
-});
+// Use the audited database connection
+const auditedDb = getAuditedDb();
 
 async function reseedLocal() {
   try {
@@ -20,13 +14,13 @@ async function reseedLocal() {
     
     // Run migrations
     console.log('📊 Running migrations...');
-    await db.migrate.latest({
+    await auditedDb.migrate.latest({
       directory: path.join(__dirname, '../src/server/database/migrations')
     });
     
     // Run seeds
     console.log('🌱 Running seeds...');
-    await db.seed.run({
+    await auditedDb.seed.run({
       directory: path.join(__dirname, '../src/server/database/seeds')
     });
     
@@ -41,7 +35,7 @@ async function reseedLocal() {
     
     for (const table of tables) {
       try {
-        const count = await db(table).count('* as count').first();
+        const count = await auditedDb(table).count('* as count').first();
         console.log(`   ${table}: ${count?.count || 0} records`);
       } catch (error) {
         console.log(`   ${table}: error reading table`);

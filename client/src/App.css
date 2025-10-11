@@ -342,6 +342,8 @@
   max-width: 1400px;
   margin: 0 auto;
   background-color: var(--bg-primary);
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -406,23 +408,137 @@
 
 .checkbox-label {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
   color: var(--text-primary);
   user-select: none;
+  line-height: 1.5;
+  margin-bottom: 1rem;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
+/* Aggressive checkbox sizing override to defeat design system */
+.settings-section .checkbox-label input[type="checkbox"],
+.checkbox-label input[type="checkbox"],
+input[type="checkbox"].settings-checkbox,
+.settings-section input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-top: 2px !important;
   accent-color: var(--primary-color);
   cursor: pointer;
+  flex-shrink: 0;
+  transform: scale(1) !important;
+  border-radius: 3px !important;
+  appearance: auto !important;
 }
 
 .checkbox-text {
   color: var(--text-primary);
+}
+
+/* Settings Page Styles */
+.settings-section {
+  padding: 1.5rem 0;
+}
+
+.settings-section h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.settings-group {
+  margin-bottom: 2rem;
+}
+
+.settings-group h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.setting-item {
+  margin-bottom: 1.5rem;
+}
+
+.setting-item label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+/* Standardize input widths in settings */
+.settings-section .form-input,
+.settings-section .form-select {
+  max-width: 300px;
+}
+
+.settings-section .form-input[type="number"] {
+  max-width: 120px;
+}
+
+.setting-description, .help-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+.help-text {
+  display: block;
+  margin-top: 0.25rem;
+  margin-left: 1.25rem;
+}
+
+.theme-selector {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.theme-option.active {
+  background-color: var(--primary) !important;
+  color: white !important;
+  border-color: var(--primary) !important;
+}
+
+.settings-actions {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.save-message {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.save-message.success {
+  background-color: color-mix(in srgb, #10b981 10%, var(--bg-secondary));
+  color: #059669;
+  border: 1px solid color-mix(in srgb, #10b981 20%, transparent);
+}
+
+.save-message.error {
+  background-color: color-mix(in srgb, #ef4444 10%, var(--bg-secondary));
+  color: #dc2626;
+  border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);
 }
 
 /* Project Type Styles */

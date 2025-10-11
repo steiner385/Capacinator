@@ -16,6 +16,9 @@ router.post('/:parentId/children', controller.createChild);
 // Add phase to project type
 router.post('/:projectTypeId/phases', controller.addPhase);
 
+// Update phase configuration for project type
+router.put('/:projectTypeId/phases/:phaseId', controller.updatePhase);
+
 // Remove phase from project type
 router.delete('/:projectTypeId/phases/:phaseId', controller.removePhase);
 

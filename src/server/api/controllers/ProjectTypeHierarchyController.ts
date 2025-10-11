@@ -140,10 +140,20 @@ export class ProjectTypeHierarchyController extends BaseController {
       const actualOrderIndex = orderIndex || await this.getNextPhaseOrderIndex(projectTypeId);
 
       await this.db('project_type_phases').insert({
+        id: `project-type-phase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         project_type_id: projectTypeId,
         phase_id: phaseId,
         is_inherited: false,
-        order_index: actualOrderIndex
+        order_index: actualOrderIndex,
+        is_mandatory: req.body.is_mandatory || false,
+        min_duration_days: req.body.min_duration_days || null,
+        max_duration_days: req.body.max_duration_days || null,
+        default_duration_days: req.body.default_duration_days || 30,
+        is_locked_order: req.body.is_locked_order || false,
+        template_description: req.body.template_description || null,
+        template_metadata: req.body.template_metadata ? JSON.stringify(req.body.template_metadata) : null,
+        created_at: new Date(),
+        updated_at: new Date()
       });
 
       // Propagate to Project Sub-Types
@@ -191,6 +201,59 @@ export class ProjectTypeHierarchyController extends BaseController {
 
       // Remove from Project Sub-Types too
       await this.removePhaseFromChildren(projectTypeId, phaseId);
+
+      return res.json({ success: true });
+    }, res);
+  };
+
+  // Update phase configuration for project type
+  updatePhase = async (req: Request, res: Response): Promise<void> => {
+    await this.executeQuery(async () => {
+      const { projectTypeId, phaseId } = req.params;
+      const updateData = req.body;
+
+      // Check if this is a Project Type (phases can only be updated on Project Types)
+      const projectType = await this.db('project_types').where('id', projectTypeId).first();
+      if (!projectType) {
+        return res.status(404).json({ error: 'Project type not found' });
+      }
+
+      // Only allow updating phases on Project Types
+      if (projectType.parent_id !== null) {
+        return res.status(400).json({ 
+          error: 'Phases can only be updated on Project Types. Project Sub-Types inherit phases from their Project Type.' 
+        });
+      }
+
+      // Find the project type phase record
+      const projectTypePhase = await this.db('project_type_phases')
+        .where({ project_type_id: projectTypeId, phase_id: phaseId })
+        .first();
+
+      if (!projectTypePhase) {
+        return res.status(404).json({ error: 'Phase not found for this project type' });
+      }
+
+      // Prepare update data with new template fields
+      const updateFields: any = {
+        updated_at: new Date()
+      };
+
+      if (updateData.is_mandatory !== undefined) updateFields.is_mandatory = updateData.is_mandatory;
+      if (updateData.min_duration_days !== undefined) updateFields.min_duration_days = updateData.min_duration_days;
+      if (updateData.max_duration_days !== undefined) updateFields.max_duration_days = updateData.max_duration_days;
+      if (updateData.default_duration_days !== undefined) updateFields.default_duration_days = updateData.default_duration_days;
+      if (updateData.is_locked_order !== undefined) updateFields.is_locked_order = updateData.is_locked_order;
+      if (updateData.template_description !== undefined) updateFields.template_description = updateData.template_description;
+      if (updateData.template_metadata !== undefined) {
+        updateFields.template_metadata = updateData.template_metadata ? JSON.stringify(updateData.template_metadata) : null;
+      }
+      if (updateData.order_index !== undefined) updateFields.order_index = updateData.order_index;
+
+      // Update the project type phase
+      await this.db('project_type_phases')
+        .where('id', projectTypePhase.id)
+        .update(updateFields);
 
       return res.json({ success: true });
     }, res);
@@ -332,9 +395,20 @@ export class ProjectTypeHierarchyController extends BaseController {
       .join('project_phases', 'project_type_phases.phase_id', 'project_phases.id')
       .where('project_type_phases.project_type_id', projectTypeId)
       .select(
-        'project_phases.*',
+        'project_phases.id as phase_id',
+        'project_phases.name as phase_name',
+        'project_phases.description as phase_description',
+        'project_type_phases.id',
+        'project_type_phases.project_type_id',
         'project_type_phases.is_inherited',
         'project_type_phases.order_index',
+        'project_type_phases.is_mandatory',
+        'project_type_phases.min_duration_days',
+        'project_type_phases.max_duration_days',
+        'project_type_phases.default_duration_days',
+        'project_type_phases.is_locked_order',
+        'project_type_phases.template_description',
+        'project_type_phases.template_metadata',
         'project_type_phases.duration_weeks as override_duration'
       )
       .orderBy('project_type_phases.order_index');

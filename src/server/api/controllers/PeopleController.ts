@@ -1,9 +1,7 @@
 import type { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
-import { auditModelChanges } from '../../middleware/auditMiddleware.js';
-import { isTableAudited } from '../../config/auditConfig.js';
+import { AuditedBaseController } from './AuditedBaseController.js';
 
-export class PeopleController extends BaseController {
+export class PeopleController extends AuditedBaseController {
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -14,8 +12,8 @@ export class PeopleController extends BaseController {
       location_id: req.query.location_id || req.query.location
     };
 
-    const result = await this.executeQuery(async () => {
-      let query = this.db('people')
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      let query = db('people')
         .leftJoin('people as supervisor', 'people.supervisor_id', 'supervisor.id')
         .leftJoin('person_roles as primary_person_role', 'people.primary_person_role_id', 'primary_person_role.id')
         .leftJoin('roles as primary_role', 'primary_person_role.role_id', 'primary_role.id')
@@ -36,7 +34,7 @@ export class PeopleController extends BaseController {
       query = this.paginate(query, page, limit);
 
       const people = await query;
-      const total = await this.db('people').count('* as count').first();
+      const total = await db('people').count('* as count').first();
 
       return {
         data: people,
@@ -57,8 +55,8 @@ export class PeopleController extends BaseController {
   async getById(req: Request, res: Response) {
     const { id } = req.params;
 
-    const result = await this.executeQuery(async () => {
-      const person = await this.db('people')
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      const person = await db('people')
         .leftJoin('people as supervisor', 'people.supervisor_id', 'supervisor.id')
         .leftJoin('person_roles as primary_person_role', 'people.primary_person_role_id', 'primary_person_role.id')
         .leftJoin('roles as primary_role', 'primary_person_role.role_id', 'primary_role.id')
@@ -79,7 +77,7 @@ export class PeopleController extends BaseController {
       }
 
       // Get roles
-      const roles = await this.db('person_roles')
+      const roles = await db('person_roles')
         .join('roles', 'person_roles.role_id', 'roles.id')
         .select(
           'person_roles.*',
@@ -89,7 +87,7 @@ export class PeopleController extends BaseController {
         .where('person_roles.person_id', id);
 
       // Get current assignments
-      const assignments = await this.db('project_assignments')
+      const assignments = await db('project_assignments')
         .join('projects', 'project_assignments.project_id', 'projects.id')
         .join('roles', 'project_assignments.role_id', 'roles.id')
         .select(
@@ -102,7 +100,7 @@ export class PeopleController extends BaseController {
         .orderBy('project_assignments.start_date');
 
       // Get availability overrides
-      const availabilityOverrides = await this.db('person_availability_overrides')
+      const availabilityOverrides = await db('person_availability_overrides')
         .where('person_id', id)
         .orderBy('start_date', 'desc');
 
@@ -135,27 +133,19 @@ export class PeopleController extends BaseController {
         return obj;
       }, {} as any);
 
-    const result = await this.executeQuery(async () => {
-      const [person] = await this.db('people')
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      await db('people')
         .insert({
           ...filteredData,
           created_at: new Date(),
           updated_at: new Date()
-        })
-        .returning('*');
+        });
 
-      // Log audit entry for creation
-      if (isTableAudited('people')) {
-        await auditModelChanges(
-          req,
-          'people',
-          person.id,
-          'CREATE',
-          undefined,
-          person,
-          `Created person: ${person.name}`
-        );
-      }
+      // Get the created record by ID (since SQLite doesn't support returning)
+      const person = await db('people')
+        .where(filteredData.email ? { email: filteredData.email } : { name: filteredData.name })
+        .orderBy('created_at', 'desc')
+        .first();
 
       return person;
     }, res, 'Failed to create person');
@@ -187,20 +177,23 @@ export class PeopleController extends BaseController {
         return obj;
       }, {} as any);
 
-    const result = await this.executeQuery(async () => {
-      const [person] = await this.db('people')
-        .where('id', id)
-        .update({
-          ...filteredData,
-          updated_at: new Date()
-        })
-        .returning('*');
-
-      if (!person) {
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      const existingPerson = await db('people').where('id', id).first();
+      
+      if (!existingPerson) {
         this.handleNotFound(res, 'Person');
         return null;
       }
 
+      await db('people')
+        .where('id', id)
+        .update({
+          ...filteredData,
+          updated_at: new Date()
+        });
+
+      // Get the updated record
+      const person = await db('people').where('id', id).first();
       return person;
     }, res, 'Failed to update person');
 
@@ -212,15 +205,17 @@ export class PeopleController extends BaseController {
   async delete(req: Request, res: Response) {
     const { id } = req.params;
 
-    const result = await this.executeQuery(async () => {
-      const deletedCount = await this.db('people')
-        .where('id', id)
-        .del();
-
-      if (deletedCount === 0) {
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      const existingPerson = await db('people').where('id', id).first();
+      
+      if (!existingPerson) {
         this.handleNotFound(res, 'Person');
         return null;
       }
+
+      await db('people')
+        .where('id', id)
+        .del();
 
       return { message: 'Person deleted successfully' };
     }, res, 'Failed to delete person');
@@ -231,8 +226,8 @@ export class PeopleController extends BaseController {
   }
 
   async getUtilization(req: Request, res: Response) {
-    const result = await this.executeQuery(async () => {
-      const utilization = await this.db('person_utilization_view').select('*');
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      const utilization = await db('person_utilization_view').select('*');
       return utilization;
     }, res, 'Failed to fetch person utilization data');
 
@@ -242,8 +237,8 @@ export class PeopleController extends BaseController {
   }
 
   async getAvailability(req: Request, res: Response) {
-    const result = await this.executeQuery(async () => {
-      const availability = await this.db('person_availability_view').select('*');
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      const availability = await db('person_availability_view').select('*');
       return availability;
     }, res, 'Failed to fetch person availability data');
 
@@ -256,20 +251,20 @@ export class PeopleController extends BaseController {
     const { id } = req.params;
     const { startDate, endDate } = req.query;
 
-    // First check if person exists
-    const person = await this.db('people')
-      .where('id', id)
-      .select('name', 'default_availability_percentage', 'default_hours_per_day')
-      .first();
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      // First check if person exists
+      const person = await db('people')
+        .where('id', id)
+        .select('name', 'default_availability_percentage', 'default_hours_per_day')
+        .first();
 
-    if (!person) {
-      return this.handleNotFound(res, 'Person');
-    }
-
-    const result = await this.executeQuery(async () => {
+      if (!person) {
+        this.handleNotFound(res, 'Person');
+        return null;
+      }
 
       // Get project assignments for this person with date filtering
-      let assignmentsQuery = this.db('project_assignments')
+      let assignmentsQuery = db('project_assignments')
         .join('projects', 'project_assignments.project_id', 'projects.id')
         .where('project_assignments.person_id', id)
         .select(

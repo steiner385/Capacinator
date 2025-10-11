@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { db } from '../database/index.js';
+import { getAuditedDb } from '../database/index.js';
 
 export interface EmailConfig {
   host: string;
@@ -43,8 +43,10 @@ export interface SendEmailOptions {
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private config: EmailConfig | null = null;
+  private db: any;
 
   constructor() {
+    this.db = getAuditedDb();
     this.initializeConfig();
   }
 
@@ -100,7 +102,7 @@ export class EmailService {
 
   public async getEmailTemplate(templateName: string): Promise<EmailTemplate | null> {
     try {
-      const template = await db('email_templates')
+      const template = await this.db('email_templates')
         .where('name', templateName)
         .where('is_active', true)
         .first();
@@ -121,7 +123,7 @@ export class EmailService {
 
   public async getUserNotificationPreferences(userId: string): Promise<NotificationPreference[]> {
     try {
-      return await db('notification_preferences')
+      return await this.db('notification_preferences')
         .where('user_id', userId)
         .where('enabled', true);
     } catch (error) {
@@ -133,7 +135,7 @@ export class EmailService {
   public async shouldSendNotification(userId: string, notificationType: string): Promise<boolean> {
     try {
       // Check if email notifications are enabled in system settings
-      const systemSettings = await db('settings')
+      const systemSettings = await this.db('settings')
         .where('category', 'system')
         .first();
 
@@ -145,7 +147,7 @@ export class EmailService {
       }
 
       // Check user's notification preferences
-      const preference = await db('notification_preferences')
+      const preference = await this.db('notification_preferences')
         .where('user_id', userId)
         .where('type', notificationType)
         .first();
@@ -255,7 +257,7 @@ export class EmailService {
     errorMessage: string | null;
   }): Promise<void> {
     try {
-      await db('notification_history').insert({
+      await this.db('notification_history').insert({
         id: this.generateUUID(),
         user_id: logData.userId,
         type: logData.type,
@@ -281,7 +283,7 @@ export class EmailService {
   ): Promise<boolean> {
     try {
       // Get the user's email
-      const user = await db('people').where('id', userId).first();
+      const user = await this.db('people').where('id', userId).first();
       if (!user || !user.email) {
         console.warn(`User ${userId} not found or has no email address`);
         return false;

@@ -182,7 +182,7 @@ export default function Roles() {
   }
 
   return (
-    <div className="roles-page">
+    <div className="page-container">
       <div className="page-header">
         <div>
           <h1>Roles</h1>

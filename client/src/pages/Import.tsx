@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Settings } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Settings, Download, FileText, Database } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { useScenario } from '../contexts/ScenarioContext';
 import './Import.css';
 
 interface ImportResult {
@@ -42,6 +43,16 @@ export default function Import() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [settingsOverrides, setSettingsOverrides] = useState<Partial<ImportSettings>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Export state
+  const [exportingScenario, setExportingScenario] = useState(false);
+  const [exportingTemplate, setExportingTemplate] = useState(false);
+  const [exportScenarioId, setExportScenarioId] = useState<string>('');
+  const [exportIncludeAssignments, setExportIncludeAssignments] = useState(true);
+  const [exportIncludePhases, setExportIncludePhases] = useState(true);
+  const [templateType, setTemplateType] = useState('complete');
+  
+  const { currentScenario, scenarios } = useScenario();
 
   // Load import settings on component mount
   useEffect(() => {
@@ -126,12 +137,148 @@ export default function Import() {
     }
   };
 
+  const handleExportScenario = async () => {
+    const scenarioToExport = exportScenarioId || currentScenario?.id;
+    
+    if (!scenarioToExport) {
+      alert('Please select a scenario to export');
+      return;
+    }
+
+    setExportingScenario(true);
+    try {
+      console.log('Exporting scenario:', scenarioToExport);
+      
+      const response = await api.import.exportScenario(scenarioToExport, {
+        includeAssignments: exportIncludeAssignments,
+        includePhases: exportIncludePhases,
+      });
+
+      // Create blob and download link
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from response headers or create default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'scenario_export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Export completed successfully');
+    } catch (error: any) {
+      console.error('Export failed:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      
+      let message = 'Unknown error occurred';
+      
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.status === 404) {
+          message = 'Export endpoint not found. Please check if the server is running properly.';
+        } else if (error.response.status === 500) {
+          message = 'Server error occurred during export. Please check server logs.';
+        } else if (error.response.data?.message) {
+          message = error.response.data.message;
+        } else {
+          message = `Server error: ${error.response.status} ${error.response.statusText}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        message = 'No response from server. Please check your connection and that the server is running.';
+      } else {
+        // Something else happened
+        message = error.message || 'Unknown error occurred';
+      }
+      
+      alert('Export failed: ' + message);
+    } finally {
+      setExportingScenario(false);
+    }
+  };
+
+  const handleExportTemplate = async () => {
+    setExportingTemplate(true);
+    try {
+      console.log('Exporting template:', templateType);
+      
+      const response = await api.import.exportTemplate({
+        templateType,
+        includeAssignments: exportIncludeAssignments,
+        includePhases: exportIncludePhases,
+      });
+
+      // Create blob and download link
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from response headers or create default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'capacinator_template.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Template export completed successfully');
+    } catch (error: any) {
+      console.error('Template export failed:', error);
+      const message = error.response?.data?.message || error.message || 'Unknown error occurred';
+      alert('Template export failed: ' + message);
+    } finally {
+      setExportingTemplate(false);
+    }
+  };
+
+  // Set default export scenario when current scenario changes
+  useEffect(() => {
+    if (currentScenario && !exportScenarioId) {
+      setExportScenarioId(currentScenario.id);
+    }
+  }, [currentScenario, exportScenarioId]);
+
   return (
-    <div className="import-page">
+    <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Import Data</h1>
-          <p className="text-muted">Upload Excel files to import project data</p>
+          <h1>Import & Export Data</h1>
+          <p className="text-muted">Import Excel files or export current scenario data</p>
         </div>
       </div>
 
@@ -361,6 +508,112 @@ export default function Import() {
             )}
           </div>
         )}
+
+        {/* Export Section */}
+        <div className="import-card export-section">
+          <div className="card-header">
+            <h2>Export Data</h2>
+            <p className="text-muted">Export scenario data or download blank templates</p>
+          </div>
+
+          <div className="export-options">
+            <div className="export-type-selector">
+              <div className="export-option">
+                <Database size={24} />
+                <div>
+                  <h3>Export Scenario Data</h3>
+                  <p>Export current scenario data in re-importable Excel format</p>
+                </div>
+              </div>
+              
+              <div className="export-controls">
+                <div className="form-group">
+                  <label>Export Scenario:</label>
+                  <select
+                    value={exportScenarioId}
+                    onChange={(e) => setExportScenarioId(e.target.value)}
+                    className="form-select"
+                    disabled={exportingScenario || exportingTemplate}
+                  >
+                    <option value="">
+                      {currentScenario ? `Current: ${currentScenario.name} (${currentScenario.scenario_type})` : 'Loading scenarios...'}
+                    </option>
+                    {scenarios.map(scenario => (
+                      <option key={scenario.id} value={scenario.id}>
+                        {scenario.name} ({scenario.scenario_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="checkbox-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={exportIncludeAssignments}
+                      onChange={(e) => setExportIncludeAssignments(e.target.checked)}
+                      disabled={exportingScenario}
+                    />
+                    <span>Include Project Assignments</span>
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={exportIncludePhases}
+                      onChange={(e) => setExportIncludePhases(e.target.checked)}
+                      disabled={exportingScenario}
+                    />
+                    <span>Include Phase Timelines</span>
+                  </label>
+                </div>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={handleExportScenario}
+                  disabled={exportingScenario || exportingTemplate || (!exportScenarioId && !currentScenario && !scenarios.length)}
+                >
+                  <Download size={16} />
+                  {exportingScenario ? 'Exporting...' : 'Export Scenario Data'}
+                </button>
+              </div>
+            </div>
+
+            <div className="export-divider">OR</div>
+
+            <div className="export-option">
+              <FileText size={24} />
+              <div>
+                <h3>Download Blank Template</h3>
+                <p>Download enhanced template with instructions and formatting</p>
+              </div>
+              
+              <div className="export-controls">
+                <div className="form-group">
+                  <label>Template Type:</label>
+                  <select
+                    value={templateType}
+                    onChange={(e) => setTemplateType(e.target.value)}
+                    className="form-select"
+                    disabled={exportingTemplate}
+                  >
+                    <option value="complete">Complete Template (All Sheets)</option>
+                    <option value="basic">Basic Template (Core Sheets Only)</option>
+                    <option value="minimal">Minimal Template (Projects & People)</option>
+                  </select>
+                </div>
+
+                <button
+                  className="btn btn-outline"
+                  onClick={handleExportTemplate}
+                  disabled={exportingTemplate}
+                >
+                  <Download size={16} />
+                  {exportingTemplate ? 'Generating...' : 'Download Template'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div className="template-info">
           <h3>Template Format</h3>

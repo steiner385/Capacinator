@@ -341,6 +341,175 @@
   color: #111827;
 }
 
+/* Export Section Styles */
+.export-section {
+  border: 2px solid var(--primary);
+  background: linear-gradient(to bottom, var(--bg-primary), var(--bg-secondary));
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.export-type-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.export-option:hover {
+  border-color: var(--primary);
+  background: var(--badge-primary-bg);
+}
+
+.export-option svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.export-option h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+}
+
+.export-option p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.export-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.export-divider {
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 1rem 0;
+  position: relative;
+}
+
+.export-divider::before,
+.export-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.export-divider::before {
+  left: 0;
+}
+
+.export-divider::after {
+  right: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .export-option {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .checkbox-group {
+    align-items: center;
+  }
+  
+  .export-controls {
+    align-items: center;
+  }
+  
+  .form-group {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
 @media (max-width: 640px) {
   .basic-options {
     flex-direction: column;

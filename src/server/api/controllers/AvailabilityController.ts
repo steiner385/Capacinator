@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
+import { AuditedBaseController } from './AuditedBaseController.js';
 
-export class AvailabilityController extends BaseController {
+export class AvailabilityController extends AuditedBaseController {
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
@@ -61,7 +61,7 @@ export class AvailabilityController extends BaseController {
   async create(req: Request, res: Response) {
     const overrideData = req.body;
 
-    const result = await this.executeQuery(async () => {
+    const result = await this.executeAuditedQuery(req, async (db) => {
       // Check for conflicts
       const conflicts = await this.checkAvailabilityConflicts(
         overrideData.person_id,
@@ -78,7 +78,7 @@ export class AvailabilityController extends BaseController {
       }
 
       // Auto-approve if creator is supervisor or self
-      const person = await this.db('people').where('id', overrideData.person_id).first();
+      const person = await db('people').where('id', overrideData.person_id).first();
       const creatorId = req.body.created_by || 'system'; // Would come from auth in real app
       
       let isApproved = false;
@@ -89,7 +89,7 @@ export class AvailabilityController extends BaseController {
         approvedBy = creatorId;
       }
 
-      const [override] = await this.db('person_availability_overrides')
+      await db('person_availability_overrides')
         .insert({
           ...overrideData,
           is_approved: isApproved,
@@ -97,10 +97,20 @@ export class AvailabilityController extends BaseController {
           approved_at: isApproved ? new Date() : null,
           created_at: new Date(),
           updated_at: new Date()
-        })
-        .returning('*');
+        });
 
-      return override;
+      // Audit logging is now automatic through AuditedDatabase
+      // Get the created record by ID (use person_id and dates for lookup since SQLite doesn't return ID)
+      const createdOverride = await db('person_availability_overrides')
+        .where({
+          person_id: overrideData.person_id,
+          start_date: overrideData.start_date,
+          end_date: overrideData.end_date
+        })
+        .orderBy('created_at', 'desc')
+        .first();
+        
+      return createdOverride;
     }, res, 'Failed to create availability override');
 
     if (result) {
@@ -165,6 +175,18 @@ export class AvailabilityController extends BaseController {
               })
               .returning('*');
 
+            // Log audit event for bulk creation
+            if ((req as any).logAuditEvent) {
+              await (req as any).logAuditEvent(
+                'availability',
+                created.id,
+                'CREATE',
+                null,
+                created,
+                'Availability override created (bulk)'
+              );
+            }
+
             results.successful.push(created);
 
           } catch (error) {
@@ -226,6 +248,18 @@ export class AvailabilityController extends BaseController {
         })
         .returning('*');
 
+      // Log audit event after approval/rejection
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'availability',
+          id,
+          'UPDATE',
+          override,
+          updated,
+          `Availability override ${approved ? 'approved' : 'rejected'}`
+        );
+      }
+
       // If rejected, could notify the requester
       if (!approved) {
         // TODO: Send notification
@@ -279,6 +313,18 @@ export class AvailabilityController extends BaseController {
         })
         .returning('*');
 
+      // Log audit event after update
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'availability',
+          id,
+          'UPDATE',
+          override,
+          updated,
+          'Availability override updated'
+        );
+      }
+
       return updated;
     }, res, 'Failed to update availability override');
 
@@ -290,8 +336,8 @@ export class AvailabilityController extends BaseController {
   async delete(req: Request, res: Response) {
     const { id } = req.params;
 
-    const result = await this.executeQuery(async () => {
-      const override = await this.db('person_availability_overrides')
+    const result = await this.executeAuditedQuery(req, async (db) => {
+      const override = await db('person_availability_overrides')
         .where('id', id)
         .first();
 
@@ -300,7 +346,8 @@ export class AvailabilityController extends BaseController {
         return null;
       }
 
-      await this.db('person_availability_overrides')
+      // Audit logging is now automatic through AuditedDatabase
+      await db('person_availability_overrides')
         .where('id', id)
         .delete();
 

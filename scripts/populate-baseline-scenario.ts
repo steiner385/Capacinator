@@ -1,14 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getDb } from '../src/server/database/index.js';
+import { getAuditedDb } from '../src/server/database/index.js';
+import { createMigrationAuditWrapper } from '../src/server/database/MigrationAuditWrapper.js';
 
-const knex = getDb();
+const auditedDb = getAuditedDb();
 
 async function populateBaselineScenario() {
   console.log('🔄 Populating baseline scenario with inherited assignments...');
 
   try {
     // Get the baseline scenario
-    const baselineScenario = await knex('scenarios')
+    const baselineScenario = await auditedDb('scenarios')
       .where('scenario_type', 'baseline')
       .where('name', 'Current State Baseline')
       .first();
@@ -21,7 +22,7 @@ async function populateBaselineScenario() {
     console.log(`✅ Found baseline scenario: ${baselineScenario.name} (${baselineScenario.id})`);
 
     // Check if baseline scenario already has assignments
-    const existingAssignments = await knex('scenario_project_assignments')
+    const existingAssignments = await auditedDb('scenario_project_assignments')
       .where('scenario_id', baselineScenario.id)
       .count('* as count')
       .first();
@@ -29,7 +30,7 @@ async function populateBaselineScenario() {
     console.log(`📊 Baseline scenario currently has ${existingAssignments?.count || 0} assignments`);
 
     // Get all base project_assignments
-    const baseAssignments = await knex('project_assignments')
+    const baseAssignments = await auditedDb('project_assignments')
       .select('*');
 
     console.log(`📋 Found ${baseAssignments.length} base project_assignments to inherit`);
@@ -42,7 +43,7 @@ async function populateBaselineScenario() {
     // If baseline already has some assignments, clear them first to avoid duplicates
     if (existingAssignments?.count > 0) {
       console.log('🧹 Clearing existing baseline scenario assignments...');
-      await knex('scenario_project_assignments')
+      await auditedDb('scenario_project_assignments')
         .where('scenario_id', baselineScenario.id)
         .del();
     }
@@ -74,12 +75,12 @@ async function populateBaselineScenario() {
     const batchSize = 100;
     for (let i = 0; i < inheritedAssignments.length; i += batchSize) {
       const batch = inheritedAssignments.slice(i, i + batchSize);
-      await knex('scenario_project_assignments').insert(batch);
+      await auditedDb('scenario_project_assignments').insert(batch);
       console.log(`   ✅ Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(inheritedAssignments.length / batchSize)} (${batch.length} assignments)`);
     }
 
     // Verify the results
-    const finalCount = await knex('scenario_project_assignments')
+    const finalCount = await auditedDb('scenario_project_assignments')
       .where('scenario_id', baselineScenario.id)
       .count('* as count')
       .first();
@@ -88,7 +89,7 @@ async function populateBaselineScenario() {
 
     // Test the new effective assignments view
     console.log('🔍 Testing effective assignments view...');
-    const effectiveAssignments = await knex('effective_project_assignments')
+    const effectiveAssignments = await auditedDb('effective_project_assignments')
       .where('scenario_id', baselineScenario.id)
       .orWhereNull('scenario_id')
       .count('* as count')
@@ -97,7 +98,7 @@ async function populateBaselineScenario() {
     console.log(`📊 Effective assignments view shows ${effectiveAssignments?.count || 0} total assignments (base + baseline scenario)`);
 
     // Test project demands view with baseline scenario
-    const demandData = await knex('project_demands_view')
+    const demandData = await auditedDb('project_demands_view')
       .where(function() {
         this.whereNull('scenario_id').orWhere('scenario_id', baselineScenario.id);
       })
@@ -112,7 +113,7 @@ async function populateBaselineScenario() {
     console.error('❌ Error populating baseline scenario:', error);
     process.exit(1);
   } finally {
-    await knex.destroy();
+    await auditedDb.destroy();
   }
 }
 

@@ -9,6 +9,12 @@ export function createAuditRoutes(auditService: AuditService): Router {
 
   // Static routes first (before parameterized routes)
   
+  // Basic audit query route - matches /api/audit with query parameters
+  router.get(
+    '/',
+    auditableController(auditController.searchAuditLog)
+  );
+  
   // Get recent changes (optionally filtered by user)
   router.get(
     '/recent',

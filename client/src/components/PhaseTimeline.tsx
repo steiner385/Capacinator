@@ -94,7 +94,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
     queryKey: ['project-phases', projectId],
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
-      return response.data;
+      return response.data.data || response.data;
     }
   });
 
@@ -103,7 +103,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
     queryKey: ['project-phase-dependencies', projectId],
     queryFn: async () => {
       const response = await api.projectPhaseDependencies.list({ project_id: projectId });
-      return response.data;
+      return response.data.data || response.data;
     }
   });
 
@@ -112,7 +112,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
     queryKey: ['phase-templates'],
     queryFn: async () => {
       const response = await api.phases.list();
-      return response.data;
+      return response.data.data || response.data;
     }
   });
 
@@ -120,7 +120,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
   const updatePhaseMutation = useMutation({
     mutationFn: async ({ phaseId, updates }: { phaseId: string; updates: Partial<Phase> }) => {
       const response = await api.projectPhases.update(phaseId, updates);
-      return response.data;
+      return response.data.data || response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
@@ -145,7 +145,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         ...phaseData,
         project_id: projectId
       });
-      return response.data;
+      return response.data.data || response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
@@ -170,7 +170,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
         ...dependencyData,
         project_id: projectId
       });
-      return response.data;
+      return response.data.data || response.data;
     },
     onSuccess: async (newDependency) => {
       // Refresh dependencies first
@@ -470,7 +470,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
           new_end_date: newEndDate
         }
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Failed to calculate cascade effects:', error);
       return null;

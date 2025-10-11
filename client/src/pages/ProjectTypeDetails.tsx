@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit2, Save, X, Plus, GitBranch, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import type { ProjectType, Role, ProjectPhase } from '../types';
+import PhaseTemplateDesigner from '../components/PhaseTemplateDesigner';
+import ProjectsTable from '../components/ProjectsTable';
+import '../components/PhaseTemplateDesigner.css';
 import './ProjectTypeDetails.css';
 
 interface ResourceTemplate {
@@ -19,8 +22,6 @@ export default function ProjectTypeDetails() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [localTemplates, setLocalTemplates] = useState<ResourceTemplate[]>([]);
-  const [showAddChild, setShowAddChild] = useState(false);
-  const [childForm, setChildForm] = useState({ name: '', description: '', color_code: '#6b7280' });
 
   // Fetch project type details
   const { data: projectType, isLoading: projectTypeLoading, error: projectTypeError } = useQuery({
@@ -59,7 +60,9 @@ export default function ProjectTypeDetails() {
       
       const sortedPhases = (phasesArray as ProjectPhase[]).sort((a, b) => a.order_index - b.order_index);
       return sortedPhases;
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1
   });
 
   // Fetch resource templates for this project type
@@ -73,33 +76,6 @@ export default function ProjectTypeDetails() {
     enabled: !!id && !!projectType && !projectTypeError
   });
 
-  // Fetch child project types
-  const { data: childProjectTypes } = useQuery({
-    queryKey: ['projectTypeChildren', id],
-    queryFn: async () => {
-      if (!id) return [];
-      const response = await api.projectTypes.getHierarchy();
-      const hierarchy = response.data.data as any[];
-      
-      // Find this project type in the hierarchy and return its children
-      const findProjectType = (items: any[]): any => {
-        for (const item of items) {
-          if (item.id === id) {
-            return item;
-          }
-          if (item.children && item.children.length > 0) {
-            const found = findProjectType(item.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      
-      const projectTypeInHierarchy = findProjectType(hierarchy);
-      return projectTypeInHierarchy?.children || [];
-    },
-    enabled: !!id && !!projectType && !projectTypeError
-  });
 
   // Fetch project type phases (including inherited)
   const { data: projectTypePhases } = useQuery({
@@ -112,10 +88,28 @@ export default function ProjectTypeDetails() {
     enabled: !!id && !!projectType && !projectTypeError
   });
 
+  // Fetch projects of this type
+  const { data: projectsOfType } = useQuery({
+    queryKey: ['projects', 'byProjectType', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const response = await api.projects.list({ 
+        project_type_id: id,
+        limit: 15 
+      });
+      return response.data.data;
+    },
+    enabled: !!id && !!projectType && !projectTypeError
+  });
+
   // Update local templates when resource templates data changes
   React.useEffect(() => {
     if (resourceTemplates) {
-      setLocalTemplates(resourceTemplates);
+      // Filter out templates with 0 or null allocation percentages
+      const filteredTemplates = resourceTemplates.filter(
+        template => template.allocation_percentage != null && template.allocation_percentage > 0
+      );
+      setLocalTemplates(filteredTemplates);
     }
   }, [resourceTemplates]);
 
@@ -130,30 +124,6 @@ export default function ProjectTypeDetails() {
     }
   });
 
-  // Create child project type mutation
-  const createChildMutation = useMutation({
-    mutationFn: async (childData: { name: string; description: string; color_code: string }) => {
-      if (!id) throw new Error('Parent ID is required');
-      return api.projectTypes.createChild(id, childData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectTypeChildren', id] });
-      queryClient.invalidateQueries({ queryKey: ['projectTypes'] });
-      setShowAddChild(false);
-      setChildForm({ name: '', description: '', color_code: '#6b7280' });
-    }
-  });
-
-  // Delete child project type mutation
-  const deleteChildMutation = useMutation({
-    mutationFn: async (childId: string) => {
-      return api.projectTypes.delete(childId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectTypeChildren', id] });
-      queryClient.invalidateQueries({ queryKey: ['projectTypes'] });
-    }
-  });
 
   // Handle individual field updates
   const handleFieldUpdate = (field: string, value: any) => {
@@ -254,26 +224,6 @@ export default function ProjectTypeDetails() {
     );
   };
 
-  const handleAddChild = () => {
-    setShowAddChild(true);
-  };
-
-  const handleCreateChild = () => {
-    if (childForm.name.trim()) {
-      createChildMutation.mutate(childForm);
-    }
-  };
-
-  const handleCancelAddChild = () => {
-    setShowAddChild(false);
-    setChildForm({ name: '', description: '', color_code: '#6b7280' });
-  };
-
-  const handleDeleteChild = (childId: string, childName: string) => {
-    if (confirm(`Are you sure you want to delete "${childName}"? This action cannot be undone.`)) {
-      deleteChildMutation.mutate(childId);
-    }
-  };
 
   // Handler for allocation changes
   const handleAllocationChange = (roleId: string, phaseId: string, newValue: number) => {
@@ -283,20 +233,27 @@ export default function ProjectTypeDetails() {
         t => t.role_id === String(roleId) && t.phase_id === String(phaseId)
       );
       
-      if (existingIndex >= 0) {
-        // Update existing template
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          allocation_percentage: newValue
-        };
+      if (newValue === 0 || !newValue) {
+        // Remove template if value is 0 or falsy
+        if (existingIndex >= 0) {
+          updated.splice(existingIndex, 1);
+        }
       } else {
-        // Create new template
-        updated.push({
-          role_id: roleId,
-          project_type_id: id!,
-          phase_id: phaseId,
-          allocation_percentage: newValue
-        });
+        if (existingIndex >= 0) {
+          // Update existing template
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            allocation_percentage: newValue
+          };
+        } else {
+          // Create new template
+          updated.push({
+            role_id: roleId,
+            project_type_id: id!,
+            phase_id: phaseId,
+            allocation_percentage: newValue
+          });
+        }
       }
       
       return updated;
@@ -321,245 +278,55 @@ export default function ProjectTypeDetails() {
 
   return (
     <div className="role-details-page">
-      <div className="page-header">
-        <div className="header-left">
-          <button 
-            className="btn btn-secondary btn-sm"
-            onClick={() => navigate('/project-types')}
-          >
-            <ArrowLeft size={16} />
-            Back to Project Types
-          </button>
-          <div>
-            <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <InlineEdit 
-                field="name" 
-                value={projectType.name} 
-                placeholder="Enter project type name"
-              />
-            </h1>
-            <div style={{ marginTop: '8px' }}>
-              <InlineEdit 
-                field="description" 
-                value={projectType.description} 
-                type="textarea"
-                placeholder="Enter project type description"
-              />
+      {/* Navigation Header */}
+      <div className="navigation-header">
+        <button 
+          className="btn btn-secondary btn-sm back-button"
+          onClick={() => navigate('/project-types')}
+        >
+          <ArrowLeft size={16} />
+          Back to Project Types
+        </button>
+      </div>
+
+      {/* Project Type Header */}
+      <div className="project-type-header">
+        <div className="header-main">
+          <div className="header-content">
+            <div className="title-section">
+              <div className="title-with-color">
+                <h1 className="project-type-title">
+                  <InlineEdit 
+                    field="name" 
+                    value={projectType.name} 
+                    placeholder="Enter project type name"
+                  />
+                </h1>
+                <div className="color-indicator">
+                  <InlineEdit
+                    field="color_code"
+                    value={projectType.color_code}
+                    type="color"
+                    placeholder="#6b7280"
+                  />
+                </div>
+              </div>
+              <div className="description-section">
+                <InlineEdit 
+                  field="description" 
+                  value={projectType.description} 
+                  type="textarea"
+                  placeholder="Enter project type description"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="role-content">
-        {/* Project Type Information Section */}
-        <section className="role-info-section">
-          <h2>Project Type Information</h2>
-          <div className="info-grid">
-            <div className="info-item">
-              <label>Color</label>
-              <InlineEdit
-                field="color_code"
-                value={projectType.color_code}
-                type="color"
-                placeholder="#6b7280"
-              />
-            </div>
-          </div>
-        </section>
 
-        {/* Project Phases Section (only for parent types) */}
-        {!projectType.parent_id && (
-          <section className="project-phases-section">
-            <div className="section-header">
-              <h2>Project Phases</h2>
-              <p className="text-muted">
-                Define the phases for this project type. These phases will be inherited by all child project types.
-              </p>
-            </div>
-            {projectTypePhases && projectTypePhases.length > 0 ? (
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Phase Name</th>
-                      <th>Description</th>
-                      <th>Duration</th>
-                      <th>Order</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {projectTypePhases.map((phase: any) => (
-                      <tr key={phase.id}>
-                        <td>{phase.name}</td>
-                        <td>{phase.description || '-'}</td>
-                        <td>{phase.duration_weeks} weeks</td>
-                        <td>{phase.order_index}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="empty-state">
-                <p>No phases defined for this project type</p>
-                <p className="text-muted">Add phases to define the workflow structure</p>
-              </div>
-            )}
-          </section>
-        )}
 
-        {/* Project Sub-Types Section (only for project types) */}
-        {!projectType.parent_id && (
-          <section className="project-sub-types-section">
-            <div className="section-header">
-              <h2>
-                <GitBranch size={20} />
-                Project Sub-Types
-              </h2>
-              <p className="text-muted">
-                Manage sub-types of this project type. Sub-types inherit phases from their project type.
-              </p>
-            </div>
-
-          {childProjectTypes && childProjectTypes.length > 0 ? (
-            <div className="sub-types-grid">
-              {childProjectTypes.map((child: any) => (
-                <div key={child.id} className={`sub-type-card ${child.is_default ? 'default-sub-type' : ''}`}>
-                  <div className="sub-type-header">
-                    <div className="sub-type-info">
-                      <div className="sub-type-name">
-                        <div 
-                          className="sub-type-color"
-                          style={{ backgroundColor: child.color_code || '#6b7280' }}
-                        />
-                        <h4>
-                          {child.name}
-                          {child.is_default && (
-                            <span className="default-badge">Default</span>
-                          )}
-                        </h4>
-                      </div>
-                      <p className="sub-type-description">
-                        {child.description || 'No description'}
-                        {child.is_default && (
-                          <span className="read-only-note">
-                            (Read-only - modify parent allocations to update)
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="sub-type-actions">
-                      {!child.is_default && (
-                        <>
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => navigate(`/project-types/${child.id}`)}
-                          >
-                            <Edit2 size={14} />
-                            Edit
-                          </button>
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleDeleteChild(child.id, child.name)}
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </>
-                      )}
-                      {child.is_default && (
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => navigate(`/project-types/${child.id}`)}
-                        >
-                          <Edit2 size={14} />
-                          View
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="sub-type-meta">
-                    <span className="level-badge">Level {child.level}</span>
-                    <span className="phases-count">
-                      {child.phases?.length || 0} phases
-                    </span>
-                    {child.is_default && (
-                      <span className="default-indicator">📌 Default Template</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <p>No child project types defined</p>
-            </div>
-          )}
-
-          {/* Add Child Form */}
-          {showAddChild ? (
-            <div className="add-child-form">
-              <h3>Add Child Project Type</h3>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={childForm.name}
-                    onChange={(e) => setChildForm({ ...childForm, name: e.target.value })}
-                    placeholder="Child project type name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Color</label>
-                  <input
-                    type="color"
-                    className="form-input"
-                    value={childForm.color_code}
-                    onChange={(e) => setChildForm({ ...childForm, color_code: e.target.value })}
-                  />
-                </div>
-                <div className="form-group span-2">
-                  <label>Description</label>
-                  <textarea
-                    className="form-input"
-                    rows={3}
-                    value={childForm.description}
-                    onChange={(e) => setChildForm({ ...childForm, description: e.target.value })}
-                    placeholder="Child project type description"
-                  />
-                </div>
-              </div>
-              <div className="form-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleCancelAddChild}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleCreateChild}
-                  disabled={!childForm.name.trim() || createChildMutation.isPending}
-                >
-                  Create Child
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="add-child-button">
-              <button
-                className="btn btn-primary"
-                onClick={handleAddChild}
-              >
-                <Plus size={16} />
-                Add Child Project Type
-              </button>
-            </div>
-          )}
-          </section>
-        )}
 
         {/* Parent Type Information Section */}
         {projectType.parent_id && (
@@ -567,7 +334,7 @@ export default function ProjectTypeDetails() {
             <div className="section-header">
               <h2>Parent Project Type</h2>
               <p className="text-muted">
-                This project type inherits phases from its parent. Role allocations are defined at this child level.
+                This project type inherits phases from its parent. Role allocations are defined for this specific project type.
               </p>
             </div>
             <div className="parent-info-card">
@@ -578,7 +345,28 @@ export default function ProjectTypeDetails() {
           </section>
         )}
 
-        {/* Resource Templates Section - For both parent and child types */}
+        {/* Phase Template Designer Section */}
+        {!projectType.parent_id && (
+          <section className="phase-template-section">
+            <PhaseTemplateDesigner 
+              projectTypeId={id!} 
+              phases={phases || []} 
+            />
+          </section>
+        )}
+
+        {/* Projects of this Type Section */}
+        <section className="role-info-section">
+          <div className="section-header">
+            <h2>Projects of this Type ({projectsOfType?.length || 0})</h2>
+            <p className="text-muted">
+              Projects currently using this project type template
+            </p>
+          </div>
+          <ProjectsTable projects={projectsOfType || []} maxRows={10} />
+        </section>
+
+        {/* Resource Templates Section */}
         <section className="resource-templates-section">
           <div className="section-header">
             <h2>Role Allocations</h2>
@@ -587,7 +375,7 @@ export default function ProjectTypeDetails() {
                 ? projectType.is_default
                   ? "This is a default project type template. Allocations are read-only and automatically sync with the parent project type. To modify allocations, edit the parent project type."
                   : "Define allocation percentages for each role across the inherited project phases. You can override inherited defaults or create new allocations."
-                : "Define default allocation percentages for each role across project phases. These defaults will be inherited by child project types."
+                : "Define default allocation percentages for each role across project phases. These defaults will be inherited by projects of this type."
               }
             </p>
             {projectType.is_default && (
@@ -598,7 +386,16 @@ export default function ProjectTypeDetails() {
             )}
           </div>
 
-          {roles && phases && !resourceTemplatesLoading && resourceTemplates !== undefined ? (
+          {roles && phases && Array.isArray(phases) && !resourceTemplatesLoading && resourceTemplates !== undefined ? (() => {
+            // Create ordered phases array based on project type phases order
+            const orderedPhases = projectTypePhases && Array.isArray(projectTypePhases) 
+              ? projectTypePhases
+                  .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+                  .map(ptp => phases.find(p => p.id === ptp.phase_id))
+                  .filter(Boolean)
+              : Array.isArray(phases) ? phases : [];
+            
+            return (
             <div className="templates-grid">
               {projectType.parent_id && (
                 <div className="inheritance-legend">
@@ -616,7 +413,7 @@ export default function ProjectTypeDetails() {
                 <thead>
                   <tr>
                     <th style={{ minWidth: '200px' }}>Role</th>
-                    {Array.isArray(phases) ? phases.map(phase => (
+                    {Array.isArray(orderedPhases) ? orderedPhases.map(phase => (
                       <th key={phase.id} style={{ minWidth: '120px', textAlign: 'center' }}>
                         {phase.name}
                       </th>
@@ -636,56 +433,80 @@ export default function ProjectTypeDetails() {
                           </div>
                         </div>
                       </td>
-                      {Array.isArray(phases) ? phases.map(phase => {
+                      {Array.isArray(orderedPhases) ? orderedPhases.map(phase => {
                         const template = localTemplates.find(
                           t => String(t.role_id) === String(role.id) && 
                                String(t.phase_id) === String(phase.id)
                         );
-                        const allocation = template?.allocation_percentage || 0;
+                        const allocation = template?.allocation_percentage;
+                        
+                        // Only show template if allocation is greater than 0
+                        const shouldShowTemplate = template && allocation && allocation > 0;
+                        
+                        // For display purposes, only show non-zero allocations
+                        const displayValue = (allocation && allocation > 0) ? allocation : '';
+                        
                         
                         return (
                           <td key={`${role.id}-${phase.id}`} style={{ textAlign: 'center', padding: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', flexDirection: 'column' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <input
-                                  type="number"
-                                  value={allocation}
-                                  min="0"
-                                  max="100"
-                                  step="5"
-                                  style={{
-                                    width: '60px',
-                                    padding: '6px 8px',
-                                    border: template?.is_inherited ? '1px solid #93c5fd' : '1px solid #d1d5db',
-                                    borderRadius: '4px',
-                                    textAlign: 'center',
-                                    fontSize: '0.875rem',
-                                    backgroundColor: template?.is_inherited ? '#dbeafe' : 'white'
-                                  }}
-                                  onChange={(e) => {
-                                    const newValue = parseFloat(e.target.value) || 0;
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <input
+                                type="number"
+                                value={displayValue}
+                                min="0"
+                                max="100"
+                                step="5"
+                                placeholder=""
+                                style={{
+                                  width: '60px',
+                                  padding: '6px 8px',
+                                  border: (shouldShowTemplate && template?.is_inherited) ? '1px solid #93c5fd' : '1px solid #d1d5db',
+                                  borderRadius: '4px',
+                                  textAlign: 'center',
+                                  fontSize: '0.875rem',
+                                  backgroundColor: (shouldShowTemplate && template?.is_inherited) ? '#dbeafe' : 'white'
+                                }}
+                                onChange={(e) => {
+                                  const inputValue = e.target.value;
+                                  if (inputValue === '' || inputValue === '0') {
                                     handleAllocationChange(
                                       String(role.id),
                                       String(phase.id),
-                                      newValue
+                                      0
                                     );
-                                  }}
-                                />
-                                <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>%</span>
-                              </div>
-                              {template?.is_inherited && (
-                                <span style={{ 
-                                  fontSize: '0.75rem', 
-                                  color: '#3b82f6', 
-                                  fontWeight: '500',
-                                  backgroundColor: '#dbeafe',
-                                  padding: '2px 6px',
-                                  borderRadius: '8px'
-                                }}>
-                                  Inherited
-                                </span>
-                              )}
+                                  } else {
+                                    const newValue = parseFloat(inputValue);
+                                    if (!isNaN(newValue)) {
+                                      handleAllocationChange(
+                                        String(role.id),
+                                        String(phase.id),
+                                        newValue
+                                      );
+                                    }
+                                  }
+                                }}
+                              />
+                              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>%</span>
                             </div>
+                            {(() => {
+                              if (shouldShowTemplate && template?.is_inherited) {
+                                return (
+                                  <div style={{ marginTop: '4px' }}>
+                                    <span style={{ 
+                                      fontSize: '0.75rem', 
+                                      color: '#3b82f6', 
+                                      fontWeight: '500',
+                                      backgroundColor: '#dbeafe',
+                                      padding: '2px 6px',
+                                      borderRadius: '8px'
+                                    }}>
+                                      Inherited
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </td>
                         );
                       }) : null}
@@ -694,7 +515,8 @@ export default function ProjectTypeDetails() {
                 </tbody>
               </table>
             </div>
-          ) : (
+            );
+          })() : (
             <div className="empty-state">
               <p>Loading role allocation configuration...</p>
             </div>

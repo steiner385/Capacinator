@@ -5,7 +5,8 @@ let Store;
 let appStore;
 
 try {
-    Store = require('electron-store');
+    const ElectronStore = require('electron-store');
+    Store = ElectronStore.default || ElectronStore;
     // Initialize electron store for app settings
     appStore = new Store({
     name: 'capacinator-config',

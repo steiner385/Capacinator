@@ -381,7 +381,7 @@ export default function People() {
   }
 
   return (
-    <div className="people-page">
+    <div className="page-container">
       <div className="page-header">
         <div>
           <h1>People</h1>

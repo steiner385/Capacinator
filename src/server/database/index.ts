@@ -2,10 +2,12 @@ import knex, { Knex } from 'knex';
 import knexConfig from './knexfile.js';
 import path from 'path';
 import fs from 'fs';
-import { initializeAuditService } from '../services/audit/index.js';
+import { initializeAuditService, getAuditService } from '../services/audit/index.js';
+import { createAuditedDatabase } from './AuditedDatabase.js';
 
 // Store database instance
 let _db: Knex | null = null;
+let _auditedDb: any = null;
 
 // Create and export the database connection
 export function getDb(): Knex {
@@ -32,6 +34,16 @@ export function getDb(): Knex {
   }
   
   return _db;
+}
+
+// Get audited database instance
+export function getAuditedDb(): any {
+  if (!_auditedDb) {
+    const rawDb = getDb();
+    const auditService = getAuditService();
+    _auditedDb = createAuditedDatabase(rawDb, auditService);
+  }
+  return _auditedDb;
 }
 
 // Export db as a getter for backward compatibility
@@ -71,10 +83,31 @@ export function createDbFunction(): any {
 // Export db as a function that always uses the current database
 export const db = createDbFunction();
 
+// Export audited database - this should be used for all new code
+export const auditedDb = new Proxy(() => getAuditedDb(), {
+  get(target, prop) {
+    const auditedInstance = getAuditedDb();
+    if (prop in auditedInstance) {
+      const value = auditedInstance[prop];
+      return typeof value === 'function' ? value.bind(auditedInstance) : value;
+    }
+    return undefined;
+  },
+  has(target, prop) {
+    const auditedInstance = getAuditedDb();
+    return prop in auditedInstance;
+  },
+  apply(target, thisArg, args) {
+    const auditedInstance = getAuditedDb();
+    return auditedInstance.apply(thisArg, args);
+  }
+});
+
 // Function to reinitialize db (useful for E2E tests)
 export function reinitializeDb(): void {
   _db = null;
   _dbProxy = null;
+  _auditedDb = null;
 }
 
 // Test the connection

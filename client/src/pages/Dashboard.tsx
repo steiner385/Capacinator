@@ -72,7 +72,7 @@ export function Dashboard() {
     : [{ name: 'No Data', value: 0, color: COLORS.primary }];
 
   return (
-    <div className="dashboard">
+    <div className="page-container">
       <div className="page-header">
         <h1>Dashboard</h1>
         <p className="page-subtitle">Overview of your project capacity planning</p>

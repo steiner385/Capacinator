@@ -734,7 +734,7 @@ export default function Assignments() {
   };
 
   return (
-    <div className="assignments-page">
+    <div className="page-container">
       <div className="page-header">
         <div>
           <h1>Assignments</h1>

@@ -91,6 +91,11 @@ export class UserPermissionsController extends BaseController {
         return this.handleNotFound(res, 'Role');
       }
       
+      // Get existing permissions for audit trail
+      const existingPermissions = await this.db('user_role_permissions')
+        .where('user_role_id', roleId)
+        .select('*');
+
       // Begin transaction
       await this.db.transaction(async (trx) => {
         // Remove existing permissions
@@ -108,6 +113,18 @@ export class UserPermissionsController extends BaseController {
           await trx('user_role_permissions').insert(rolePermissions);
         }
       });
+
+      // Log audit event for role permissions update
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'user_role_permissions',
+          roleId,
+          'UPDATE',
+          { existing_permissions: existingPermissions },
+          { new_permission_ids: permissionIds },
+          `Role permissions updated for role ${role.name}`
+        );
+      }
       
       res.json({
         success: true,
@@ -238,6 +255,18 @@ export class UserPermissionsController extends BaseController {
           user_role_id: roleId || null,
           updated_at: new Date()
         });
+
+      // Log audit event for user role update
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'people',
+          userId,
+          'UPDATE',
+          { user_role_id: user.user_role_id },
+          { user_role_id: roleId || null },
+          `User role updated for ${user.name}`
+        );
+      }
       
       res.json({
         success: true,
@@ -293,15 +322,41 @@ export class UserPermissionsController extends BaseController {
             granted_at: new Date(),
             updated_at: new Date()
           });
+
+        // Log audit event for permission update
+        if ((req as any).logAuditEvent) {
+          await (req as any).logAuditEvent(
+            'user_permissions',
+            `${userId}-${permissionId}`,
+            'UPDATE',
+            existingOverride,
+            { granted, reason, permission_name: permission.name },
+            `User permission ${granted ? 'granted' : 'revoked'} for ${user.name}: ${permission.name}`
+          );
+        }
       } else {
         // Create new override
-        await this.db('user_permissions').insert({
+        const newPermission = {
           person_id: userId,
           permission_id: permissionId,
           granted: granted,
           reason: reason || null,
           granted_at: new Date()
-        });
+        };
+        
+        await this.db('user_permissions').insert(newPermission);
+
+        // Log audit event for permission creation
+        if ((req as any).logAuditEvent) {
+          await (req as any).logAuditEvent(
+            'user_permissions',
+            `${userId}-${permissionId}`,
+            'CREATE',
+            null,
+            { ...newPermission, permission_name: permission.name },
+            `User permission ${granted ? 'granted' : 'revoked'} for ${user.name}: ${permission.name}`
+          );
+        }
       }
       
       res.json({
@@ -318,6 +373,25 @@ export class UserPermissionsController extends BaseController {
     try {
       const { userId, permissionId } = req.params;
       
+      // Get the existing permission override for audit trail
+      const existingOverride = await this.db('user_permissions')
+        .join('system_permissions', 'user_permissions.permission_id', 'system_permissions.id')
+        .join('people', 'user_permissions.person_id', 'people.id')
+        .where({
+          'user_permissions.person_id': userId,
+          'user_permissions.permission_id': permissionId
+        })
+        .select(
+          'user_permissions.*',
+          'system_permissions.name as permission_name',
+          'people.name as user_name'
+        )
+        .first();
+      
+      if (!existingOverride) {
+        return this.handleNotFound(res, 'Permission override');
+      }
+      
       const deleted = await this.db('user_permissions')
         .where({
           person_id: userId,
@@ -327,6 +401,18 @@ export class UserPermissionsController extends BaseController {
       
       if (deleted === 0) {
         return this.handleNotFound(res, 'Permission override');
+      }
+
+      // Log audit event for permission override removal
+      if ((req as any).logAuditEvent) {
+        await (req as any).logAuditEvent(
+          'user_permissions',
+          `${userId}-${permissionId}`,
+          'DELETE',
+          existingOverride,
+          null,
+          `Permission override removed for ${existingOverride.user_name}: ${existingOverride.permission_name}`
+        );
       }
       
       res.json({

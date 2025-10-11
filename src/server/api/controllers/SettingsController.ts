@@ -27,20 +27,36 @@ export class SettingsController extends BaseController {
   // Get system settings
   getSystemSettings = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {
-      const result = await this.db('settings')
-        .where('category', 'system')
-        .first();
+      try {
+        const result = await this.db('settings')
+          .where('category', 'system')
+          .first();
 
-      if (!result) {
-        return res.status(404).json({
-          error: 'System settings not found'
+        if (!result) {
+          return res.status(404).json({
+            error: 'System settings not found'
+          });
+        }
+
+        return res.json({
+          success: true,
+          data: JSON.parse(result.settings)
         });
+      } catch (error: any) {
+        // Handle missing table gracefully
+        if (error.code === 'SQLITE_ERROR' && error.message.includes('no such table: settings')) {
+          return res.json({
+            success: true,
+            data: {
+              // Return default system settings
+              audit_enabled: true,
+              auto_backup: true,
+              max_file_size: 52428800
+            }
+          });
+        }
+        throw error;
       }
-
-      return res.json({
-        success: true,
-        data: JSON.parse(result.settings)
-      });
     }, res);
   };
 

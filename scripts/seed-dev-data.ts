@@ -1,15 +1,10 @@
-import knex from 'knex';
 import { faker } from '@faker-js/faker';
 import path from 'path';
+import { getAuditedDb } from '../src/server/database/index.js';
+import { withSeedAudit } from '../src/server/database/MigrationAuditWrapper.js';
 
-// Create a database connection for production/dev deployment
-const db = knex({
-  client: 'better-sqlite3',
-  connection: {
-    filename: process.env.DATABASE_PATH || path.join(__dirname, '../../data/capacinator.db')
-  },
-  useNullAsDefault: true
-});
+// Use the audited database connection
+const auditedDb = getAuditedDb();
 
 // Fiscal week helpers
 function getFiscalWeek(date: Date): string {
@@ -91,21 +86,21 @@ async function clearExistingData() {
   console.log('🧹 Clearing existing data...');
   
   // Delete in reverse order of dependencies
-  await db('project_planning_audit').del();
-  await db('role_planning_audit').del();
-  await db('availability_audit').del();
-  await db('project_assignments').del();
-  await db('person_availability_overrides').del();
-  await db('standard_allocations').del();
-  await db('project_phases_timeline').del();
-  await db('projects').del();
-  await db('person_roles').del();
-  await db('people').del();
-  await db('role_planners').del();
-  await db('roles').del();
-  await db('project_phases').del();
-  await db('project_types').del();
-  await db('locations').del();
+  await auditedDb('project_planning_audit').del();
+  await auditedDb('role_planning_audit').del();
+  await auditedDb('availability_audit').del();
+  await auditedDb('project_assignments').del();
+  await auditedDb('person_availability_overrides').del();
+  await auditedDb('standard_allocations').del();
+  await auditedDb('project_phases_timeline').del();
+  await auditedDb('projects').del();
+  await auditedDb('person_roles').del();
+  await auditedDb('people').del();
+  await auditedDb('role_planners').del();
+  await auditedDb('roles').del();
+  await auditedDb('project_phases').del();
+  await auditedDb('project_types').del();
+  await auditedDb('locations').del();
   
   console.log('✅ Existing data cleared');
 }
@@ -119,7 +114,7 @@ async function seedLocations() {
     description: name === 'Remote' ? 'Work from anywhere' : `Office location in ${name}`
   }));
   
-  await db('locations').insert(locationData);
+  await auditedDb('locations').insert(locationData);
   console.log(`✅ Created ${locationData.length} locations`);
   return locationData;
 }
@@ -133,7 +128,7 @@ async function seedProjectTypes() {
     description: faker.lorem.sentence()
   }));
   
-  await db('project_types').insert(projectTypeData);
+  await auditedDb('project_types').insert(projectTypeData);
   console.log(`✅ Created ${projectTypeData.length} project types`);
   return projectTypeData;
 }
@@ -149,7 +144,7 @@ async function seedPhases() {
     order_index: phase.order_index
   }));
   
-  await db('project_phases').insert(phaseData);
+  await auditedDb('project_phases').insert(phaseData);
   console.log(`✅ Created ${phaseData.length} phases`);
   return phaseData;
 }
@@ -169,7 +164,7 @@ async function seedRoles() {
     has_data_access: true
   }));
   
-  await db('roles').insert(roleData);
+  await auditedDb('roles').insert(roleData);
   
   // Add role planners for manager roles
   const managerRoles = roleData.filter(r => ['PM', 'TL', 'DIR', 'VP'].includes(r.code));
@@ -192,7 +187,7 @@ async function seedRoles() {
   }
   
   if (plannerData.length > 0) {
-    await db('role_planners').insert(plannerData);
+    await auditedDb('role_planners').insert(plannerData);
   }
   
   console.log(`✅ Created ${roleData.length} roles and ${plannerData.length} role planner relationships`);
@@ -260,8 +255,8 @@ async function seedPeople(locationData: any[], roleData: any[]) {
     });
   }
   
-  await db('people').insert(peopleData);
-  await db('person_roles').insert(personRolesData);
+  await auditedDb('people').insert(peopleData);
+  await auditedDb('person_roles').insert(personRolesData);
   
   console.log(`✅ Created ${peopleData.length} people with ${personRolesData.length} role assignments`);
   return { peopleData, personRolesData };
@@ -330,9 +325,9 @@ async function seedProjects(locationData: any[], projectTypeData: any[], phaseDa
     }
   }
   
-  await db('projects').insert(projectData);
+  await auditedDb('projects').insert(projectData);
   if (phaseTimelineData.length > 0) {
-    await db('project_phases_timeline').insert(phaseTimelineData);
+    await auditedDb('project_phases_timeline').insert(phaseTimelineData);
   }
   
   console.log(`✅ Created ${projectData.length} projects with ${phaseTimelineData.length} phase timelines`);
@@ -383,7 +378,7 @@ async function seedStandardAllocations(projectTypeData: any[], phaseData: any[],
     }
   }
   
-  await db('standard_allocations').insert(standardAllocationData);
+  await auditedDb('standard_allocations').insert(standardAllocationData);
   console.log(`✅ Created ${standardAllocationData.length} standard allocations`);
   return standardAllocationData;
 }
@@ -435,7 +430,7 @@ async function seedAssignments(projectData: any[], peopleData: any[], personRole
     }
   }
   
-  await db('project_assignments').insert(assignmentData);
+  await auditedDb('project_assignments').insert(assignmentData);
   console.log(`✅ Created ${assignmentData.length} assignments`);
   return assignmentData;
 }
@@ -487,7 +482,7 @@ async function seedAvailabilityOverrides(peopleData: any[]) {
     }
   }
   
-  await db('person_availability_overrides').insert(availabilityData);
+  await auditedDb('person_availability_overrides').insert(availabilityData);
   console.log(`✅ Created ${availabilityData.length} availability overrides`);
   return availabilityData;
 }
@@ -528,7 +523,7 @@ async function seedDatabase() {
     console.log(`  - Roles: ${roleData.length}`);
     console.log(`  - People: ${peopleData.length}`);
     console.log(`  - Projects: ${projectData.length}`);
-    console.log(`  - Assignments: ${(await db('project_assignments').count('* as count'))[0].count}`);
+    console.log(`  - Assignments: ${(await auditedDb('project_assignments').count('* as count'))[0].count}`);
     
   } catch (error) {
     console.error('❌ Error seeding database:', error);

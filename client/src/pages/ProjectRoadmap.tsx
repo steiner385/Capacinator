@@ -1,11 +1,13 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Edit2, Save, X, ZoomIn, ZoomOut, Filter, Search, ChevronDown, ChevronRight, ChevronLeft, SkipBack, SkipForward, Maximize2, Minimize2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Edit2, Save, X, ZoomIn, ZoomOut, Filter, Search, ChevronLeft, ChevronRight, SkipBack, SkipForward } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from '../components/InteractiveTimeline';
 import type { Project, ProjectPhase } from '../types';
+import { parseDate, formatTimelineDate, toISODateString } from '../utils/dateUtils';
 import './ProjectRoadmap.css';
 
 interface ProjectWithPhases extends Project {
@@ -18,8 +20,8 @@ interface ProjectPhaseTimeline {
   phase_id: string;
   phase_name: string;
   phase_order: number;
-  start_date: string;
-  end_date: string;
+  start_date: string | number; // Support both date strings and timestamps
+  end_date: string | number;   // Support both date strings and timestamps
   color_code?: string;
   created_at: string;
   updated_at: string;
@@ -52,6 +54,7 @@ const getPhaseColor = (phaseName: string): string => {
 };
 
 export default function ProjectRoadmap() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const timelineRef = useRef<HTMLDivElement>(null);
   // Calculate initial viewport with Today at 30% from left
@@ -155,7 +158,6 @@ export default function ProjectRoadmap() {
   }, []);
   
   const [editingPhase, setEditingPhase] = useState<EditingPhase | null>(null);
-  const [selectedProject, setSelectedProject] = useState<ProjectWithPhases | null>(null);
   
   const [filters, setFilters] = useState({
     search: '',
@@ -169,8 +171,8 @@ export default function ProjectRoadmap() {
     return project.phases.map(phase => ({
       id: phase.id,
       name: phase.phase_name,
-      startDate: new Date(phase.start_date),
-      endDate: new Date(phase.end_date),
+      startDate: parseDate(phase.start_date),
+      endDate: parseDate(phase.end_date),
       color: getPhaseColor(phase.phase_name),
       data: { ...phase, projectId: project.id } // Include project context
     }));
@@ -188,8 +190,6 @@ export default function ProjectRoadmap() {
     return () => clearTimeout(timer);
   }, [filters]);
   
-  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
-  const [allCollapsed, setAllCollapsed] = useState(true);
 
   // Update phase dates mutation for drag operations
   const updatePhaseDragMutation = useMutation({
@@ -279,8 +279,8 @@ export default function ProjectRoadmap() {
         updatePhaseDragMutation.mutate({
           projectId: update.projectId,
           phaseId: update.phaseId,
-          startDate: update.newStartDate.toISOString().split('T')[0],
-          endDate: update.newEndDate.toISOString().split('T')[0]
+          startDate: toISODateString(update.newStartDate),
+          endDate: toISODateString(update.newEndDate)
         });
       });
 
@@ -320,8 +320,8 @@ export default function ProjectRoadmap() {
               if (phase.id === itemId) {
                 return {
                   ...phase,
-                  start_date: newStartDate.toISOString().split('T')[0],
-                  end_date: newEndDate.toISOString().split('T')[0]
+                  start_date: toISODateString(newStartDate),
+                  end_date: toISODateString(newEndDate)
                 };
               }
               return phase;
@@ -355,19 +355,12 @@ export default function ProjectRoadmap() {
       setEditingPhase({
         projectId: projectWithPhase.id,
         phaseId: phase.id,
-        startDate: phase.start_date,
-        endDate: phase.end_date
+        startDate: typeof phase.start_date === 'string' ? phase.start_date : toISODateString(new Date(phase.start_date)),
+        endDate: typeof phase.end_date === 'string' ? phase.end_date : toISODateString(new Date(phase.end_date))
       });
     }
   }, [projects]);
 
-  // Set all projects as collapsed by default when data loads
-  React.useEffect(() => {
-    if (projects && allCollapsed) {
-      const allProjectIds = new Set(projects.map(p => p.id));
-      setCollapsedProjects(allProjectIds);
-    }
-  }, [projects, allCollapsed]);
 
   // Calculate date position on timeline
   const getDatePosition = useCallback((date: Date) => {
@@ -392,6 +385,19 @@ export default function ProjectRoadmap() {
     }));
   };
 
+  // Determine header tier based on zoom level
+  const getHeaderTierType = useCallback(() => {
+    const pixelsPerDay = viewport.pixelsPerDay;
+    
+    if (pixelsPerDay <= 1.5) {
+      return 'year-quarter'; // Wide view: Year/Quarter
+    } else if (pixelsPerDay <= 4) {
+      return 'year-month'; // Medium view: Year/Month (current)
+    } else {
+      return 'month-week'; // Detail view: Month/Week
+    }
+  }, [viewport.pixelsPerDay]);
+
 
 
   // Save manual edit
@@ -401,50 +407,75 @@ export default function ProjectRoadmap() {
     }
   };
 
-  // Toggle project collapse
-  const toggleProjectCollapse = (projectId: string) => {
-    setCollapsedProjects(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(projectId)) {
-        newSet.delete(projectId);
-      } else {
-        newSet.add(projectId);
-      }
+
+
+  // Generate year/quarter headers for wide view
+  const generateYearQuarterHeaders = () => {
+    const headers = { years: [], quarters: [] };
+    const startYear = viewport.startDate.getFullYear();
+    const endYear = viewport.endDate.getFullYear();
+    
+    // Generate year headers
+    for (let year = startYear; year <= endYear; year++) {
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd = new Date(year + 1, 0, 0);
       
-      // Update allCollapsed state based on current state
-      if (projects) {
-        const allProjectIds = projects.map(p => p.id);
-        const allCollapsedNow = allProjectIds.every(id => newSet.has(id));
-        const noneCollapsedNow = allProjectIds.every(id => !newSet.has(id));
+      const actualStart = new Date(Math.max(yearStart.getTime(), viewport.startDate.getTime()));
+      const actualEnd = new Date(Math.min(yearEnd.getTime(), viewport.endDate.getTime()));
+      
+      const startPosition = getDatePosition(actualStart);
+      const endPosition = getDatePosition(actualEnd);
+      const width = endPosition - startPosition;
+      
+      if (width > 30) { // Minimum width for year label
+        headers.years.push(
+          <div 
+            key={`year-${year}`} 
+            className="timeline-header-year"
+            style={{ 
+              left: startPosition,
+              width: width
+            }}
+          >
+            <div className="year-label">{year}</div>
+          </div>
+        );
+      }
+    }
+    
+    // Generate quarter headers
+    for (let year = startYear; year <= endYear; year++) {
+      for (let quarter = 0; quarter < 4; quarter++) {
+        const quarterStart = new Date(year, quarter * 3, 1);
+        const quarterEnd = new Date(year, (quarter + 1) * 3, 0);
         
-        if (allCollapsedNow) {
-          setAllCollapsed(true);
-        } else if (noneCollapsedNow) {
-          setAllCollapsed(false);
+        const actualStart = new Date(Math.max(quarterStart.getTime(), viewport.startDate.getTime()));
+        const actualEnd = new Date(Math.min(quarterEnd.getTime(), viewport.endDate.getTime()));
+        
+        if (actualStart < actualEnd) {
+          const startPosition = getDatePosition(actualStart);
+          const endPosition = getDatePosition(actualEnd);
+          const width = endPosition - startPosition;
+          
+          if (width > 25) { // Minimum width for quarter label
+            headers.quarters.push(
+              <div 
+                key={`quarter-${year}-${quarter}`} 
+                className="timeline-header-quarter"
+                style={{ 
+                  left: startPosition,
+                  width: width
+                }}
+              >
+                <div className="quarter-label">Q{quarter + 1}</div>
+              </div>
+            );
+          }
         }
       }
-      
-      return newSet;
-    });
-  };
-
-  // Toggle all projects expand/collapse
-  const toggleAllProjects = () => {
-    if (!projects) return;
-    
-    const allProjectIds = projects.map(p => p.id);
-    const allCurrentlyCollapsed = allProjectIds.every(id => collapsedProjects.has(id));
-    
-    if (allCurrentlyCollapsed) {
-      // Expand all
-      setCollapsedProjects(new Set());
-      setAllCollapsed(false);
-    } else {
-      // Collapse all
-      const allProjectIdSet = new Set(allProjectIds);
-      setCollapsedProjects(allProjectIdSet);
-      setAllCollapsed(true);
     }
+    
+    return headers;
   };
 
   // Generate year headers
@@ -466,7 +497,7 @@ export default function ProjectRoadmap() {
       const endPosition = getDatePosition(actualEnd);
       const width = endPosition - startPosition;
       
-      if (width > 0) {
+      if (width > 10) { // Reduced minimum width for debugging
         yearHeaders.push(
           <div 
             key={year} 
@@ -513,30 +544,223 @@ export default function ProjectRoadmap() {
       );
     }
     
-    // Add quarter markers for better navigation
-    const quarterHeaders = [];
-    const startYear = viewport.startDate.getFullYear();
-    const endYear = viewport.endDate.getFullYear();
+    return headers;
+  };
+
+  // Generate month/week headers for detail view
+  const generateMonthWeekHeaders = () => {
+    const headers = { months: [], weeks: [] };
+    const startDate = new Date(viewport.startDate);
+    const endDate = new Date(viewport.endDate);
     
-    for (let year = startYear; year <= endYear; year++) {
-      for (let quarter = 0; quarter < 4; quarter++) {
-        const quarterStart = new Date(year, quarter * 3, 1);
-        if (quarterStart >= viewport.startDate && quarterStart <= viewport.endDate) {
-          const position = getDatePosition(quarterStart);
-          quarterHeaders.push(
-            <div
-              key={`q${year}-${quarter}`}
-              className="quarter-marker"
-              style={{ left: position }}
+    // Generate month headers
+    const currentMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (currentMonth <= endDate) {
+      const nextMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+      
+      const actualStart = new Date(Math.max(currentMonth.getTime(), viewport.startDate.getTime()));
+      const actualEnd = new Date(Math.min(nextMonth.getTime(), viewport.endDate.getTime()));
+      
+      if (actualStart < actualEnd) {
+        const startPosition = getDatePosition(actualStart);
+        const endPosition = getDatePosition(actualEnd);
+        const width = endPosition - startPosition;
+        
+        if (width > 50) { // Minimum width for month label
+          headers.months.push(
+            <div 
+              key={`month-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`} 
+              className="timeline-header-month-detail"
+              style={{ 
+                left: startPosition,
+                width: width
+              }}
             >
-              Q{quarter + 1}
+              <div className="month-detail-label">
+                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
             </div>
+          );
+        }
+      }
+      
+      currentMonth.setMonth(currentMonth.getMonth() + 1);
+    }
+    
+    // Generate week headers
+    const currentWeek = new Date(startDate);
+    // Move to start of week (Sunday)
+    currentWeek.setDate(currentWeek.getDate() - currentWeek.getDay());
+    
+    while (currentWeek <= endDate) {
+      const nextWeek = new Date(currentWeek);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const actualStart = new Date(Math.max(currentWeek.getTime(), viewport.startDate.getTime()));
+      const actualEnd = new Date(Math.min(nextWeek.getTime(), viewport.endDate.getTime()));
+      
+      if (actualStart < actualEnd) {
+        const startPosition = getDatePosition(actualStart);
+        const endPosition = getDatePosition(actualEnd);
+        const width = endPosition - startPosition;
+        
+        if (width > 25) { // Minimum width for week label
+          const weekStart = new Date(currentWeek);
+          const weekEnd = new Date(currentWeek);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          
+          headers.weeks.push(
+            <div 
+              key={`week-${currentWeek.getTime()}`} 
+              className="timeline-header-week"
+              style={{ 
+                left: startPosition,
+                width: width
+              }}
+            >
+              <div className="week-label">
+                {weekStart.getDate()}-{weekEnd.getDate()}
+              </div>
+            </div>
+          );
+        }
+      }
+      
+      currentWeek.setDate(currentWeek.getDate() + 7);
+    }
+    
+    return headers;
+  };
+
+  // Generate grid lines aligned to header tiers
+  const generateGridLines = () => {
+    const gridLines = { major: [], minor: [] };
+    const tierType = getHeaderTierType();
+    
+    if (tierType === 'year-quarter') {
+      // Major lines: Year boundaries (match generateYearQuarterHeaders logic)
+      const startYear = viewport.startDate.getFullYear();
+      const endYear = viewport.endDate.getFullYear();
+      
+      for (let year = startYear; year <= endYear; year++) {
+        // Use same logic as generateYearQuarterHeaders for year positioning
+        const yearStart = new Date(year, year === startYear ? viewport.startDate.getMonth() : 0, 1);
+        const yearEnd = new Date(year, year === endYear ? viewport.endDate.getMonth() + 1 : 12, 0);
+        
+        const actualStart = new Date(Math.max(yearStart.getTime(), viewport.startDate.getTime()));
+        const actualEnd = new Date(Math.min(yearEnd.getTime(), viewport.endDate.getTime()));
+        
+        if (actualStart <= actualEnd) {
+          const position = getDatePosition(actualStart);
+          gridLines.major.push(
+            <div
+              key={`major-year-${year}`}
+              className="timeline-grid-line major"
+              style={{ left: position }}
+            />
+          );
+        }
+      }
+      
+      // Minor lines: Quarter boundaries (match generateYearQuarterHeaders logic)
+      for (let year = startYear; year <= endYear; year++) {
+        for (let quarter = 0; quarter < 4; quarter++) {
+          const quarterStart = new Date(year, quarter * 3, 1);
+          if (quarterStart >= viewport.startDate && quarterStart <= viewport.endDate) {
+            const position = getDatePosition(quarterStart);
+            gridLines.minor.push(
+              <div
+                key={`minor-quarter-${year}-${quarter}`}
+                className="timeline-grid-line minor"
+                style={{ left: position }}
+              />
+            );
+          }
+        }
+      }
+    } else if (tierType === 'month-week') {
+      // Major lines: Month boundaries (match generateMonthWeekHeaders logic)
+      const totalDays = (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24);
+      const monthsToShow = Math.ceil(totalDays / 30);
+      
+      for (let i = 0; i < monthsToShow; i++) {
+        const date = new Date(viewport.startDate.getFullYear(), viewport.startDate.getMonth() + i, 1);
+        if (date <= viewport.endDate) {
+          const position = getDatePosition(date);
+          gridLines.major.push(
+            <div
+              key={`major-month-${i}`}
+              className="timeline-grid-line major"
+              style={{ left: position }}
+            />
+          );
+        }
+      }
+      
+      // Minor lines: Week boundaries
+      const currentWeek = new Date(viewport.startDate);
+      currentWeek.setDate(currentWeek.getDate() - currentWeek.getDay()); // Start of week
+      
+      while (currentWeek <= viewport.endDate) {
+        if (currentWeek >= viewport.startDate) {
+          const position = getDatePosition(currentWeek);
+          gridLines.minor.push(
+            <div
+              key={`minor-week-${currentWeek.getTime()}`}
+              className="timeline-grid-line minor"
+              style={{ left: position }}
+            />
+          );
+        }
+        currentWeek.setDate(currentWeek.getDate() + 7);
+      }
+    } else {
+      // Default year-month: Major = years, Minor = months (match existing header logic)
+      
+      // Major lines: Year boundaries (match generateYearHeaders logic)
+      const startYear = viewport.startDate.getFullYear();
+      const endYear = viewport.endDate.getFullYear();
+      
+      for (let year = startYear; year <= endYear; year++) {
+        // Use same logic as generateYearHeaders
+        const yearStart = new Date(year, year === startYear ? viewport.startDate.getMonth() : 0, 1);
+        const yearEnd = new Date(year, year === endYear ? viewport.endDate.getMonth() + 1 : 12, 0);
+        
+        const actualStart = new Date(Math.max(yearStart.getTime(), viewport.startDate.getTime()));
+        const actualEnd = new Date(Math.min(yearEnd.getTime(), viewport.endDate.getTime()));
+        
+        if (actualEnd > actualStart) {
+          const position = getDatePosition(actualStart);
+          gridLines.major.push(
+            <div
+              key={`major-year-${year}`}
+              className="timeline-grid-line major"
+              style={{ left: position }}
+            />
+          );
+        }
+      }
+      
+      // Minor lines: Month boundaries (match generateTimelineHeader logic)
+      const totalDays = (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24);
+      const monthsToShow = Math.ceil(totalDays / 30);
+      
+      for (let i = 0; i < monthsToShow; i++) {
+        const date = new Date(viewport.startDate.getFullYear(), viewport.startDate.getMonth() + i, 1);
+        if (date <= viewport.endDate) {
+          const position = getDatePosition(date);
+          gridLines.minor.push(
+            <div
+              key={`minor-month-${i}`}
+              className="timeline-grid-line minor"
+              style={{ left: position }}
+            />
           );
         }
       }
     }
     
-    return [...headers, ...quarterHeaders];
+    return gridLines;
   };
 
   if (isLoading) return <LoadingSpinner />;
@@ -589,88 +813,77 @@ export default function ProjectRoadmap() {
             </select>
           </div>
 
-          <div className="timeline-info">
-            <span className="timeline-range">
-              {viewport.startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {viewport.endDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-            </span>
-          </div>
+          <div className="timeline-controls-group">
+            <div className="timeline-info">
+              <span className="timeline-range">
+                {viewport.startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - {viewport.endDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              </span>
+            </div>
 
-          <button 
-            className="btn btn-sm today-btn" 
-            onClick={goToToday}
-            title="Go to today"
-          >
-            Today
-          </button>
+            <div className="navigation-controls">
+              <button 
+                onClick={() => scrollTimeline('left')}
+                className="btn btn-sm nav-btn"
+                title="Previous 3 months"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              
+              <button 
+                className="btn btn-sm today-btn" 
+                onClick={goToToday}
+                title="Go to today"
+              >
+                Today
+              </button>
 
-          <input
-            type="date"
-            className="header-date-picker"
-            onChange={(e) => {
-              if (e.target.value) {
-                const selectedDate = new Date(e.target.value);
-                const monthsToShow = Math.round((viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
-                const newStartDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - Math.floor(monthsToShow / 2), 1);
-                const newEndDate = new Date(newStartDate);
-                newEndDate.setMonth(newEndDate.getMonth() + monthsToShow);
-                
-                setViewport({
-                  ...viewport,
-                  startDate: newStartDate,
-                  endDate: newEndDate
-                });
-              }
-            }}
-            title="Jump to specific date"
-          />
-          
-          <button 
-            onClick={toggleAllProjects}
-            className="btn btn-sm"
-            title={
-              projects && projects.every(p => collapsedProjects.has(p.id)) 
-                ? 'Expand all projects' 
-                : 'Collapse all projects'
-            }
-          >
-            {projects && projects.every(p => collapsedProjects.has(p.id)) 
-              ? <Maximize2 size={16} /> 
-              : <Minimize2 size={16} />
-            }
-            {projects && projects.every(p => collapsedProjects.has(p.id)) 
-              ? 'Expand All' 
-              : 'Collapse All'
-            }
-          </button>
-          
-          <div className="zoom-controls">
-            <button onClick={() => handleZoom('out')} className="btn btn-sm">
-              <ZoomOut size={16} />
-            </button>
-            <span className="zoom-level">{Math.round(viewport.pixelsPerDay * 50)}%</span>
-            <button onClick={() => handleZoom('in')} className="btn btn-sm">
-              <ZoomIn size={16} />
-            </button>
+              <button 
+                onClick={() => scrollTimeline('right')}
+                className="btn btn-sm nav-btn"
+                title="Next 3 months"
+              >
+                <ChevronRight size={16} />
+              </button>
+
+              <input
+                type="date"
+                className="header-date-picker"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const selectedDate = new Date(e.target.value);
+                    const monthsToShow = Math.round((viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+                    const newStartDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - Math.floor(monthsToShow / 2), 1);
+                    const newEndDate = new Date(newStartDate);
+                    newEndDate.setMonth(newEndDate.getMonth() + monthsToShow);
+                    
+                    setViewport({
+                      ...viewport,
+                      startDate: newStartDate,
+                      endDate: newEndDate
+                    });
+                  }
+                }}
+                title="Jump to specific date"
+              />
+            </div>
+
+            <div className="view-controls">
+              
+              <div className="zoom-controls">
+                <button onClick={() => handleZoom('out')} className="btn btn-sm" title="Zoom out">
+                  <ZoomOut size={16} />
+                </button>
+                <span className="zoom-level">{Math.round(viewport.pixelsPerDay * 50)}%</span>
+                <button onClick={() => handleZoom('in')} className="btn btn-sm" title="Zoom in">
+                  <ZoomIn size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="roadmap-content" style={{ position: 'relative' }}>
-        {/* Left Navigation Bar */}
-        <div className="timeline-nav-side left" onClick={() => scrollTimeline('left')}>
-          <div className="nav-side-content">
-            <ChevronLeft size={24} />
-            <span className="nav-side-text">Previous</span>
-          </div>
-        </div>
-
-        {/* Right Navigation Bar */}
-        <div className="timeline-nav-side right" onClick={() => scrollTimeline('right')}>
-          <div className="nav-side-content">
-            <span className="nav-side-text">Next</span>
-            <ChevronRight size={24} />
-          </div>
-        </div>
 
         {/* Today Line - Full Height */}
         {(() => {
@@ -680,7 +893,7 @@ export default function ProjectRoadmap() {
           // Only show today line if it's within the current viewport
           if (todayPosition >= 0 && todayPosition <= timelineWidth) {
             // Calculate proper offset based on actual project info panel
-            const projectInfoPanelWidth = 320; // This should match the actual panel width
+            const projectInfoPanelWidth = 400; // This should match the actual panel width
             const adjustedPosition = projectInfoPanelWidth + todayPosition;
             
             return (
@@ -726,89 +939,117 @@ export default function ProjectRoadmap() {
         <div className="timeline-container" ref={timelineRef}>
           {/* Timeline Header */}
           <div className="timeline-header">
-            {/* Timeline Navigation Controls */}
-            <div className="timeline-nav-controls">
-              {/* Navigation controls moved to main header */}
-            </div>
-            
-            <div className="timeline-years" style={{ width: timelineWidth }}>
-              {generateYearHeaders()}
-            </div>
-            <div className="timeline-months" style={{ width: timelineWidth }}>
-              {generateTimelineHeader()}
-            </div>
+            {(() => {
+              const tierType = getHeaderTierType();
+              
+              if (tierType === 'year-quarter') {
+                const headers = generateYearQuarterHeaders();
+                return (
+                  <>
+                    <div className="timeline-years" style={{ width: timelineWidth }}>
+                      {headers.years}
+                    </div>
+                    <div className="timeline-months" style={{ width: timelineWidth }}>
+                      {headers.quarters}
+                    </div>
+                  </>
+                );
+              } else if (tierType === 'month-week') {
+                const headers = generateMonthWeekHeaders();
+                return (
+                  <>
+                    <div className="timeline-years" style={{ width: timelineWidth }}>
+                      {headers.months}
+                    </div>
+                    <div className="timeline-months" style={{ width: timelineWidth }}>
+                      {headers.weeks}
+                    </div>
+                  </>
+                );
+              } else {
+                // Default year-month view
+                return (
+                  <>
+                    <div className="timeline-years" style={{ width: timelineWidth }}>
+                      {generateYearHeaders()}
+                    </div>
+                    <div className="timeline-months" style={{ width: timelineWidth }}>
+                      {generateTimelineHeader()}
+                    </div>
+                  </>
+                );
+              }
+            })()}
           </div>
+          
+          {/* Grid Lines */}
+          {(() => {
+            const gridLines = generateGridLines();
+            return (
+              <>
+                {gridLines.major}
+                {gridLines.minor}
+              </>
+            );
+          })()}
           
           {/* Project Rows */}
           <div className="projects-timeline">
             {projects?.map((project) => {
-              const isCollapsed = collapsedProjects.has(project.id);
               return (
-                <div key={project.id} className={`project-row ${isCollapsed ? 'collapsed' : ''}`}>
+                <div key={project.id} className="project-row">
                   <div className="project-info">
                     <div className="project-header">
-                      <div className="project-title-section">
-                        <button
-                          className="collapse-toggle"
-                          onClick={() => toggleProjectCollapse(project.id)}
-                          title={isCollapsed ? 'Expand project details' : 'Collapse project details'}
+                      <div className="project-name-row">
+                        <button 
+                          className="project-name-link"
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          title={`${project.name} - Click to view project details`}
                         >
-                          {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                          {project.name}
                         </button>
-                        <h3 className="project-name">
-                          <button 
-                            className="project-name-link"
-                            onClick={() => setSelectedProject(project)}
-                            title="View project details"
-                          >
-                            {project.name}
-                          </button>
-                        </h3>
                       </div>
-                      <div className="project-priority">
-                        <span className={`priority-badge priority-${project.priority <= 1 ? 'high' : project.priority <= 3 ? 'medium' : 'low'}`}>
-                          {project.priority <= 1 ? 'High' : project.priority <= 3 ? 'Medium' : 'Low'}
+                      <div className="project-badges-row">
+                        <span 
+                          className={`priority-badge priority-${project.priority <= 1 ? 'high' : project.priority <= 3 ? 'medium' : 'low'}`}
+                          title={`Priority: ${project.priority <= 1 ? 'High' : project.priority <= 3 ? 'Medium' : 'Low'} (${project.priority})`}
+                        >
+                          {project.priority <= 1 ? 'H' : project.priority <= 3 ? 'M' : 'L'}
+                        </span>
+                        <span 
+                          className="project-type-compact" 
+                          title={`Project Type: ${project.project_type?.name || project.project_type_name || 'Unknown'}`}
+                          style={{ 
+                            backgroundColor: project.project_type?.color_code ? `${project.project_type.color_code}15` : '#eff6ff',
+                            color: project.project_type?.color_code || '#1d4ed8',
+                            borderLeft: `2px solid ${project.project_type?.color_code || '#1d4ed8'}`
+                          }}
+                        >
+                          {project.project_type?.name || project.project_type_name || 'Unknown'}
+                        </span>
+                        <span 
+                          className={`project-status-compact status-${(project.status || 'planned').toLowerCase()}`}
+                          title={`Status: ${project.status || 'Planned'}`}
+                        >
+                          {project.status || 'Planned'}
+                        </span>
+                        <span 
+                          className="project-phase-count-inline"
+                          title={`${project.phases.length} phase${project.phases.length !== 1 ? 's' : ''}`}
+                        >
+                          {project.phases.length}p
                         </span>
                       </div>
                     </div>
-                    
-                    {!isCollapsed && (
-                      <div className="project-details">
-                        <p className="project-meta">
-                          <span 
-                            className="project-type" 
-                            style={{ 
-                              backgroundColor: project.project_type?.color_code ? `${project.project_type.color_code}20` : '#eff6ff',
-                              color: project.project_type?.color_code || '#1d4ed8',
-                              borderLeft: `3px solid ${project.project_type?.color_code || '#1d4ed8'}`
-                            }}
-                          >
-                            {project.project_type?.name}
-                          </span>
-                          <span className={`project-status status-${(project.status || 'planned').toLowerCase()}`}>
-                            {project.status || 'Planned'}
-                          </span>
-                        </p>
-                        <p className="project-dates">
-                          <span className="date-range">
-                            {project.aspiration_start && new Date(project.aspiration_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - 
-                            {project.aspiration_finish && new Date(project.aspiration_finish).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                        </p>
-                        <p className="project-owner">
-                          <span className="owner-label">Owner:</span> {project.owner_name || 'Unassigned'}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 
-                <div className="project-timeline" style={{ width: timelineWidth }}>
+                  <div className="project-timeline" style={{ width: timelineWidth }}>
                   {/* Use InteractiveTimeline in roadmap mode for consistent phase visualization */}
                   <InteractiveTimeline
                     items={convertPhasesToTimelineItems(project)}
                     viewport={viewport}
                     mode="roadmap"
-                    height={60}
+                    height={52}
                     onItemMove={handlePhaseMove}
                     onItemResize={handlePhaseMove}
                     onItemEdit={handlePhaseEdit}
@@ -877,73 +1118,6 @@ export default function ProjectRoadmap() {
         </div>
       )}
 
-      {/* Project Details Modal */}
-      {selectedProject && (
-        <div className="modal-overlay" onClick={() => setSelectedProject(null)}>
-          <div className="modal-container project-details-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Project Details</h3>
-              <button onClick={() => setSelectedProject(null)}>
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="modal-content">
-              <div className="project-detail-section">
-                <h4 className="project-detail-title">{selectedProject.name}</h4>
-                <div className="project-detail-meta">
-                  <span className={`priority-badge priority-${selectedProject.priority <= 1 ? 'high' : selectedProject.priority <= 3 ? 'medium' : 'low'}`}>
-                    {selectedProject.priority <= 1 ? 'High' : selectedProject.priority <= 3 ? 'Medium' : 'Low'} Priority
-                  </span>
-                </div>
-              </div>
-
-              <div className="project-detail-grid">
-                <div className="project-detail-item">
-                  <label>Description</label>
-                  <p>{selectedProject.description || 'No description provided'}</p>
-                </div>
-                
-                <div className="project-detail-item">
-                  <label>Project Type</label>
-                  <p>{selectedProject.project_type_name || 'Unknown'}</p>
-                </div>
-                
-                <div className="project-detail-item">
-                  <label>Timeline</label>
-                  <p>
-                    {selectedProject.aspiration_start && new Date(selectedProject.aspiration_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {selectedProject.aspiration_start && selectedProject.aspiration_finish && ' - '}
-                    {selectedProject.aspiration_finish && new Date(selectedProject.aspiration_finish).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-                
-                <div className="project-detail-item">
-                  <label>Project Owner</label>
-                  <p>{selectedProject.owner_name || 'Not assigned'}</p>
-                </div>
-
-                {selectedProject.phases && selectedProject.phases.length > 0 && (
-                  <div className="project-detail-item full-width">
-                    <label>Project Phases</label>
-                    <div className="phases-list">
-                      {selectedProject.phases.map((phase: any) => (
-                        <div key={phase.id} className="phase-item">
-                          <span className="phase-name">{phase.phase_name}</span>
-                          <span className="phase-dates">
-                            {new Date(phase.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - 
-                            {new Date(phase.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

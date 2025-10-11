@@ -1,11 +1,13 @@
 import * as cron from 'node-cron';
-import { db } from '../database/index.js';
+import { getAuditedDb } from '../database/index.js';
 import { emailService } from './EmailService.js';
 
 export class NotificationScheduler {
   private weeklyEmailTask: cron.ScheduledTask | null = null;
+  private db: any;
 
   constructor() {
+    this.db = getAuditedDb();
     this.initializeScheduler();
   }
 
@@ -39,7 +41,7 @@ export class NotificationScheduler {
       console.log('📧 Sending weekly summary emails...');
 
       // Get all users who have weekly summary notifications enabled
-      const users = await db('people')
+      const users = await this.db('people')
         .select('people.*')
         .join('notification_preferences', 'people.id', 'notification_preferences.user_id')
         .where('notification_preferences.type', 'summary')
@@ -82,7 +84,7 @@ export class NotificationScheduler {
   private async generateWeeklySummaryData(userId: string, startDate: Date, endDate: Date): Promise<any> {
     try {
       // Get user's assignments for the week
-      const assignments = await db('assignments')
+      const assignments = await this.db('assignments')
         .select(
           'assignments.*',
           'projects.name as project_name',
@@ -107,7 +109,7 @@ export class NotificationScheduler {
       const upcomingDeadlineDate = new Date();
       upcomingDeadlineDate.setDate(upcomingDeadlineDate.getDate() + 14);
 
-      const upcomingDeadlines = await db('assignments')
+      const upcomingDeadlines = await this.db('assignments')
         .select(
           'assignments.end_date',
           'projects.name as project_name',
@@ -150,14 +152,14 @@ export class NotificationScheduler {
     assignmentData: any
   ): Promise<void> {
     try {
-      const user = await db('people').where('id', userId).first();
+      const user = await this.db('people').where('id', userId).first();
       if (!user) {
         console.warn(`User ${userId} not found for assignment notification`);
         return;
       }
 
-      const project = await db('projects').where('id', assignmentData.project_id).first();
-      const role = await db('roles').where('id', assignmentData.role_id).first();
+      const project = await this.db('projects').where('id', assignmentData.project_id).first();
+      const role = await this.db('roles').where('id', assignmentData.role_id).first();
 
       if (!project || !role) {
         console.warn(`Project or role not found for assignment notification`);
@@ -188,8 +190,8 @@ export class NotificationScheduler {
     requestData: any
   ): Promise<void> {
     try {
-      const approver = await db('people').where('id', approverUserId).first();
-      const requestor = await db('people').where('id', requestData.requestor_id).first();
+      const approver = await this.db('people').where('id', approverUserId).first();
+      const requestor = await this.db('people').where('id', requestData.requestor_id).first();
 
       if (!approver || !requestor) {
         console.warn(`Approver or requestor not found for approval notification`);
@@ -219,14 +221,14 @@ export class NotificationScheduler {
     newEndDate: Date | null
   ): Promise<void> {
     try {
-      const project = await db('projects').where('id', projectId).first();
+      const project = await this.db('projects').where('id', projectId).first();
       if (!project) {
         console.warn(`Project ${projectId} not found for timeline notification`);
         return;
       }
 
       // Get all users assigned to this project
-      const assignedUsers = await db('assignments')
+      const assignedUsers = await this.db('assignments')
         .select('people.id', 'people.email', 'people.name')
         .join('people', 'assignments.person_id', 'people.id')
         .where('assignments.project_id', projectId)
@@ -266,7 +268,7 @@ export class NotificationScheduler {
   ): Promise<void> {
     try {
       // Get all users with system notifications enabled
-      const users = await db('people')
+      const users = await this.db('people')
         .select('people.*')
         .join('notification_preferences', 'people.id', 'notification_preferences.user_id')
         .where('notification_preferences.type', 'system')

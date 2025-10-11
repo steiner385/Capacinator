@@ -71,7 +71,7 @@ export function Locations() {
 
   if (loading) {
     return (
-      <div className="locations-page">
+      <div className="page-container">
         <div className="loading">Loading locations...</div>
       </div>
     );
@@ -79,14 +79,14 @@ export function Locations() {
 
   if (error) {
     return (
-      <div className="locations-page">
+      <div className="page-container">
         <div className="error">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="locations-page">
+    <div className="page-container">
       <div className="page-header">
         <div className="page-title">
           <MapPin size={24} />
