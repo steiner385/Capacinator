@@ -352,7 +352,7 @@ export default function People() {
       name: 'primary_role_id',
       label: 'Primary Role',
       type: 'select' as const,
-      options: roles?.map(role => ({ value: role.id, label: role.name })) || []
+      options: Array.isArray(roles) ? roles.map(role => ({ value: role.id, label: role.name })) : []
     },
     {
       name: 'worker_type',

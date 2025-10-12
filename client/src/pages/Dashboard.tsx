@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +19,10 @@ import { StatCard } from '../components/ui/StatCard';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { CriticalAlertsPanel } from '../components/dashboard/CriticalAlertsPanel';
+import { DateRangeSelector, DateRangePreset } from '../components/dashboard/DateRangeSelector';
+import { EnhancedKPIs } from '../components/dashboard/EnhancedKPIs';
+import { useCriticalAlerts } from '../hooks/useCriticalAlerts';
 import './Dashboard.css';
 
 const COLORS = {
@@ -33,8 +38,15 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { currentScenario } = useScenario();
   
+  // Date range state for time-based filtering
+  const [dateRange, setDateRange] = React.useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    preset: 'current' as DateRangePreset
+  });
+  
   const { data: dashboard, isLoading, error } = useQuery({
-    queryKey: ['dashboard', currentScenario?.id],
+    queryKey: ['dashboard', currentScenario?.id, dateRange],
     queryFn: async () => {
       const response = await api.reporting.getDashboard();
       // Handle the nested response structure: response.data.data
@@ -42,6 +54,8 @@ export function Dashboard() {
     },
     enabled: !!currentScenario
   });
+
+  const { alerts, isLoading: alertsLoading, hasAlerts } = useCriticalAlerts();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message="Failed to load dashboard data" />;
@@ -73,18 +87,38 @@ export function Dashboard() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1>Dashboard</h1>
-        <p className="page-subtitle">Overview of your project capacity planning</p>
-      </div>
+      <header className="page-header" role="banner">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1>Dashboard</h1>
+            <p className="page-subtitle">Overview of your project capacity planning</p>
+          </div>
+          <div className="w-64">
+            <DateRangeSelector
+              selectedRange={dateRange}
+              onRangeChange={setDateRange}
+            />
+          </div>
+        </div>
+      </header>
 
-      <div className="stats-grid">
+      {/* Critical Alerts Panel */}
+      {hasAlerts && (
+        <section className="mb-6" role="region" aria-labelledby="alerts-heading">
+          <h2 id="alerts-heading" className="sr-only">Critical Alerts and Notifications</h2>
+          <CriticalAlertsPanel alerts={alerts} />
+        </section>
+      )}
+
+      <section className="stats-grid" role="region" aria-labelledby="stats-heading">
+        <h2 id="stats-heading" className="sr-only">Key Metrics Overview</h2>
         <StatCard
           title="Current Projects"
           value={dashboard.summary.projects}
           icon={FolderKanban}
           color="primary"
           onClick={() => navigate('/projects')}
+          aria-label={`${dashboard.summary.projects} current projects. Click to view all projects.`}
         />
         <StatCard
           title="Total People"
@@ -92,6 +126,7 @@ export function Dashboard() {
           icon={Users}
           color="success"
           onClick={() => navigate('/people')}
+          aria-label={`${dashboard.summary.people} total people. Click to view people directory.`}
         />
         <StatCard
           title="Total Roles"
@@ -99,6 +134,7 @@ export function Dashboard() {
           icon={Briefcase}
           color="purple"
           onClick={() => navigate('/people')}
+          aria-label={`${dashboard.summary.roles} total roles defined. Click to view people and roles.`}
         />
         <StatCard
           title="Capacity Gaps"
@@ -106,15 +142,31 @@ export function Dashboard() {
           icon={AlertTriangle}
           color="danger"
           onClick={() => navigate('/reports')}
+          aria-label={`${dashboard.capacityGaps?.GAP || 0} capacity gaps detected. Click to view detailed reports.`}
         />
-      </div>
+      </section>
 
-      <div className="charts-grid">
+      {/* Enhanced KPIs Section */}
+      <EnhancedKPIs dashboard={dashboard} className="mb-6" />
+
+      <div className="charts-grid" role="region" aria-labelledby="charts-heading">
+        <h2 id="charts-heading" className="sr-only">Dashboard Charts and Analytics</h2>
         <Card 
           title="Current Project Health"
           onClick={() => navigate('/projects')}
         >
-          <div className="chart-container">
+          <div 
+            className="chart-container" 
+            role="img" 
+            aria-label={`Project health breakdown: ${projectHealthData.map(item => `${item.name} ${item.value} projects`).join(', ')}. Click to view all projects.`}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/projects');
+              }
+            }}
+          >
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -151,7 +203,18 @@ export function Dashboard() {
           title="Resource Utilization"
           onClick={() => navigate('/people')}
         >
-          <div className="chart-container">
+          <div 
+            className="chart-container" 
+            role="img" 
+            aria-label={`Resource utilization breakdown: ${utilizationData.map(item => `${item.name} ${item.value} people`).join(', ')}. Click to view people directory.`}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate('/people');
+              }
+            }}
+          >
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={utilizationData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -173,18 +236,36 @@ export function Dashboard() {
           title="Capacity Status by Role"
           onClick={() => navigate('/reports')}
         >
-          <div className="capacity-summary">
-            {capacityData.map((item) => (
+          <div 
+            className="capacity-summary" 
+            role="list"
+            aria-label="Capacity status breakdown by role type"
+          >
+            {capacityData.map((item, index) => (
               <div 
                 key={item.name} 
                 className="capacity-item capacity-item-clickable"
+                role="listitem"
+                tabIndex={0}
+                aria-label={`${item.name} status: ${item.value} roles. Click to view detailed reports.`}
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate('/reports');
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate('/reports');
+                  }
+                }}
               >
                 <div className="capacity-label">
-                  <span className="capacity-status" style={{ backgroundColor: item.color }}></span>
+                  <span 
+                    className="capacity-status" 
+                    style={{ backgroundColor: item.color }}
+                    role="img"
+                    aria-label={`Status indicator for ${item.name}`}
+                  ></span>
                   <span>{item.name}</span>
                 </div>
                 <span className="capacity-value">{item.value} roles</span>
@@ -194,12 +275,21 @@ export function Dashboard() {
         </Card>
 
         <Card title="Quick Stats">
-          <div className="quick-stats">
+          <div className="quick-stats" role="list" aria-label="Quick availability and utilization statistics">
             <div 
               className="stat-item stat-item-clickable" 
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${dashboard.availability?.AVAILABLE || 0} people available. Click to view people directory.`}
               onClick={() => navigate('/people')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate('/people');
+                }
+              }}
             >
-              <UserCheck className="stat-icon" color={COLORS.success} />
+              <UserCheck className="stat-icon" color={COLORS.success} aria-hidden="true" />
               <div>
                 <div className="stat-value">{dashboard.availability?.AVAILABLE || 0}</div>
                 <div className="stat-label">Available</div>
@@ -207,9 +297,18 @@ export function Dashboard() {
             </div>
             <div 
               className="stat-item stat-item-clickable" 
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${dashboard.availability?.UNAVAILABLE || 0} people on leave. Click to view people directory.`}
               onClick={() => navigate('/people')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate('/people');
+                }
+              }}
             >
-              <UserX className="stat-icon" color={COLORS.danger} />
+              <UserX className="stat-icon" color={COLORS.danger} aria-hidden="true" />
               <div>
                 <div className="stat-value">{dashboard.availability?.UNAVAILABLE || 0}</div>
                 <div className="stat-label">On Leave</div>
@@ -217,9 +316,18 @@ export function Dashboard() {
             </div>
             <div 
               className="stat-item stat-item-clickable" 
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${dashboard.availability?.LIMITED || 0} people with limited capacity. Click to view people directory.`}
               onClick={() => navigate('/people')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate('/people');
+                }
+              }}
             >
-              <Activity className="stat-icon" color={COLORS.warning} />
+              <Activity className="stat-icon" color={COLORS.warning} aria-hidden="true" />
               <div>
                 <div className="stat-value">{dashboard.availability?.LIMITED || 0}</div>
                 <div className="stat-label">Limited Capacity</div>
@@ -227,9 +335,18 @@ export function Dashboard() {
             </div>
             <div 
               className="stat-item stat-item-clickable" 
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${dashboard.utilization?.OVER_ALLOCATED || 0} people over allocated. Click to view people directory.`}
               onClick={() => navigate('/people')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate('/people');
+                }
+              }}
             >
-              <TrendingUp className="stat-icon" color={COLORS.primary} />
+              <TrendingUp className="stat-icon" color={COLORS.primary} aria-hidden="true" />
               <div>
                 <div className="stat-value">{dashboard.utilization?.OVER_ALLOCATED || 0}</div>
                 <div className="stat-label">Over Allocated</div>

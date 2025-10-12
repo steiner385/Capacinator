@@ -1,7 +1,7 @@
 {
-  "pid": 609501,
+  "pid": 1672574,
   "name": "e2e-frontend",
   "port": 3120,
-  "startTime": 1760114263615,
-  "command": "/usr/bin/node /home/tony/GitHub/Capacinator/node_modules/.bin/playwright test tests/e2e/roadmap-ui-fixes-validation.spec.ts --headed --project=chromium --timeout=30000"
+  "startTime": 1760208063168,
+  "command": "/usr/bin/node /home/tony/GitHub/Capacinator/node_modules/.bin/playwright test tests/e2e/suites/features/import-export/export-button-fix-proof.spec.ts --headed --timeout=60000"
 }

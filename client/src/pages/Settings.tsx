@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { useTheme } from '../contexts/ThemeContext';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
+import { UnifiedTabComponent } from '../components/ui/UnifiedTabComponent';
 
 interface SystemSettings {
   defaultWorkHoursPerWeek: number;
@@ -25,10 +27,23 @@ interface ImportSettings {
   dateFormat: string;
 }
 
+// Define settings tabs configuration
+const settingsTabs = [
+  { id: 'system', label: 'System', icon: SettingsIcon },
+  { id: 'import', label: 'Import', icon: Database },
+  { id: 'users', label: 'User Permissions', icon: Users },
+  { id: 'appearance', label: 'Appearance', icon: Palette }
+];
+
 export default function Settings() {
   const queryClient = useQueryClient();
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<'system' | 'import' | 'users' | 'appearance'>('system');
+  
+  // Use bookmarkable tabs for settings
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: settingsTabs,
+    defaultTab: 'system'
+  });
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
     defaultWorkHoursPerWeek: 40,
     defaultVacationDaysPerYear: 15,
@@ -544,48 +559,19 @@ export default function Settings() {
 
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Settings</h1>
-      </div>
-
-      <div className="settings-tabs">
-        <button 
-          className={`tab ${activeTab === 'system' ? 'active' : ''}`}
-          onClick={() => setActiveTab('system')}
-        >
-          <SettingsIcon size={20} />
-          System
-        </button>
-        <button 
-          className={`tab ${activeTab === 'import' ? 'active' : ''}`}
-          onClick={() => setActiveTab('import')}
-        >
-          <Database size={20} />
-          Import
-        </button>
-        <button 
-          className={`tab ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          <Users size={20} />
-          User Permissions
-        </button>
-        <button 
-          className={`tab ${activeTab === 'appearance' ? 'active' : ''}`}
-          onClick={() => setActiveTab('appearance')}
-        >
-          <Palette size={20} />
-          Appearance
-        </button>
-      </div>
-
-      <div className="settings-content">
-        {activeTab === 'system' && renderSystemSettings()}
-        {activeTab === 'import' && renderImportSettings()}
-        {activeTab === 'users' && renderUserPermissions()}
-        {activeTab === 'appearance' && renderAppearanceSettings()}
-      </div>
-    </div>
+    <UnifiedTabComponent
+      tabs={settingsTabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      variant="primary"
+      size="md"
+      orientation="horizontal"
+      ariaLabel="Settings navigation"
+    >
+      {activeTab === 'system' && renderSystemSettings()}
+      {activeTab === 'import' && renderImportSettings()}
+      {activeTab === 'users' && renderUserPermissions()}
+      {activeTab === 'appearance' && renderAppearanceSettings()}
+    </UnifiedTabComponent>
   );
 }

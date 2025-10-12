@@ -937,11 +937,11 @@ export function SmartAssignmentModal({
                           ? 'Select a role (from project demands)' 
                           : 'Select a project first'}
                     </option>
-                    {(formData.project_id ? projectRoles : roles || [])?.map((role: any) => (
+                    {Array.isArray(formData.project_id ? projectRoles : roles) ? (formData.project_id ? projectRoles : roles).map((role: any) => (
                       <option key={role.id} value={role.id}>
                         {role.name}
                       </option>
-                    ))}
+                    )) : []}
                   </select>
                 </div>
 

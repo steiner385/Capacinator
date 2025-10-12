@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api-client';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import './ScenarioComparison.css';
 
 interface Scenario {
@@ -69,13 +70,27 @@ interface ComparisonData {
   };
 }
 
+// Define scenario comparison tabs configuration
+const comparisonTabs = [
+  { id: 'summary', label: 'Summary' },
+  { id: 'assignments', label: 'Assignments' },
+  { id: 'phases', label: 'Phases' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'metrics', label: 'Metrics' }
+];
+
 export const ScenarioComparison: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'assignments' | 'phases' | 'projects' | 'metrics' | 'summary'>('summary');
+  
+  // Use bookmarkable tabs for scenario comparison
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: comparisonTabs,
+    defaultTab: 'summary'
+  });
 
   const sourceId = searchParams.get('source');
   const targetId = searchParams.get('target');
@@ -410,31 +425,31 @@ export const ScenarioComparison: React.FC = () => {
 
       <div className="comparison-tabs">
         <button 
-          className={`tab ${activeTab === 'summary' ? 'active' : ''}`}
+          className={`tab ${isActiveTab('summary') ? 'active' : ''}`}
           onClick={() => setActiveTab('summary')}
         >
           Summary
         </button>
         <button 
-          className={`tab ${activeTab === 'assignments' ? 'active' : ''}`}
+          className={`tab ${isActiveTab('assignments') ? 'active' : ''}`}
           onClick={() => setActiveTab('assignments')}
         >
           Assignments ({comparisonData.differences.assignments.added.length + comparisonData.differences.assignments.modified.length + comparisonData.differences.assignments.removed.length})
         </button>
         <button 
-          className={`tab ${activeTab === 'phases' ? 'active' : ''}`}
+          className={`tab ${isActiveTab('phases') ? 'active' : ''}`}
           onClick={() => setActiveTab('phases')}
         >
           Phases ({comparisonData.differences.phases.added.length + comparisonData.differences.phases.modified.length + comparisonData.differences.phases.removed.length})
         </button>
         <button 
-          className={`tab ${activeTab === 'projects' ? 'active' : ''}`}
+          className={`tab ${isActiveTab('projects') ? 'active' : ''}`}
           onClick={() => setActiveTab('projects')}
         >
           Projects ({comparisonData.differences.projects.added.length + comparisonData.differences.projects.modified.length + comparisonData.differences.projects.removed.length})
         </button>
         <button 
-          className={`tab ${activeTab === 'metrics' ? 'active' : ''}`}
+          className={`tab ${isActiveTab('metrics') ? 'active' : ''}`}
           onClick={() => setActiveTab('metrics')}
         >
           Impact Metrics
@@ -442,11 +457,11 @@ export const ScenarioComparison: React.FC = () => {
       </div>
 
       <div className="comparison-content">
-        {activeTab === 'summary' && renderSummaryTab()}
-        {activeTab === 'assignments' && renderAssignmentChanges()}
-        {activeTab === 'phases' && <div className="coming-soon">Phase comparison visualization coming soon</div>}
-        {activeTab === 'projects' && <div className="coming-soon">Project comparison visualization coming soon</div>}
-        {activeTab === 'metrics' && renderMetricsTab()}
+        {isActiveTab('summary') && renderSummaryTab()}
+        {isActiveTab('assignments') && renderAssignmentChanges()}
+        {isActiveTab('phases') && <div className="coming-soon">Phase comparison visualization coming soon</div>}
+        {isActiveTab('projects') && <div className="coming-soon">Project comparison visualization coming soon</div>}
+        {isActiveTab('metrics') && renderMetricsTab()}
       </div>
     </div>
   );

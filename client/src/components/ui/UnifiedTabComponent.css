@@ -1,0 +1,327 @@
+/* Unified Tab Component Styles - Accessibility Compliant */
+
+/* Container */
+.unified-tab-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+/* Tab List */
+.unified-tab-list {
+  display: flex;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 2rem;
+  flex-shrink: 0;
+  z-index: 10;
+  position: sticky;
+  top: 0;
+  min-height: 60px;
+  align-items: center;
+}
+
+.unified-tab-list--horizontal {
+  flex-direction: row;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.unified-tab-list--horizontal::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.unified-tab-list--vertical {
+  flex-direction: column;
+  align-items: stretch;
+  overflow-y: auto;
+  min-height: auto;
+  height: auto;
+  max-height: 400px;
+}
+
+/* Tab Button */
+.unified-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  white-space: nowrap;
+  text-decoration: none;
+  
+  /* Accessibility: Minimum touch target size */
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Size Variants */
+.unified-tab-list--sm .unified-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  min-height: 36px;
+}
+
+.unified-tab-list--md .unified-tab {
+  padding: 1rem 1.5rem;
+  font-size: 0.875rem;
+  min-height: 44px;
+}
+
+.unified-tab-list--lg .unified-tab {
+  padding: 1.25rem 2rem;
+  font-size: 1rem;
+  min-height: 52px;
+}
+
+/* Variant Styles */
+.unified-tab-list--primary .unified-tab {
+  background: var(--bg-tertiary);
+}
+
+.unified-tab-list--secondary .unified-tab {
+  background: transparent;
+}
+
+.unified-tab-list--minimal .unified-tab {
+  background: transparent;
+  border-bottom: none;
+  border-radius: 6px;
+  margin: 0 0.25rem;
+}
+
+/* Tab States */
+.unified-tab:hover:not(.unified-tab--disabled) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.unified-tab--active {
+  color: var(--primary) !important;
+  background: var(--bg-active) !important;
+}
+
+.unified-tab-list--primary .unified-tab--active,
+.unified-tab-list--secondary .unified-tab--active {
+  border-bottom-color: var(--primary);
+}
+
+.unified-tab-list--minimal .unified-tab--active {
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+.unified-tab--disabled {
+  color: var(--text-disabled) !important;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Focus Styles - WCAG 2.2 Compliant */
+.unified-tab:focus {
+  outline: none;
+  /* High contrast focus indicator with 3:1 contrast ratio */
+  box-shadow: 
+    inset 0 0 0 2px var(--primary),
+    0 0 0 2px var(--bg-primary);
+  z-index: 1;
+}
+
+.unified-tab:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+.unified-tab:focus-visible {
+  outline: none;
+  box-shadow: 
+    inset 0 0 0 2px var(--primary),
+    0 0 0 2px var(--bg-primary);
+  z-index: 1;
+}
+
+/* Enhanced focus for keyboard navigation */
+.unified-tab--focused {
+  box-shadow: 
+    inset 0 0 0 2px var(--primary),
+    0 0 0 2px var(--bg-primary);
+  z-index: 1;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .unified-tab:focus,
+  .unified-tab:focus-visible,
+  .unified-tab--focused {
+    outline: 2px solid;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+  
+  .unified-tab--active {
+    outline: 2px solid;
+    outline-offset: -2px;
+  }
+}
+
+/* Tab Label */
+.unified-tab__label {
+  font: inherit;
+  color: inherit;
+}
+
+/* Vertical Tab List Modifications */
+.unified-tab-list--vertical .unified-tab {
+  justify-content: flex-start;
+  text-align: left;
+  border-bottom: none;
+  border-right: 2px solid transparent;
+  width: 100%;
+}
+
+.unified-tab-list--vertical .unified-tab--active {
+  border-right-color: var(--primary);
+  border-bottom-color: transparent;
+}
+
+/* Tab Content */
+.unified-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  
+  /* Ensure content is accessible */
+  outline: none;
+}
+
+.unified-tab-content:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* Content wrapper styles */
+.unified-tab-content > * {
+  height: 100%;
+  flex: 1;
+}
+
+/* Ensure content areas don't have conflicting page containers */
+.unified-tab-content .page-container {
+  height: 100%;
+  background: transparent;
+  padding: 1rem 2rem;
+  max-width: none;
+  margin: 0;
+}
+
+/* Remove duplicate headers since we have tabs */
+.unified-tab-content .page-header h1 {
+  display: none;
+}
+
+.unified-tab-content .page-header p {
+  display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .unified-tab-list {
+    padding: 0 1rem;
+    min-height: 52px; /* Larger touch targets on mobile */
+  }
+  
+  .unified-tab {
+    min-height: 48px; /* WCAG AA touch target minimum */
+    min-width: 48px;
+  }
+  
+  .unified-tab-list--sm .unified-tab {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+  
+  .unified-tab-list--md .unified-tab {
+    min-height: 48px;
+    padding: 1rem 1.25rem;
+  }
+  
+  .unified-tab-list--lg .unified-tab {
+    min-height: 52px;
+    padding: 1.25rem 1.5rem;
+  }
+  
+  /* Hide text on very small screens, keep icons */
+  @media (max-width: 480px) {
+    .unified-tab__label {
+      display: none;
+    }
+    
+    .unified-tab {
+      padding: 1rem;
+      min-width: 48px;
+    }
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .unified-tab {
+    transition: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .unified-tab-list {
+    display: none;
+  }
+  
+  .unified-tab-content {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+  }
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  .unified-tab:focus,
+  .unified-tab:focus-visible,
+  .unified-tab--focused {
+    box-shadow: 
+      inset 0 0 0 2px var(--primary),
+      0 0 0 2px var(--bg-secondary);
+  }
+}
+
+/* Animation for tab content loading */
+.unified-tab-content {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unified-tab-content {
+    animation: none;
+  }
+}

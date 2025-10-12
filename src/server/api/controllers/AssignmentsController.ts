@@ -83,7 +83,19 @@ export class AssignmentsController extends EnhancedBaseController {
       // Compute dates for each assignment
       const assignmentsWithComputedDates = await Promise.all(
         assignments.map(async (assignment: any) => {
-          const computedDates = await this.computeAssignmentDates(assignment);
+          // Map the query result fields to what computeAssignmentDates expects
+          const assignmentForComputation = {
+            ...assignment,
+            // Create a mock project object with the dates
+            project: {
+              aspiration_start: assignment.aspiration_start,
+              aspiration_finish: assignment.aspiration_finish,
+              start_date: null, // Projects table doesn't have start_date
+              end_date: null,   // Projects table doesn't have end_date
+              name: assignment.project_name
+            }
+          };
+          const computedDates = await this.computeAssignmentDates(assignmentForComputation);
           return { ...assignment, ...computedDates };
         })
       );
@@ -1097,21 +1109,39 @@ export class AssignmentsController extends EnhancedBaseController {
           throw new Error('Project mode requires project_id');
         }
         
-        const project = await this.db('projects')
-          .where('id', assignment.project_id)
-          .first();
-          
+        // Use project data from assignment if available (when called from getAll),
+        // otherwise fetch from database
+        let project = assignment.project;
         if (!project) {
-          throw new Error(`Project ${assignment.project_id} not found`);
+          project = await this.db('projects')
+            .where('id', assignment.project_id)
+            .first();
+            
+          if (!project) {
+            throw new Error(`Project ${assignment.project_id} not found`);
+          }
         }
         
-        if (!project.aspiration_start || !project.aspiration_finish) {
-          throw new Error(`Project ${assignment.project_id} missing aspiration dates`);
+        // Use aspiration dates if available, otherwise fall back to project start/end dates
+        const startDate = project.aspiration_start || project.start_date;
+        const endDate = project.aspiration_finish || project.end_date;
+        
+        if (!startDate || !endDate) {
+          console.warn(`Project ${assignment.project_id} (${project.name || 'Unknown'}) missing both aspiration and start/end dates, using assignment dates as fallback`);
+          
+          // If assignment dates are also missing, use reasonable defaults
+          const fallbackStartDate = assignment.start_date || new Date().toISOString().split('T')[0];
+          const fallbackEndDate = assignment.end_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 90 days from now
+          
+          return {
+            computed_start_date: fallbackStartDate,
+            computed_end_date: fallbackEndDate
+          };
         }
         
         return {
-          computed_start_date: project.aspiration_start,
-          computed_end_date: project.aspiration_finish
+          computed_start_date: startDate,
+          computed_end_date: endDate
         };
         
       default:

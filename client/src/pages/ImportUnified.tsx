@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Settings, Download, FileText, Database } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { useScenario } from '../contexts/ScenarioContext';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
+import { UnifiedTabComponent } from '../components/ui/UnifiedTabComponent';
 import './Import.css';
 
 interface ImportResult {
@@ -33,7 +35,13 @@ interface ImportSettings {
   dateFormat: string;
 }
 
-export default function Import() {
+// Define import/export tabs configuration
+const importExportTabs = [
+  { id: 'import', label: 'Import', icon: Upload },
+  { id: 'export', label: 'Export', icon: Download }
+];
+
+function ImportUnified() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [clearExisting, setClearExisting] = useState(false);
@@ -55,6 +63,23 @@ export default function Import() {
   const [showTemplateOptions, setShowTemplateOptions] = useState(false);
   
   const { currentScenario, scenarios } = useScenario();
+
+  // Use bookmarkable tabs for import/export
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: importExportTabs,
+    defaultTab: 'import'
+  });
+
+  // Update document title based on active tab
+  useEffect(() => {
+    const title = activeTab === 'export' ? 'Export Data' : 'Import Data';
+    document.title = `${title} - Capacinator`;
+    
+    // Also update the page on initial load to reflect both functions
+    if (!activeTab) {
+      document.title = 'Import & Export - Capacinator';
+    }
+  }, [activeTab]);
 
   // Load import settings on component mount
   useEffect(() => {
@@ -275,17 +300,8 @@ export default function Import() {
     }
   }, [currentScenario, exportScenarioId]);
 
-
-
-  return (
+  const renderImportTab = () => (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1>Import & Export Data</h1>
-          <p className="text-muted">Import Excel files or export current scenario data</p>
-        </div>
-      </div>
-
       <div className="import-container">
         <div className="import-card">
           <div className="import-options">
@@ -513,13 +529,77 @@ export default function Import() {
           </div>
         )}
 
-        {/* Export Section */}
+        <div className="help-section" role="complementary" aria-labelledby="help-section-title">
+          <div className="help-header">
+            <h3 id="help-section-title">Need Help Getting Started?</h3>
+            <p className="text-muted">Learn about the import format and download templates from the Export tab</p>
+          </div>
+          
+          <div className="help-cards">
+            <div className="help-card" role="article" aria-labelledby="template-structure-title">
+              <div className="help-card-icon" aria-hidden="true">
+                📄
+              </div>
+              <div className="help-card-content">
+                <h4 id="template-structure-title">Template Structure</h4>
+                <p>Excel files should contain these key sheets:</p>
+                <div className="sheet-list" role="list">
+                  <div className="sheet-item essential" role="listitem">
+                    <span className="sheet-badge" aria-label="Required sheet">Required</span>
+                    <strong>Projects</strong> - Project details with type, location, priority
+                  </div>
+                  <div className="sheet-item essential" role="listitem">
+                    <span className="sheet-badge" aria-label="Required sheet">Required</span>
+                    <strong>Roster</strong> - People with roles and availability
+                  </div>
+                  <div className="sheet-item" role="listitem">
+                    <span className="sheet-badge" aria-label="Optional sheet">Optional</span>
+                    <strong>Assignments</strong> - Person assignments by project
+                  </div>
+                  <div className="sheet-item" role="listitem">
+                    <span className="sheet-badge" aria-label="Optional sheet">Optional</span>
+                    <strong>Project Roadmap</strong> - Phase timelines
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="help-card" role="article" aria-labelledby="import-tips-title">
+              <div className="help-card-icon" aria-hidden="true">
+                ⚙️
+              </div>
+              <div className="help-card-content">
+                <h4 id="import-tips-title">Import Tips</h4>
+                <div className="tip-list" role="list">
+                  <div className="tip-item" role="listitem">
+                    <span aria-hidden="true">💡</span> Use "Clear existing data" for fresh starts
+                  </div>
+                  <div className="tip-item" role="listitem">
+                    <span aria-hidden="true">📅</span> Enable "fiscal weeks" format for new templates
+                  </div>
+                  <div className="tip-item" role="listitem">
+                    <span aria-hidden="true">🔍</span> Review settings before importing large datasets
+                  </div>
+                  <div className="tip-item" role="listitem">
+                    <span aria-hidden="true">💾</span> Always backup your current scenario first
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderExportTab = () => (
+    <div className="page-container">
+      <div className="import-container">
         <div className="import-card export-section">
           <div className="card-header">
             <h2>Export Data</h2>
             <p className="text-muted">Export scenario data or download blank templates</p>
           </div>
-
 
           <div className="export-options">
             {/* Export Scenario Data Section */}
@@ -731,67 +811,24 @@ export default function Import() {
             </div>
           </div>
         </div>
-
-        <div className="help-section" role="complementary" aria-labelledby="help-section-title">
-          <div className="help-header">
-            <h3 id="help-section-title">Need Help Getting Started?</h3>
-            <p className="text-muted">Learn about the import format and download templates above</p>
-          </div>
-          
-          <div className="help-cards">
-            <div className="help-card" role="article" aria-labelledby="template-structure-title">
-              <div className="help-card-icon" aria-hidden="true">
-                📄
-              </div>
-              <div className="help-card-content">
-                <h4 id="template-structure-title">Template Structure</h4>
-                <p>Excel files should contain these key sheets:</p>
-                <div className="sheet-list" role="list">
-                  <div className="sheet-item essential" role="listitem">
-                    <span className="sheet-badge" aria-label="Required sheet">Required</span>
-                    <strong>Projects</strong> - Project details with type, location, priority
-                  </div>
-                  <div className="sheet-item essential" role="listitem">
-                    <span className="sheet-badge" aria-label="Required sheet">Required</span>
-                    <strong>Roster</strong> - People with roles and availability
-                  </div>
-                  <div className="sheet-item" role="listitem">
-                    <span className="sheet-badge" aria-label="Optional sheet">Optional</span>
-                    <strong>Assignments</strong> - Person assignments by project
-                  </div>
-                  <div className="sheet-item" role="listitem">
-                    <span className="sheet-badge" aria-label="Optional sheet">Optional</span>
-                    <strong>Project Roadmap</strong> - Phase timelines
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="help-card" role="article" aria-labelledby="import-tips-title">
-              <div className="help-card-icon" aria-hidden="true">
-                ⚙️
-              </div>
-              <div className="help-card-content">
-                <h4 id="import-tips-title">Import Tips</h4>
-                <div className="tip-list" role="list">
-                  <div className="tip-item" role="listitem">
-                    <span aria-hidden="true">💡</span> Use "Clear existing data" for fresh starts
-                  </div>
-                  <div className="tip-item" role="listitem">
-                    <span aria-hidden="true">📅</span> Enable "fiscal weeks" format for new templates
-                  </div>
-                  <div className="tip-item" role="listitem">
-                    <span aria-hidden="true">🔍</span> Review settings before importing large datasets
-                  </div>
-                  <div className="tip-item" role="listitem">
-                    <span aria-hidden="true">💾</span> Always backup your current scenario first
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
+
+  return (
+    <UnifiedTabComponent
+      tabs={importExportTabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      variant="primary"
+      size="md"
+      orientation="horizontal"
+      ariaLabel="Import & Export Data - Use tabs to switch between importing and exporting data"
+    >
+      {activeTab === 'import' && renderImportTab()}
+      {activeTab === 'export' && renderExportTab()}
+    </UnifiedTabComponent>
+  );
 }
+
+export default ImportUnified;

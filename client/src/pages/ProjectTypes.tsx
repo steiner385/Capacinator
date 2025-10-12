@@ -9,8 +9,15 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import ProjectTypeModal from '../components/modals/ProjectTypeModal';
 import { useModal } from '../hooks/useModal';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import type { ProjectType } from '../types';
 import './ProjectTypes.css';
+
+// Define project types view tabs configuration
+const projectTypesViewTabs = [
+  { id: 'list', label: 'List' },
+  { id: 'hierarchy', label: 'Hierarchy' }
+];
 
 export default function ProjectTypes() {
   const navigate = useNavigate();
@@ -18,7 +25,14 @@ export default function ProjectTypes() {
   const [filters, setFilters] = useState({
     search: ''
   });
-  const [viewMode, setViewMode] = useState<'list' | 'hierarchy'>('list');
+  
+  // Use bookmarkable tabs for view mode selection
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: projectTypesViewTabs,
+    defaultTab: 'list',
+    paramName: 'view'
+  });
+  const viewMode = activeTab as 'list' | 'hierarchy';
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   
   const addProjectTypeModal = useModal();
@@ -289,20 +303,17 @@ export default function ProjectTypes() {
         </div>
         <div className="header-actions">
           <div className="view-mode-toggle">
-            <button
-              className={`btn btn-sm ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setViewMode('list')}
-            >
-              <List size={16} />
-              List
-            </button>
-            <button
-              className={`btn btn-sm ${viewMode === 'hierarchy' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setViewMode('hierarchy')}
-            >
-              <GitBranch size={16} />
-              Hierarchy
-            </button>
+            {projectTypesViewTabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={`btn btn-sm ${isActiveTab(tab.id) ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.id === 'list' && <List size={16} />}
+                {tab.id === 'hierarchy' && <GitBranch size={16} />}
+                {tab.label}
+              </button>
+            ))}
           </div>
           <button
             className="btn btn-primary"

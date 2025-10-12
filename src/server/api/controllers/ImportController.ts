@@ -1147,13 +1147,13 @@ export class ImportController extends BaseController {
 
     try {
       // Get standard allocations - these are typically global, not scenario-specific
-      const allocations = await this.db('standard_allocations')
-      .leftJoin('project_types', 'standard_allocations.project_type_id', 'project_types.id')
-      .leftJoin('project_sub_types', 'standard_allocations.project_sub_type_id', 'project_sub_types.id')
-      .leftJoin('project_phases', 'standard_allocations.phase_id', 'project_phases.id')
-      .leftJoin('roles', 'standard_allocations.role_id', 'roles.id')
+      const allocations = await this.db('resource_templates')
+      .leftJoin('project_types', 'resource_templates.project_type_id', 'project_types.id')
+      .leftJoin('project_sub_types', 'resource_templates.project_sub_type_id', 'project_sub_types.id')
+      .leftJoin('project_phases', 'resource_templates.phase_id', 'project_phases.id')
+      .leftJoin('roles', 'resource_templates.role_id', 'roles.id')
       .select(
-        'standard_allocations.*',
+        'resource_templates.*',
         'project_types.name as project_type_name',
         'project_sub_types.name as project_sub_type_name',
         'project_phases.name as phase_name',
@@ -1275,11 +1275,11 @@ export class ImportController extends BaseController {
     let phasesQuery;
     if (scenarioType === 'baseline') {
       // For baseline, get phase timelines directly
-      phasesQuery = this.db('project_phase_timelines')
-        .join('projects', 'project_phase_timelines.project_id', 'projects.id')
-        .join('project_phases', 'project_phase_timelines.phase_id', 'project_phases.id')
+      phasesQuery = this.db('project_phases_timeline')
+        .join('projects', 'project_phases_timeline.project_id', 'projects.id')
+        .join('project_phases', 'project_phases_timeline.phase_id', 'project_phases.id')
         .select(
-          'project_phase_timelines.*',
+          'project_phases_timeline.*',
           'projects.name as project_name',
           'project_phases.name as phase_name'
         );

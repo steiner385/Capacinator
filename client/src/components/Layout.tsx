@@ -15,6 +15,7 @@ import {
   GanttChart,
   MapPin,
   Upload,
+  ArrowUpDown,
 } from 'lucide-react';
 import { AppHeader } from './AppHeader';
 import './Layout.css';
@@ -30,7 +31,7 @@ const navigation = [
   { name: 'Assignments', href: '/assignments', icon: ClipboardList },
   { name: 'Scenarios', href: '/scenarios', icon: GitBranch },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Import', href: '/import', icon: Upload },
+  { name: 'Import & Export', href: '/import', icon: ArrowUpDown },
   { name: 'Locations', href: '/locations', icon: MapPin },
   { name: 'Audit Log', href: '/audit-log', icon: History },
   { name: 'Settings', href: '/settings', icon: Settings },

@@ -5,6 +5,7 @@ import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { VisualPhaseManager } from './VisualPhaseManager';
 import { TimelineViewport } from './InteractiveTimeline';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 
 interface ProjectDemandChartProps {
   projectId: string;
@@ -26,6 +27,13 @@ interface PhaseInfo {
 }
 
 type ChartView = 'demand' | 'capacity' | 'gaps';
+
+// Define chart view tabs configuration
+const chartViewTabs = [
+  { id: 'demand', label: 'Demand' },
+  { id: 'capacity', label: 'Capacity' },
+  { id: 'gaps', label: 'Gaps' }
+];
 
 // Simple Brush Control Component for timeline selection
 const SimpleBrushControl = ({ 
@@ -249,7 +257,13 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const queryClient = useQueryClient();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartDimensions, setChartDimensions] = useState<{ width: number; left: number; right: number } | null>(null);
-  const [currentView, setCurrentView] = useState<ChartView>('demand');
+  // Use bookmarkable tabs for chart view selection
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: chartViewTabs,
+    defaultTab: 'demand',
+    paramName: 'view'
+  });
+  const currentView = activeTab as ChartView;
   const [brushStart, setBrushStart] = useState<number>(0);
   const [brushEnd, setBrushEnd] = useState<number>(0);
   const [sharedViewport, setSharedViewport] = useState<TimelineViewport | null>(null);
@@ -1172,10 +1186,10 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
             padding: '2px',
             backgroundColor: 'hsl(var(--card))'
           }}>
-            {(['demand', 'capacity', 'gaps'] as const).map((view) => (
+            {chartViewTabs.map((tab) => (
               <button
-                key={view}
-                onClick={() => setCurrentView(view)}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
                 style={{
                   padding: '6px 12px',
                   border: 'none',
@@ -1183,12 +1197,12 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
                   fontSize: '12px',
                   fontWeight: '500',
                   cursor: 'pointer',
-                  backgroundColor: currentView === view ? 'hsl(var(--primary))' : 'transparent',
-                  color: currentView === view ? 'white' : 'hsl(var(--muted-foreground))',
+                  backgroundColor: isActiveTab(tab.id) ? 'hsl(var(--primary))' : 'transparent',
+                  color: isActiveTab(tab.id) ? 'white' : 'hsl(var(--muted-foreground))',
                   transition: 'all 0.2s ease'
                 }}
               >
-                {view.charAt(0).toUpperCase() + view.slice(1)}
+                {tab.label}
               </button>
             ))}
           </div>

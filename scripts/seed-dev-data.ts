@@ -91,7 +91,7 @@ async function clearExistingData() {
   await auditedDb('availability_audit').del();
   await auditedDb('project_assignments').del();
   await auditedDb('person_availability_overrides').del();
-  await auditedDb('standard_allocations').del();
+  await auditedDb('resource_templates').del();
   await auditedDb('project_phases_timeline').del();
   await auditedDb('projects').del();
   await auditedDb('person_roles').del();
@@ -335,9 +335,9 @@ async function seedProjects(locationData: any[], projectTypeData: any[], phaseDa
 }
 
 async function seedStandardAllocations(projectTypeData: any[], phaseData: any[], roleData: any[]) {
-  console.log('📊 Creating standard allocations...');
+  console.log('📊 Creating resource templates...');
   
-  const standardAllocationData = [];
+  const resourceTemplateData = [];
   const resourceRoles = roleData.filter(r => r.is_assignable);
   
   for (const projectType of projectTypeData) {
@@ -366,21 +366,25 @@ async function seedStandardAllocations(projectTypeData: any[], phaseData: any[],
           allocationHours = faker.number.int({ min: 5, max: 20 });
         }
         
-        standardAllocationData.push({
+        // Calculate percentage from hours (assuming 40 hours per week = 100%)
+        const allocationPercentage = Math.round((allocationHours / 40) * 100);
+        
+        resourceTemplateData.push({
           id: faker.string.uuid(),
           project_type_id: projectType.id,
           phase_id: phase.id,
           role_id: role.id,
           allocation_hours: allocationHours,
+          allocation_percentage: allocationPercentage,
           notes: faker.lorem.sentence()
         });
       }
     }
   }
   
-  await auditedDb('standard_allocations').insert(standardAllocationData);
-  console.log(`✅ Created ${standardAllocationData.length} standard allocations`);
-  return standardAllocationData;
+  await auditedDb('resource_templates').insert(resourceTemplateData);
+  console.log(`✅ Created ${resourceTemplateData.length} resource templates`);
+  return resourceTemplateData;
 }
 
 async function seedAssignments(projectData: any[], peopleData: any[], personRolesData: any[], phaseTimelineData: any[]) {

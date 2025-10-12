@@ -1,24 +1,14 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { 
   BarChart3, PieChart, TrendingUp, Users, Calendar, 
   Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, UserMinus, ClipboardList, ChevronDown,
   Briefcase, User, Plus, X, Minus
 } from 'lucide-react';
-import { UnifiedTabComponent, type UnifiedTabConfig } from '../components/ui/UnifiedTabComponent';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
 import { useScenario } from '../contexts/ScenarioContext';
 import { getDefaultReportDateRange } from '../utils/date';
-
-// Helper function to format month-year string
-const formatMonthYear = (monthStr: string): string => {
-  if (!monthStr || !monthStr.includes('-')) return monthStr;
-  const [year, month] = monthStr.split('-');
-  const date = new Date(parseInt(year), parseInt(month) - 1);
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-};
 import {
   ReportSummaryCard,
   ReportEmptyState,
@@ -44,6 +34,14 @@ interface ReportFilters {
   roleId?: string;
 }
 
+// Helper function to format month-year string
+const formatMonthYear = (monthStr: string): string => {
+  if (!monthStr || !monthStr.includes('-')) return monthStr;
+  const [year, month] = monthStr.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1);
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+};
+
 // Custom tooltip component for charts
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -68,15 +66,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// Define report tabs configuration
-const reportTabs = [
-  { id: 'demand', label: 'Demand', icon: TrendingUp },
-  { id: 'capacity', label: 'Capacity', icon: Users },
-  { id: 'utilization', label: 'Utilization', icon: BarChart3 },
-  { id: 'gaps', label: 'Gaps Analysis', icon: AlertTriangle }
-];
+interface ReportsTabContentProps {
+  activeReport: string;
+}
 
-export default function Reports() {
+export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeReport }) => {
   const { currentScenario } = useScenario();
   const [filters, setFilters] = useState<ReportFilters>(getDefaultReportDateRange());
   const [showExportDropdown, setShowExportDropdown] = useState(false);
@@ -734,358 +728,10 @@ export default function Reports() {
     );
   };
 
-  // Reduce Load Modal Component
-  const renderReduceLoadModal = () => {
-    if (!showReduceLoadModal || !selectedPerson) return null;
-    
-    const recommendations = getProjectRemovalRecommendations(selectedPerson);
-    
-    return (
-      <div className="modal-backdrop" onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          setShowReduceLoadModal(false);
-          setSelectedPerson(null);
-        }
-      }}>
-        <div className="modal" style={{ maxWidth: '800px' }}>
-          <div className="modal-header">
-            <div>
-              <h2 style={{ margin: 0 }}>Reduce Workload for {selectedPerson.name}</h2>
-              {filters.startDate && filters.endDate && (
-                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  Date Range: {filters.startDate} to {filters.endDate}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => {setShowReduceLoadModal(false); setSelectedPerson(null);}}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)'
-              }}
-            >
-              <X size={24} />
-            </button>
-          </div>
-          
-          <div className="modal-body">
-            <div style={{
-              backgroundColor: '#fee',
-              border: '1px solid #fcc',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem'
-            }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: '#c00' }}>
-                <AlertTriangle size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                Overallocated at {selectedPerson.utilization}%
-              </h4>
-              <p style={{ margin: 0, color: '#800' }}>
-                This person is allocated {selectedPerson.utilization - 100}% over capacity. 
-                Remove or reduce assignments to bring utilization under 100%.
-              </p>
-            </div>
-
-            <h3>Current Assignments</h3>
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {recommendations.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                  No assignments found to remove.
-                </p>
-              ) : (
-                <table className="table" style={{ width: '100%' }}>
-                  <thead>
-                    <tr>
-                      <th>Project</th>
-                      <th>Allocation %</th>
-                      <th>New Utilization</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recommendations.map((assignment) => (
-                      <tr key={assignment.id}>
-                        <td>
-                          <strong>{assignment.project_name}</strong>
-                          <br />
-                          <small style={{ color: 'var(--text-secondary)' }}>
-                            {assignment.role_name}
-                          </small>
-                        </td>
-                        <td>
-                          <span style={{ 
-                            color: assignment.allocation_percentage > 50 ? 'var(--danger)' : 'var(--warning)',
-                            fontWeight: 600
-                          }}>
-                            {assignment.allocation_percentage}%
-                          </span>
-                        </td>
-                        <td>
-                          {assignment.newUtilization}% 
-                          <span style={{ 
-                            color: assignment.newUtilization <= 100 ? 'var(--success)' : 'var(--warning)',
-                            marginLeft: '0.5rem'
-                          }}>
-                            {assignment.newUtilization <= 100 ? '✓' : '⚠'}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await api.assignments.delete(assignment.id);
-                                // Refresh the assignments data
-                                await refetchPersonAssignments();
-                                // Close modal and refresh utilization data
-                                setShowReduceLoadModal(false);
-                                await refetchUtilization();
-                                setModalNotification({
-                                  type: 'success',
-                                  message: `Successfully removed ${selectedPerson.name} from ${assignment.project_name}`
-                                });
-                              } catch (error) {
-                                console.error('Error removing assignment:', error);
-                                setModalNotification({
-                                  type: 'error',
-                                  message: 'Failed to remove assignment. Please try again.'
-                                });
-                              }
-                            }}
-                            className="btn btn-sm btn-danger"
-                          >
-                            <Minus size={14} /> Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-          
-          <div className="modal-footer">
-            <button
-              onClick={() => {setShowReduceLoadModal(false); setSelectedPerson(null);}}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Add Projects Modal Component
-  const renderAddProjectsModal = () => {
-    if (!showAddProjectsModal || !selectedPerson) return null;
-    
-    const recommendations = getProjectAdditionRecommendations(selectedPerson);
-    
-    return (
-      <div className="modal-backdrop" onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          setShowAddProjectsModal(false);
-          setSelectedPerson(null);
-        }
-      }}>
-        <div className="modal" style={{ maxWidth: '800px' }}>
-          <div className="modal-header">
-            <div>
-              <h2 style={{ margin: 0 }}>Add Projects for {selectedPerson.person_name || selectedPerson.name}</h2>
-              {filters.startDate && filters.endDate && (
-                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  Date Range: {filters.startDate} to {filters.endDate}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => {setShowAddProjectsModal(false); setSelectedPerson(null);}}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)'
-              }}
-            >
-              <X size={24} />
-            </button>
-          </div>
-          
-          <div className="modal-body">
-            <div style={{
-              backgroundColor: '#fef8e7',
-              border: '1px solid #f9e3a3',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1.5rem'
-            }}>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: '#b87900' }}>
-                <AlertTriangle size={20} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
-                Underutilized at {selectedPerson.utilization || 0}%
-              </h4>
-              <p style={{ margin: 0, color: '#8b6914' }}>
-                This person has {(selectedPerson.availableCapacity || 0).toFixed(1)}% capacity available. 
-                Add projects to improve utilization.
-              </p>
-            </div>
-
-            <h3>Available Projects</h3>
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {recommendations.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                  No projects with gaps found that match this person's skills.
-                </p>
-              ) : (
-                <table className="table" style={{ width: '100%' }}>
-                  <thead>
-                    <tr>
-                      <th>Project</th>
-                      <th>Priority</th>
-                      <th>Gap</th>
-                      <th>Suggested %</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recommendations.map((project) => (
-                      <tr key={project.id}>
-                        <td>
-                          <strong>{project.name}</strong>
-                          <br />
-                          <small style={{ color: 'var(--text-secondary)' }}>
-                            {project.project_type_name || 'No type'}
-                          </small>
-                        </td>
-                        <td>
-                          <ReportStatusBadge
-                            status={`P${project.priority}`}
-                            variant={project.priority === 1 ? 'danger' : project.priority === 2 ? 'warning' : 'default'}
-                          />
-                        </td>
-                        <td>
-                          <span style={{ color: 'var(--danger)' }}>
-                            {project.remaining_demand || 'Unknown'}%
-                          </span>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min="0"
-                            max={selectedPerson.availableCapacity}
-                            defaultValue={project.suggestedAllocation}
-                            id={`allocation-${project.id}`}
-                            style={{
-                              width: '80px',
-                              padding: '0.25rem',
-                              borderRadius: '4px',
-                              border: '1px solid var(--border-color)'
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <button
-                            onClick={async () => {
-                              const allocationInput = document.getElementById(`allocation-${project.id}`) as HTMLInputElement;
-                              const allocation = parseInt(allocationInput.value) || project.suggestedAllocation;
-                              
-                              try {
-                                // Validate allocation fits within available capacity
-                                if (allocation > selectedPerson.availableCapacity) {
-                                  setModalNotification({
-                                    type: 'error',
-                                    message: `Allocation exceeds available capacity (${selectedPerson.availableCapacity}%)`
-                                  });
-                                  return;
-                                }
-
-                                // Check if assignment already exists
-                                const existingAssignment = personAssignments.find((a: any) => 
-                                  a.project_id === project.id && 
-                                  a.person_id === selectedPerson.id
-                                );
-
-                                if (existingAssignment) {
-                                  // Update existing assignment
-                                  await api.assignments.update(existingAssignment.id, {
-                                    allocation_percentage: existingAssignment.allocation_percentage + allocation
-                                  });
-                                } else {
-                                  // Create new assignment
-                                  await api.assignments.create({
-                                    person_id: selectedPerson.id || selectedPerson.person_id,
-                                    project_id: project.id,
-                                    role_id: selectedPerson.role_id || selectedPerson.primary_role_id,
-                                    allocation_percentage: allocation,
-                                    start_date: filters.startDate || project.aspiration_start,
-                                    end_date: filters.endDate || project.aspiration_finish
-                                  });
-                                }
-                                
-                                // Refresh data
-                                await refetchPersonAssignments();
-                                await refetchAvailableProjects();
-                                // Close modal and refresh main report
-                                setShowAddProjectsModal(false);
-                                await refetchUtilization();
-                                
-                                setModalNotification({
-                                  type: 'success',
-                                  message: `Successfully assigned ${selectedPerson.person_name} to ${project.name}`
-                                });
-                              } catch (error: any) {
-                                console.error('Error creating assignment:', error);
-                                
-                                // Handle specific error cases
-                                let errorMessage = 'Failed to create assignment. Please try again.';
-                                
-                                if (error.response?.status === 409) {
-                                  errorMessage = 'Assignment already exists for this person and project.';
-                                } else if (error.response?.data?.message) {
-                                  errorMessage = `Assignment creation failed: ${error.response.data.message}`;
-                                }
-                                
-                                setModalNotification({
-                                  type: 'error',
-                                  message: errorMessage
-                                });
-                              }
-                            }}
-                            className="btn btn-sm btn-primary"
-                          >
-                            <Plus size={14} /> Assign
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-          
-          <div className="modal-footer">
-            <button
-              onClick={() => {setShowAddProjectsModal(false); setSelectedPerson(null);}}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const isLoading = capacityLoading || utilizationLoading || demandLoading || gapsLoading;
 
   return (
-    <div className="page-container">
+    <div className="reports-tab-content">
       <div className="page-header">
         <h1>Reports & Analytics</h1>
         <div className="header-actions">
@@ -1107,37 +753,6 @@ export default function Reports() {
             )}
           </div>
         </div>
-      </div>
-
-      <div className="report-tabs">
-        <button 
-          className={`tab ${isActiveTab('capacity') ? 'active' : ''}`}
-          onClick={() => setActiveReport('capacity')}
-        >
-          <Users size={16} />
-          Capacity
-        </button>
-        <button 
-          className={`tab ${isActiveTab('utilization') ? 'active' : ''}`}
-          onClick={() => setActiveReport('utilization')}
-        >
-          <BarChart3 size={16} />
-          Utilization
-        </button>
-        <button 
-          className={`tab ${isActiveTab('demand') ? 'active' : ''}`}
-          onClick={() => setActiveReport('demand')}
-        >
-          <TrendingUp size={16} />
-          Demand
-        </button>
-        <button 
-          className={`tab ${isActiveTab('gaps') ? 'active' : ''}`}
-          onClick={() => setActiveReport('gaps')}
-        >
-          <AlertTriangle size={16} />
-          Gaps Analysis
-        </button>
       </div>
 
       <div className="report-filters">
@@ -1221,99 +836,6 @@ export default function Reports() {
           />
         )}
       </div>
-
-      {/* Modal Components */}
-      {renderReduceLoadModal()}
-      {renderAddProjectsModal()}
-      
-      {/* Notification Modal */}
-      {modalNotification.type && (
-        <div style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: 'var(--bg-primary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          padding: '2rem',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-          zIndex: 1001,
-          minWidth: '300px',
-          maxWidth: '500px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginBottom: '1rem',
-            color: modalNotification.type === 'error' ? 'var(--danger)' : 
-                   modalNotification.type === 'warning' ? 'var(--warning)' : 
-                   modalNotification.type === 'success' ? 'var(--success)' : 
-                   'var(--info)'
-          }}>
-            <AlertTriangle size={20} style={{ marginRight: '0.5rem' }} />
-            <strong>
-              {modalNotification.type === 'error' ? 'Error' : 
-               modalNotification.type === 'warning' ? 'Warning' : 
-               modalNotification.type === 'success' ? 'Success' : 
-               'Info'}
-            </strong>
-          </div>
-          <p style={{ margin: '0 0 1rem 0' }}>
-            {modalNotification.message}
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setModalNotification({ type: null, message: '' })}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: 'var(--primary-color)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {/* Confirmation Modal */}
-      {showConfirmation.show && (
-        <div style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: 'var(--bg-primary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          padding: '2rem',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-          zIndex: 1001,
-          minWidth: '300px',
-          maxWidth: '500px'
-        }}>
-          <h3 style={{ marginTop: 0 }}>Confirm Action</h3>
-          <p>{showConfirmation.message}</p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-            <button
-              onClick={showConfirmation.onCancel}
-              className="btn btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={showConfirmation.onConfirm}
-              className="btn btn-primary"
-            >
-              Confirm
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
-}
+};

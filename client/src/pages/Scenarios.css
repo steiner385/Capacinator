@@ -2000,3 +2000,134 @@
 .scenario-type-badge:hover + .scenario-category-tooltip {
   display: block;
 }
+
+/* Accessibility Enhancements for Tree Navigation */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Tree focus styles */
+.hierarchy-row.focused {
+  background-color: var(--primary-light, #f0f9ff);
+  border: 2px solid var(--primary, #3b82f6);
+  border-radius: 4px;
+  outline: none;
+}
+
+.hierarchy-row:focus {
+  outline: 2px solid var(--primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Expand/collapse button styles */
+.connector-expand-button {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.connector-expand-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.connector-expand-button:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.connector-expand-button.baseline {
+  border-color: var(--success, #10b981);
+  color: var(--success, #10b981);
+}
+
+.connector-expand-button.branch {
+  border-color: var(--primary, #3b82f6);
+  color: var(--primary, #3b82f6);
+}
+
+.connector-expand-button.sandbox {
+  border-color: var(--warning, #f59e0b);
+  color: var(--warning, #f59e0b);
+}
+
+/* Expand icon animation */
+.expand-icon {
+  transition: transform 0.2s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* Enhanced tree focus indicators */
+.hierarchy-content[role="tree"]:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Keyboard navigation hint */
+.tree-instructions {
+  background: var(--info-light, #eff6ff);
+  color: var(--info-dark, #1e40af);
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--info, #3b82f6);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .hierarchy-row.focused {
+    border-width: 3px;
+  }
+  
+  .connector-expand-button {
+    border-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .connector-expand-button {
+    transition: none;
+  }
+  
+  .expand-icon {
+    transition: none;
+  }
+  
+  .connector-expand-button:hover {
+    transform: none;
+  }
+}
+
+/* Touch target compliance */
+@media (pointer: coarse) {
+  .connector-expand-button {
+    width: 24px;
+    height: 24px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

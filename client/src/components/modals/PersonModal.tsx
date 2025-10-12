@@ -198,7 +198,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
 
   // Filtered data based on selections
   const filteredSupervisors = useMemo(() => {
-    if (!people) return [];
+    if (!people || !Array.isArray(people)) return [];
     
     return people.filter((person: any) => {
       // Don't allow a person to be their own supervisor
@@ -345,11 +345,11 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                   <SelectValue placeholder="Select primary role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredRoles?.map((role: any) => (
+                  {Array.isArray(filteredRoles) ? filteredRoles.map((role: any) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
                     </SelectItem>
-                  ))}
+                  )) : []}
                 </SelectContent>
               </Select>
               {errors.primary_person_role_id && <p className="text-sm text-destructive">{errors.primary_person_role_id}</p>}

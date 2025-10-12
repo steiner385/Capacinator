@@ -1,20 +1,21 @@
 import type { Request, Response } from 'express';
-import { BaseController } from './BaseController.js';
+import { EnhancedBaseController } from './EnhancedBaseController.js';
+import { RequestWithLogging } from '../../middleware/requestLogger.js';
 
-export class RolesController extends BaseController {
-  async getAll(req: Request, res: Response) {
+export class RolesController extends EnhancedBaseController {
+  getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {
       const roles = await this.db('roles')
         .select('*')
         .orderBy('name');
 
       return roles;
-    }, res, 'Failed to fetch roles');
+    }, req, res, 'Failed to fetch roles');
 
     if (result) {
-      res.json(result);
+      this.sendSuccess(req, res, result, 'Roles fetched successfully');
     }
-  }
+  })
 
   async getById(req: Request, res: Response) {
     const { id } = req.params;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Plus, Edit2, Trash2, Check, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import type { Person, PersonAvailabilityOverride } from '../types';
 
 interface OverrideForm {
@@ -14,10 +15,23 @@ interface OverrideForm {
   is_approved: boolean;
 }
 
+// Define availability view tabs configuration
+const availabilityViewTabs = [
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'list', label: 'List View' }
+];
+
 export default function Availability() {
   const queryClient = useQueryClient();
   const [selectedPerson, setSelectedPerson] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  
+  // Use bookmarkable tabs for view mode selection
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: availabilityViewTabs,
+    defaultTab: 'calendar',
+    paramName: 'view'
+  });
+  const viewMode = activeTab as 'calendar' | 'list';
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -288,19 +302,16 @@ export default function Availability() {
         <h1>Availability Management</h1>
         <div className="header-actions">
           <div className="view-toggle">
-            <button 
-              className={`btn ${viewMode === 'calendar' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setViewMode('calendar')}
-            >
-              <Calendar size={20} />
-              Calendar
-            </button>
-            <button 
-              className={`btn ${viewMode === 'list' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setViewMode('list')}
-            >
-              List View
-            </button>
+            {availabilityViewTabs.map((tab) => (
+              <button 
+                key={tab.id}
+                className={`btn ${isActiveTab(tab.id) ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.id === 'calendar' && <Calendar size={20} />}
+                {tab.label}
+              </button>
+            ))}
           </div>
           <button 
             className="btn btn-primary"

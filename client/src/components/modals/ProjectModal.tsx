@@ -210,7 +210,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   // Filter project types to only show project sub-types (not main project types)
   const filteredProjectTypes = useMemo(() => {
-    if (!projectTypes) return [];
+    if (!projectTypes || !Array.isArray(projectTypes)) return [];
     
     // Only show project sub-types (those with parent_id)
     // Projects should not be associated with main project types
@@ -219,7 +219,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   // Filter potential owners based on location
   const filteredOwners = useMemo(() => {
-    if (!people) return [];
+    if (!people || !Array.isArray(people)) return [];
     
     return people.filter((person: any) => {
       // If location is selected, prefer owners from same location

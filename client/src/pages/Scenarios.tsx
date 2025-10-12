@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   GitBranch, 
@@ -21,6 +21,10 @@ import { api } from '../lib/api-client';
 import { Scenario } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { CreateScenarioModal, EditScenarioModal, DeleteConfirmationModal } from '../components/modals/ScenarioModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
 import './Scenarios.css';
 
 // Tree node type for hierarchical display
@@ -262,7 +266,7 @@ const MergeModal: React.FC<MergeModalProps> = ({
     mutationFn: (data: any) => api.scenarios.merge(scenario.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scenarios'] });
-      onClose();
+      handleClose();
       setConfirmMerge(false);
     },
   });
@@ -277,129 +281,193 @@ const MergeModal: React.FC<MergeModalProps> = ({
     });
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    // Reset form state
+    setConfirmMerge(false);
+    setMergeStrategy('favor_source');
+    // Give time for animation before calling onClose
+    setTimeout(() => onClose(), 200);
+  };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2>Merge Scenario</h2>
-          <button onClick={onClose} className="modal-close">×</button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Merge Scenario</DialogTitle>
+          <DialogDescription>
+            Merge {scenario.name} back into {scenario.parent_scenario_name || 'the parent scenario'}. This will combine all changes from this scenario.
+          </DialogDescription>
+        </DialogHeader>
         
-        <div className="modal-body">
-          <div className="merge-info">
-            <div className="merge-flow">
-              <div className="merge-source">
-                <h4>Source Scenario</h4>
-                <div className="scenario-card-mini">
-                  <div className="scenario-name">{scenario.name}</div>
-                  <div className="scenario-meta">
-                    <span className={`scenario-type ${scenario.scenario_type}`}>
-                      {scenario.scenario_type}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="merge-arrow">
-                <ArrowRightLeft size={24} />
-              </div>
-              
-              <div className="merge-target">
-                <h4>Target Scenario</h4>
-                <div className="scenario-card-mini">
-                  <div className="scenario-name">{scenario.parent_scenario_name}</div>
-                  <div className="scenario-meta">
-                    <span className="scenario-type baseline">
-                      {scenario.parent_scenario_id ? 'parent' : 'baseline'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="merge-options">
-            <h4>Conflict Resolution Strategy</h4>
-            <div className="strategy-options">
-              <label className="strategy-option">
-                <input
-                  type="radio"
-                  name="merge-strategy"
-                  value="favor_source"
-                  checked={mergeStrategy === 'favor_source'}
-                  onChange={(e) => setMergeStrategy(e.target.value as any)}
-                />
-                <div className="strategy-content">
-                  <div className="strategy-title">Favor Source (Recommended)</div>
-                  <div className="strategy-description">
-                    When conflicts occur, use changes from "{scenario.name}"
-                  </div>
-                </div>
-              </label>
-              
-              <label className="strategy-option">
-                <input
-                  type="radio"
-                  name="merge-strategy"
-                  value="favor_target"
-                  checked={mergeStrategy === 'favor_target'}
-                  onChange={(e) => setMergeStrategy(e.target.value as any)}
-                />
-                <div className="strategy-content">
-                  <div className="strategy-title">Favor Target</div>
-                  <div className="strategy-description">
-                    When conflicts occur, keep existing changes in target scenario
-                  </div>
-                </div>
-              </label>
-              
-              <label className="strategy-option">
-                <input
-                  type="radio"
-                  name="merge-strategy"
-                  value="manual"
-                  checked={mergeStrategy === 'manual'}
-                  onChange={(e) => setMergeStrategy(e.target.value as any)}
-                />
-                <div className="strategy-content">
-                  <div className="strategy-title">Manual Resolution</div>
-                  <div className="strategy-description">
-                    Review and resolve each conflict manually (Advanced)
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div className="merge-confirmation">
-            <label className="confirm-checkbox">
-              <input
-                type="checkbox"
-                checked={confirmMerge}
-                onChange={(e) => setConfirmMerge(e.target.checked)}
-              />
-              <span>I understand this will merge "{scenario.name}" into "{scenario.parent_scenario_name}"</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            onClick={handleSubmit}
-            className="btn-warning"
-            disabled={!confirmMerge || mergeMutation.isPending}
+        <form onSubmit={handleSubmit}>
+          {/* Screen reader status announcements */}
+          <div 
+            aria-live="polite" 
+            aria-atomic="true" 
+            className="sr-only"
+            id="merge-status"
           >
-            {mergeMutation.isPending ? 'Merging...' : 'Merge Scenario'}
-          </button>
-        </div>
-      </div>
-    </div>
+            {mergeMutation.isPending 
+              ? 'Merge in progress. Please wait.' 
+              : confirmMerge 
+                ? 'Ready to merge scenario. Click Merge Scenario button to proceed.'
+                : 'Complete the form to enable scenario merge.'
+            }
+          </div>
+          
+          <div className="space-y-6 py-4">
+            {/* Merge flow visualization */}
+            <div className="merge-info" role="region" aria-labelledby="merge-flow-heading">
+              <h3 id="merge-flow-heading" className="text-lg font-medium mb-4">Merge Overview</h3>
+              <div className="merge-flow">
+                <div className="merge-source">
+                  <h4 className="text-sm font-medium mb-2">Source Scenario</h4>
+                  <div className="scenario-card-mini">
+                    <div className="scenario-name">{scenario.name}</div>
+                    <div className="scenario-meta">
+                      <span className={`scenario-type ${scenario.scenario_type}`}>
+                        {scenario.scenario_type}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="merge-arrow" aria-hidden="true">
+                  <ArrowRightLeft size={24} />
+                </div>
+                
+                <div className="merge-target">
+                  <h4 className="text-sm font-medium mb-2">Target Scenario</h4>
+                  <div className="scenario-card-mini">
+                    <div className="scenario-name">{scenario.parent_scenario_name}</div>
+                    <div className="scenario-meta">
+                      <span className="scenario-type baseline">
+                        {scenario.parent_scenario_id ? 'parent' : 'baseline'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Conflict resolution strategy */}
+            <div className="merge-options" role="region" aria-labelledby="strategy-heading">
+              <Label id="strategy-heading" className="text-sm font-medium mb-3 block">
+                Conflict Resolution Strategy
+              </Label>
+              <fieldset 
+                className="space-y-3"
+                aria-describedby="strategy-help"
+              >
+                <legend className="sr-only">Choose conflict resolution strategy</legend>
+                
+                <div className="strategy-option">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="favor_source"
+                      name="merge-strategy"
+                      value="favor_source"
+                      checked={mergeStrategy === 'favor_source'}
+                      onChange={(e) => setMergeStrategy(e.target.value as 'favor_source' | 'favor_target' | 'manual')}
+                      className="mt-1"
+                    />
+                    <Label htmlFor="favor_source" className="flex-1 cursor-pointer">
+                      <div className="strategy-content">
+                        <div className="strategy-title font-medium">Favor Source (Recommended)</div>
+                        <div className="strategy-description text-sm text-muted-foreground">
+                          When conflicts occur, use changes from "{scenario.name}"
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+                
+                <div className="strategy-option">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="favor_target"
+                      name="merge-strategy"
+                      value="favor_target"
+                      checked={mergeStrategy === 'favor_target'}
+                      onChange={(e) => setMergeStrategy(e.target.value as 'favor_source' | 'favor_target' | 'manual')}
+                      className="mt-1"
+                    />
+                    <Label htmlFor="favor_target" className="flex-1 cursor-pointer">
+                      <div className="strategy-content">
+                        <div className="strategy-title font-medium">Favor Target</div>
+                        <div className="strategy-description text-sm text-muted-foreground">
+                          When conflicts occur, keep existing changes in target scenario
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+                
+                <div className="strategy-option">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="radio"
+                      id="manual"
+                      name="merge-strategy"
+                      value="manual"
+                      checked={mergeStrategy === 'manual'}
+                      onChange={(e) => setMergeStrategy(e.target.value as 'favor_source' | 'favor_target' | 'manual')}
+                      className="mt-1"
+                    />
+                    <Label htmlFor="manual" className="flex-1 cursor-pointer">
+                      <div className="strategy-content">
+                        <div className="strategy-title font-medium">Manual Resolution</div>
+                        <div className="strategy-description text-sm text-muted-foreground">
+                          Review and resolve each conflict manually (Advanced)
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                </div>
+              </fieldset>
+              <p id="strategy-help" className="text-xs text-muted-foreground mt-2">
+                Choose how to handle conflicting changes between scenarios during merge.
+              </p>
+            </div>
+
+            {/* Confirmation checkbox */}
+            <div className="merge-confirmation" role="region" aria-labelledby="confirmation-heading">
+              <div className="flex items-start space-x-3">
+                <Checkbox 
+                  id="confirm-merge"
+                  checked={confirmMerge}
+                  onCheckedChange={setConfirmMerge}
+                  aria-describedby="confirm-help"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="confirm-merge" className="text-sm font-medium cursor-pointer">
+                    I understand this will merge "{scenario.name}" into "{scenario.parent_scenario_name}"
+                  </Label>
+                  <p id="confirm-help" className="text-xs text-muted-foreground mt-1">
+                    This action cannot be undone. The source scenario will be marked as merged.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="destructive"
+              disabled={!confirmMerge || mergeMutation.isPending}
+            >
+              {mergeMutation.isPending ? 'Merging...' : 'Merge Scenario'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -415,7 +483,6 @@ const CompareModal: React.FC<CompareModalProps> = ({
 
   const availableScenarios = scenarios.filter(s => s.id !== scenario.id);
   const selectedScenario = availableScenarios.find(s => s.id === compareToScenario);
-
 
   const handleCompare = async () => {
     if (!compareToScenario) return;
@@ -436,22 +503,51 @@ const CompareModal: React.FC<CompareModalProps> = ({
     setCompareToScenario('');
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    // Reset state
+    setComparisonResults(null);
+    setCompareToScenario('');
+    setIsLoading(false);
+    // Give time for animation before calling onClose
+    setTimeout(() => onClose(), 200);
+  };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content modal-large">
-        <div className="modal-header">
-          <h2>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
             {comparisonResults 
               ? `Comparing: ${scenario.name} vs ${selectedScenario?.name || ''}`
               : 'Compare Scenarios'
             }
-          </h2>
-          <button onClick={onClose} className="modal-close">×</button>
+          </DialogTitle>
+          <DialogDescription>
+            {comparisonResults 
+              ? 'View the differences between the selected scenarios'
+              : 'Select two scenarios to analyze their differences'
+            }
+          </DialogDescription>
+        </DialogHeader>
+        
+        {/* Screen reader status announcements for comparison */}
+        <div 
+          aria-live="polite" 
+          aria-atomic="true" 
+          className="sr-only"
+          id="comparison-announcements"
+        >
+          {isLoading 
+            ? 'Comparing scenarios. Please wait.' 
+            : comparisonResults 
+              ? `Comparison completed. Found ${(comparisonResults?.differences?.assignments?.added?.length || 0) + (comparisonResults?.differences?.assignments?.modified?.length || 0) + (comparisonResults?.differences?.assignments?.removed?.length || 0)} total differences.`
+              : compareToScenario 
+                ? 'Scenarios selected. Ready to compare.'
+                : 'Select a scenario to compare against.'
+          }
         </div>
         
-        <div className="modal-body">
+        <div className="scenarios-comparison-content" style={{ paddingTop: '1rem' }}>
           {!comparisonResults ? (
             <div className="comparison-setup">
               <div className="comparison-scenarios">
@@ -475,11 +571,14 @@ const CompareModal: React.FC<CompareModalProps> = ({
                 </div>
                 
                 <div className="scenario-selector">
-                  <h4>Compare To</h4>
+                  <Label htmlFor="compare-scenario-select">Compare To</Label>
                   <select
+                    id="compare-scenario-select"
                     value={compareToScenario}
                     onChange={(e) => setCompareToScenario(e.target.value)}
                     className="scenario-select"
+                    aria-describedby="compare-scenario-help"
+                    aria-required="true"
                   >
                     <option value="">Select a scenario to compare</option>
                     {availableScenarios.map((s) => (
@@ -488,6 +587,9 @@ const CompareModal: React.FC<CompareModalProps> = ({
                       </option>
                     ))}
                   </select>
+                  <div id="compare-scenario-help" className="help-text" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                    Choose a scenario to compare against {scenario.name}
+                  </div>
                   
                   {selectedScenario && (
                     <div className="scenario-card-mini">
@@ -506,42 +608,52 @@ const CompareModal: React.FC<CompareModalProps> = ({
               </div>
               
               <div className="comparison-actions">
-                <button 
+                <Button 
                   onClick={handleCompare}
-                  className="btn-primary"
                   disabled={!compareToScenario || isLoading}
+                  aria-describedby="comparison-status"
                 >
                   {isLoading ? 'Comparing...' : 'Run Comparison'}
-                </button>
+                </Button>
+                <div id="comparison-status" className="sr-only" aria-live="polite">
+                  {isLoading ? 'Comparison in progress' : !compareToScenario ? 'Select a scenario to enable comparison' : 'Ready to compare scenarios'}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="comparison-results">
+            <div className="comparison-results" role="region" aria-labelledby="results-heading">
               <div className="results-header">
-                <h4>Comparison Results</h4>
-                <button onClick={handleReset} className="btn-secondary btn-sm">
+                <h4 id="results-heading">Comparison Results</h4>
+                <Button onClick={handleReset} variant="outline" size="sm">
                   New Comparison
-                </button>
+                </Button>
               </div>
               
-              <div className="comparison-summary">
+              <div className="comparison-summary" role="group" aria-labelledby="summary-heading">
+                <h5 id="summary-heading" className="sr-only">Summary of Changes</h5>
                 <div className="summary-item">
                   <div className="summary-label">Assignments Added</div>
-                  <div className="summary-value">{comparisonResults?.differences?.assignments?.added?.length || 0}</div>
+                  <div className="summary-value" aria-label={`${comparisonResults?.differences?.assignments?.added?.length || 0} assignments added`}>
+                    {comparisonResults?.differences?.assignments?.added?.length || 0}
+                  </div>
                 </div>
                 <div className="summary-item">
                   <div className="summary-label">Assignments Modified</div>
-                  <div className="summary-value">{comparisonResults?.differences?.assignments?.modified?.length || 0}</div>
+                  <div className="summary-value" aria-label={`${comparisonResults?.differences?.assignments?.modified?.length || 0} assignments modified`}>
+                    {comparisonResults?.differences?.assignments?.modified?.length || 0}
+                  </div>
                 </div>
                 <div className="summary-item">
                   <div className="summary-label">Assignments Removed</div>
-                  <div className="summary-value">{comparisonResults?.differences?.assignments?.removed?.length || 0}</div>
+                  <div className="summary-value" aria-label={`${comparisonResults?.differences?.assignments?.removed?.length || 0} assignments removed`}>
+                    {comparisonResults?.differences?.assignments?.removed?.length || 0}
+                  </div>
                 </div>
               </div>
               
               <div className="comparison-details">
-                <div className="details-section">
-                  <h5>Assignment Differences</h5>
+                <div className="details-section" role="region" aria-labelledby="differences-heading">
+                  <h5 id="differences-heading">Assignment Differences</h5>
                   <div className="differences-list">
                     {comparisonResults?.differences?.assignments?.added?.length > 0 && (
                       <div className="difference-group">
@@ -589,9 +701,9 @@ const CompareModal: React.FC<CompareModalProps> = ({
                   </div>
                 </div>
                 
-                <div className="details-section">
-                  <h5>Impact Analysis</h5>
-                  <div className="impact-metrics">
+                <div className="details-section" role="region" aria-labelledby="impact-heading">
+                  <h5 id="impact-heading">Impact Analysis</h5>
+                  <div className="impact-metrics" role="group" aria-labelledby="impact-heading">
                     <div className="metric">
                       <span className="metric-label">Total Allocation Change:</span>
                       <span className="metric-value">
@@ -619,13 +731,13 @@ const CompareModal: React.FC<CompareModalProps> = ({
           )}
         </div>
 
-        <div className="modal-footer">
-          <button type="button" onClick={onClose} className="btn-secondary">
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={handleClose}>
             {comparisonResults ? 'Close' : 'Cancel'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -660,11 +772,133 @@ export const Scenarios: React.FC = () => {
   const [displayLimit, setDisplayLimit] = useState(10);
   const [hideMergedScenarios, setHideMergedScenarios] = useState(false);
   
+  // Accessibility and keyboard navigation state
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [treeNodes, setTreeNodes] = useState<ScenarioTreeNode[]>([]);
+  const treeRef = useRef<HTMLDivElement>(null);
+  
+  // Focus restoration system for modals
+  const focusReturnRef = useRef<HTMLElement | null>(null);
+  
   // Removed toggleSection function - no longer needed
   
   // Removed renderGroupedScenarios function - no longer needed
   
   const queryClient = useQueryClient();
+
+  // Keyboard navigation helper functions
+  const getAllVisibleNodes = useCallback((nodes: ScenarioTreeNode[]): ScenarioTreeNode[] => {
+    const visibleNodes: ScenarioTreeNode[] = [];
+    
+    const traverse = (nodeList: ScenarioTreeNode[]) => {
+      nodeList.forEach(node => {
+        visibleNodes.push(node);
+        if (expandedNodes.has(node.id) && node.children.length > 0) {
+          traverse(node.children);
+        }
+      });
+    };
+    
+    traverse(nodes);
+    return visibleNodes;
+  }, [expandedNodes]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!focusedNodeId || treeNodes.length === 0) return;
+
+    const visibleNodes = getAllVisibleNodes(treeNodes);
+    const currentIndex = visibleNodes.findIndex(node => node.id === focusedNodeId);
+    const currentNode = visibleNodes[currentIndex];
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (currentIndex < visibleNodes.length - 1) {
+          setFocusedNodeId(visibleNodes[currentIndex + 1].id);
+        }
+        break;
+
+      case 'ArrowUp':
+        e.preventDefault();
+        if (currentIndex > 0) {
+          setFocusedNodeId(visibleNodes[currentIndex - 1].id);
+        }
+        break;
+
+      case 'ArrowRight':
+        e.preventDefault();
+        if (currentNode?.children.length > 0) {
+          if (!expandedNodes.has(currentNode.id)) {
+            setExpandedNodes(prev => new Set([...prev, currentNode.id]));
+          } else {
+            // Move to first child if expanded
+            setFocusedNodeId(currentNode.children[0].id);
+          }
+        }
+        break;
+
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (expandedNodes.has(currentNode.id) && currentNode.children.length > 0) {
+          // Collapse if expanded
+          setExpandedNodes(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(currentNode.id);
+            return newSet;
+          });
+        } else {
+          // Move to parent
+          const parent = findParentNode(currentNode.id, treeNodes);
+          if (parent) {
+            setFocusedNodeId(parent.id);
+          }
+        }
+        break;
+
+      case 'Home':
+        e.preventDefault();
+        if (visibleNodes.length > 0) {
+          setFocusedNodeId(visibleNodes[0].id);
+        }
+        break;
+
+      case 'End':
+        e.preventDefault();
+        if (visibleNodes.length > 0) {
+          setFocusedNodeId(visibleNodes[visibleNodes.length - 1].id);
+        }
+        break;
+
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        // Toggle expansion or trigger action
+        if (currentNode?.children.length > 0) {
+          setExpandedNodes(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(currentNode.id)) {
+              newSet.delete(currentNode.id);
+            } else {
+              newSet.add(currentNode.id);
+            }
+            return newSet;
+          });
+        }
+        break;
+    }
+  }, [focusedNodeId, treeNodes, expandedNodes, getAllVisibleNodes]);
+
+  const findParentNode = useCallback((nodeId: string, nodes: ScenarioTreeNode[]): ScenarioTreeNode | null => {
+    for (const node of nodes) {
+      if (node.children.some(child => child.id === nodeId)) {
+        return node;
+      }
+      const found = findParentNode(nodeId, node.children);
+      if (found) return found;
+    }
+    return null;
+  }, []);
 
   const deleteMutation = useMutation({
     mutationFn: (scenarioId: string) => api.scenarios.delete(scenarioId),
@@ -716,6 +950,45 @@ export const Scenarios: React.FC = () => {
     
     return filtered;
   }, [scenarios, searchTerm, activeFilters, hideMergedScenarios]);
+
+  // Update tree nodes when filtered scenarios change
+  useEffect(() => {
+    if (filteredScenarios.length > 0) {
+      const displayedScenarios = showAllScenarios ? filteredScenarios : filteredScenarios.slice(0, displayLimit);
+      
+      // Build hierarchical tree structure
+      const scenarioMap = new Map<string, ScenarioTreeNode>(
+        displayedScenarios.map(s => [s.id, { ...s, children: [] as ScenarioTreeNode[] }])
+      );
+      const roots: ScenarioTreeNode[] = [];
+
+      displayedScenarios.forEach(scenario => {
+        const scenarioNode = scenarioMap.get(scenario.id)!;
+        if (scenario.parent_scenario_id && scenarioMap.has(scenario.parent_scenario_id)) {
+          const parent = scenarioMap.get(scenario.parent_scenario_id)!;
+          parent.children.push(scenarioNode);
+        } else {
+          roots.push(scenarioNode);
+        }
+      });
+
+      setTreeNodes(roots);
+      
+      // Set initial focus if no node is focused
+      if (!focusedNodeId && roots.length > 0) {
+        setFocusedNodeId(roots[0].id);
+      }
+      
+      // Expand nodes that have children by default
+      const newExpandedNodes = new Set<string>();
+      roots.forEach(node => {
+        if (node.children.length > 0) {
+          newExpandedNodes.add(node.id);
+        }
+      });
+      setExpandedNodes(newExpandedNodes);
+    }
+  }, [filteredScenarios, showAllScenarios, displayLimit, focusedNodeId]);
 
   // Get unique values for filter options
   const filterOptions = React.useMemo(() => {
@@ -793,54 +1066,74 @@ export const Scenarios: React.FC = () => {
     setShowCreateModal(true);
   };
 
-  const handleEdit = (scenario: Scenario) => {
+  const handleEdit = (scenario: Scenario, event?: React.MouseEvent) => {
+    focusReturnRef.current = event?.currentTarget as HTMLElement || document.activeElement as HTMLElement;
     setEditingScenario(scenario);
     setShowEditModal(true);
   };
 
-  const handleDelete = (scenario: Scenario) => {
+  const handleDelete = (scenario: Scenario, event?: React.MouseEvent) => {
+    focusReturnRef.current = event?.currentTarget as HTMLElement || document.activeElement as HTMLElement;
     setDeletingScenario(scenario);
     setShowDeleteModal(true);
   };
 
-  const handleMerge = (scenario: Scenario) => {
+  const handleMerge = (scenario: Scenario, event?: React.MouseEvent) => {
+    focusReturnRef.current = event?.currentTarget as HTMLElement || document.activeElement as HTMLElement;
     setMergingScenario(scenario);
     setShowMergeModal(true);
   };
 
-  const handleCompare = (scenario: Scenario) => {
+  const handleCompare = (scenario: Scenario, event?: React.MouseEvent) => {
+    focusReturnRef.current = event?.currentTarget as HTMLElement || document.activeElement as HTMLElement;
     setComparingScenario(scenario);
     setShowCompareModal(true);
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = (event?: React.MouseEvent) => {
+    focusReturnRef.current = event?.currentTarget as HTMLElement || document.activeElement as HTMLElement;
     setSelectedParentScenario(undefined);
     setShowCreateModal(true);
   };
 
+  const restoreFocus = useCallback(() => {
+    if (focusReturnRef.current && focusReturnRef.current.isConnected) {
+      // Use setTimeout to ensure the modal has fully closed before restoring focus
+      setTimeout(() => {
+        focusReturnRef.current?.focus();
+        focusReturnRef.current = null;
+      }, 100);
+    }
+  }, []);
+
   const handleCloseModal = () => {
     setShowCreateModal(false);
     setSelectedParentScenario(undefined);
+    restoreFocus();
   };
 
   const handleCloseEditModal = () => {
     setShowEditModal(false);
     setEditingScenario(null);
+    restoreFocus();
   };
 
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
     setDeletingScenario(null);
+    restoreFocus();
   };
 
   const handleCloseMergeModal = () => {
     setShowMergeModal(false);
     setMergingScenario(null);
+    restoreFocus();
   };
 
   const handleCloseCompareModal = () => {
     setShowCompareModal(false);
     setComparingScenario(null);
+    restoreFocus();
   };
 
   const renderListView = () => {
@@ -870,13 +1163,27 @@ export const Scenarios: React.FC = () => {
       return roots;
     };
 
-    const renderScenarioNode = (scenario: any, level: number = 0, isLast: boolean = true, parentLines: boolean[] = []) => {
+    const renderScenarioNode = (scenario: ScenarioTreeNode, level: number = 0, isLast: boolean = true, parentLines: boolean[] = []): React.ReactNode => {
       const indent = level * 24;
       const hasChildren = scenario.children && scenario.children.length > 0;
+      const isExpanded = expandedNodes.has(scenario.id);
+      const isFocused = focusedNodeId === scenario.id;
+      const isBaseline = scenario.scenario_type === 'baseline';
       
       return (
         <div key={scenario.id}>
-          <div className={`hierarchy-row ${scenario.scenario_type}`}>
+          <div 
+            className={`hierarchy-row ${scenario.scenario_type} ${isFocused ? 'focused' : ''}`}
+            role="treeitem"
+            aria-expanded={hasChildren ? isExpanded : undefined}
+            aria-level={level + 1}
+            aria-selected={isFocused}
+            aria-label={`${scenario.name}, ${scenario.scenario_type} scenario, ${scenario.status} status${hasChildren ? `, ${scenario.children.length} child scenarios` : ''}`}
+            tabIndex={isFocused ? 0 : -1}
+            onFocus={() => setFocusedNodeId(scenario.id)}
+            onClick={() => setFocusedNodeId(scenario.id)}
+            onKeyDown={handleKeyDown}
+          >
             {/* Name Column with Tree Structure */}
             <div className="hierarchy-cell name-column">
               <div className="hierarchy-indent" style={{ paddingLeft: `${indent}px` }}>
@@ -887,6 +1194,7 @@ export const Scenarios: React.FC = () => {
                       key={index}
                       className={`parent-line ${showLine ? 'visible' : ''}`}
                       style={{ left: `${index * 24 + 12}px` }}
+                      aria-hidden="true"
                     />
                   ))}
                   
@@ -896,23 +1204,51 @@ export const Scenarios: React.FC = () => {
                       <div 
                         className="branch-line horizontal" 
                         style={{ left: `${(level - 1) * 24 + 12}px` }}
+                        aria-hidden="true"
                       />
                       <div 
                         className={`branch-line vertical ${isLast ? 'last' : ''}`}
                         style={{ left: `${(level - 1) * 24 + 12}px` }}
+                        aria-hidden="true"
                       />
                     </>
                   )}
                   
-                  {/* Node connector */}
+                  {/* Node connector with expand/collapse button for nodes with children */}
                   <div className="node-connector" style={{ left: `${level * 24 + 12}px` }}>
-                    <div className={`connector-dot ${scenario.scenario_type}`}></div>
+                    {hasChildren ? (
+                      <button
+                        className={`connector-expand-button ${scenario.scenario_type}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedNodes(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(scenario.id)) {
+                              newSet.delete(scenario.id);
+                            } else {
+                              newSet.add(scenario.id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${scenario.name} scenarios`}
+                        tabIndex={-1}
+                      >
+                        <ChevronDown 
+                          size={12} 
+                          className={`expand-icon ${isExpanded ? 'expanded' : ''}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : (
+                      <div className={`connector-dot ${scenario.scenario_type}`} aria-hidden="true"></div>
+                    )}
                   </div>
                 </div>
                 
                 <div className="hierarchy-content">
                   <div className="scenario-name-cell">
-                    <GitBranch size={16} />
+                    <GitBranch size={16} aria-hidden="true" />
                     <div className="scenario-info">
                       <div className="name">{scenario.name}</div>
                       {scenario.description && (
@@ -969,7 +1305,7 @@ export const Scenarios: React.FC = () => {
                   <GitBranch size={14} />
                 </button>
                 <button
-                  onClick={() => handleCompare(scenario)}
+                  onClick={(e) => handleCompare(scenario, e)}
                   className="action-button compare"
                   title="Compare Scenarios"
                 >
@@ -977,7 +1313,7 @@ export const Scenarios: React.FC = () => {
                 </button>
                 {scenario.parent_scenario_id && scenario.status === 'active' ? (
                   <button
-                    onClick={() => handleMerge(scenario)}
+                    onClick={(e) => handleMerge(scenario, e)}
                     className="action-button merge"
                     title={`Merge to ${scenario.parent_scenario_name}`}
                   >
@@ -1002,7 +1338,7 @@ export const Scenarios: React.FC = () => {
                   </div>
                 )}
                 <button
-                  onClick={() => handleEdit(scenario)}
+                  onClick={(e) => handleEdit(scenario, e)}
                   className="action-button edit"
                   title="Edit Scenario"
                 >
@@ -1010,7 +1346,7 @@ export const Scenarios: React.FC = () => {
                 </button>
                 {scenario.scenario_type !== 'baseline' && (
                   <button
-                    onClick={() => handleDelete(scenario)}
+                    onClick={(e) => handleDelete(scenario, e)}
                     className="action-button delete"
                     title="Delete Scenario"
                   >
@@ -1021,12 +1357,16 @@ export const Scenarios: React.FC = () => {
             </div>
           </div>
           
-          {/* Render children */}
-          {hasChildren && scenario.children.map((child: any, index: number) => {
-            const isLastChild = index === scenario.children.length - 1;
-            const newParentLines = [...parentLines, !isLastChild];
-            return renderScenarioNode(child, level + 1, isLastChild, newParentLines);
-          })}
+          {/* Render children with proper accessibility */}
+          {hasChildren && isExpanded && (
+            <div role="group" aria-label={`Child scenarios of ${scenario.name}`}>
+              {scenario.children.map((child: ScenarioTreeNode, index: number) => {
+                const isLastChild = index === scenario.children.length - 1;
+                const newParentLines = [...parentLines, !isLastChild];
+                return renderScenarioNode(child, level + 1, isLastChild, newParentLines);
+              })}
+            </div>
+          )}
         </div>
       );
     };
@@ -1063,9 +1403,20 @@ export const Scenarios: React.FC = () => {
           <div className="column-header actions-column">Actions</div>
         </div>
         
-        <div className="hierarchy-content">
-          {scenarioTree.map((rootScenario, index) => 
-            renderScenarioNode(rootScenario, 0, index === scenarioTree.length - 1, [])
+        <div 
+          className="hierarchy-content"
+          role="tree"
+          aria-label="Scenario hierarchy tree"
+          aria-describedby="tree-instructions"
+          ref={treeRef}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+        >
+          <div id="tree-instructions" className="sr-only">
+            Use arrow keys to navigate, Enter or Space to expand/collapse, Home/End to go to first/last item.
+          </div>
+          {treeNodes.map((rootScenario, index) => 
+            renderScenarioNode(rootScenario, 0, index === treeNodes.length - 1, [])
           )}
         </div>
       </div>
@@ -1100,7 +1451,7 @@ export const Scenarios: React.FC = () => {
           <h1>Scenario Planning</h1>
           <p>Create and manage resource planning scenarios to explore different allocation strategies</p>
         </div>
-        <button onClick={handleCreateNew} className="btn-primary">
+        <button onClick={(e) => handleCreateNew(e)} className="btn-primary">
           <Plus size={16} />
           New Scenario
         </button>

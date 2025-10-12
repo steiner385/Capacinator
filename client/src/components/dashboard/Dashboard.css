@@ -1,0 +1,163 @@
+/* Dashboard component styles */
+.dashboard-alerts-panel {
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-alert-item {
+  transition: all 0.2s ease-in-out;
+  border-radius: 0.5rem;
+}
+
+.dashboard-alert-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-alert-item:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.dashboard-alert-icon {
+  flex-shrink: 0;
+}
+
+.dashboard-alert-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.dashboard-alert-badge {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+.dashboard-healthy-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #059669;
+}
+
+.dashboard-healthy-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.75rem;
+  border-radius: 50%;
+  background-color: #d1fae5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .dashboard-alerts-panel {
+    margin-bottom: 1rem;
+  }
+  
+  .dashboard-alert-item {
+    padding: 0.75rem;
+  }
+  
+  .dashboard-alert-badge {
+    font-size: 0.6875rem;
+    padding: 0.0625rem 0.375rem;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .dashboard-alert-item {
+    border-width: 2px;
+  }
+  
+  .dashboard-alert-item:focus-within {
+    outline-width: 3px;
+  }
+}
+
+/* Enhanced KPIs Styles */
+.enhanced-kpis .kpi-card {
+  transition: all 0.2s ease-in-out;
+  border-radius: 0.75rem;
+}
+
+.enhanced-kpis .kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.enhanced-kpis .kpi-card:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Progress bar animations */
+.enhanced-kpis .kpi-card [role="progressbar"] {
+  transition: width 0.3s ease-in-out;
+}
+
+/* KPI status indicators */
+.kpi-status-excellent {
+  color: #059669;
+  background-color: #d1fae5;
+}
+
+.kpi-status-good {
+  color: #2563eb;
+  background-color: #dbeafe;
+}
+
+.kpi-status-warning {
+  color: #d97706;
+  background-color: #fef3c7;
+}
+
+.kpi-status-critical {
+  color: #dc2626;
+  background-color: #fee2e2;
+}
+
+/* Responsive adjustments for KPIs */
+@media (max-width: 768px) {
+  .enhanced-kpis {
+    margin-bottom: 1rem;
+  }
+  
+  .enhanced-kpis .kpi-card {
+    padding: 0.75rem;
+  }
+  
+  .enhanced-kpis .kpi-card:hover {
+    transform: none;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-alert-item {
+    transition: none;
+  }
+  
+  .dashboard-alert-item:hover {
+    transform: none;
+  }
+  
+  .enhanced-kpis .kpi-card {
+    transition: none;
+  }
+  
+  .enhanced-kpis .kpi-card:hover {
+    transform: none;
+  }
+  
+  .enhanced-kpis .kpi-card [role="progressbar"] {
+    transition: none;
+  }
+}

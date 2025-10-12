@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, AlertTriangle, Lightbulb, Play, Users, TrendingUp } from 'lucide-react';
+import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import { api } from '../lib/api-client';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
@@ -16,6 +17,12 @@ import type { ProjectAssignment, Project, Person, Role } from '../types';
 import './Assignments.css';
 
 
+// Define assignments tabs configuration
+const assignmentTabs = [
+  { id: 'assignments', label: 'Assignments' },
+  { id: 'recommendations', label: 'Recommendations' }
+];
+
 export default function Assignments() {
   // console.log('Assignments component rendering');
   
@@ -24,7 +31,12 @@ export default function Assignments() {
   const [searchParams] = useSearchParams();
   const { currentScenario } = useScenario();
   const [contextMessage, setContextMessage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'assignments' | 'recommendations'>('assignments');
+  
+  // Use bookmarkable tabs for assignments
+  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+    tabs: assignmentTabs,
+    defaultTab: 'assignments'
+  });
   const [filters, setFilters] = useState({
     search: '',
     project_id: '',
@@ -523,7 +535,7 @@ export default function Assignments() {
       name: 'role_id',
       label: 'Role',
       type: 'select' as const,
-      options: roles?.map(role => ({ value: role.id, label: role.name })) || []
+      options: Array.isArray(roles) ? roles.map(role => ({ value: role.id, label: role.name })) : []
     },
     {
       name: 'date_range',
@@ -784,7 +796,7 @@ export default function Assignments() {
       }}>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button
-            className={`tab-button ${activeTab === 'assignments' ? 'active' : ''}`}
+            className={`tab-button ${isActiveTab('assignments') ? 'active' : ''}`}
             onClick={() => setActiveTab('assignments')}
             style={{
               padding: '0.75rem 1rem',
@@ -803,7 +815,7 @@ export default function Assignments() {
             Assignments ({assignments?.length || 0})
           </button>
           <button
-            className={`tab-button ${activeTab === 'recommendations' ? 'active' : ''}`}
+            className={`tab-button ${isActiveTab('recommendations') ? 'active' : ''}`}
             onClick={() => setActiveTab('recommendations')}
             style={{
               padding: '0.75rem 1rem',

@@ -24,9 +24,9 @@ import Assignments from './pages/Assignments';
 import { Scenarios } from './pages/Scenarios';
 import Availability from './pages/Availability';
 import { AuditLog } from './pages/AuditLog';
-import Reports from './pages/Reports';
+import ReportsUnified from './pages/ReportsUnified';
 import Settings from './pages/Settings';
-import Import from './pages/Import';
+import ImportUnified from './pages/ImportUnified';
 import { Locations } from './pages/Locations';
 import { Toaster } from './components/ui/toaster';
 import './globals.css';
@@ -68,8 +68,8 @@ const AppContent: React.FC = () => {
           <Route path="/scenarios" element={<Scenarios />} />
           <Route path="/availability" element={<Navigate to="/people" replace />} />
           <Route path="/audit-log" element={<AuditLog />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/import" element={<Import />} />
+          <Route path="/reports" element={<ReportsUnified />} />
+          <Route path="/import" element={<ImportUnified />} />
           <Route path="/locations" element={<Locations />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

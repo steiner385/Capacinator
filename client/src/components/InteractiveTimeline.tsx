@@ -202,120 +202,7 @@ export function InteractiveTimeline({
     position: number;
   } | null>(null);
 
-  // Scroll state management for hiding handles during scroll
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Scroll event detection to hide handles during scrolling
-  useEffect(() => {
-    const handleScroll = (event?: Event) => {
-      // Debug logging to understand scroll detection
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔄 Scroll detected:', {
-          target: event?.target instanceof Element ? event.target.className : 'window',
-          isScrolling: true,
-          handlesVisible: !isScrolling
-        });
-      }
-      
-      setIsScrolling(true);
-      
-      // Clear handle hover state during scrolling
-      setHoveredHandle(null);
-      
-      // Clear any existing timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      
-      // Set timeout to detect when scrolling stops
-      scrollTimeoutRef.current = setTimeout(() => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Scroll stopped - showing handles');
-        }
-        setIsScrolling(false);
-      }, 150); // 150ms delay after scroll stops
-    };
-
-    // Helper function to check if an element is scrollable
-    const isScrollable = (element: Element): boolean => {
-      const style = window.getComputedStyle(element);
-      const hasOverflow = ['auto', 'scroll'].includes(style.overflow) ||
-                         ['auto', 'scroll'].includes(style.overflowX) ||
-                         ['auto', 'scroll'].includes(style.overflowY);
-      return hasOverflow;
-    };
-
-    // Find all scrollable containers up the DOM tree
-    const findScrollableContainers = (startElement: Element): Element[] => {
-      const scrollableContainers: Element[] = [];
-      let currentElement: Element | null = startElement;
-      
-      while (currentElement && currentElement !== document.body) {
-        if (isScrollable(currentElement)) {
-          scrollableContainers.push(currentElement);
-        }
-        currentElement = currentElement.parentElement;
-      }
-      
-      return scrollableContainers;
-    };
-
-    const scrollableContainers: Element[] = [];
-    
-    // Always listen to window scroll
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Find and listen to all scrollable containers
-    if (timelineRef.current) {
-      const containers = findScrollableContainers(timelineRef.current);
-      scrollableContainers.push(...containers);
-      
-      // Also check specific container classes that might be scrollable in roadmap
-      const timelineContainer = timelineRef.current.closest('.timeline-container');
-      if (timelineContainer && !containers.includes(timelineContainer)) {
-        containers.push(timelineContainer);
-        scrollableContainers.push(timelineContainer);
-      }
-      
-      const roadmapContent = timelineRef.current.closest('.roadmap-content');
-      if (roadmapContent && !containers.includes(roadmapContent)) {
-        containers.push(roadmapContent);
-        scrollableContainers.push(roadmapContent);
-      }
-      
-      // Debug logging for development
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📋 InteractiveTimeline scroll containers detected:', {
-          totalContainers: containers.length,
-          containers: containers.map(c => ({
-            tagName: c.tagName,
-            className: c.className,
-            isScrollable: isScrollable(c)
-          }))
-        });
-      }
-      
-      // Add scroll listeners to all found containers
-      containers.forEach(container => {
-        container.addEventListener('scroll', handleScroll, { passive: true });
-      });
-    }
-
-    return () => {
-      // Clean up all event listeners
-      window.removeEventListener('scroll', handleScroll);
-      
-      scrollableContainers.forEach(container => {
-        container.removeEventListener('scroll', handleScroll);
-      });
-      
-      // Clean up timeout
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []); // Empty dependency array since we want this to run once
+  // Note: Scroll detection logic removed - now using z-index layering for proper handle positioning
 
   // Calculate timeline width - use container width when available for precise alignment
   const calculateTimelineWidth = () => {
@@ -1135,23 +1022,6 @@ export function InteractiveTimeline({
         ...style 
       }}
     >
-      {/* Temporary scroll detection indicator */}
-      {process.env.NODE_ENV === 'development' && isScrolling && (
-        <div style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          backgroundColor: 'red',
-          color: 'white',
-          padding: '8px 12px',
-          borderRadius: '4px',
-          fontWeight: 'bold',
-          zIndex: 10000,
-          fontSize: '12px'
-        }}>
-          SCROLLING DETECTED
-        </div>
-      )}
       {/* Timeline container */}
       <div
         ref={timelineRef}
@@ -1164,7 +1034,7 @@ export function InteractiveTimeline({
           backgroundColor: 'transparent',
           border: '1px solid #e2e8f0',
           borderRadius: '6px',
-          overflow: 'visible', // Allow handles to show above
+          overflow: 'visible', // Allow handles to show above within timeline bounds
           paddingTop: mode === 'phase-manager' ? '30px' : '0px' // Space for handles (not needed in roadmap mode)
         }}
         onMouseDown={(e) => handleMouseDown(e)}
@@ -1698,7 +1568,7 @@ export function InteractiveTimeline({
         })}
 
         {/* Visual handles for phase boundary actions - new intuitive approach */}
-        {(mode === 'phase-manager' || mode === 'roadmap') && !isScrolling && phaseHandles.map((handle) => {
+        {(mode === 'phase-manager' || mode === 'roadmap') && phaseHandles.map((handle) => {
           const isHovered = hoveredHandle && 
             hoveredHandle.phaseId === handle.phaseId && 
             hoveredHandle.handleType === handle.handleType;
@@ -1717,7 +1587,7 @@ export function InteractiveTimeline({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              zIndex: 25,
+              zIndex: 8,
               transition: 'all 0.2s ease, opacity 0.15s ease-out',
               borderRadius: '6px',
               fontSize: '12px',
@@ -1848,7 +1718,7 @@ export function InteractiveTimeline({
       )}
 
       {/* Handle tooltip - shows keyboard shortcut hint */}
-      {hoveredHandle && !isScrolling && (
+      {hoveredHandle && (
         <div
           style={{
             position: 'absolute',
