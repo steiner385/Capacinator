@@ -139,7 +139,7 @@ describe('Dashboard API Response Structure', () => {
     });
 
     // Should render without crashing
-    expect(container.querySelector('.dashboard')).toBeInTheDocument();
+    expect(container.querySelector('.page-container')).toBeInTheDocument();
   });
 
   test('BEFORE FIX: would fail with "Cannot convert undefined to object" error', async () => {

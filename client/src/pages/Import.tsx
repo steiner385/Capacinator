@@ -537,8 +537,9 @@ export default function Import() {
                   <div className="controls-section">
                     <div className="controls-section-title">Scenario Selection</div>
                     <div className="form-group">
-                      <label>Choose Scenario to Export:</label>
+                      <label htmlFor="export-scenario-select">Choose Scenario to Export:</label>
                       <select
+                        id="export-scenario-select"
                         value={exportScenarioId}
                         onChange={(e) => setExportScenarioId(e.target.value)}
                         className="form-select"
@@ -547,11 +548,11 @@ export default function Import() {
                         <option value="">
                           {currentScenario ? `Current: ${currentScenario.name} (${currentScenario.scenario_type})` : 'Loading scenarios...'}
                         </option>
-                        {scenarios.map(scenario => (
+                        {scenarios?.map(scenario => (
                           <option key={scenario.id} value={scenario.id}>
                             {scenario.name} ({scenario.scenario_type})
                           </option>
-                        ))}
+                        )) || []}
                       </select>
                     </div>
                   </div>

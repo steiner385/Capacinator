@@ -54,11 +54,14 @@ CREATE TABLE IF NOT EXISTS user_permission_overrides (
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
+  recipient_id TEXT,
   type TEXT NOT NULL,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   status TEXT DEFAULT 'unread',
+  scheduled_for TEXT,
   created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
   read_at TEXT
 );
 
@@ -76,6 +79,7 @@ ALTER TABLE projects ADD COLUMN aspiration_finish TEXT;
 -- Update project_assignments table  
 ALTER TABLE project_assignments ADD COLUMN assignment_date_mode TEXT DEFAULT 'fixed';
 ALTER TABLE project_assignments ADD COLUMN scenario_id TEXT;
+ALTER TABLE project_assignments ADD COLUMN notes TEXT;
 
 -- Make start_date and end_date nullable for phase/project based assignments
 -- SQLite doesn't support ALTER COLUMN, so we need to recreate the table
@@ -92,6 +96,7 @@ CREATE TABLE project_assignments_new (
   computed_end_date TEXT,
   assignment_date_mode TEXT DEFAULT 'fixed',
   scenario_id TEXT,
+  notes TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (person_id) REFERENCES people(id),
@@ -110,6 +115,7 @@ ALTER TABLE project_assignments_new RENAME TO project_assignments;
 -- Update people table
 ALTER TABLE people ADD COLUMN default_hours_per_day REAL DEFAULT 8;
 ALTER TABLE people ADD COLUMN worker_type TEXT DEFAULT 'employee';
+ALTER TABLE people ADD COLUMN password TEXT;
 
 -- Person roles table
 CREATE TABLE IF NOT EXISTS person_roles (
@@ -173,12 +179,38 @@ CREATE TABLE IF NOT EXISTS scenario_project_assignments (
   FOREIGN KEY (phase_id) REFERENCES project_phases(id)
 );
 
+-- Audit log table
+CREATE TABLE IF NOT EXISTS audit_log (
+  id TEXT PRIMARY KEY,
+  table_name TEXT NOT NULL,
+  record_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  old_values TEXT,
+  new_values TEXT,
+  changed_fields TEXT,
+  changed_by TEXT,
+  changed_at TEXT NOT NULL,
+  request_id TEXT,
+  ip_address TEXT,
+  user_agent TEXT,
+  comment TEXT,
+  parent_id TEXT,
+  is_undo INTEGER DEFAULT 0
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(project_type_id);
 CREATE INDEX IF NOT EXISTS idx_projects_location ON projects(location_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_person ON project_assignments(person_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_project ON project_assignments(project_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_scenario ON project_assignments(scenario_id);
+
+-- Audit log indexes
+CREATE INDEX IF NOT EXISTS idx_audit_table_record ON audit_log(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_changed_by ON audit_log(changed_by);
+CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit_log(changed_at);
+CREATE INDEX IF NOT EXISTS idx_audit_request_id ON audit_log(request_id);
+CREATE INDEX IF NOT EXISTS idx_audit_parent_id ON audit_log(parent_id);
 
 -- Add scenario_type column to scenarios table
 ALTER TABLE scenarios ADD COLUMN scenario_type TEXT DEFAULT 'what-if';

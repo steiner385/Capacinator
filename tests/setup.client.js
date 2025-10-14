@@ -1,6 +1,10 @@
 // Client test setup
 // Setup for client-side tests
 
+// Import React for JSX transform
+const React = require('react');
+global.React = React;
+
 // Add TextEncoder/TextDecoder polyfills
 const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
@@ -29,7 +33,15 @@ jest.mock('../client/src/contexts/ThemeContext', () => ({
 
 jest.mock('../client/src/contexts/ScenarioContext', () => ({
   ScenarioProvider: ({ children }) => children,
-  useScenario: () => ({ activeScenarioId: null, setActiveScenarioId: jest.fn() }),
+  useScenario: () => ({ 
+    activeScenarioId: null, 
+    setActiveScenarioId: jest.fn(),
+    currentScenario: { id: 'test-scenario', name: 'Test Scenario', scenario_type: 'baseline' },
+    scenarios: [
+      { id: 'baseline-1', name: 'Baseline Scenario', scenario_type: 'baseline' },
+      { id: 'branch-1', name: 'Test Branch', scenario_type: 'branch' }
+    ]
+  }),
 }));
 
 // Mock PortalThemeProvider

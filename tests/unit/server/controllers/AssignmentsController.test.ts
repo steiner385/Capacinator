@@ -619,7 +619,7 @@ describe('AssignmentsController', () => {
           .rejects.toThrow('Phase mode requires both phase_id and project_id');
       });
 
-      it('should throw error for project mode with missing aspiration dates', async () => {
+      it('should use fallback dates for project mode with missing aspiration dates', async () => {
         const assignment = {
           assignment_date_mode: 'project',
           project_id: 'project-1'
@@ -636,8 +636,12 @@ describe('AssignmentsController', () => {
         // Set controller's db to return the project query
         (controller as any).db = jest.fn(() => projectQuery);
 
-        await expect((controller as any).computeAssignmentDates(assignment))
-          .rejects.toThrow('Project project-1 missing aspiration dates');
+        const computedDates = await (controller as any).computeAssignmentDates(assignment);
+
+        // Should use fallback dates instead of throwing error
+        expect(computedDates.computed_start_date).toBeDefined();
+        expect(computedDates.computed_end_date).toBeDefined();
+        expect(new Date(computedDates.computed_end_date)).toBeInstanceOf(Date);
       });
     });
 

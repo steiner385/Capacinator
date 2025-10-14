@@ -32,7 +32,9 @@ export class MigrationAuditWrapper {
     const result = await this.db(tableName).insert(data).returning('*');
     
     if (this.auditService && this.shouldAuditTable(tableName)) {
-      await this.logMigrationAudit(tableName, result, 'CREATE', null, data);
+      // Use the original data for record ID since returning('*') may not work in SQLite
+      const recordForAudit = Array.isArray(result) && result.length > 0 ? result[0] : data;
+      await this.logMigrationAudit(tableName, recordForAudit, 'CREATE', null, data);
     }
     
     return result;
@@ -78,6 +80,20 @@ export class MigrationAuditWrapper {
     }
     
     return deletedCount;
+  }
+
+  // Wrapper for audit-aware bulk insert operations
+  async bulkInsert(tableName: string, data: any[]): Promise<any> {
+    const result = await this.db(tableName).insert(data).returning('*');
+    
+    if (this.auditService && this.shouldAuditTable(tableName)) {
+      // Use the original data for record IDs since returning('*') may not work reliably in SQLite
+      for (const record of data) {
+        await this.logMigrationAudit(tableName, record, 'CREATE', null, record);
+      }
+    }
+    
+    return result;
   }
 
   // Direct database access for non-audited operations
@@ -129,13 +145,13 @@ export class MigrationAuditWrapper {
         tableName: this.getAuditTableName(tableName),
         recordId: String(recordId),
         action,
-        changedBy: 'system',
+        changedBy: `system:${this.context.operation}`,
         oldValues,
         newValues,
         requestId: `migration-${this.context.migrationName}`,
         ipAddress: 'localhost',
         userAgent: `Migration: ${this.context.migrationName}`,
-        comment: this.context.comment || `${this.context.operation}: ${this.context.migrationName}`
+        comment: `${this.context.operation}: ${this.context.migrationName}` + (this.context.comment ? ` - ${this.context.comment}` : '')
       });
     } catch (error) {
       console.error(`Failed to log migration audit for ${tableName}:`, error);
@@ -161,31 +177,57 @@ export function createMigrationAuditWrapper(db: Knex, context: MigrationAuditCon
 }
 
 // Convenience function for migrations
-export function withMigrationAudit(
+export async function withMigrationAudit(
   db: Knex, 
   migrationName: string, 
   callback: (auditDb: MigrationAuditWrapper) => Promise<void>
 ): Promise<void> {
-  const auditWrapper = createMigrationAuditWrapper(db, {
-    migrationName,
-    operation: 'migration',
-    comment: `Schema migration: ${migrationName}`
-  });
-  
-  return callback(auditWrapper);
+  // Use transactions in production but direct database access in test environment
+  if (process.env.NODE_ENV === 'test') {
+    const auditWrapper = createMigrationAuditWrapper(db, {
+      migrationName,
+      operation: 'migration',
+      comment: `Schema migration: ${migrationName}`
+    });
+    
+    return callback(auditWrapper);
+  } else {
+    return db.transaction(async (trx) => {
+      const auditWrapper = createMigrationAuditWrapper(trx, {
+        migrationName,
+        operation: 'migration',
+        comment: `Schema migration: ${migrationName}`
+      });
+      
+      return callback(auditWrapper);
+    });
+  }
 }
 
 // Convenience function for seeds
-export function withSeedAudit(
+export async function withSeedAudit(
   db: Knex, 
   seedName: string, 
   callback: (auditDb: MigrationAuditWrapper) => Promise<void>
 ): Promise<void> {
-  const auditWrapper = createMigrationAuditWrapper(db, {
-    migrationName: seedName,
-    operation: 'seed',
-    comment: `Data seeding: ${seedName}`
-  });
-  
-  return callback(auditWrapper);
+  // Use transactions in production but direct database access in test environment
+  if (process.env.NODE_ENV === 'test') {
+    const auditWrapper = createMigrationAuditWrapper(db, {
+      migrationName: seedName,
+      operation: 'seed',
+      comment: `Data seeding: ${seedName}`
+    });
+    
+    return callback(auditWrapper);
+  } else {
+    return db.transaction(async (trx) => {
+      const auditWrapper = createMigrationAuditWrapper(trx, {
+        migrationName: seedName,
+        operation: 'seed',
+        comment: `Data seeding: ${seedName}`
+      });
+      
+      return callback(auditWrapper);
+    });
+  }
 }

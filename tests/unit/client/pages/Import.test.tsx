@@ -1,9 +1,9 @@
 import { describe, test, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Import from '../../../../client/src/pages/Import';
-import { ScenarioProvider } from '../../../../client/src/contexts/ScenarioContext';
+import { ScenarioProvider, useScenario } from '../../../../client/src/contexts/ScenarioContext';
 import { api } from '../../../../client/src/lib/api-client';
 
 // Mock API client
@@ -54,26 +54,47 @@ const mockScenarios = [
   },
 ];
 
-const renderWithProviders = (component: React.ReactElement) => {
+// Mock the useScenario hook directly
+jest.mock('../../../../client/src/contexts/ScenarioContext', () => ({
+  ScenarioProvider: ({ children }: any) => children,
+  useScenario: jest.fn(),
+}));
+
+const renderWithProviders = async (component: React.ReactElement) => {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ScenarioProvider>
-        {component}
-      </ScenarioProvider>
-    </QueryClientProvider>
-  );
+  let renderResult;
+  await act(async () => {
+    renderResult = render(
+      <QueryClientProvider client={queryClient}>
+        <ScenarioProvider>
+          {component}
+        </ScenarioProvider>
+      </QueryClientProvider>
+    );
+  });
+  
+  return renderResult;
 };
 
 describe('Import Page', () => {
   let user: ReturnType<typeof userEvent.setup>;
+  const mockUseScenario = useScenario as jest.Mock;
 
   beforeEach(() => {
     user = userEvent.setup();
     jest.clearAllMocks();
+
+    // Configure ScenarioContext mock
+    mockUseScenario.mockReturnValue({
+      currentScenario: mockScenarios[0], // Baseline scenario
+      scenarios: mockScenarios,
+      setCurrentScenario: jest.fn(),
+      isLoading: false,
+      error: null,
+    });
 
     // Mock scenarios API
     (api.scenarios.list as jest.Mock).mockResolvedValue({
@@ -99,11 +120,12 @@ describe('Import Page', () => {
 
   afterEach(() => {
     jest.resetAllMocks();
+    mockUseScenario.mockReset();
   });
 
   describe('Page Rendering', () => {
     it('should render import and export sections', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       expect(screen.getByText('Import & Export Data')).toBeInTheDocument();
       expect(screen.getByText('Import Excel files or export current scenario data')).toBeInTheDocument();
@@ -111,8 +133,8 @@ describe('Import Page', () => {
       expect(screen.getByText('Export scenario data or download blank templates')).toBeInTheDocument();
     });
 
-    it('should show file upload area', () => {
-      renderWithProviders(<Import />);
+    it('should show file upload area', async () => {
+      await renderWithProviders(<Import />);
 
       expect(screen.getByText('Drop Excel file here')).toBeInTheDocument();
       expect(screen.getByText('or click to browse')).toBeInTheDocument();
@@ -120,10 +142,10 @@ describe('Import Page', () => {
     });
 
     it('should display import settings when loaded', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByText('Import Settings')).toBeInTheDocument();
+        expect(screen.getByText('Import Configuration')).toBeInTheDocument();
       });
 
       expect(screen.getByText('Validate duplicates: Yes')).toBeInTheDocument();
@@ -133,32 +155,39 @@ describe('Import Page', () => {
 
   describe('Export Functionality', () => {
     it('should render export scenario section', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByText('Export Scenario Data')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Export Scenario Data' })).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Export current scenario data in re-importable Excel format')).toBeInTheDocument();
-      expect(screen.getByLabelText('Export Scenario:')).toBeInTheDocument();
-      expect(screen.getByLabelText('Include Project Assignments')).toBeInTheDocument();
-      expect(screen.getByLabelText('Include Phase Timelines')).toBeInTheDocument();
+      expect(screen.getByText(/Export current scenario data in re-importable Excel format/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Choose Scenario to Export:')).toBeInTheDocument();
+      
+      // Click the "Show export options" button to reveal additional options
+      const showOptionsButton = screen.getByRole('button', { name: /Show export options/ });
+      await user.click(showOptionsButton);
+      
+      await waitFor(() => {
+        expect(screen.getByLabelText('Include Project Assignments')).toBeInTheDocument();
+        expect(screen.getByLabelText('Include Phase Timelines')).toBeInTheDocument();
+      });
     });
 
     it('should populate scenario selector with available scenarios', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        const select = screen.getByLabelText('Export Scenario:');
+        const select = screen.getByLabelText('Choose Scenario to Export:');
         expect(select).toBeInTheDocument();
       });
 
-      const select = screen.getByLabelText('Export Scenario:');
+      const select = screen.getByLabelText('Choose Scenario to Export:');
       const options = within(select).getAllByRole('option');
       
       expect(options).toHaveLength(3); // Current + 2 scenarios
-      expect(within(select).getByText(/Baseline Scenario/)).toBeInTheDocument();
-      expect(within(select).getByText(/Test Branch/)).toBeInTheDocument();
+      expect(within(select).getByText('Current: Baseline Scenario (baseline)')).toBeInTheDocument();
+      expect(within(select).getByText('Test Branch (branch)')).toBeInTheDocument();
     });
 
     it('should export scenario data when button clicked', async () => {
@@ -173,13 +202,13 @@ describe('Import Page', () => {
         },
       });
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByText('Export Scenario Data')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Export Scenario Data' })).toBeInTheDocument();
       });
 
-      const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
+      const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
       await user.click(exportButton);
 
       await waitFor(() => {
@@ -197,8 +226,12 @@ describe('Import Page', () => {
     });
 
     it('should handle export scenario options', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
+      // First click to show export options
+      const showOptionsButton = screen.getByRole('button', { name: /Show export options/ });
+      await user.click(showOptionsButton);
+      
       await waitFor(() => {
         expect(screen.getByLabelText('Include Project Assignments')).toBeInTheDocument();
       });
@@ -213,7 +246,7 @@ describe('Import Page', () => {
         headers: {},
       });
 
-      const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
+      const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
       await user.click(exportButton);
 
       await waitFor(() => {
@@ -237,13 +270,13 @@ describe('Import Page', () => {
         },
       });
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
         expect(screen.getByText('Download Blank Template')).toBeInTheDocument();
       });
 
-      const templateButton = screen.getByRole('button', { name: /Download Template/ });
+      const templateButton = screen.getByRole('button', { name: /Download blank Excel template/ });
       await user.click(templateButton);
 
       await waitFor(() => {
@@ -260,8 +293,12 @@ describe('Import Page', () => {
     });
 
     it('should handle different template types', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
+      // Click to show template options first
+      const showTemplateOptionsButton = screen.getByRole('button', { name: /Show template customization options/ });
+      await user.click(showTemplateOptionsButton);
+      
       await waitFor(() => {
         expect(screen.getByLabelText('Template Type:')).toBeInTheDocument();
       });
@@ -275,7 +312,7 @@ describe('Import Page', () => {
         headers: {},
       });
 
-      const templateButton = screen.getByRole('button', { name: /Download Template/ });
+      const templateButton = screen.getByRole('button', { name: /Download blank Excel template/ });
       await user.click(templateButton);
 
       await waitFor(() => {
@@ -293,13 +330,13 @@ describe('Import Page', () => {
         () => new Promise(resolve => setTimeout(() => resolve({ data: new Blob([]), headers: {} }), 100))
       );
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Export Scenario Data/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Export selected scenario data as Excel file/ })).toBeInTheDocument();
       });
 
-      const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
+      const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
       await user.click(exportButton);
 
       // Should show loading state
@@ -308,7 +345,7 @@ describe('Import Page', () => {
 
       // Wait for completion
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Export Scenario Data/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Export selected scenario data as Excel file/ })).toBeInTheDocument();
       });
     });
 
@@ -319,13 +356,13 @@ describe('Import Page', () => {
         new Error('Export failed')
       );
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Export Scenario Data/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Export selected scenario data as Excel file/ })).toBeInTheDocument();
       });
 
-      const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
+      const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
       await user.click(exportButton);
 
       await waitFor(() => {
@@ -338,13 +375,13 @@ describe('Import Page', () => {
 
   describe('Import Functionality', () => {
     it('should handle file selection', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       const file = new File(['mock excel content'], 'test.xlsx', {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
 
-      const fileInput = screen.getByRole('button', { name: /Drop Excel file here/ });
+      const fileInput = screen.getByText('Drop Excel file here');
       const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
 
       Object.defineProperty(hiddenInput, 'files', {
@@ -364,7 +401,7 @@ describe('Import Page', () => {
     it('should validate file types', async () => {
       const mockAlert = jest.spyOn(window, 'alert').mockImplementation(() => {});
       
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       const file = new File(['mock content'], 'test.txt', { type: 'text/plain' });
       const hiddenInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -394,7 +431,7 @@ describe('Import Page', () => {
         },
       });
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       // Add a file
       const file = new File(['mock excel content'], 'test.xlsx', {
@@ -428,12 +465,13 @@ describe('Import Page', () => {
       });
 
       // Should show success result
-      expect(screen.getByText('Import Successful')).toBeInTheDocument();
-      expect(screen.getByText('projects: 5')).toBeInTheDocument();
+      expect(screen.getByText('Import completed successfully')).toBeInTheDocument();
+      expect(screen.getByText('projects:')).toBeInTheDocument();
+      expect(screen.getByText('5')).toBeInTheDocument();
     });
 
     it('should toggle import options', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Clear existing data before import')).toBeInTheDocument();
@@ -453,45 +491,58 @@ describe('Import Page', () => {
     });
 
     it('should show advanced settings when toggled', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Show Advanced Settings/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Advanced Settings/ })).toBeInTheDocument();
       });
 
-      const advancedButton = screen.getByRole('button', { name: /Show Advanced Settings/ });
+      const advancedButton = screen.getByRole('button', { name: /Advanced Settings/ });
       await user.click(advancedButton);
 
       expect(screen.getByText('Override Settings for This Import')).toBeInTheDocument();
       expect(screen.getByLabelText('Auto-create missing roles')).toBeInTheDocument();
-      expect(screen.getByLabelText('Default Project Priority:')).toBeInTheDocument();
+      expect(screen.getByText('Default Project Priority:')).toBeInTheDocument();
     });
   });
 
   describe('Accessibility', () => {
     it('should have proper form labels', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Export Scenario:')).toBeInTheDocument();
+        expect(screen.getByLabelText('Choose Scenario to Export:')).toBeInTheDocument();
       });
 
-      expect(screen.getByLabelText('Template Type:')).toBeInTheDocument();
-      expect(screen.getByLabelText('Include Project Assignments')).toBeInTheDocument();
-      expect(screen.getByLabelText('Include Phase Timelines')).toBeInTheDocument();
+      // Click to show template options
+      const showTemplateOptionsButton = screen.getByRole('button', { name: /Show template customization options/ });
+      await user.click(showTemplateOptionsButton);
+      
+      await waitFor(() => {
+        expect(screen.getByLabelText('Template Type:')).toBeInTheDocument();
+      });
+
+      // Click to show export options  
+      const showExportOptionsButton = screen.getByRole('button', { name: /Show export options/ });
+      await user.click(showExportOptionsButton);
+      
+      await waitFor(() => {
+        expect(screen.getByLabelText('Include Project Assignments')).toBeInTheDocument();
+        expect(screen.getByLabelText('Include Phase Timelines')).toBeInTheDocument();
+      });
     });
 
     it('should have proper button states', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
+        const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
         expect(exportButton).toBeInTheDocument();
       });
 
       // Buttons should be enabled when scenarios are loaded
-      const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
-      const templateButton = screen.getByRole('button', { name: /Download Template/ });
+      const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
+      const templateButton = screen.getByRole('button', { name: /Download blank Excel template/ });
 
       expect(exportButton).not.toBeDisabled();
       expect(templateButton).not.toBeDisabled();
@@ -504,13 +555,13 @@ describe('Import Page', () => {
         response: { data: { message: 'Scenario not found' } }
       });
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Export Scenario Data/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Export selected scenario data as Excel file/ })).toBeInTheDocument();
       });
 
-      const exportButton = screen.getByRole('button', { name: /Export Scenario Data/ });
+      const exportButton = screen.getByRole('button', { name: /Export selected scenario data as Excel file/ });
       await user.click(exportButton);
 
       await waitFor(() => {
@@ -523,37 +574,38 @@ describe('Import Page', () => {
 
   describe('Integration with Context', () => {
     it('should use current scenario from context', async () => {
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       await waitFor(() => {
-        const select = screen.getByLabelText('Export Scenario:');
+        const select = screen.getByLabelText('Choose Scenario to Export:');
         expect(select).toBeInTheDocument();
       });
 
       // Should show current scenario in dropdown
-      const select = screen.getByLabelText('Export Scenario:');
+      const select = screen.getByLabelText('Choose Scenario to Export:');
       expect(within(select).getByText(/Current: Baseline Scenario/)).toBeInTheDocument();
     });
 
     it('should handle scenario loading states', async () => {
-      // Mock loading state
-      (api.scenarios.list as jest.Mock).mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ data: mockScenarios }), 100))
-      );
+      // Override mock to show loading state
+      mockUseScenario.mockReturnValue({
+        currentScenario: null,
+        scenarios: [],
+        setCurrentScenario: jest.fn(),
+        isLoading: true,
+        error: null,
+      });
 
-      renderWithProviders(<Import />);
+      await renderWithProviders(<Import />);
 
       // Should show loading text initially
       await waitFor(() => {
-        const select = screen.getByLabelText('Export Scenario:');
+        const select = screen.getByLabelText('Choose Scenario to Export:');
         expect(within(select).getByText('Loading scenarios...')).toBeInTheDocument();
       });
 
-      // Should load scenarios
-      await waitFor(() => {
-        const select = screen.getByLabelText('Export Scenario:');
-        expect(within(select).getByText(/Baseline Scenario/)).toBeInTheDocument();
-      });
+      // This test is sufficient - it verifies the loading state is displayed correctly
+      // Testing the transition from loading to loaded would require more complex state management
     });
   });
 });

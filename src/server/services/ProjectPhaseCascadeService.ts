@@ -141,6 +141,62 @@ export class ProjectPhaseCascadeService {
   }
 
   /**
+   * Update project phases and handle cascading effects
+   * This method is used by tests to verify audit functionality
+   */
+  async updateProjectPhases(projectId: string, phaseUpdates: Array<{
+    phase_id: string;
+    start_date: Date;
+    end_date: Date;
+  }>): Promise<void> {
+    const trx = await this.db.transaction();
+    
+    try {
+      for (const update of phaseUpdates) {
+        // Update the phase timeline
+        await trx('project_phases_timeline')
+          .where('project_id', projectId)
+          .where('phase_id', update.phase_id)
+          .update({
+            start_date: this.formatDateSafe(update.start_date),
+            end_date: this.formatDateSafe(update.end_date),
+            updated_at: new Date().toISOString()
+          });
+
+        // Calculate and apply cascading effects
+        const cascadeResult = await this.calculateCascade(
+          projectId,
+          update.phase_id,
+          update.start_date,
+          update.end_date
+        );
+        
+        if (cascadeResult.validation_errors && cascadeResult.validation_errors.length > 0) {
+          throw new Error(`Phase update validation failed: ${cascadeResult.validation_errors.join(', ')}`);
+        }
+
+        // Apply cascade changes
+        if (cascadeResult.affected_phases.length > 0) {
+          for (const change of cascadeResult.affected_phases) {
+            await trx('project_phases_timeline')
+              .where('id', change.phase_timeline_id)
+              .update({
+                start_date: change.new_start_date,
+                end_date: change.new_end_date,
+                updated_at: new Date().toISOString()
+              });
+          }
+        }
+      }
+      
+      await trx.commit();
+    } catch (error) {
+      await trx.rollback();
+      throw error;
+    }
+  }
+
+  /**
    * Build a dependency graph for the project
    */
   private async buildDependencyGraph(projectId: string): Promise<Map<string, DependencyNode>> {

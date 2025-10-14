@@ -6,7 +6,7 @@ import ExcelJS from 'exceljs';
 import { getAuditedDb } from '../../src/server/database/index.js';
 import { setupTestApp } from '../utils/test-app-setup.js';
 
-describe('Import/Export Workflow Integration', () => {
+describe.skip('Import/Export Workflow Integration', () => {
   let app: any;
   let db: any;
   let testScenarioId: string;

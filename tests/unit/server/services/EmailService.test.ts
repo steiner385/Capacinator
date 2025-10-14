@@ -37,7 +37,8 @@ const mockDb = jest.fn(() => createMockQuery()) as any;
 mockDb.fn = { now: jest.fn() };
 
 jest.mock('../../../../src/server/database/index', () => ({
-  db: mockDb
+  db: mockDb,
+  getAuditedDb: jest.fn(() => mockDb)
 }));
 
 // Mock nodemailer before importing EmailService

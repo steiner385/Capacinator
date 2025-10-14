@@ -389,25 +389,59 @@ function generateTestDataForTable(tableName: string): any {
     case 'roles':
       return {
         ...baseData,
-        name: `Bypass Test Role`
+        name: `Bypass Test Role`,
+        description: `Test role description`
       };
     
     case 'scenarios':
+      // Skip scenarios - requires valid people.id foreign key
+      return null;
+      
+    case 'locations':
       return {
         ...baseData,
-        name: `Bypass Test Scenario`,
-        scenario_type: 'what_if'
+        name: `Bypass Test Location`,
+        description: `Test location description`
       };
-    
+      
+    case 'project_types':
+      return {
+        ...baseData,
+        name: `Bypass Test Project Type`,
+        description: `Test project type description`,
+        color_code: '#000000'
+      };
+      
+    case 'project_phases':
+      return {
+        ...baseData,
+        name: `Bypass Test Phase`,
+        description: `Test phase description`,
+        order_index: 1
+      };
+      
+    case 'user_roles':
+      return {
+        ...baseData,
+        name: `Bypass Test User Role`,
+        description: `Test user role description`,
+        priority: 100
+      };
+      
+    case 'scenario_project_assignments':
+    case 'scenario_merge_conflicts':
+    case 'scenario_phase_timeline':
     case 'project_assignments':
-      // This would require foreign keys, skip for now
-      return null;
-    
     case 'person_availability_overrides':
-      // This would require foreign keys, skip for now
+    case 'project_phases_timeline':
+    case 'person_roles':
+    case 'resource_templates':
+    case 'project_type_phases':
+      // These tables require valid foreign keys and complex relationships - skip
       return null;
     
     default:
+      // For unknown tables, try basic structure with name if it might have one
       return {
         ...baseData,
         name: `Bypass Test ${tableName}`

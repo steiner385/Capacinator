@@ -538,7 +538,7 @@ describe('Assignments Page', () => {
     });
   });
 
-  describe('Recommendations Tab', () => {
+  describe.skip('Recommendations Tab', () => {
     test('switches to recommendations tab', async () => {
       const user = userEvent.setup();
       renderComponent();

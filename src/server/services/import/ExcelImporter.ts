@@ -934,9 +934,10 @@ export class ExcelImporter {
     }
 
     // Start database transaction
-    const trx = await this.db.transaction();
+    let trx;
     
     try {
+      trx = await this.db.transaction();
       // Temporarily override database connection to use transaction
       const originalDb = this.db;
       this.db = trx;
@@ -1021,7 +1022,9 @@ export class ExcelImporter {
       this.db = originalDb;
 
     } catch (error) {
-      await trx.rollback();
+      if (trx) {
+        await trx.rollback();
+      }
       result.errors.push(`Import failed and rolled back: ${error instanceof Error ? error.message : 'Unknown error'}`);
       result.success = false;
     }

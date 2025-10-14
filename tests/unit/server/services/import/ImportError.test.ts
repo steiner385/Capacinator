@@ -545,7 +545,7 @@ describe('ImportError', () => {
         expect(error.severity).toBe('medium');
         expect(error.category).toBe('reference');
         expect(error.currentValue).toBe('John Doe');
-        expect(error.message).toContain('Person \\'John Doe\\' not found');
+        expect(error.message).toContain("Person 'John Doe' not found");
         expect(error.suggestion).toContain('exists or will be created');
       });
     });
@@ -581,6 +581,8 @@ describe('ImportError', () => {
     });
 
     it('should track row processing', () => {
+      // Set total operations so progress can be calculated
+      tracker.setTotalOperations(10);
       tracker.updateRowProgress('Projects', 5, 10);
       
       expect(mockCallback.onRowProcessed).toHaveBeenCalledWith('Projects', 5, 10);
@@ -590,17 +592,21 @@ describe('ImportError', () => {
     it('should calculate time estimates', () => {
       tracker.setTotalOperations(4);
       
-      // Simulate some progress
-      tracker.completeOperation();
-      tracker.completeOperation();
+      // Simulate some progress with operation names to trigger updateProgress
+      tracker.completeOperation('First operation');
+      tracker.completeOperation('Second operation');
       
       // Should have called onEstimate with remaining time
       expect(mockCallback.onEstimate).toHaveBeenCalled();
     });
 
-    it('should provide accurate statistics', () => {
+    it('should provide accurate statistics', async () => {
       tracker.setTotalOperations(10);
       tracker.startPhase(ImportPhase.PROJECTS, 'Test phase');
+      
+      // Add a small delay to ensure elapsedMs > 0
+      await new Promise(resolve => setTimeout(resolve, 1));
+      
       tracker.completeOperation();
       tracker.completeOperation();
       

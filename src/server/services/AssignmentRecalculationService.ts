@@ -414,4 +414,11 @@ export class AssignmentRecalculationService {
       conflicts: [...phaseResults.conflicts, ...projectResults.conflicts]
     };
   }
+
+  /**
+   * Alias for recalculateAllProjectAssignments - used by test
+   */
+  async recalculateAssignments(projectId: string): Promise<AssignmentRecalculationResult> {
+    return this.recalculateAllProjectAssignments(projectId);
+  }
 }

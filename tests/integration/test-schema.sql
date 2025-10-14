@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS project_phase_dependencies (
 CREATE TABLE IF NOT EXISTS roles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  external_id TEXT,
+  description TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -128,15 +130,17 @@ CREATE TABLE IF NOT EXISTS audit_log (
   table_name TEXT NOT NULL,
   record_id TEXT NOT NULL,
   action TEXT NOT NULL,
-  changed_by TEXT,
-  changed_at TEXT NOT NULL,
   old_values TEXT,
   new_values TEXT,
   changed_fields TEXT,
+  changed_by TEXT,
+  changed_at TEXT NOT NULL,
   request_id TEXT,
   ip_address TEXT,
   user_agent TEXT,
-  comment TEXT
+  comment TEXT,
+  parent_id TEXT,
+  is_undo INTEGER DEFAULT 0
 );
 
 -- Scenarios table

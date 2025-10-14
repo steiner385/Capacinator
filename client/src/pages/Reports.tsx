@@ -79,6 +79,7 @@ const reportTabs = [
 export default function Reports() {
   const { currentScenario } = useScenario();
   const [filters, setFilters] = useState<ReportFilters>(getDefaultReportDateRange());
+  const [activeReport, setActiveReport] = useState<string>('demand');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showReduceLoadModal, setShowReduceLoadModal] = useState(false);
   const [showAddProjectsModal, setShowAddProjectsModal] = useState(false);
@@ -450,6 +451,11 @@ export default function Reports() {
       });
       setShowAddProjectsModal(true);
     }
+  };
+
+  // Tab helpers
+  const isActiveTab = (tabId: string) => {
+    return activeReport === tabId;
   };
 
   // Export handlers
