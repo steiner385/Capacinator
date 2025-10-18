@@ -5,8 +5,9 @@ import { AuditContext } from '../../database/AuditedDatabase.js';
 export abstract class AuditedBaseController {
   protected auditedDb: any;
 
-  constructor() {
-    this.auditedDb = getAuditedDb();
+  constructor(auditedDb?: any) {
+    // Allow dependency injection for testing, otherwise get the default instance
+    this.auditedDb = auditedDb || getAuditedDb();
   }
 
   // Get database instance with audit context from request
@@ -21,9 +22,8 @@ export abstract class AuditedBaseController {
       };
 
       // Set audit context on the database instance
-      const auditedInstance = getAuditedDb();
-      auditedInstance.setDefaultContext(auditContext);
-      return auditedInstance;
+      this.auditedDb.setDefaultContext(auditContext);
+      return this.auditedDb;
     }
 
     return this.auditedDb;
