@@ -116,9 +116,11 @@ ALTER TABLE project_assignments_new RENAME TO project_assignments;
 ALTER TABLE people ADD COLUMN default_hours_per_day REAL DEFAULT 8;
 ALTER TABLE people ADD COLUMN worker_type TEXT DEFAULT 'employee';
 ALTER TABLE people ADD COLUMN password TEXT;
+ALTER TABLE people ADD COLUMN location_id TEXT;
 
--- Person roles table
-CREATE TABLE IF NOT EXISTS person_roles (
+-- Person roles table - drop and recreate to add id and timestamps
+DROP TABLE IF EXISTS person_roles;
+CREATE TABLE person_roles (
   id TEXT PRIMARY KEY,
   person_id TEXT NOT NULL,
   role_id TEXT NOT NULL,
@@ -154,8 +156,48 @@ CREATE TABLE IF NOT EXISTS scenarios (
   status TEXT DEFAULT 'active',
   description TEXT,
   created_by TEXT,
+  branch_point TEXT,
+  scenario_type TEXT DEFAULT 'what-if',
+  parent_scenario_id TEXT,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (created_by) REFERENCES people(id),
+  FOREIGN KEY (parent_scenario_id) REFERENCES scenarios(id) ON DELETE SET NULL
+);
+
+-- Scenario projects table (tracks project changes in scenarios)
+CREATE TABLE IF NOT EXISTS scenario_projects (
+  id TEXT PRIMARY KEY,
+  scenario_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  name TEXT,
+  priority INTEGER,
+  notes TEXT,
+  change_type TEXT DEFAULT 'unchanged' CHECK(change_type IN ('added', 'removed', 'modified', 'unchanged')),
+  aspiration_start TEXT,
+  aspiration_finish TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+-- Scenario project phases table (tracks phase changes in scenarios)
+CREATE TABLE IF NOT EXISTS scenario_project_phases (
+  id TEXT PRIMARY KEY,
+  scenario_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  phase_id TEXT NOT NULL,
+  start_date TEXT,
+  end_date TEXT,
+  base_phase_timeline_id TEXT,
+  notes TEXT,
+  change_type TEXT DEFAULT 'unchanged' CHECK(change_type IN ('added', 'removed', 'modified', 'unchanged')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (phase_id) REFERENCES project_phases(id) ON DELETE CASCADE
 );
 
 -- Scenario project assignments table
@@ -168,8 +210,12 @@ CREATE TABLE IF NOT EXISTS scenario_project_assignments (
   phase_id TEXT,
   allocation_percentage INTEGER NOT NULL DEFAULT 100,
   assignment_date_mode TEXT DEFAULT 'fixed',
+  change_type TEXT DEFAULT 'unchanged' CHECK(change_type IN ('added', 'removed', 'modified', 'unchanged')),
   start_date TEXT,
   end_date TEXT,
+  is_billable INTEGER DEFAULT 1,
+  is_aspirational INTEGER DEFAULT 0,
+  base_assignment_id TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (scenario_id) REFERENCES scenarios(id),
@@ -212,8 +258,52 @@ CREATE INDEX IF NOT EXISTS idx_audit_changed_at ON audit_log(changed_at);
 CREATE INDEX IF NOT EXISTS idx_audit_request_id ON audit_log(request_id);
 CREATE INDEX IF NOT EXISTS idx_audit_parent_id ON audit_log(parent_id);
 
--- Add scenario_type column to scenarios table
-ALTER TABLE scenarios ADD COLUMN scenario_type TEXT DEFAULT 'what-if';
+-- Note: scenario_type and parent_scenario_id are now included in the CREATE TABLE statement above
+-- These ALTER TABLE statements are kept for backward compatibility but will be no-ops if table already has these columns
+
+-- Scenario merge conflicts table
+CREATE TABLE IF NOT EXISTS scenario_merge_conflicts (
+  id TEXT PRIMARY KEY,
+  source_scenario_id TEXT NOT NULL,
+  target_scenario_id TEXT NOT NULL,
+  conflict_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  source_data TEXT,
+  target_data TEXT,
+  resolution TEXT DEFAULT 'pending',
+  resolved_data TEXT,
+  resolved_by TEXT,
+  resolved_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (source_scenario_id) REFERENCES scenarios(id),
+  FOREIGN KEY (target_scenario_id) REFERENCES scenarios(id),
+  FOREIGN KEY (resolved_by) REFERENCES people(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_merge_conflicts_source ON scenario_merge_conflicts(source_scenario_id);
+CREATE INDEX IF NOT EXISTS idx_merge_conflicts_target ON scenario_merge_conflicts(target_scenario_id);
+CREATE INDEX IF NOT EXISTS idx_merge_conflicts_resolution ON scenario_merge_conflicts(resolution);
+
+-- Add project_phase_dependencies table
+CREATE TABLE IF NOT EXISTS project_phase_dependencies (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  predecessor_phase_timeline_id TEXT NOT NULL,
+  successor_phase_timeline_id TEXT NOT NULL,
+  dependency_type TEXT NOT NULL DEFAULT 'FS' CHECK(dependency_type IN ('FS', 'SS', 'FF', 'SF')),
+  lag_days INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (predecessor_phase_timeline_id) REFERENCES project_phases_timeline(id) ON DELETE CASCADE,
+  FOREIGN KEY (successor_phase_timeline_id) REFERENCES project_phases_timeline(id) ON DELETE CASCADE,
+  UNIQUE(predecessor_phase_timeline_id, successor_phase_timeline_id)
+);
+
+-- Add indexes for project_phase_dependencies
+CREATE INDEX IF NOT EXISTS idx_phase_dependencies_project ON project_phase_dependencies(project_id);
+CREATE INDEX IF NOT EXISTS idx_phase_dependencies_predecessor ON project_phase_dependencies(predecessor_phase_timeline_id);
+CREATE INDEX IF NOT EXISTS idx_phase_dependencies_successor ON project_phase_dependencies(successor_phase_timeline_id);
 
 -- Add resource_templates table needed for views
 CREATE TABLE IF NOT EXISTS resource_templates (
@@ -241,6 +331,45 @@ CREATE TABLE IF NOT EXISTS person_availability_overrides (
   updated_at TEXT NOT NULL,
   FOREIGN KEY (person_id) REFERENCES people(id)
 );
+
+-- Add scenario_assignments_view for scenario queries
+CREATE VIEW IF NOT EXISTS scenario_assignments_view AS
+SELECT
+  spa.id,
+  spa.scenario_id,
+  spa.project_id,
+  spa.person_id,
+  spa.role_id,
+  spa.phase_id,
+  spa.allocation_percentage,
+  spa.assignment_date_mode,
+  spa.change_type,
+  spa.start_date,
+  spa.end_date,
+  p.name as person_name,
+  r.name as role_name,
+  proj.name as project_name,
+  -- Compute start and end dates based on assignment mode
+  CASE
+    WHEN spa.assignment_date_mode = 'fixed' THEN spa.start_date
+    WHEN spa.assignment_date_mode = 'project' THEN COALESCE(sp.aspiration_start, proj.aspiration_start)
+    WHEN spa.assignment_date_mode = 'phase' THEN sph.start_date
+    ELSE spa.start_date
+  END as computed_start_date,
+  CASE
+    WHEN spa.assignment_date_mode = 'fixed' THEN spa.end_date
+    WHEN spa.assignment_date_mode = 'project' THEN COALESCE(sp.aspiration_finish, proj.aspiration_finish)
+    WHEN spa.assignment_date_mode = 'phase' THEN sph.end_date
+    ELSE spa.end_date
+  END as computed_end_date,
+  spa.created_at,
+  spa.updated_at
+FROM scenario_project_assignments spa
+INNER JOIN people p ON spa.person_id = p.id
+INNER JOIN roles r ON spa.role_id = r.id
+INNER JOIN projects proj ON spa.project_id = proj.id
+LEFT JOIN scenario_projects sp ON spa.scenario_id = sp.scenario_id AND spa.project_id = sp.project_id
+LEFT JOIN scenario_project_phases sph ON spa.scenario_id = sph.scenario_id AND spa.phase_id = sph.phase_id AND spa.project_id = sph.project_id;
 
 -- Add capacity_gaps_view for ReportingController tests
 CREATE VIEW IF NOT EXISTS capacity_gaps_view AS

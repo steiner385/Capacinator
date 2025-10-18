@@ -233,9 +233,9 @@ const SimpleBrushControl = ({
           transform: 'translateX(-50%)',
           whiteSpace: 'nowrap'
         }}>
-          {formatDate(dailyData[brushStart]?.date || '')}
+          {dailyData[brushStart]?.date ? formatDate(dailyData[brushStart].date) : 'N/A'}
         </div>
-        
+
         <div style={{
           position: 'absolute',
           top: '5px',
@@ -245,7 +245,7 @@ const SimpleBrushControl = ({
           transform: 'translateX(-50%)',
           whiteSpace: 'nowrap'
         }}>
-          {formatDate(dailyData[brushEnd]?.date || '')}
+          {dailyData[brushEnd]?.date ? formatDate(dailyData[brushEnd].date) : 'N/A'}
         </div>
       </div>
     </div>
@@ -266,6 +266,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const currentView = activeTab as ChartView;
   const [brushStart, setBrushStart] = useState<number>(0);
   const [brushEnd, setBrushEnd] = useState<number>(0);
+  const [brushInitialized, setBrushInitialized] = useState<boolean>(false);
   const [sharedViewport, setSharedViewport] = useState<TimelineViewport | null>(null);
   
   const { data: apiResponse, isLoading, error } = useQuery({
@@ -356,9 +357,21 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       ]) : [];
     
     const allProjectDates = [...allDates, ...demandDates, ...assignmentDates];
+
+    // Guard against empty date arrays
+    if (allProjectDates.length === 0) {
+      return {
+        demandData: [],
+        capacityData: [],
+        gapsData: [],
+        phases: [],
+        dateRange: { start: new Date(), end: new Date() }
+      };
+    }
+
     const minDate = new Date(Math.min(...allProjectDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allProjectDates.map(d => d.getTime())));
-    
+
     console.log('🗓️ Complete project date range:', { 
       minDate: minDate.toISOString().split('T')[0], 
       maxDate: maxDate.toISOString().split('T')[0],
@@ -815,35 +828,59 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const handleBrushChange = React.useCallback((start: number, end: number) => {
     setBrushStart(start);
     setBrushEnd(end);
-    
+
     // Update the shared viewport to sync with phase diagram
     const currentDailyData = (
       currentView === 'demand' ? demandData :
       currentView === 'capacity' ? capacityData :
       gapsData
     );
-    
+
     if (currentDailyData.length > 0 && start >= 0 && end < currentDailyData.length) {
-      const startDate = new Date(currentDailyData[start].date);
-      const endDate = new Date(currentDailyData[end].date);
-      
+      const startDataPoint = currentDailyData[start];
+      const endDataPoint = currentDailyData[end];
+
+      console.log('🔄 Brush change - creating dates from:', {
+        start, end,
+        startDataPoint: startDataPoint?.date,
+        endDataPoint: endDataPoint?.date,
+        startIsString: typeof startDataPoint?.date === 'string',
+        endIsString: typeof endDataPoint?.date === 'string'
+      });
+
+      const startDate = new Date(startDataPoint.date);
+      const endDate = new Date(endDataPoint.date);
+
+      console.log('🔄 Created Date objects:', {
+        startDate,
+        endDate,
+        startDateIsDate: startDate instanceof Date,
+        endDateIsDate: endDate instanceof Date,
+        startDateValid: !isNaN(startDate.getTime()),
+        endDateValid: !isNaN(endDate.getTime()),
+        startDateISO: startDate.toISOString?.(),
+        endDateISO: endDate.toISOString?.()
+      });
+
       // Calculate pixels per day based on the selected range
       const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       const availableWidth = chartDimensions?.width || 800;
       const pixelsPerDay = Math.max(0.5, Math.min(10, availableWidth / totalDays));
-      
+
       const newViewport: TimelineViewport = {
         startDate,
         endDate,
         pixelsPerDay
       };
-      
+
       console.log('🔄 Brush change updating viewport:', {
         brushIndices: { start, end },
-        dateRange: { start: startDate.toISOString().split('T')[0], end: endDate.toISOString().split('T')[0] },
+        viewport: newViewport,
+        startDateType: typeof newViewport.startDate,
+        endDateType: typeof newViewport.endDate,
         pixelsPerDay
       });
-      
+
       setSharedViewport(newViewport);
     }
   }, [currentView, demandData, capacityData, gapsData, chartDimensions]);
@@ -881,6 +918,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   }, [currentView, demandData, capacityData, gapsData]);
 
   // Create initial viewport based on current chart data range
+  // IMPORTANT: This should match the brush selection when initialized
   const initialViewport = React.useMemo((): TimelineViewport => {
     const currentDailyData = (
       currentView === 'demand' ? demandData :
@@ -897,40 +935,135 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       };
     }
 
-    const startDate = new Date(currentDailyData[0].date);
-    const endDate = new Date(currentDailyData[currentDailyData.length - 1].date);
-    
+    // If brush is initialized, use the brush selection for viewport
+    // Otherwise use the full range (but brush will initialize soon)
+    let startIndex = 0;
+    let endIndex = currentDailyData.length - 1;
+
+    if (brushInitialized && brushStart >= 0 && brushEnd < currentDailyData.length) {
+      startIndex = brushStart;
+      endIndex = brushEnd;
+    }
+
+    const startDate = new Date(currentDailyData[startIndex].date);
+    const endDate = new Date(currentDailyData[endIndex].date);
+
     // Calculate pixels per day based on available width
     const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     const availableWidth = chartDimensions?.width || 800;
-    const pixelsPerDay = Math.max(1, availableWidth / totalDays);
+    const pixelsPerDay = Math.max(1, Math.min(10, availableWidth / totalDays));
+
+    console.log('📐 Initial viewport calculation:', {
+      brushInitialized,
+      brushStart,
+      brushEnd,
+      startIndex,
+      endIndex,
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      pixelsPerDay
+    });
 
     return {
       startDate,
       endDate,
       pixelsPerDay
     };
-  }, [currentView, demandData, capacityData, gapsData, chartDimensions]);
+  }, [currentView, demandData, capacityData, gapsData, chartDimensions, brushInitialized, brushStart, brushEnd]);
 
 
-  // Initialize brush range when data loads
+  // Synchronize sharedViewport with initialViewport when brush initializes
   React.useEffect(() => {
-    if (processedDataWithGranularity.length > 0 && brushEnd === 0) {
+    if (brushInitialized && (!sharedViewport || !sharedViewport.startDate || Object.keys(sharedViewport.startDate).length === 0)) {
+      console.log('🔄 Synchronizing sharedViewport with initialViewport after brush initialization');
+      setSharedViewport(initialViewport);
+    }
+  }, [brushInitialized, initialViewport, sharedViewport]);
+
+  // Reset brush when project changes
+  React.useEffect(() => {
+    setBrushInitialized(false);
+    setSharedViewport(null); // Also reset shared viewport
+  }, [projectId]);
+
+  // Initialize brush range when data loads - smart zoom to project duration
+  React.useEffect(() => {
+    if (processedDataWithGranularity.length > 0 && !brushInitialized) {
       // Get current daily data for initialization
       const currentDailyData = (
         currentView === 'demand' ? demandData :
         currentView === 'capacity' ? capacityData :
         gapsData
       );
-      
-      // Use daily data length for brush indices for fine granularity
-      const dailyDataLength = currentDailyData.length;
-      const initialStart = 0; // Start from the beginning to show full date range
-      const initialEnd = dailyDataLength - 1;
+
+      if (currentDailyData.length === 0) return;
+
+      // Calculate smart initial range based on actual phase dates (not assignment dates)
+      // Add minimal padding (7 days before and after) for context
+      const paddingDays = 7;
+
+      // Get min/max dates directly from phases, not from dateRange (which includes assignments)
+      const phaseDates = phases.flatMap(p => [new Date(p.start_date), new Date(p.end_date)]);
+      const phaseMinDate = phaseDates.length > 0 ? new Date(Math.min(...phaseDates.map(d => d.getTime()))) : dateRange.start;
+      const phaseMaxDate = phaseDates.length > 0 ? new Date(Math.max(...phaseDates.map(d => d.getTime()))) : dateRange.end;
+
+      let targetStartDate = new Date(phaseMinDate);
+      let targetEndDate = new Date(phaseMaxDate);
+
+      // Add padding
+      targetStartDate.setDate(targetStartDate.getDate() - paddingDays);
+      targetEndDate.setDate(targetEndDate.getDate() + paddingDays);
+
+      // Convert dates to indices in the daily data array
+      const targetStartStr = targetStartDate.toISOString().split('T')[0];
+      const targetEndStr = targetEndDate.toISOString().split('T')[0];
+
+      // Find indices that correspond to these dates
+      let initialStart = currentDailyData.findIndex(d => d.date >= targetStartStr);
+      let initialEnd = currentDailyData.findIndex(d => d.date > targetEndStr);
+
+      // Fallback to boundaries if not found
+      if (initialStart === -1) initialStart = 0;
+      if (initialEnd === -1 || initialEnd === 0) initialEnd = currentDailyData.length - 1;
+      else initialEnd = initialEnd - 1; // findIndex returns first item AFTER, so subtract 1
+
+      // Ensure we don't exceed array bounds
+      initialStart = Math.max(0, initialStart);
+      initialEnd = Math.min(currentDailyData.length - 1, initialEnd);
+
+      console.log('🎯 Smart brush initialization:', {
+        phaseDateRange: {
+          start: phaseMinDate.toISOString().split('T')[0],
+          end: phaseMaxDate.toISOString().split('T')[0]
+        },
+        fullProjectDateRange: {
+          start: dateRange.start.toISOString().split('T')[0],
+          end: dateRange.end.toISOString().split('T')[0]
+        },
+        withPadding: {
+          start: targetStartStr,
+          end: targetEndStr
+        },
+        brushIndices: { start: initialStart, end: initialEnd },
+        dailyDataRange: {
+          start: currentDailyData[0]?.date,
+          end: currentDailyData[currentDailyData.length - 1]?.date,
+          length: currentDailyData.length
+        },
+        actualBrushRange: {
+          start: currentDailyData[initialStart]?.date,
+          end: currentDailyData[initialEnd]?.date
+        }
+      });
+
       setBrushStart(initialStart);
       setBrushEnd(initialEnd);
+      setBrushInitialized(true);
+
+      // Update the viewport to match the brush selection
+      handleBrushChange(initialStart, initialEnd);
     }
-  }, [processedDataWithGranularity, brushEnd, currentView, demandData.length, capacityData.length, gapsData.length]);
+  }, [processedDataWithGranularity, brushInitialized, currentView, demandData, capacityData, gapsData, dateRange, phases, handleBrushChange]);
 
   // Measure chart dimensions for phase diagram alignment
   React.useEffect(() => {
@@ -1007,19 +1140,18 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   // Create filtered data based on brush selection
   const displayData = React.useMemo(() => {
     if (processedDataWithGranularity.length === 0) return processedDataWithGranularity;
-    
+
     // Get the current daily data to check if brush is showing full range
     const currentDailyData = (
       currentView === 'demand' ? demandData :
       currentView === 'capacity' ? capacityData :
       gapsData
     );
-    
-    // If brush is uninitialized or showing full range, return unfiltered data
-    if (brushStart === brushEnd || 
-        (brushStart === 0 && brushEnd === currentDailyData.length - 1)) {
-      console.log('🔍 Returning unfiltered data (full range or uninitialized):', {
-        brushStart, brushEnd, 
+
+    // If brush is uninitialized (both at 0), return unfiltered data
+    if (brushStart === 0 && brushEnd === 0) {
+      console.log('🔍 Returning unfiltered data (uninitialized):', {
+        brushStart, brushEnd,
         dailyDataLength: currentDailyData.length,
         returning: 'processedDataWithGranularity',
         dataStart: processedDataWithGranularity[0]?.date,
@@ -1027,7 +1159,130 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       });
       return processedDataWithGranularity;
     }
-    
+
+    if (currentDailyData.length === 0) return processedDataWithGranularity;
+
+    // CRITICAL FIX: Instead of filtering processed data, re-process the daily data
+    // with the appropriate granularity for the SELECTED range
+    const dailyStart = Math.max(0, Math.min(brushStart, brushEnd));
+    const dailyEnd = Math.min(currentDailyData.length - 1, Math.max(brushStart, brushEnd));
+
+    // Get the filtered daily data first
+    const filteredDailyData = currentDailyData.slice(dailyStart, dailyEnd + 1);
+
+    if (filteredDailyData.length === 0) return [];
+
+    // Calculate appropriate granularity for the FILTERED range
+    const rangeStartDate = new Date(filteredDailyData[0].date);
+    const rangeEndDate = new Date(filteredDailyData[filteredDailyData.length - 1].date);
+    const startMonth = rangeStartDate.getFullYear() + '-' + (rangeStartDate.getMonth() + 1).toString().padStart(2, '0');
+    const endMonth = rangeEndDate.getFullYear() + '-' + (rangeEndDate.getMonth() + 1).toString().padStart(2, '0');
+    const appropriateGranularity = getGranularity(startMonth, endMonth);
+
+    console.log('📊 Display data granularity recalculation:', {
+      brushRange: { start: dailyStart, end: dailyEnd },
+      dateRange: {
+        start: filteredDailyData[0].date,
+        end: filteredDailyData[filteredDailyData.length - 1].date
+      },
+      originalGranularity: processedDataWithGranularity[0]?.granularity,
+      appropriateGranularity,
+      filteredDailyDataLength: filteredDailyData.length
+    });
+
+    // If daily is appropriate, return filtered daily data
+    if (appropriateGranularity === 'daily') {
+      const result = filteredDailyData.map(d => ({ ...d, granularity: 'daily' }));
+      console.log('✅ Returning daily filtered data:', {
+        length: result.length,
+        start: result[0]?.date,
+        end: result[result.length - 1]?.date,
+        sampleData: result.slice(0, 2),
+        allRolesFound: allRoles,
+        firstItemRoles: allRoles.map(role => ({ role, value: result[0]?.[role] }))
+      });
+      return result;
+    }
+
+    // Otherwise, aggregate the filtered daily data with the appropriate granularity
+    const datePoints = generateDatePointsWithActualEnd(rangeStartDate, rangeEndDate, appropriateGranularity);
+
+    const processedFiltered = datePoints.map(datePoint => {
+      let periodStart: Date;
+      let periodEnd: Date;
+      let displayDate: string;
+
+      if (appropriateGranularity === 'weekly') {
+        const pointDate = new Date(datePoint);
+        periodStart = new Date(pointDate);
+        periodEnd = new Date(pointDate);
+        periodEnd.setDate(periodEnd.getDate() + 6);
+
+        if (periodEnd > rangeEndDate) {
+          periodEnd = new Date(rangeEndDate);
+          displayDate = periodEnd.toISOString().split('T')[0];
+        } else {
+          displayDate = datePoint;
+        }
+      } else if (appropriateGranularity === 'monthly') {
+        const [year, monthNum] = datePoint.split('-').map(Number);
+        periodStart = new Date(year, monthNum - 1, 1);
+        periodEnd = new Date(year, monthNum, 0);
+        displayDate = datePoint;
+      } else { // quarterly
+        const [year, monthNum] = datePoint.split('-').map(Number);
+        periodStart = new Date(year, monthNum - 1, 1);
+        periodEnd = new Date(year, monthNum - 1 + 3, 0);
+        displayDate = datePoint;
+      }
+
+      const periodData: ChartDataPoint = {
+        date: displayDate,
+        timestamp: periodStart.getTime(),
+        granularity: appropriateGranularity
+      };
+
+      allRoles.forEach(role => {
+        const relevantDays = filteredDailyData.filter(d => {
+          const dayDate = new Date(d.date);
+          return dayDate >= periodStart && dayDate <= periodEnd;
+        });
+
+        if (relevantDays.length > 0) {
+          const totalValue = relevantDays.reduce((sum, day) => sum + (day[role] || 0), 0);
+          periodData[role] = totalValue / relevantDays.length;
+        } else {
+          periodData[role] = 0;
+        }
+      });
+
+      return periodData;
+    });
+
+    console.log('✅ Returning reprocessed filtered data:', {
+      length: processedFiltered.length,
+      start: processedFiltered[0]?.date,
+      end: processedFiltered[processedFiltered.length - 1]?.date,
+      granularity: appropriateGranularity,
+      sampleData: processedFiltered.slice(0, 2),
+      allRolesFound: allRoles,
+      firstItemKeys: Object.keys(processedFiltered[0] || {})
+    });
+
+    return processedFiltered;
+  }, [processedDataWithGranularity, brushStart, brushEnd, currentView, demandData, capacityData, gapsData, allRoles, getGranularity, generateDatePointsWithActualEnd]);
+
+  // OLD FILTERING LOGIC - REPLACED ABOVE
+  const OLD_displayData_UNUSED = React.useMemo(() => {
+    if (processedDataWithGranularity.length === 0) return processedDataWithGranularity;
+
+    // Get the current daily data to check if brush is showing full range
+    const currentDailyData = (
+      currentView === 'demand' ? demandData :
+      currentView === 'capacity' ? capacityData :
+      gapsData
+    );
+
     if (currentDailyData.length === 0) return processedDataWithGranularity;
     
     // Map daily brush indices to processed data date range
@@ -1040,35 +1295,64 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     if (!startDate || !endDate) return processedDataWithGranularity;
     
     // Filter processed data by date range with granularity-aware filtering
-    const filtered = processedDataWithGranularity.filter(dataPoint => {
+    const filtered = processedDataWithGranularity.filter((dataPoint, idx) => {
       const pointDate = dataPoint.date;
       const granularity = dataPoint.granularity || 'daily';
-      
+
       // For non-daily granularity, be more inclusive in filtering
       if (granularity === 'weekly') {
         // Include if the week overlaps with our date range
         const weekStart = new Date(pointDate);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
-        
+
         const rangeStart = new Date(startDate);
         const rangeEnd = new Date(endDate);
-        
+
+        const overlaps = weekStart <= rangeEnd && weekEnd >= rangeStart;
+
+        // Log first few items to debug
+        if (idx < 5) {
+          console.log(`🔎 Filter check [${idx}]:`, {
+            pointDate,
+            weekStart: weekStart.toISOString().split('T')[0],
+            weekEnd: weekEnd.toISOString().split('T')[0],
+            rangeStart: rangeStart.toISOString().split('T')[0],
+            rangeEnd: rangeEnd.toISOString().split('T')[0],
+            overlaps,
+            checks: {
+              'weekStart <= rangeEnd': weekStart <= rangeEnd,
+              'weekEnd >= rangeStart': weekEnd >= rangeStart
+            }
+          });
+        }
+
         // Include if week overlaps with range
-        return weekStart <= rangeEnd && weekEnd >= rangeStart;
+        return overlaps;
       } else if (granularity === 'monthly') {
         // Include if the month overlaps with our date range
         const [year, month] = pointDate.split('-').map(Number);
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0);
-        
+
         const rangeStart = new Date(startDate);
         const rangeEnd = new Date(endDate);
-        
+
         // Include if month overlaps with range
         return monthStart <= rangeEnd && monthEnd >= rangeStart;
+      } else if (granularity === 'quarterly') {
+        // Include if the quarter overlaps with our date range
+        const [year, month] = pointDate.split('-').map(Number);
+        const quarterStart = new Date(year, month - 1, 1);
+        const quarterEnd = new Date(year, month - 1 + 3, 0); // 3 months later, last day
+
+        const rangeStart = new Date(startDate);
+        const rangeEnd = new Date(endDate);
+
+        // Include if quarter overlaps with range
+        return quarterStart <= rangeEnd && quarterEnd >= rangeStart;
       } else {
-        // Daily or quarterly - use exact date filtering
+        // Daily - use exact date filtering
         return pointDate >= startDate && pointDate <= endDate;
       }
     });
@@ -1087,9 +1371,13 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       sampleProcessedDates: processedDataWithGranularity.slice(0, 3).map(d => d.date),
       sampleFilteredDates: filtered.slice(-3).map(d => d.date),
       processedStart: processedDataWithGranularity[0]?.date,
-      processedEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date
+      processedEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date,
+      ALL_FILTERED_DATES: filtered.map(d => d.date),
+      filteredDataSample: filtered.length > 0 ? filtered[0] : 'no data'
     });
-    
+
+    console.log('❗ CRITICAL: Returning filtered data with', filtered.length, 'items. First item:', filtered[0]);
+
     return filtered;
   }, [processedDataWithGranularity, brushStart, brushEnd, currentView, demandData, capacityData, gapsData]);
 

@@ -212,31 +212,45 @@ export default function Assignments() {
       render: (value, row) => {
         const startDate = row.computed_start_date || row.start_date;
         const endDate = row.computed_end_date || row.end_date;
-        const modeLabel = row.assignment_date_mode === 'phase' ? 'Phase' : 
+        const modeLabel = row.assignment_date_mode === 'phase' ? 'Phase' :
                          row.assignment_date_mode === 'project' ? 'Project' : 'Fixed';
-        
+
         return (
-          <div className="project-info">
-            <span className="project-name">
-              {value}
+          <div className="project-info" style={{ minWidth: '200px' }}>
+            <div className="project-name" style={{
+              fontWeight: '500',
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}>
+              <span>{value}</span>
               {row.assignment_type === 'scenario' && (
                 <span className="scenario-badge" style={{
-                  marginLeft: '8px',
                   padding: '2px 6px',
                   fontSize: '10px',
                   borderRadius: '4px',
                   backgroundColor: 'var(--primary-light)',
                   color: 'var(--primary-dark)',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  whiteSpace: 'nowrap'
                 }}>
                   {row.scenario_name || 'Scenario'}
                 </span>
               )}
-            </span>
-            <span className="text-xs text-muted">
-              {formatDate(startDate)} - {formatDate(endDate)}
+            </div>
+            <div style={{
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}>
+              <span>{formatDate(startDate)} - {formatDate(endDate)}</span>
               <span className="assignment-mode-badge">{modeLabel}</span>
-            </span>
+            </div>
           </div>
         );
       }
@@ -260,10 +274,10 @@ export default function Assignments() {
             });
           }}
           type="select"
-          options={roles?.map((role: Role) => ({
+          options={Array.isArray(roles) ? roles.map((role: Role) => ({
             value: role.id,
             label: role.name
-          })) || []}
+          })) : []}
           renderValue={() => value}
         />
       )
@@ -272,59 +286,97 @@ export default function Assignments() {
       key: 'allocation_percentage',
       header: 'Allocation',
       sortable: true,
-      render: (value, row) => (
-        <div className="allocation-cell" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <input
-            type="number"
-            defaultValue={value}
-            onChange={(e) => {
-              const newValue = Number(e.target.value);
-              // Validate range
-              if (newValue < 0) e.target.value = '0';
-              if (newValue > 100) e.target.value = '100';
-            }}
-            onBlur={(e) => {
-              const newValue = Number(e.target.value);
-              if (newValue !== value && newValue >= 0 && newValue <= 100) {
-                updateAssignmentMutation.mutate({
-                  id: row.id,
-                  data: { allocation_percentage: newValue }
-                });
-              }
-              e.target.style.borderColor = 'transparent';
-              e.target.style.background = 'transparent';
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur();
-              } else if (e.key === 'Escape') {
-                e.currentTarget.value = value.toString();
-                e.currentTarget.blur();
-              }
-            }}
-            min={0}
-            max={100}
-            className={`inline-edit-input ${getUtilizationColor(value)}`}
-            style={{
-              width: '60px',
-              padding: '4px 8px',
-              border: '1px solid transparent',
-              borderRadius: '4px',
-              background: 'transparent',
-              textAlign: 'center',
-              transition: 'all 0.2s',
-              cursor: 'pointer'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'var(--primary-color)';
-              e.target.style.background = 'var(--bg-secondary)';
-              e.target.select();
-            }}
-          />
-          <span>%</span>
-          {getUtilizationIcon(value)}
-        </div>
-      )
+      render: (value, row) => {
+        const getBadgeStyle = (percentage: number) => {
+          if (percentage > 100) {
+            return {
+              backgroundColor: 'var(--danger)',
+              color: 'white',
+              border: '1px solid var(--danger)'
+            };
+          } else if (percentage >= 80) {
+            return {
+              backgroundColor: 'var(--warning)',
+              color: 'white',
+              border: '1px solid var(--warning)'
+            };
+          } else {
+            return {
+              backgroundColor: 'var(--success)',
+              color: 'white',
+              border: '1px solid var(--success)'
+            };
+          }
+        };
+
+        return (
+          <div className="allocation-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontWeight: '600',
+              fontSize: '0.875rem',
+              minWidth: '80px',
+              justifyContent: 'center',
+              ...getBadgeStyle(value)
+            }}>
+              <input
+                type="number"
+                defaultValue={value}
+                onChange={(e) => {
+                  const newValue = Number(e.target.value);
+                  if (newValue < 0) e.target.value = '0';
+                  if (newValue > 200) e.target.value = '200';
+                }}
+                onBlur={(e) => {
+                  const newValue = Number(e.target.value);
+                  if (newValue !== value && newValue >= 0 && newValue <= 200) {
+                    updateAssignmentMutation.mutate({
+                      id: row.id,
+                      data: { allocation_percentage: newValue }
+                    });
+                  }
+                  e.target.style.borderColor = 'transparent';
+                  e.target.style.background = 'transparent';
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                  } else if (e.key === 'Escape') {
+                    e.currentTarget.value = value.toString();
+                    e.currentTarget.blur();
+                  }
+                }}
+                min={0}
+                max={200}
+                className="inline-edit-input"
+                style={{
+                  width: '45px',
+                  padding: '0',
+                  border: 'none',
+                  borderRadius: '4px',
+                  background: 'transparent',
+                  textAlign: 'center',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  fontWeight: 'inherit',
+                  fontSize: 'inherit'
+                }}
+                onFocus={(e) => {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                  e.target.select();
+                }}
+              />
+              <span>%</span>
+            </div>
+            {value > 100 && <AlertTriangle size={16} style={{ color: 'var(--danger)' }} />}
+          </div>
+        );
+      }
     },
     {
       key: 'start_date',

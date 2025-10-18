@@ -381,7 +381,7 @@ describe('AssignmentsController Integration Tests', () => {
         .where('person_id', testData.person_id)
         .update({
           availability_percentage: 0,
-          override_type: 'unavailable',
+          override_type: 'UNAVAILABLE',
           updated_at: new Date()
         });
 

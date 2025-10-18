@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { X, GitMerge, AlertTriangle, CheckCircle, ArrowRight, RefreshCw, Eye } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { Scenario } from '../../types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import './ScenarioMergeModal.css';
 
 interface MergeConflict {
@@ -138,77 +147,81 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
   };
 
   const renderSetupStep = () => (
-    <div className="merge-setup">
-      <div className="merge-info">
-        <h3>
+    <div className="p-6">
+      <div className="mb-8">
+        <h3 className="flex items-center gap-2 text-2xl font-semibold text-foreground mb-3">
           <GitMerge size={20} />
           Merge Scenario: {scenario.name}
         </h3>
-        <p className="merge-description">
-          This will merge changes from "{scenario.name}" back to its parent scenario. 
+        <p className="text-base text-muted-foreground leading-relaxed">
+          This will merge changes from "{scenario.name}" back to its parent scenario.
           All modifications, assignments, and project changes will be applied to the parent.
         </p>
       </div>
 
-      <div className="merge-strategy-selection">
-        <h4>Merge Strategy</h4>
-        <div className="strategy-options">
-          <label className={`strategy-option ${mergeStrategy === 'manual' ? 'selected' : ''}`}>
-            <input
-              type="radio"
-              value="manual"
-              checked={mergeStrategy === 'manual'}
-              onChange={(e) => setMergeStrategy(e.target.value as any)}
-            />
-            <div className="option-content">
-              <strong>Manual Resolution</strong>
-              <span>Review each conflict individually (Recommended)</span>
-            </div>
-          </label>
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">Merge Strategy</Label>
+        <RadioGroup value={mergeStrategy} onValueChange={(value) => setMergeStrategy(value as any)}>
+          <div className="space-y-3">
+            <Label
+              htmlFor="strategy-manual"
+              className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                mergeStrategy === 'manual'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              <RadioGroupItem value="manual" id="strategy-manual" className="mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">Manual Resolution</span>
+                <span className="text-sm text-muted-foreground">Review each conflict individually (Recommended)</span>
+              </div>
+            </Label>
 
-          <label className={`strategy-option ${mergeStrategy === 'use_source' ? 'selected' : ''}`}>
-            <input
-              type="radio"
-              value="use_source"
-              checked={mergeStrategy === 'use_source'}
-              onChange={(e) => setMergeStrategy(e.target.value as any)}
-            />
-            <div className="option-content">
-              <strong>Source Priority</strong>
-              <span>This scenario takes precedence over parent</span>
-            </div>
-          </label>
+            <Label
+              htmlFor="strategy-source"
+              className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                mergeStrategy === 'use_source'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              <RadioGroupItem value="use_source" id="strategy-source" className="mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">Source Priority</span>
+                <span className="text-sm text-muted-foreground">This scenario takes precedence over parent</span>
+              </div>
+            </Label>
 
-          <label className={`strategy-option ${mergeStrategy === 'use_target' ? 'selected' : ''}`}>
-            <input
-              type="radio"
-              value="use_target"
-              checked={mergeStrategy === 'use_target'}
-              onChange={(e) => setMergeStrategy(e.target.value as any)}
-            />
-            <div className="option-content">
-              <strong>Target Priority</strong>
-              <span>Parent scenario takes precedence</span>
-            </div>
-          </label>
-        </div>
+            <Label
+              htmlFor="strategy-target"
+              className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                mergeStrategy === 'use_target'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              <RadioGroupItem value="use_target" id="strategy-target" className="mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-foreground">Target Priority</span>
+                <span className="text-sm text-muted-foreground">Parent scenario takes precedence</span>
+              </div>
+            </Label>
+          </div>
+        </RadioGroup>
       </div>
 
-      <div className="merge-actions">
-        <button onClick={onClose} className="btn-secondary">
+      <div className="flex justify-between gap-3 mt-6">
+        <Button variant="outline" onClick={onClose}>
           Cancel
-        </button>
-        <button 
-          onClick={initiateMerge} 
-          disabled={loading}
-          className="btn-primary"
-        >
+        </Button>
+        <Button onClick={initiateMerge} disabled={loading}>
           {loading ? 'Analyzing...' : 'Analyze Conflicts'}
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="error-message">
+        <div className="mt-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
           {error}
         </div>
       )}
@@ -221,79 +234,87 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
     const canProceed = resolvedCount === conflicts.length;
 
     return (
-      <div className="conflict-resolution">
-        <div className="conflict-header">
-          <h3>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b">
+          <h3 className="flex items-center gap-2 text-xl font-semibold text-destructive m-0">
             <AlertTriangle size={20} />
             Resolve Merge Conflicts ({resolvedCount}/{conflicts.length})
           </h3>
-          <div className="conflict-navigation">
-            <button 
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => setCurrentConflictIndex(Math.max(0, currentConflictIndex - 1))}
               disabled={currentConflictIndex === 0}
-              className="btn-secondary btn-sm"
             >
               Previous
-            </button>
-            <span className="conflict-counter">
+            </Button>
+            <span className="text-sm text-muted-foreground font-medium px-2">
               {currentConflictIndex + 1} of {conflicts.length}
             </span>
-            <button 
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => setCurrentConflictIndex(Math.min(conflicts.length - 1, currentConflictIndex + 1))}
               disabled={currentConflictIndex === conflicts.length - 1}
-              className="btn-secondary btn-sm"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
 
         {currentConflict && (
-          <div className="conflict-detail">
-            <div className="conflict-info">
-              <h4>Conflict: {currentConflict.type.replace('_', ' ').toUpperCase()}</h4>
-              <p>{currentConflict.conflict_description}</p>
-              <div className="conflict-id">Entity ID: {currentConflict.entity_id}</div>
+          <div className="bg-muted border rounded-lg p-5 mb-6">
+            <div className="mb-5">
+              <h4 className="text-lg font-semibold text-foreground mb-2">
+                Conflict: {currentConflict.type.replace('_', ' ').toUpperCase()}
+              </h4>
+              <p className="text-muted-foreground mb-2">{currentConflict.conflict_description}</p>
+              <div className="text-xs text-muted-foreground font-mono">
+                Entity ID: {currentConflict.entity_id}
+              </div>
             </div>
 
-            <div className="conflict-comparison">
-              <div className="conflict-side">
-                <h5>Source (This Scenario)</h5>
-                <div className="conflict-data">
+            <div className="flex gap-6 mb-5">
+              <div className="flex-1 bg-background border rounded-md p-4">
+                <h5 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Source (This Scenario)
+                </h5>
+                <div className="bg-muted/50 border rounded p-3 mb-3 min-h-[100px]">
                   {renderConflictData(currentConflict.source_data)}
                 </div>
-                <button 
+                <Button
+                  variant={conflictResolutions[currentConflict.entity_id]?.resolution === 'source' ? 'default' : 'outline'}
+                  className="w-full"
                   onClick={() => resolveConflict(currentConflict.entity_id, 'source')}
-                  className={`resolution-btn ${
-                    conflictResolutions[currentConflict.entity_id]?.resolution === 'source' ? 'selected' : ''
-                  }`}
                 >
                   Use Source
-                </button>
+                </Button>
               </div>
 
-              <div className="conflict-divider">
+              <div className="flex items-center justify-center text-muted-foreground">
                 <ArrowRight size={20} />
               </div>
 
-              <div className="conflict-side">
-                <h5>Target (Parent Scenario)</h5>
-                <div className="conflict-data">
+              <div className="flex-1 bg-background border rounded-md p-4">
+                <h5 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Target (Parent Scenario)
+                </h5>
+                <div className="bg-muted/50 border rounded p-3 mb-3 min-h-[100px]">
                   {renderConflictData(currentConflict.target_data)}
                 </div>
-                <button 
+                <Button
+                  variant={conflictResolutions[currentConflict.entity_id]?.resolution === 'target' ? 'default' : 'outline'}
+                  className="w-full"
                   onClick={() => resolveConflict(currentConflict.entity_id, 'target')}
-                  className={`resolution-btn ${
-                    conflictResolutions[currentConflict.entity_id]?.resolution === 'target' ? 'selected' : ''
-                  }`}
                 >
                   Use Target
-                </button>
+                </Button>
               </div>
             </div>
 
             {conflictResolutions[currentConflict.entity_id] && (
-              <div className="resolution-status">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-950/50 p-2 rounded">
                 <CheckCircle size={16} />
                 Resolved: Using {conflictResolutions[currentConflict.entity_id].resolution} data
               </div>
@@ -301,40 +322,38 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
           </div>
         )}
 
-        <div className="conflict-actions">
-          <button onClick={() => setCurrentStep('setup')} className="btn-secondary">
+        <div className="flex justify-between gap-3 mt-6">
+          <Button variant="outline" onClick={() => setCurrentStep('setup')}>
             Back to Setup
-          </button>
-          <button 
-            onClick={proceedToPreview}
-            disabled={!canProceed}
-            className="btn-primary"
-          >
+          </Button>
+          <Button onClick={proceedToPreview} disabled={!canProceed}>
             {canProceed ? 'Preview Merge' : `Resolve ${conflicts.length - resolvedCount} more conflicts`}
-          </button>
+          </Button>
         </div>
       </div>
     );
   };
 
   const renderPreviewStep = () => (
-    <div className="merge-preview">
-      <div className="preview-header">
-        <h3>
+    <div className="p-6">
+      <div className="mb-6">
+        <h3 className="flex items-center gap-2 text-xl font-semibold text-foreground mb-2">
           <Eye size={20} />
           Merge Preview
         </h3>
-        <p>Review the changes that will be applied during the merge</p>
+        <p className="text-muted-foreground">Review the changes that will be applied during the merge</p>
       </div>
 
-      <div className="preview-content">
-        <div className="preview-section">
-          <h4>Conflict Resolutions ({Object.keys(conflictResolutions).length})</h4>
-          <div className="resolution-list">
+      <div className="flex flex-col gap-6 mb-8">
+        <div className="bg-muted border rounded-lg p-5">
+          <h4 className="text-base font-semibold text-muted-foreground mb-4">
+            Conflict Resolutions ({Object.keys(conflictResolutions).length})
+          </h4>
+          <div className="flex flex-col gap-2">
             {Object.entries(conflictResolutions).map(([entityId, resolution]) => (
-              <div key={entityId} className="resolution-item">
-                <div className="resolution-entity">{entityId}</div>
-                <div className="resolution-choice">
+              <div key={entityId} className="flex justify-between items-center p-2 bg-background border rounded">
+                <div className="font-mono text-xs text-muted-foreground">{entityId}</div>
+                <div className="text-green-600 dark:text-green-400 font-medium text-sm">
                   Using {resolution.resolution} data
                 </div>
               </div>
@@ -342,115 +361,117 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
           </div>
         </div>
 
-        <div className="preview-section">
-          <h4>Impact Summary</h4>
-          <div className="impact-list">
-            <div className="impact-item">
-              <span className="impact-label">Assignments affected:</span>
-              <span className="impact-value">{conflicts.filter(c => c.type === 'assignment').length}</span>
+        <div className="bg-muted border rounded-lg p-5">
+          <h4 className="text-base font-semibold text-muted-foreground mb-4">Impact Summary</h4>
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <span className="text-muted-foreground font-medium">Assignments affected:</span>
+              <span className="text-foreground font-semibold font-mono">
+                {conflicts.filter(c => c.type === 'assignment').length}
+              </span>
             </div>
-            <div className="impact-item">
-              <span className="impact-label">Phase timelines affected:</span>
-              <span className="impact-value">{conflicts.filter(c => c.type === 'phase_timeline').length}</span>
+            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <span className="text-muted-foreground font-medium">Phase timelines affected:</span>
+              <span className="text-foreground font-semibold font-mono">
+                {conflicts.filter(c => c.type === 'phase_timeline').length}
+              </span>
             </div>
-            <div className="impact-item">
-              <span className="impact-label">Project details affected:</span>
-              <span className="impact-value">{conflicts.filter(c => c.type === 'project_details').length}</span>
+            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <span className="text-muted-foreground font-medium">Project details affected:</span>
+              <span className="text-foreground font-semibold font-mono">
+                {conflicts.filter(c => c.type === 'project_details').length}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="preview-actions">
-        <button onClick={() => setCurrentStep('conflicts')} className="btn-secondary">
+      <div className="flex justify-between gap-3 mt-6">
+        <Button variant="outline" onClick={() => setCurrentStep('conflicts')}>
           Back to Conflicts
-        </button>
-        <button 
-          onClick={executeMerge}
-          disabled={loading}
-          className="btn-primary btn-danger"
-        >
+        </Button>
+        <Button variant="destructive" onClick={executeMerge} disabled={loading}>
           {loading ? 'Executing...' : 'Execute Merge'}
-        </button>
+        </Button>
       </div>
     </div>
   );
 
   const renderExecutingStep = () => (
-    <div className="merge-executing">
-      <div className="executing-animation">
-        <RefreshCw size={48} className="spinning" />
-        <h3>Executing Merge...</h3>
-        <p>Applying changes to parent scenario. Please wait...</p>
+    <div className="py-16 px-6 text-center">
+      <div className="flex flex-col items-center gap-4">
+        <RefreshCw size={48} className="animate-spin text-primary" />
+        <h3 className="text-2xl font-semibold text-foreground">Executing Merge...</h3>
+        <p className="text-base text-muted-foreground">Applying changes to parent scenario. Please wait...</p>
       </div>
     </div>
   );
 
   const renderCompleteStep = () => (
-    <div className="merge-complete">
-      <div className="completion-status">
-        <CheckCircle size={48} className="success-icon" />
-        <h3>Merge Completed Successfully</h3>
-        <p>All changes have been applied to the parent scenario.</p>
+    <div className="py-10 px-6 text-center">
+      <div className="mb-8">
+        <CheckCircle size={48} className="text-green-600 dark:text-green-400 mb-4 inline-block" />
+        <h3 className="text-2xl font-semibold text-foreground mb-2">Merge Completed Successfully</h3>
+        <p className="text-base text-muted-foreground">All changes have been applied to the parent scenario.</p>
       </div>
 
       {mergeResult && (
-        <div className="merge-summary">
-          <h4>Merge Summary</h4>
-          <div className="summary-details">
-            <div className="summary-item">
-              <span>Source Scenario:</span>
-              <span>{scenario.name}</span>
+        <div className="bg-primary/10 border border-primary rounded-lg p-5 mb-8 text-left">
+          <h4 className="text-base font-semibold text-primary mb-4">Merge Summary</h4>
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <span className="text-primary font-medium">Source Scenario:</span>
+              <span className="text-primary font-semibold">{scenario.name}</span>
             </div>
-            <div className="summary-item">
-              <span>Conflicts Resolved:</span>
-              <span>{Object.keys(conflictResolutions).length}</span>
+            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <span className="text-primary font-medium">Conflicts Resolved:</span>
+              <span className="text-primary font-semibold">{Object.keys(conflictResolutions).length}</span>
             </div>
-            <div className="summary-item">
-              <span>Status:</span>
-              <span className="success">Merged Successfully</span>
+            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+              <span className="text-primary font-medium">Status:</span>
+              <span className="text-green-600 dark:text-green-400 font-semibold">Merged Successfully</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="complete-actions">
-        <button onClick={onClose} className="btn-primary">
+      <div className="flex justify-center mt-6">
+        <Button onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
     </div>
   );
 
   const renderConflictData = (data: any) => {
-    if (!data) return <div className="no-data">No data</div>;
+    if (!data) return <div className="text-muted-foreground italic text-center py-5">No data</div>;
 
     return (
-      <div className="data-display">
+      <div className="flex flex-col gap-1.5">
         {Object.entries(data).map(([key, value]) => (
-          <div key={key} className="data-field">
-            <span className="field-name">{key}:</span>
-            <span className="field-value">{String(value)}</span>
+          <div key={key} className="flex gap-2 text-[13px]">
+            <span className="text-muted-foreground font-medium min-w-[120px]">{key}:</span>
+            <span className="text-foreground font-mono">{String(value)}</span>
           </div>
         ))}
       </div>
     );
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    // Give time for animation before calling onClose
+    setTimeout(() => onClose(), 200);
+  };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content scenario-merge-modal">
-        <div className="modal-header">
-          <h2>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="scenario-merge-modal max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <GitMerge size={20} />
             Scenario Merge
-          </h2>
-          <button onClick={onClose} className="modal-close">
-            <X size={20} />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
         <div className="modal-body">
           {currentStep === 'setup' && renderSetupStep()}
@@ -459,8 +480,8 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
           {currentStep === 'executing' && renderExecutingStep()}
           {currentStep === 'complete' && renderCompleteStep()}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

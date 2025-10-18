@@ -98,12 +98,15 @@ export async function createTestUser(overrides: Partial<any> = {}): Promise<any>
   // No need for legacy handling - we just use name field
   const processedOverrides = { ...overrides };
 
+  const uniqueId = overrides.id || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const user = {
-    id: overrides.id || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: uniqueId,
     name: overrides.name || 'Test User',
-    email: 'test@example.com',
-    is_active: true,
+    email: overrides.email || `test-${uniqueId}@example.com`, // Use unique email
+    is_active: 1, // SQLite uses INTEGER for booleans
+    worker_type: 'FTE', // Must be 'FTE', 'Contractor', or 'Consultant'
     default_availability_percentage: 100,
+    default_hours_per_day: 8,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...processedOverrides

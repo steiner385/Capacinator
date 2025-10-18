@@ -25,7 +25,8 @@ export function ScenarioProvider({ children }: ScenarioProviderProps) {
     queryKey: ['scenarios'],
     queryFn: async () => {
       const response = await api.scenarios.list();
-      return response.data;
+      // Handle both nested and flat response structures for backward compatibility
+      return response.data?.data || response.data || [];
     },
   });
 

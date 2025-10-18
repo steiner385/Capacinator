@@ -27,7 +27,9 @@ export default function Roles() {
         .filter(([_, value]) => value)
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       const response = await api.roles.list(params);
-      return response.data as Role[];
+      // Handle nested response structure: response.data.data
+      const rolesData = response.data?.data || response.data || [];
+      return Array.isArray(rolesData) ? rolesData : [];
     }
   });
 

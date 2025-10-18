@@ -439,22 +439,78 @@
   color: var(--text-secondary);
 }
 
+/* Report Filters - Horizontal Layout */
+.report-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.filter-group {
+  flex: 0 1 auto;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  margin-bottom: 0.25rem;
+}
+
+.filter-group input[type="date"],
+.filter-group select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.filter-group input[type="date"]:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .report-summary {
     grid-template-columns: 1fr 1fr;
   }
-  
+
   .charts-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .actionable-items-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .actions-cell {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .report-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    width: 100%;
+    min-width: unset;
   }
 }

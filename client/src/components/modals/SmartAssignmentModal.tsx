@@ -1,11 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  AlertTriangle, CheckCircle, Info, Calendar, Users, 
+import {
+  AlertTriangle, CheckCircle, Info, Calendar, Users,
   TrendingUp, Sparkles, Clock, BarChart3, Link2, RefreshCw, ExternalLink, Trash2
 } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { formatDate } from '../../utils/date';
+import { calculatePhaseDurationWeeks } from '../../utils/phaseDurations';
+import {
+  calculateRoleBasedScore,
+  calculatePriorityBasedScore,
+  calculateSuggestedAllocation
+} from '../../utils/recommendationScoring';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +22,9 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Input } from '../ui/input';
 import { cn } from '../../lib/utils';
 import './SmartAssignmentModal.css';
 
@@ -286,37 +295,19 @@ export function SmartAssignmentModal({
           
         const suggestedRole = rolesData.find((r: any) => r.id === suggestedRoleId);
         
-        // Calculate score - if no role requirements, base it on project priority
-        let score: number;
-        let fitLevel: 'excellent' | 'good' | 'partial';
-        let reason = '';
+        // Calculate score using extracted utility functions
+        const scoring = hasNoRoleRequirements
+          ? calculatePriorityBasedScore(project.priority, suggestedRole?.name)
+          : calculateRoleBasedScore(matchingRoles.length, projectRoleNeeds.size, suggestedRole?.name);
 
-        if (hasNoRoleRequirements) {
-          // For projects without role requirements, use priority to determine fit
-          score = project.priority === 1 ? 0.9 : project.priority === 2 ? 0.7 : 0.5;
-          fitLevel = project.priority === 1 ? 'excellent' : project.priority === 2 ? 'good' : 'partial';
-          reason = `Available for ${project.priority === 1 ? 'high priority' : project.priority === 2 ? 'medium priority' : 'standard'} project as ${suggestedRole?.name || 'team member'}`;
-        } else {
-          score = matchingRoles.length / Math.max(projectRoleNeeds.size, 1);
-          if (score >= 0.8) {
-            fitLevel = 'excellent';
-            reason = `Perfect match as ${suggestedRole?.name || 'team member'}`;
-          } else if (score >= 0.5) {
-            fitLevel = 'good';
-            reason = `Good fit as ${suggestedRole?.name || 'team member'}`;
-          } else if (matchingRoles.length > 0) {
-            fitLevel = 'partial';
-            reason = `Can contribute as ${suggestedRole?.name || 'team member'}`;
-          } else {
-            fitLevel = 'partial';
-            reason = `Available as ${suggestedRole?.name || 'team member'}`;
-          }
-        }
+        const score = scoring.score;
+        const fitLevel = scoring.fitLevel;
+        const reason = scoring.reason;
 
         // Suggest allocation based on remaining capacity and project priority
-        const suggestedAllocation = Math.min(
+        const suggestedAllocation = calculateSuggestedAllocation(
           utilizationData.remainingCapacity,
-          project.priority === 1 ? 60 : project.priority === 2 ? 40 : 20
+          project.priority
         );
 
         // Only add recommendation if we have a valid role
@@ -589,23 +580,11 @@ export function SmartAssignmentModal({
       const defaultStartDate = new Date(today);
       const defaultEndDate = new Date(today);
       
-      // Set default duration based on phase (you can adjust these as needed)
+      // Set default duration based on phase using extracted utility
       const selectedPhase = projectPhases?.find((phase: any) => phase.phase_id === value);
       if (selectedPhase) {
-        // Calculate a reasonable duration (e.g., 2-8 weeks depending on phase)
-        const phaseName = selectedPhase.phase_name?.toLowerCase() || '';
-        let durationWeeks = 4; // default
-        
-        if (phaseName.includes('planning') || phaseName.includes('pending')) {
-          durationWeeks = 2;
-        } else if (phaseName.includes('development')) {
-          durationWeeks = 8;
-        } else if (phaseName.includes('testing')) {
-          durationWeeks = 3;
-        } else if (phaseName.includes('cutover') || phaseName.includes('hypercare')) {
-          durationWeeks = 2;
-        }
-        
+        // Calculate duration using utility function
+        const durationWeeks = calculatePhaseDurationWeeks(selectedPhase.phase_name);
         defaultEndDate.setDate(defaultEndDate.getDate() + (durationWeeks * 7));
         
         setFormData(prev => ({
@@ -828,154 +807,90 @@ export function SmartAssignmentModal({
                 </div>
               ) : (
                 // Show add interface for adding assignments
-                <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="project-select">
-                    <span>PROJECT</span>
-                    <span style={{ color: 'hsl(var(--danger))' }}> *</span>
+                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="project-select">
+                    Project *
                     {!isLoadingAllocations && projectsWithDemand.length > 0 && projectsWithDemand.length < (projects?.data?.length || 0) && (
-                      <span style={{ 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280',
-                        fontSize: '0.75rem',
-                        fontWeight: 'normal',
-                        marginLeft: '8px'
-                      }}>
+                      <span className="text-xs text-muted-foreground font-normal ml-2">
                         ({projectsWithDemand.length} with resource needs)
                       </span>
                     )}
-                  </label>
-                  <select
-                    id="project-select"
+                  </Label>
+                  <Select
                     value={formData.project_id}
-                    onChange={(e) => handleFormChange('project_id', e.target.value)}
-                    className="modal-select"
-                    required
+                    onValueChange={(value) => handleFormChange('project_id', value)}
                     disabled={!isLoadingAllocations && projectsWithDemand.length === 0}
-                    style={{ 
-                      color: isDarkMode ? '#f9fafb' : '#1f2937',
-                      WebkitTextFillColor: isDarkMode ? '#f9fafb' : '#1f2937',
-                      opacity: !isLoadingAllocations && projectsWithDemand.length === 0 ? 0.5 : 1,
-                      fontWeight: 500,
-                      backgroundColor: isDarkMode ? '#374151' : 'white',
-                      borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
-                      padding: '0.375rem 0.5rem',
-                      fontSize: '0.875rem',
-                      borderRadius: '0.375rem',
-                      width: '100%',
-                      height: '38px',
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em',
-                      paddingRight: '2.5rem',
-                      cursor: !isLoadingAllocations && projectsWithDemand.length === 0 ? 'not-allowed' : 'pointer'
-                    }}
                   >
-                    <option value="" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                      {isLoadingAllocations
-                        ? 'Loading projects...'
-                        : projectsWithDemand.length === 0 
-                          ? 'No projects have resource needs' 
-                          : 'Select a project (with resource needs)'}
-                    </option>
-                    {projectsWithDemand.map((project: any) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="project-select">
+                      <SelectValue placeholder={
+                        isLoadingAllocations
+                          ? 'Loading projects...'
+                          : projectsWithDemand.length === 0
+                            ? 'No projects have resource needs'
+                            : 'Select a project (with resource needs)'
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectsWithDemand.map((project: any) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="role-select">
-                    <span>ROLE</span>
-                    <span style={{ color: 'hsl(var(--danger))' }}> *</span>
+                <div className="space-y-2">
+                  <Label htmlFor="role-select">
+                    Role *
                     {formData.project_id && projectRoles.length > 0 && (
-                      <span style={{ 
-                        color: isDarkMode ? '#9ca3af' : '#6b7280',
-                        fontSize: '0.75rem',
-                        fontWeight: 'normal',
-                        marginLeft: '8px'
-                      }}>
+                      <span className="text-xs text-muted-foreground font-normal ml-2">
                         ({projectRoles.length} roles needed)
                       </span>
                     )}
-                  </label>
-                  <select
-                    id="role-select"
+                  </Label>
+                  <Select
                     value={formData.role_id}
-                    onChange={(e) => handleFormChange('role_id', e.target.value)}
-                    className="modal-select"
-                    required
+                    onValueChange={(value) => handleFormChange('role_id', value)}
                     disabled={!formData.project_id || projectRoles.length === 0 || projectsWithDemand.length === 0}
-                    style={{ 
-                      color: isDarkMode ? '#f9fafb' : '#1f2937',
-                      WebkitTextFillColor: isDarkMode ? '#f9fafb' : '#1f2937',
-                      opacity: !formData.project_id || projectRoles.length === 0 ? 0.5 : 1,
-                      fontWeight: 500,
-                      backgroundColor: isDarkMode ? '#374151' : 'white',
-                      borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
-                      padding: '0.375rem 0.5rem',
-                      fontSize: '0.875rem',
-                      borderRadius: '0.375rem',
-                      width: '100%',
-                      height: '38px',
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em',
-                      paddingRight: '2.5rem',
-                      cursor: !formData.project_id || projectRoles.length === 0 ? 'not-allowed' : 'pointer'
-                    }}
                   >
-                    <option value="" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                      {formData.project_id && projectRoles.length === 0 
-                        ? 'No roles needed for this project' 
-                        : formData.project_id 
-                          ? 'Select a role (from project demands)' 
-                          : 'Select a project first'}
-                    </option>
-                    {Array.isArray(formData.project_id ? projectRoles : roles) ? (formData.project_id ? projectRoles : roles).map((role: any) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    )) : []}
-                  </select>
+                    <SelectTrigger id="role-select">
+                      <SelectValue placeholder={
+                        formData.project_id && projectRoles.length === 0
+                          ? 'No roles needed for this project'
+                          : formData.project_id
+                            ? 'Select a role (from project demands)'
+                            : 'Select a project first'
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.isArray(formData.project_id ? projectRoles : roles) && (formData.project_id ? projectRoles : roles).map((role: any) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="phase-select" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span>PHASE</span>
+                <div className="space-y-2 col-span-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="phase-select">
+                      Phase
                       {formData.role_id && filteredPhases.length > 0 && (
-                        <span style={{ 
-                          color: isDarkMode ? '#9ca3af' : '#6b7280',
-                          fontSize: '0.75rem',
-                          fontWeight: 'normal',
-                          marginLeft: '8px'
-                        }}>
+                        <span className="text-xs text-muted-foreground font-normal ml-2">
                           ({filteredPhases.length} phases with this role)
                         </span>
                       )}
-                    </div>
+                    </Label>
                     {formData.project_id && (
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => refetchPhases()}
                           title="Refresh phase dates"
-                          style={{
-                            padding: '4px',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: isDarkMode ? '#9ca3af' : '#6b7280',
-                            transition: 'color 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280'}
+                          className="p-1 text-muted-foreground hover:text-primary transition-colors"
                         >
                           <RefreshCw size={14} />
                         </button>
@@ -984,91 +899,53 @@ export function SmartAssignmentModal({
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Edit phase dates in project timeline"
-                          style={{
-                            padding: '4px',
-                            color: isDarkMode ? '#9ca3af' : '#6b7280',
-                            transition: 'color 0.2s',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = isDarkMode ? '#9ca3af' : '#6b7280'}
+                          className="p-1 text-muted-foreground hover:text-primary transition-colors flex items-center"
                         >
                           <ExternalLink size={14} />
                         </a>
                       </div>
                     )}
-                  </label>
-                  <select
-                    id="phase-select"
+                  </div>
+                  <Select
                     value={formData.phase_id}
-                    onChange={(e) => handleFormChange('phase_id', e.target.value)}
-                    className="modal-select"
+                    onValueChange={(value) => handleFormChange('phase_id', value)}
                     disabled={!formData.project_id || !formData.role_id || projectsWithDemand.length === 0}
-                    style={{ 
-                      color: isDarkMode ? '#f9fafb' : '#1f2937',
-                      WebkitTextFillColor: isDarkMode ? '#f9fafb' : '#1f2937',
-                      opacity: !formData.project_id || !formData.role_id ? 0.5 : 1,
-                      fontWeight: 500,
-                      backgroundColor: isDarkMode ? '#374151' : 'white',
-                      borderColor: isDarkMode ? '#4b5563' : '#e5e7eb',
-                      padding: '0.375rem 0.5rem',
-                      fontSize: '0.875rem',
-                      borderRadius: '0.375rem',
-                      width: '100%',
-                      height: '38px',
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em',
-                      paddingRight: '2.5rem',
-                      cursor: !formData.project_id || !formData.role_id ? 'not-allowed' : 'pointer'
-                    }}
                   >
-                    <option value="" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                      {!formData.project_id 
-                        ? 'Select a project first' 
-                        : !formData.role_id 
-                          ? 'Select a role first'
-                          : filteredPhases.length === 0
-                            ? 'No phases need this role'
-                            : 'No specific phase'}
-                    </option>
-                    {filteredPhases?.map((phase: any) => (
-                      <option key={phase.id} value={phase.id}>
-                        {phase.name} ({new Date(phase.start_date).toLocaleDateString()} - {new Date(phase.end_date).toLocaleDateString()})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="phase-select">
+                      <SelectValue placeholder={
+                        !formData.project_id
+                          ? 'Select a project first'
+                          : !formData.role_id
+                            ? 'Select a role first'
+                            : filteredPhases.length === 0
+                              ? 'No phases need this role'
+                              : 'No specific phase'
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredPhases?.map((phase: any) => (
+                        <SelectItem key={phase.id} value={phase.id}>
+                          {phase.name} ({new Date(phase.start_date).toLocaleDateString()} - {new Date(phase.end_date).toLocaleDateString()})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {formData.phase_id && (
-                  <div style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
-                    border: `1px solid ${isDarkMode ? '#3b82f6' : '#93c5fd'}`,
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    color: isDarkMode ? '#93c5fd' : '#2563eb',
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <Link2 size={16} />
+                  <div className="col-span-2 p-3 bg-primary/10 border border-primary/30 rounded-md text-sm text-primary flex items-center gap-2 mb-2">
+                    <Link2 size={16} className="flex-shrink-0" />
                     <div>
-                      <strong>Phase-linked assignment:</strong> The start and end dates are automatically synchronized with the selected phase. 
+                      <strong>Phase-linked assignment:</strong> The start and end dates are automatically synchronized with the selected phase.
                       If the phase dates change in the future, this assignment will automatically update to match.
                     </div>
                   </div>
                 )}
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="allocation-slider">
-                    <span>ALLOCATION: {formData.allocation_percentage}%</span>
-                  </label>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="allocation-slider">
+                    Allocation: {formData.allocation_percentage}%
+                  </Label>
                   <input
                     id="allocation-slider"
                     type="range"
@@ -1090,64 +967,44 @@ export function SmartAssignmentModal({
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="start-date">
-                    <span>START DATE</span>
-                    <span style={{ color: 'hsl(var(--danger))' }}> *</span>
+                <div className="space-y-2">
+                  <Label htmlFor="start-date">
+                    Start Date *
                     {formData.phase_id && (
-                      <span style={{ 
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                        fontSize: '0.75rem',
-                        fontWeight: 'normal',
-                        marginLeft: '8px'
-                      }}>
+                      <span className="text-xs text-primary font-normal ml-2">
                         (Linked to phase)
                       </span>
                     )}
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="start-date"
                     type="date"
                     value={formData.start_date}
                     onChange={(e) => handleFormChange('start_date', e.target.value)}
-                    className="form-input"
                     required
                     disabled={!!formData.phase_id}
-                    style={{ 
-                      opacity: formData.phase_id ? 0.7 : 1,
-                      cursor: formData.phase_id ? 'not-allowed' : 'text'
-                    }}
+                    className={formData.phase_id ? 'opacity-70 cursor-not-allowed' : ''}
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="end-date">
-                    <span>END DATE</span>
-                    <span style={{ color: 'hsl(var(--danger))' }}> *</span>
+                <div className="space-y-2">
+                  <Label htmlFor="end-date">
+                    End Date *
                     {formData.phase_id && (
-                      <span style={{ 
-                        color: isDarkMode ? '#60a5fa' : '#3b82f6',
-                        fontSize: '0.75rem',
-                        fontWeight: 'normal',
-                        marginLeft: '8px'
-                      }}>
+                      <span className="text-xs text-primary font-normal ml-2">
                         (Linked to phase)
                       </span>
                     )}
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="end-date"
                     type="date"
                     value={formData.end_date}
                     onChange={(e) => handleFormChange('end_date', e.target.value)}
                     min={formData.start_date}
-                    className="form-input"
                     required
                     disabled={!!formData.phase_id}
-                    style={{ 
-                      opacity: formData.phase_id ? 0.7 : 1,
-                      cursor: formData.phase_id ? 'not-allowed' : 'text'
-                    }}
+                    className={formData.phase_id ? 'opacity-70 cursor-not-allowed' : ''}
                   />
                 </div>
               </div>
@@ -1177,17 +1034,17 @@ export function SmartAssignmentModal({
             </div>
           )}
 
-          <DialogFooter className="dialog-footer">
-            <button type="button" onClick={onClose}>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
               {actionType === 'reduce_workload' ? 'Done' : 'Cancel'}
-            </button>
+            </Button>
             {actionType !== 'reduce_workload' && (
-              <button 
+              <Button
                 type="submit"
                 disabled={createAssignmentMutation.isPending || (!selectedRecommendation && !formData.project_id)}
               >
                 {createAssignmentMutation.isPending ? 'Creating...' : 'Create Assignment'}
-              </button>
+              </Button>
             )}
           </DialogFooter>
         </form>

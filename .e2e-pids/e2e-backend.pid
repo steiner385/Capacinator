@@ -1,7 +1,0 @@
-{
-  "pid": 1672528,
-  "name": "e2e-backend",
-  "port": 3110,
-  "startTime": 1760208062337,
-  "command": "/usr/bin/node /home/tony/GitHub/Capacinator/node_modules/.bin/playwright test tests/e2e/suites/features/import-export/export-button-fix-proof.spec.ts --headed --timeout=60000"
-}

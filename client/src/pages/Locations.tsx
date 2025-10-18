@@ -1,48 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, MapPin, Users, Building } from 'lucide-react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Trash2, MapPin, Building } from 'lucide-react';
 import { Location } from '../types';
 import { api } from '../lib/api-client';
+import { DataTable, Column } from '../components/ui/DataTable';
+import { InlineEdit } from '../components/ui/InlineEdit';
 import { LocationModal } from '../components/modals/LocationModal';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { ErrorMessage } from '../components/ui/ErrorMessage';
 import './Locations.css';
 
 export function Locations() {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; location: Location | null }>({
     isOpen: false,
     location: null
   });
 
-  useEffect(() => {
-    loadLocations();
-  }, []);
-
-  const loadLocations = async () => {
-    try {
-      setLoading(true);
+  // Fetch locations with React Query
+  const { data: locations, isLoading, error } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
       const response = await api.locations.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
       const locationsData = response.data?.data || response.data || [];
-      setLocations(Array.isArray(locationsData) ? locationsData : []);
-    } catch (err) {
-      setError('Failed to load locations');
-      console.error('Error loading locations:', err);
-    } finally {
-      setLoading(false);
+      return Array.isArray(locationsData) ? locationsData : [];
     }
-  };
+  });
+
+  // Update location mutation
+  const updateLocationMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Location> }) => {
+      await api.locations.update(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+    onError: (error) => {
+      console.error('Failed to update location:', error);
+      alert('Failed to update location. Please try again.');
+    }
+  });
+
+  // Delete location mutation
+  const deleteLocationMutation = useMutation({
+    mutationFn: async (locationId: string) => {
+      await api.locations.delete(locationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      setDeleteConfirm({ isOpen: false, location: null });
+    },
+    onError: (error) => {
+      console.error('Failed to delete location:', error);
+      alert('Failed to delete location. Please try again.');
+    }
+  });
 
   const handleCreate = () => {
-    setSelectedLocation(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (location: Location) => {
-    setSelectedLocation(location);
     setIsModalOpen(true);
   };
 
@@ -50,47 +66,109 @@ export function Locations() {
     setDeleteConfirm({ isOpen: true, location });
   };
 
-  const confirmDelete = async () => {
-    if (!deleteConfirm.location) return;
-
-    try {
-      await api.locations.delete(deleteConfirm.location.id);
-      await loadLocations();
-      setDeleteConfirm({ isOpen: false, location: null });
-    } catch (err) {
-      setError('Failed to delete location');
-      console.error('Error deleting location:', err);
+  const confirmDelete = () => {
+    if (deleteConfirm.location) {
+      deleteLocationMutation.mutate(deleteConfirm.location.id);
     }
   };
 
-  const handleSave = async () => {
-    await loadLocations();
+  const handleSave = () => {
+    queryClient.invalidateQueries({ queryKey: ['locations'] });
     setIsModalOpen(false);
-    setSelectedLocation(null);
   };
 
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div className="loading">Loading locations...</div>
-      </div>
-    );
+  // Define columns for the DataTable
+  const columns: Column<Location>[] = [
+    {
+      key: 'name',
+      header: 'Location Name',
+      sortable: true,
+      render: (value, row) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Building size={18} style={{ color: 'var(--primary)' }} />
+          <InlineEdit
+            value={row.name}
+            onSave={(newValue) => {
+              updateLocationMutation.mutate({
+                id: row.id,
+                data: { name: newValue as string }
+              });
+            }}
+            type="text"
+            placeholder="Location name"
+          />
+        </div>
+      )
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (value, row) => (
+        <InlineEdit
+          value={row.description || ''}
+          onSave={(newValue) => {
+            updateLocationMutation.mutate({
+              id: row.id,
+              data: { description: newValue as string }
+            });
+          }}
+          type="textarea"
+          placeholder="Add description..."
+          rows={2}
+        />
+      )
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      sortable: true,
+      render: (value) => {
+        if (!value) return '-';
+        return new Date(value).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      width: '100px',
+      render: (_, row) => (
+        <div className="table-actions">
+          <button
+            className="btn btn-icon btn-sm btn-danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+            title="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      )
+    }
+  ];
+
+  if (isLoading) {
+    return <LoadingSpinner />;
   }
 
   if (error) {
-    return (
-      <div className="page-container">
-        <div className="error">Error: {error}</div>
-      </div>
-    );
+    return <ErrorMessage message="Failed to load locations" details={(error as Error).message} />;
   }
 
   return (
     <div className="page-container">
       <div className="page-header">
-        <div className="page-title">
-          <MapPin size={24} />
-          <h1>Locations</h1>
+        <div>
+          <h1>
+            <MapPin size={24} style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
+            Locations
+          </h1>
+          <p className="text-muted">Manage organizational locations where people and projects are based</p>
         </div>
         <button className="btn btn-primary" onClick={handleCreate}>
           <Plus size={16} />
@@ -98,76 +176,18 @@ export function Locations() {
         </button>
       </div>
 
-      <div className="page-description">
-        <p>Manage organizational locations where people and projects are based.</p>
-      </div>
-
-      <div className="locations-grid">
-        {locations.map((location) => (
-          <div key={location.id} className="location-card">
-            <div className="location-header">
-              <div className="location-title">
-                <Building size={20} />
-                <h3>{location.name}</h3>
-              </div>
-              <div className="location-actions">
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => handleEdit(location)}
-                  title="Edit location"
-                >
-                  <Edit size={16} />
-                </button>
-                <button
-                  className="btn btn-ghost btn-sm btn-danger"
-                  onClick={() => handleDelete(location)}
-                  title="Delete location"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-            
-            {location.description && (
-              <p className="location-description">{location.description}</p>
-            )}
-
-            <div className="location-stats">
-              <div className="stat">
-                <Users size={16} />
-                <span>People & Projects</span>
-              </div>
-            </div>
-
-            <div className="location-meta">
-              <small className="text-muted">
-                Created: {new Date(location.created_at!).toLocaleDateString()}
-              </small>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {locations.length === 0 && (
-        <div className="empty-state">
-          <MapPin size={48} />
-          <h3>No locations found</h3>
-          <p>Start by creating your first location to organize people and projects.</p>
-          <button className="btn btn-primary" onClick={handleCreate}>
-            <Plus size={16} />
-            Add First Location
-          </button>
-        </div>
-      )}
+      <DataTable
+        data={locations || []}
+        columns={columns}
+        emptyMessage="No locations found. Start by creating your first location to organize people and projects."
+        itemsPerPage={20}
+      />
 
       {isModalOpen && (
         <LocationModal
-          location={selectedLocation}
+          location={null}
           onSave={handleSave}
-          onCancel={() => {
-            setIsModalOpen(false);
-            setSelectedLocation(null);
-          }}
+          onCancel={() => setIsModalOpen(false)}
         />
       )}
 

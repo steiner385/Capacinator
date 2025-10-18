@@ -161,7 +161,7 @@ export abstract class EnhancedBaseController {
     limit: number
   ) {
     const totalPages = Math.ceil(total / limit);
-    
+
     res.json({
       success: true,
       data,
@@ -174,6 +174,13 @@ export abstract class EnhancedBaseController {
         hasPrevPage: page > 1
       },
       requestId: req.requestId
+    });
+  }
+
+  // Helper for error responses
+  protected sendError(req: RequestWithLogging, res: Response, message: string, statusCode: number = 400) {
+    res.status(statusCode).json({
+      error: message
     });
   }
 }

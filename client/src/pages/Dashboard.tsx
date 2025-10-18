@@ -88,19 +88,19 @@ export function Dashboard() {
   return (
     <div className="page-container">
       <header className="page-header" role="banner">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1>Dashboard</h1>
-            <p className="page-subtitle">Overview of your project capacity planning</p>
-          </div>
-          <div className="w-64">
-            <DateRangeSelector
-              selectedRange={dateRange}
-              onRangeChange={setDateRange}
-            />
-          </div>
+        <div>
+          <h1>Dashboard</h1>
+          <p className="page-subtitle">Overview of your project capacity planning</p>
         </div>
       </header>
+
+      {/* Date Range Filter */}
+      <div className="dashboard-filter-bar">
+        <DateRangeSelector
+          selectedRange={dateRange}
+          onRangeChange={setDateRange}
+        />
+      </div>
 
       {/* Critical Alerts Panel */}
       {hasAlerts && (

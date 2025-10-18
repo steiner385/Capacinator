@@ -436,4 +436,221 @@ describe('NotificationsController', () => {
       });
     });
   });
+
+  describe('Helper Methods', () => {
+    describe('triggerAssignmentNotification', () => {
+      it('should trigger assignment created notification', async () => {
+        const assignmentData = {
+          project_name: 'Test Project',
+          role_name: 'Developer',
+          start_date: '2024-01-01',
+          end_date: '2024-03-31',
+          allocation: 80
+        };
+
+        mockEmailService.sendNotificationEmail.mockResolvedValue(true);
+
+        await controller.triggerAssignmentNotification('user-1', 'created', assignmentData);
+
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith(
+          'user-1',
+          'assignment_created',
+          expect.objectContaining({
+            projectName: 'Test Project',
+            roleName: 'Developer',
+            startDate: '2024-01-01',
+            endDate: '2024-03-31',
+            allocation: 80
+          })
+        );
+      });
+
+      it('should trigger assignment updated notification', async () => {
+        const assignmentData = {
+          project_name: 'Test Project',
+          role_name: 'Developer',
+          start_date: '2024-01-01',
+          end_date: '2024-03-31',
+          allocation: 100,
+          changes: 'Allocation increased to 100%'
+        };
+
+        mockEmailService.sendNotificationEmail.mockResolvedValue(true);
+
+        await controller.triggerAssignmentNotification('user-1', 'updated', assignmentData);
+
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith(
+          'user-1',
+          'assignment_updated',
+          expect.objectContaining({
+            projectName: 'Test Project',
+            changes: 'Allocation increased to 100%'
+          })
+        );
+      });
+
+      it('should handle errors gracefully', async () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        mockEmailService.sendNotificationEmail.mockRejectedValue(new Error('Email send failed'));
+
+        await controller.triggerAssignmentNotification('user-1', 'created', {
+          project_name: 'Test',
+          role_name: 'Dev'
+        });
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Error triggering assignment notification:',
+          expect.any(Error)
+        );
+
+        consoleErrorSpy.mockRestore();
+      });
+    });
+
+    describe('triggerApprovalNotification', () => {
+      it('should trigger approval request notification', async () => {
+        const requestData = {
+          type: 'project_change',
+          requestor_name: 'John Doe',
+          details: 'Request to extend project deadline',
+          reason: 'Additional requirements discovered'
+        };
+
+        mockEmailService.sendNotificationEmail.mockResolvedValue(true);
+
+        await controller.triggerApprovalNotification('approver-1', requestData);
+
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith(
+          'approver-1',
+          'approval_request',
+          expect.objectContaining({
+            requestType: 'project_change',
+            requestorName: 'John Doe',
+            details: 'Request to extend project deadline',
+            reason: 'Additional requirements discovered'
+          })
+        );
+      });
+
+      it('should handle errors gracefully', async () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        mockEmailService.sendNotificationEmail.mockRejectedValue(new Error('Email send failed'));
+
+        await controller.triggerApprovalNotification('approver-1', {
+          type: 'test',
+          requestor_name: 'Test'
+        });
+
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Error triggering approval notification:',
+          expect.any(Error)
+        );
+
+        consoleErrorSpy.mockRestore();
+      });
+    });
+
+    describe('triggerProjectNotification', () => {
+      it('should trigger project notifications for multiple users', async () => {
+        const projectData = {
+          name: 'Test Project',
+          previous_start: '2024-01-01',
+          new_start: '2024-02-01',
+          previous_end: '2024-06-30',
+          new_end: '2024-07-31'
+        };
+
+        mockEmailService.sendNotificationEmail.mockResolvedValue(true);
+
+        await controller.triggerProjectNotification(
+          ['user-1', 'user-2', 'user-3'],
+          'date_changed',
+          projectData
+        );
+
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledTimes(3);
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith(
+          'user-1',
+          'project_date_changed',
+          expect.objectContaining({
+            projectName: 'Test Project',
+            previousStart: '2024-01-01',
+            newStart: '2024-02-01'
+          })
+        );
+      });
+
+      it('should call send for each user', async () => {
+        mockEmailService.sendNotificationEmail.mockResolvedValue(true);
+
+        await controller.triggerProjectNotification(
+          ['user-1', 'user-2', 'user-3'],
+          'status_changed',
+          { name: 'Project' }
+        );
+
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledTimes(3);
+      });
+
+      it('should construct template name correctly', async () => {
+        mockEmailService.sendNotificationEmail.mockResolvedValue(true);
+
+        await controller.triggerProjectNotification(
+          ['user-1'],
+          'deadline_changed',
+          { name: 'Test Project' }
+        );
+
+        expect(mockEmailService.sendNotificationEmail).toHaveBeenCalledWith(
+          'user-1',
+          'project_deadline_changed',
+          expect.any(Object)
+        );
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle sendNotification errors', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      mockReq.body = {
+        userId: 'user1',
+        templateName: 'assignment_created',
+        variables: {}
+      };
+
+      mockEmailService.sendNotificationEmail.mockRejectedValue(new Error('Email service unavailable'));
+
+      await controller.sendNotification(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Failed to send notification'
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle sendTestEmail errors with error message', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      mockReq.body = { email: 'test@example.com' };
+      mockEmailService.isConfigured.mockReturnValue(true);
+      mockEmailService.sendTestEmail.mockRejectedValue(new Error('SMTP connection failed'));
+
+      await controller.sendTestEmail(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'SMTP connection failed'
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
 });

@@ -13,10 +13,11 @@ import { db } from '../../../../src/server/database/index.js';
 // Mock ProjectPhaseCascadeService
 jest.mock('../../../../src/server/services/ProjectPhaseCascadeService', () => ({
   ProjectPhaseCascadeService: jest.fn().mockImplementation(() => ({
-    calculateCascade: jest.fn().mockResolvedValue({ 
-      affected: [], 
-      conflicts: [] 
-    })
+    calculateCascade: jest.fn().mockResolvedValue({
+      affected: [],
+      conflicts: []
+    }),
+    applyCascade: jest.fn().mockResolvedValue(undefined)
   }))
 }));
 
@@ -159,6 +160,16 @@ describe('ProjectPhaseDependenciesController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Dependency not found' });
     });
+
+    it('should handle errors in getById', async () => {
+      mockReq.params = { id: 'dep-1' };
+      mockQuery.first.mockRejectedValue(new Error('Database error'));
+
+      await ProjectPhaseDependenciesController.getById(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to fetch dependency' });
+    });
   });
 
   describe('create', () => {
@@ -271,6 +282,17 @@ describe('ProjectPhaseDependenciesController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Dependency not found' });
     });
+
+    it('should handle errors in update', async () => {
+      mockReq.params = { id: 'dep-1' };
+      mockReq.body = { lag_days: 5 };
+      mockQuery.returning.mockRejectedValue(new Error('Update failed'));
+
+      await ProjectPhaseDependenciesController.update(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to update dependency' });
+    });
   });
 
   describe('delete', () => {
@@ -295,6 +317,58 @@ describe('ProjectPhaseDependenciesController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Dependency not found' });
+    });
+
+    it('should handle errors in delete', async () => {
+      mockReq.params = { id: 'dep-1' };
+      mockQuery.delete.mockRejectedValue(new Error('Delete failed'));
+
+      await ProjectPhaseDependenciesController.delete(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to delete dependency' });
+    });
+  });
+
+  describe('calculateCascade', () => {
+    it('should calculate cascade effects', async () => {
+      mockReq.body = {
+        project_id: 'proj-1',
+        phase_timeline_id: 'timeline-1',
+        new_start_date: '2024-01-01',
+        new_end_date: '2024-01-31'
+      };
+
+      const mockCascadeResult = {
+        affected_phases: ['timeline-2', 'timeline-3'],
+        cascade_count: 2
+      };
+
+      // The ProjectPhaseCascadeService is mocked at the top of the file
+      await ProjectPhaseDependenciesController.calculateCascade(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        affected: [],
+        conflicts: []
+      });
+    });
+  });
+
+  describe('applyCascade', () => {
+    it('should apply cascade changes', async () => {
+      mockReq.body = {
+        project_id: 'proj-1',
+        cascade_data: {
+          'timeline-2': { start_date: '2024-02-01', end_date: '2024-02-28' },
+          'timeline-3': { start_date: '2024-03-01', end_date: '2024-03-31' }
+        }
+      };
+
+      await ProjectPhaseDependenciesController.applyCascade(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        message: 'Cascade changes applied successfully'
+      });
     });
   });
 });

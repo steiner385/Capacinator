@@ -9,7 +9,7 @@ async function createTestUser(overrides?: Partial<{ id: string; name: string; em
   await testDb('people').insert({
     id: userId,
     name: overrides?.name || 'Test User',
-    email: overrides?.email || 'test@example.com',
+    email: overrides?.email || `test-${userId}@example.com`, // Use unique email based on ID
     default_availability_percentage: 100,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()

@@ -312,7 +312,7 @@ export class ReportingController extends EnhancedBaseController {
           }, {} as Record<string, number>)
         }
       };
-    }, res, 'Failed to fetch project report');
+    }, req, res, 'Failed to fetch project report');
 
     if (result) {
       this.sendSuccess(req, res, result);

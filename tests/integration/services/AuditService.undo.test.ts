@@ -182,9 +182,10 @@ describe('AuditService - Undo Functionality', () => {
     });
 
     test('should handle partial field updates correctly', async () => {
-      const testUser = await createTestUser({ 
-        name: 'John Doe', 
-        email: 'john@example.com',
+      const uniqueEmail = `john-partial-${Date.now()}@example.com`;
+      const testUser = await createTestUser({
+        name: 'John Doe',
+        email: uniqueEmail,
         is_active: true
       });
       
@@ -210,7 +211,7 @@ describe('AuditService - Undo Functionality', () => {
       const userAfter = await testDb('people').where('id', testUser.id).first();
       expect(userAfter.name).toBe('John Doe');
       expect(userAfter.is_active).toBe(1); // SQLite stores boolean as integer
-      expect(userAfter.email).toBe('john@example.com'); // Should remain unchanged
+      expect(userAfter.email).toBe(uniqueEmail); // Should remain unchanged
     });
   });
 
@@ -454,9 +455,10 @@ describe('AuditService - Undo Functionality', () => {
 
   describe('Complex Undo Scenarios', () => {
     test('should handle cascading updates correctly', async () => {
-      const testUser = await createTestUser({ 
+      const uniqueEmail = `john-cascade-${Date.now()}@example.com`;
+      const testUser = await createTestUser({
         name: 'John Doe',
-        email: 'john@example.com',
+        email: uniqueEmail,
         is_active: true
       });
       
@@ -471,7 +473,7 @@ describe('AuditService - Undo Functionality', () => {
         recordId: testUser.id,
         action: 'UPDATE',
         changedBy: 'user',
-        oldValues: { email: 'john@example.com' },
+        oldValues: { email: uniqueEmail },
         newValues: { email: 'john.doe@company.com' }
       });
 
@@ -595,15 +597,16 @@ describe('AuditService - Undo Functionality', () => {
     });
 
     test('should handle undo when record has been modified after audit log', async () => {
-      const testUser = await createTestUser({ name: 'Original', email: 'original@example.com' });
-      
+      const uniqueEmail = `original-modified-${Date.now()}@example.com`;
+      const testUser = await createTestUser({ name: 'Original', email: uniqueEmail });
+
       // Log an update
       await auditService.logChange({
         tableName: 'people',
         recordId: testUser.id,
         action: 'UPDATE',
         changedBy: 'user',
-        oldValues: { name: 'Original', email: 'original@example.com' },
+        oldValues: { name: 'Original', email: uniqueEmail },
         newValues: { name: 'Updated', email: 'updated@example.com' }
       });
 
@@ -621,7 +624,7 @@ describe('AuditService - Undo Functionality', () => {
 
       const userAfter = await testDb('people').where('id', testUser.id).first();
       expect(userAfter.name).toBe('Original');
-      expect(userAfter.email).toBe('original@example.com');
+      expect(userAfter.email).toBe(uniqueEmail);
     });
   });
 });

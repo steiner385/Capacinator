@@ -52,8 +52,8 @@ export class ExcelImporterV2 {
   private projectMap: Map<string, string> = new Map(); // name -> project_id
   private phaseMap: Map<string, string> = new Map(); // abbreviation -> phase_id
 
-  constructor() {
-    this.db = getAuditedDb();
+  constructor(db?: any) {
+    this.db = db || getAuditedDb();
   }
 
   private async clearExistingData() {
@@ -252,11 +252,13 @@ export class ExcelImporterV2 {
           for (let rowNumber = 2; rowNumber <= maxRowsToCheck && rowErrors.length < 10; rowNumber++) {
             const row = worksheet.getRow(rowNumber);
             const values = row.values as any[];
-            
-            if (values.length <= 1 || !values[1]) continue; // Skip empty rows
-            
+
+            // Skip completely empty rows (no data in any column)
+            const hasAnyData = values.slice(1).some(v => v !== null && v !== undefined && v !== '');
+            if (!hasAnyData) continue;
+
             let rowValid = true;
-            
+
             // Validate required fields based on worksheet type
             if (worksheetDef.name === 'Projects') {
               if (!values[1]) { // Project Name
@@ -301,7 +303,7 @@ export class ExcelImporterV2 {
                 rowValid = false;
               }
             }
-            
+
             if (rowValid) validRows++;
           }
           
@@ -349,8 +351,12 @@ export class ExcelImporterV2 {
 
       // Determine if import can proceed
       const criticalErrors = result.errors.filter(e => e.severity === 'critical');
+      const highSeverityErrors = result.errors.filter(e => e.severity === 'high');
       if (criticalErrors.length > 0) {
         result.canImport = false;
+        result.valid = false;
+      } else if (highSeverityErrors.length > 0) {
+        // High severity errors (like missing required columns) make it invalid but might allow import with warnings
         result.valid = false;
       }
 
@@ -397,13 +403,17 @@ export class ExcelImporterV2 {
 
         for (let rowNumber = 2; rowNumber <= projectsWorksheet.rowCount; rowNumber++) {
           const row = projectsWorksheet.getRow(rowNumber);
-          const projectName = row.getCell(1).value?.toString();
-          if (projectName) {
-            const lowerName = projectName.toLowerCase();
-            if (existingProjectNames.has(lowerName) || projectNames.has(lowerName)) {
-              duplicates.projects.push(projectName);
+          const projectSite = row.getCell(1).value?.toString();
+          if (projectSite) {
+            // Parse "Project @ Site" format to extract just the project name
+            const { project: projectName } = parseProjectSite(projectSite);
+            if (projectName) {
+              const lowerName = projectName.toLowerCase();
+              if (existingProjectNames.has(lowerName) || projectNames.has(lowerName)) {
+                duplicates.projects.push(projectSite); // Keep full format for display
+              }
+              projectNames.add(lowerName);
             }
-            projectNames.add(lowerName);
           }
         }
       }
@@ -448,22 +458,28 @@ export class ExcelImporterV2 {
         }
       }
 
-      // Check project types sheet for locations
-      const projectTypesWorksheet = workbook.getWorksheet('Project Types');
-      if (projectTypesWorksheet) {
+      // Check projects sheet for locations (from "Project @ Site" format)
+      if (projectsWorksheet) {
         const locationNames = new Set<string>();
         const existingLocations = await this.db('locations').select('name');
         const existingLocationNames = new Set(existingLocations.map(l => l.name.toLowerCase()));
+        const reportedDuplicates = new Set<string>(); // Track which duplicates we've already reported
 
-        for (let rowNumber = 2; rowNumber <= projectTypesWorksheet.rowCount; rowNumber++) {
-          const row = projectTypesWorksheet.getRow(rowNumber);
-          const locationName = row.getCell(3).value?.toString(); // Location is typically in column 3
-          if (locationName) {
-            const lowerName = locationName.toLowerCase();
-            if (existingLocationNames.has(lowerName) || locationNames.has(lowerName)) {
-              duplicates.locations.push(locationName);
+        for (let rowNumber = 2; rowNumber <= projectsWorksheet.rowCount; rowNumber++) {
+          const row = projectsWorksheet.getRow(rowNumber);
+          const projectSite = row.getCell(1).value?.toString();
+          if (projectSite) {
+            // Parse "Project @ Site" format to extract the site/location name
+            const { site: siteName } = parseProjectSite(projectSite);
+            if (siteName) {
+              const lowerName = siteName.toLowerCase();
+              // Only flag as duplicate if it exists in database and we haven't reported it yet
+              if (existingLocationNames.has(lowerName) && !reportedDuplicates.has(lowerName)) {
+                duplicates.locations.push(siteName);
+                reportedDuplicates.add(lowerName);
+              }
+              locationNames.add(lowerName);
             }
-            locationNames.add(lowerName);
           }
         }
       }
@@ -674,9 +690,12 @@ export class ExcelImporterV2 {
         // Add person-role relationship
         if (roleId) {
           await this.db('person_roles').insert({
+            id: uuidv4(),
             person_id: personId,
             role_id: roleId,
-            proficiency_level: 'Intermediate'
+            proficiency_level: 'Intermediate',
+            created_at: new Date(),
+            updated_at: new Date()
           });
         }
 
@@ -1218,15 +1237,11 @@ export class ExcelImporterV2 {
         result.errors.push(...typesResult.errors);
       }
 
-      // 2. Project Phases
+      // 2. Project Phases (optional - creates standard phases from PHASE_ABBREVIATIONS)
       const phasesWorksheet = workbook.getWorksheet('Project Phases');
-      if (!phasesWorksheet) {
-        errorCollector.addCriticalError('Project Phases', 'Project Phases worksheet not found', 'Add a worksheet named "Project Phases" to your Excel file');
-      } else {
-        const phasesResult = await this.importProjectPhases(phasesWorksheet, errorCollector);
-        result.imported.phases = phasesResult.count;
-        result.errors.push(...phasesResult.errors);
-      }
+      const phasesResult = await this.importProjectPhases(phasesWorksheet, errorCollector);
+      result.imported.phases = phasesResult.count;
+      result.errors.push(...phasesResult.errors);
 
       // 3. Roles
       const rolesWorksheet = workbook.getWorksheet('Roles');
@@ -1258,27 +1273,27 @@ export class ExcelImporterV2 {
         result.errors.push(...projectsResult.errors);
       }
 
-      // 6. Project Roadmap (Phase Timelines)
+      // 6. Project Roadmap (Phase Timelines) - optional
       const roadmapWorksheet = workbook.getWorksheet('Project Roadmap');
-      const roadmapResult = roadmapWorksheet ? await this.importProjectRoadmap(roadmapWorksheet) : { count: 0, errors: ['Project Roadmap worksheet not found'] };
+      const roadmapResult = roadmapWorksheet ? await this.importProjectRoadmap(roadmapWorksheet) : { count: 0, errors: [] };
       result.imported.phaseTimelines = roadmapResult.count;
       result.errors.push(...roadmapResult.errors);
 
-      // 7. Standard Allocations
+      // 7. Standard Allocations - optional
       const allocationsWorksheet2 = workbook.getWorksheet('Standard Allocations');
-      const allocationsResult = allocationsWorksheet2 ? await this.importStandardAllocations(allocationsWorksheet2) : { count: 0, errors: ['Standard Allocations worksheet not found'] };
+      const allocationsResult = allocationsWorksheet2 ? await this.importStandardAllocations(allocationsWorksheet2) : { count: 0, errors: [] };
       result.imported.standardAllocations = allocationsResult.count;
       result.errors.push(...allocationsResult.errors);
 
-      // 8. Project Demand
+      // 8. Project Demand - optional
       const demandWorksheet = workbook.getWorksheet('Project Demand');
-      const demandResult = demandWorksheet ? await this.importProjectDemand(demandWorksheet) : { count: 0, errors: ['Project Demand worksheet not found'] };
+      const demandResult = demandWorksheet ? await this.importProjectDemand(demandWorksheet) : { count: 0, errors: [] };
       result.imported.demands = demandResult.count;
       result.errors.push(...demandResult.errors);
 
-      // 9. Project Assignments
+      // 9. Project Assignments - optional
       const assignmentsWorksheet = workbook.getWorksheet('Project Assignments');
-      const assignmentsResult = assignmentsWorksheet ? await this.importProjectAssignments(assignmentsWorksheet) : { count: 0, errors: ['Project Assignments worksheet not found'] };
+      const assignmentsResult = assignmentsWorksheet ? await this.importProjectAssignments(assignmentsWorksheet) : { count: 0, errors: [] };
       result.imported.assignments = assignmentsResult.count;
       result.errors.push(...assignmentsResult.errors);
 

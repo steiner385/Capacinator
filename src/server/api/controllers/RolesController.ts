@@ -6,7 +6,24 @@ export class RolesController extends EnhancedBaseController {
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {
       const roles = await this.db('roles')
-        .select('*')
+        .select(
+          'roles.*',
+          this.db.raw(`(
+            SELECT COUNT(DISTINCT pr.person_id)
+            FROM person_roles pr
+            WHERE pr.role_id = roles.id AND pr.is_primary = 1
+          ) as people_count`),
+          this.db.raw(`(
+            SELECT COUNT(*)
+            FROM role_planners
+            WHERE role_planners.role_id = roles.id
+          ) as planners_count`),
+          this.db.raw(`(
+            SELECT COUNT(*)
+            FROM resource_templates
+            WHERE resource_templates.role_id = roles.id
+          ) as standard_allocations_count`)
+        )
         .orderBy('name');
 
       return roles;
@@ -17,7 +34,7 @@ export class RolesController extends EnhancedBaseController {
     }
   })
 
-  async getById(req: Request, res: Response) {
+  async getById(req: RequestWithLogging, res: Response) {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -26,7 +43,7 @@ export class RolesController extends EnhancedBaseController {
         .first();
 
       if (!role) {
-        this.handleNotFound(res, 'Role');
+        this.handleNotFound(req, res, 'Role');
         return null;
       }
 
@@ -50,31 +67,31 @@ export class RolesController extends EnhancedBaseController {
         .where('role_planners.role_id', id)
         .orderBy('role_planners.is_primary', 'desc');
 
-      // Get standard allocations
-      const standardAllocations = await this.db('standard_allocations')
-        .join('project_types', 'standard_allocations.project_type_id', 'project_types.id')
-        .join('project_phases', 'standard_allocations.phase_id', 'project_phases.id')
+      // Get resource templates (renamed from standard_allocations)
+      const resourceTemplates = await this.db('resource_templates')
+        .join('project_types', 'resource_templates.project_type_id', 'project_types.id')
+        .join('project_phases', 'resource_templates.phase_id', 'project_phases.id')
         .select(
-          'standard_allocations.*',
+          'resource_templates.*',
           'project_types.name as project_type_name',
           'project_phases.name as phase_name'
         )
-        .where('standard_allocations.role_id', id);
+        .where('resource_templates.role_id', id);
 
       return {
         ...role,
         people,
         planners,
-        standardAllocations
+        resourceTemplates
       };
-    }, res, 'Failed to fetch role');
+    }, req, res, 'Failed to fetch role');
 
     if (result) {
       res.json(result);
     }
   }
 
-  async create(req: Request, res: Response) {
+  async create(req: RequestWithLogging, res: Response) {
     const roleData = req.body;
 
     const result = await this.executeQuery(async () => {
@@ -99,14 +116,14 @@ export class RolesController extends EnhancedBaseController {
       }
 
       return role;
-    }, res, 'Failed to create role');
+    }, req, res, 'Failed to create role');
 
     if (result) {
       res.status(201).json(result);
     }
   }
 
-  async update(req: Request, res: Response) {
+  async update(req: RequestWithLogging, res: Response) {
     const { id } = req.params;
     const updateData = req.body;
 
@@ -117,7 +134,7 @@ export class RolesController extends EnhancedBaseController {
         .first();
 
       if (!existingRole) {
-        this.handleNotFound(res, 'Role');
+        this.handleNotFound(req, res, 'Role');
         return null;
       }
 
@@ -130,7 +147,7 @@ export class RolesController extends EnhancedBaseController {
         .returning('*');
 
       if (!role) {
-        this.handleNotFound(res, 'Role');
+        this.handleNotFound(req, res, 'Role');
         return null;
       }
 
@@ -147,14 +164,14 @@ export class RolesController extends EnhancedBaseController {
       }
 
       return role;
-    }, res, 'Failed to update role');
+    }, req, res, 'Failed to update role');
 
     if (result) {
       res.json(result);
     }
   }
 
-  async delete(req: Request, res: Response) {
+  async delete(req: RequestWithLogging, res: Response) {
     const { id } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -164,7 +181,7 @@ export class RolesController extends EnhancedBaseController {
         .first();
 
       if (!existingRole) {
-        this.handleNotFound(res, 'Role');
+        this.handleNotFound(req, res, 'Role');
         return null;
       }
 
@@ -173,7 +190,7 @@ export class RolesController extends EnhancedBaseController {
         .del();
 
       if (deletedCount === 0) {
-        this.handleNotFound(res, 'Role');
+        this.handleNotFound(req, res, 'Role');
         return null;
       }
 
@@ -190,14 +207,14 @@ export class RolesController extends EnhancedBaseController {
       }
 
       return { message: 'Role deleted successfully' };
-    }, res, 'Failed to delete role');
+    }, req, res, 'Failed to delete role');
 
     if (result) {
       res.json(result);
     }
   }
 
-  async addPlanner(req: Request, res: Response) {
+  async addPlanner(req: RequestWithLogging, res: Response) {
     const { id } = req.params;
     const plannerData = req.body;
 
@@ -223,14 +240,14 @@ export class RolesController extends EnhancedBaseController {
       }
 
       return rolePlanner;
-    }, res, 'Failed to add role planner');
+    }, req, res, 'Failed to add role planner');
 
     if (result) {
       res.status(201).json(result);
     }
   }
 
-  async removePlanner(req: Request, res: Response) {
+  async removePlanner(req: RequestWithLogging, res: Response) {
     const { id, plannerId } = req.params;
 
     const result = await this.executeQuery(async () => {
@@ -241,7 +258,7 @@ export class RolesController extends EnhancedBaseController {
         .first();
 
       if (!existingPlanner) {
-        this.handleNotFound(res, 'Role planner assignment');
+        this.handleNotFound(req, res, 'Role planner assignment');
         return null;
       }
 
@@ -251,7 +268,7 @@ export class RolesController extends EnhancedBaseController {
         .del();
 
       if (deletedCount === 0) {
-        this.handleNotFound(res, 'Role planner assignment');
+        this.handleNotFound(req, res, 'Role planner assignment');
         return null;
       }
 
@@ -268,28 +285,28 @@ export class RolesController extends EnhancedBaseController {
       }
 
       return { message: 'Role planner removed successfully' };
-    }, res, 'Failed to remove role planner');
+    }, req, res, 'Failed to remove role planner');
 
     if (result) {
       res.json(result);
     }
   }
 
-  async getCapacityGaps(req: Request, res: Response) {
+  async getCapacityGaps(req: RequestWithLogging, res: Response) {
     const result = await this.executeQuery(async () => {
       const gaps = await this.db('capacity_gaps_view')
         .select('*')
         .orderBy('gap_fte', 'desc');
 
       return gaps;
-    }, res, 'Failed to fetch capacity gaps');
+    }, req, res, 'Failed to fetch capacity gaps');
 
     if (result) {
       res.json(result);
     }
   }
 
-  async getExpertiseLevels(req: Request, res: Response) {
+  async getExpertiseLevels(req: RequestWithLogging, res: Response) {
     try {
       const expertiseLevels = [
         { level: 1, name: 'Novice', description: 'Learning the fundamentals, requires supervision' },

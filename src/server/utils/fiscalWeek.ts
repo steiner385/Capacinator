@@ -94,8 +94,10 @@ export function getPhaseFullName(abbreviation: string): string {
  */
 export function parseProjectSite(value: string): { project: string; site: string } {
   if (!value) return { project: '', site: '' };
-  
-  const parts = value.split('/').map(part => part.trim());
+
+  // Support both '@' and '/' as separators
+  const separator = value.includes('@') ? '@' : '/';
+  const parts = value.split(separator).map(part => part.trim());
   return {
     project: parts[0] || '',
     site: parts[1] || ''

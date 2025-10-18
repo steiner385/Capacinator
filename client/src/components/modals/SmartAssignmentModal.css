@@ -76,38 +76,7 @@
   height: 16px;
 }
 
-/* Form Layout - removed duplicate, see above */
-
-/* Tabs Styling */
-.smart-assignment-modal [role="tablist"] {
-  background-color: hsl(var(--muted));
-  padding: 4px;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-3);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-
-.smart-assignment-modal [role="tab"] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1-5);
-  font-weight: 500;
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-  color: hsl(var(--muted-foreground));
-  flex: 1;
-}
-
-.smart-assignment-modal [role="tab"][data-state="active"] {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  box-shadow: var(--shadow-sm);
-}
+/* Tabs inherit default shadcn/ui styling */
 
 /* Recommendations Tab */
 .recommendations-tab {
@@ -221,64 +190,7 @@
   padding-top: 0;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1-5);
-}
-
-.form-group:has(.allocation-slider) {
-  grid-column: 1 / -1;
-}
-
-.form-label {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: hsl(var(--foreground));
-  display: block;
-  margin-bottom: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.form-select,
-.form-input {
-  padding: var(--space-2) var(--space-2-5);
-  font-size: var(--text-base);
-  background-color: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-md);
-  color: hsl(var(--foreground));
-  transition: all var(--transition-fast);
-  width: 100%;
-  height: 40px;
-}
-
-
-/* Ensure select options are visible in both themes */
-.form-select option {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-.form-select:hover,
-.form-input:hover {
-  border-color: hsl(var(--muted-foreground) / 0.5);
-}
-
-.form-select:focus,
-.form-input:focus {
-  outline: none;
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
-}
+/* Form inputs use shadcn/ui components */
 
 /* Allocation Slider */
 .allocation-slider {
@@ -408,63 +320,7 @@
   opacity: 0.8;
 }
 
-/* Dialog Footer */
-.smart-assignment-modal .dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid hsl(var(--border));
-  margin-top: var(--space-4);
-  flex-shrink: 0; /* Prevent footer from being compressed */
-}
-
-/* Button Styling */
-.smart-assignment-modal button {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-base);
-  font-weight: 500;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  min-width: 100px;
-  height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.smart-assignment-modal button[type="submit"] {
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border: none;
-}
-
-.smart-assignment-modal button[type="submit"]:hover:not(:disabled) {
-  background-color: hsl(var(--primary) / 0.9);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.smart-assignment-modal button[type="submit"]:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.smart-assignment-modal button[type="button"] {
-  background: none;
-  color: hsl(var(--foreground));
-  border: none;
-  text-decoration: none;
-  font-weight: 400;
-  opacity: 0.8;
-  padding: var(--space-2) var(--space-3);
-}
-
-
-.smart-assignment-modal button[type="button"]:hover {
-  opacity: 1;
-  text-decoration: underline;
-}
+/* Buttons use shadcn/ui Button component */
 
 /* Scrollbar Styling */
 .recommendations-list::-webkit-scrollbar {

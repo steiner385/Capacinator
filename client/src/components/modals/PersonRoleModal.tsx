@@ -59,7 +59,9 @@ export default function PersonRoleModal({
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.roles.list();
-      return response.data;
+      // Handle nested response structure: response.data.data or response.data
+      const rolesData = response.data?.data || response.data || [];
+      return Array.isArray(rolesData) ? rolesData : [];
     }
   });
 
@@ -154,7 +156,7 @@ export default function PersonRoleModal({
                 <SelectValue placeholder="Select a role..." />
               </SelectTrigger>
               <SelectContent>
-                {roles?.map((role: any) => (
+                {Array.isArray(roles) && roles.map((role: any) => (
                   <SelectItem key={role.id} value={role.id}>
                     {role.name}
                   </SelectItem>

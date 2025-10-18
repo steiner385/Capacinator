@@ -35,7 +35,8 @@ export default function RoleDetails() {
     queryKey: ['projectTypes'],
     queryFn: async () => {
       const response = await api.projectTypes.list();
-      return response.data.data as ProjectType[];
+      const typesData = response.data?.data || response.data || [];
+      return Array.isArray(typesData) ? typesData : [];
     }
   });
 
@@ -44,8 +45,9 @@ export default function RoleDetails() {
     queryKey: ['phases'],
     queryFn: async () => {
       const response = await api.phases.list();
-      const sortedPhases = (response.data.data as ProjectPhase[]).sort((a, b) => a.order_index - b.order_index);
-      return sortedPhases;
+      const phasesData = response.data?.data || response.data || [];
+      const phasesArray = Array.isArray(phasesData) ? phasesData : [];
+      return phasesArray.sort((a: ProjectPhase, b: ProjectPhase) => a.order_index - b.order_index);
     }
   });
 
@@ -55,7 +57,9 @@ export default function RoleDetails() {
     queryFn: async () => {
       if (!id) return [];
       const response = await api.resourceTemplates.list({ role_id: id });
-      return response.data.data as ResourceTemplate[];
+      // Handle nested response structure and ensure we always return an array
+      const templatesData = response.data?.data || response.data || [];
+      return Array.isArray(templatesData) ? templatesData : [];
     },
     enabled: !!id
   });
@@ -159,6 +163,7 @@ export default function RoleDetails() {
   // Create resource template matrix for display
   const templateMatrix = React.useMemo(() => {
     if (!projectTypes || !phases || !localTemplates) return [];
+    if (!Array.isArray(projectTypes) || !Array.isArray(phases)) return [];
 
     return projectTypes.map(projectType => ({
       projectType,
@@ -274,7 +279,7 @@ export default function RoleDetails() {
             </p>
           </div>
 
-          {projectTypes && phases && localTemplates !== undefined ? (
+          {projectTypes && phases && localTemplates !== undefined && Array.isArray(projectTypes) && Array.isArray(phases) ? (
             <div className="templates-grid">
               <table className="resource-templates-table">
                 <thead>

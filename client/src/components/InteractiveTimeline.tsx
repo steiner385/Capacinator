@@ -30,34 +30,35 @@ export interface InteractiveTimelineProps {
   items: TimelineItem[];
   viewport: TimelineViewport;
   height?: number;
-  
+  width?: number; // Explicit width for precise alignment (bypasses container measurement)
+
   // Mode configuration
   mode: 'brush' | 'phase-manager' | 'roadmap';
-  
+
   // Brush mode props
   brushRange?: { start: number; end: number };
   onBrushChange?: (start: number, end: number) => void;
-  
+
   // Phase management props
   onItemAdd?: (afterItemId?: string, position?: { x: number, date: Date }) => void;
   onItemEdit?: (itemId: string) => void;
   onItemDelete?: (itemId: string) => void;
   onItemMove?: (itemId: string, newStartDate: Date, newEndDate: Date) => void;
   onItemResize?: (itemId: string, newStartDate: Date, newEndDate: Date) => void;
-  
+
   // Dependencies
   dependencies?: DependencyLine[];
   onDependencyCreate?: (predecessorId: string, successorId: string, dependencyType: 'FS' | 'SS' | 'FF' | 'SF') => void;
-  
+
   // Visual configuration
   showGrid?: boolean;
   showToday?: boolean;
   allowOverlap?: boolean;
   minItemDuration?: number; // in days
-  
+
   // Chart alignment
   chartTimeData?: Array<{ date: string; [key: string]: any }>; // For aligning with chart time axis
-  
+
   // Styling
   className?: string;
   style?: React.CSSProperties;
@@ -140,6 +141,7 @@ export function InteractiveTimeline({
   items,
   viewport,
   height = 60,
+  width,
   mode,
   brushRange,
   onBrushChange,
@@ -204,40 +206,45 @@ export function InteractiveTimeline({
 
   // Note: Scroll detection logic removed - now using z-index layering for proper handle positioning
 
-  // Calculate timeline width - use container width when available for precise alignment
+  // Calculate timeline width - use explicit width prop first for precise alignment
   const calculateTimelineWidth = () => {
-    // If we have a container, use its actual width for perfect alignment
+    // Priority 1: Use explicit width prop if provided (for precise chart alignment)
+    if (width !== undefined && width > 0) {
+      return width;
+    }
+
+    // Priority 2: If we have a container, use its actual width for perfect alignment
     if (timelineRef.current?.parentElement) {
       const containerWidth = timelineRef.current.parentElement.getBoundingClientRect().width;
       if (containerWidth > 0) {
         return containerWidth;
       }
     }
-    
-    // Fallback to natural width based on viewport
+
+    // Priority 3: Fallback to natural width based on viewport
     const naturalWidth = (viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24) * viewport.pixelsPerDay;
     return Math.max(naturalWidth, 200); // Reduced minimum for better alignment
   };
   
   const [timelineWidth, setTimelineWidth] = useState(400); // Start with default
   
-  // Recalculate width when container resizes or viewport changes
+  // Recalculate width when container resizes, viewport changes, or explicit width prop changes
   useEffect(() => {
     const updateWidth = () => {
       const newWidth = calculateTimelineWidth();
       // Only update if the width actually changed to prevent unnecessary re-renders
       setTimelineWidth(prevWidth => {
         if (Math.abs(newWidth - prevWidth) > 1) { // Allow 1px tolerance
-          // console.log('📏 InteractiveTimeline width updated:', prevWidth, '→', newWidth);
+          console.log('📏 InteractiveTimeline width updated:', prevWidth, '→', newWidth, width ? '(from explicit prop)' : '(from measurement)');
           return newWidth;
         }
         return prevWidth;
       });
     };
-    
+
     // Update immediately
     updateWidth();
-    
+
     // Use ResizeObserver if available, otherwise fallback to window resize only
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
@@ -251,16 +258,16 @@ export function InteractiveTimeline({
         resizeObserver = null;
       }
     }
-    
+
     // Always listen to window resize as fallback
     window.addEventListener('resize', updateWidth);
-    
+
     // Additional fallback: check for size changes periodically if ResizeObserver is unavailable
     let intervalId: NodeJS.Timeout | null = null;
     if (!resizeObserver) {
       intervalId = setInterval(updateWidth, 5000); // Check every 5 seconds as last resort (reduced frequency)
     }
-    
+
     return () => {
       if (resizeObserver) {
         resizeObserver.disconnect();
@@ -270,7 +277,7 @@ export function InteractiveTimeline({
         clearInterval(intervalId);
       }
     };
-  }, [viewport]);
+  }, [viewport, width]);
 
   // Generate grid lines for visual reference
   const generateGridLines = useCallback(() => {

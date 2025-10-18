@@ -67,16 +67,24 @@ const TREND_ICONS = {
 };
 
 function calculateResourceEfficiency(dashboard: DashboardSummary): number {
-  const totalPeople = dashboard.summary?.people || 1;
+  const totalPeople = dashboard.summary?.people || 0;
+
+  // If no people, return 0
+  if (totalPeople === 0) return 0;
+
   const fullyAllocated = dashboard.utilization?.FULLY_ALLOCATED || 0;
   const overAllocated = dashboard.utilization?.OVER_ALLOCATED || 0;
-  
+  const allocated = fullyAllocated + overAllocated;
+
+  // If no allocations yet, return 0 (not 100, as nothing is allocated)
+  if (allocated === 0) return 0;
+
   // Efficiency = (properly allocated) / total people
   // Over-allocation reduces efficiency
-  const efficiency = Math.max(0, Math.min(100, 
+  const efficiency = Math.max(0, Math.min(100,
     ((fullyAllocated - overAllocated * 0.5) / totalPeople) * 100
   ));
-  
+
   return Math.round(efficiency);
 }
 
@@ -269,9 +277,16 @@ export function EnhancedKPIs({ dashboard, className = '' }: EnhancedKPIsProps) {
                   )}
 
                   <p className="text-xs text-muted-foreground">{kpi.description}</p>
-                  <div className="text-xs font-medium text-blue-600 mt-2">
-                    {kpi.actionText} →
-                  </div>
+
+                  {kpi.value === 0 && kpi.id === 'resource-efficiency' ? (
+                    <div className="text-xs text-yellow-600 mt-2 p-2 bg-yellow-50 rounded">
+                      No allocations yet. Start by assigning people to projects →
+                    </div>
+                  ) : (
+                    <div className="text-xs font-medium text-blue-600 mt-2">
+                      {kpi.actionText} →
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>

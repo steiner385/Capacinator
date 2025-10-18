@@ -44,9 +44,12 @@ export function DataTable<T extends Record<string, any>>({
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const sortedData = useMemo(() => {
-    if (!sortColumn || !sortDirection) return data;
+    // Ensure data is always an array
+    const safeData = Array.isArray(data) ? data : [];
 
-    return [...data].sort((a, b) => {
+    if (!sortColumn || !sortDirection) return safeData;
+
+    return [...safeData].sort((a, b) => {
       const aValue = a[sortColumn];
       const bValue = b[sortColumn];
 
@@ -80,7 +83,7 @@ export function DataTable<T extends Record<string, any>>({
     return sortedData.slice(startIndex, startIndex + itemsPerPage);
   }, [sortedData, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -122,7 +125,7 @@ export function DataTable<T extends Record<string, any>>({
     );
   }
 
-  if (data.length === 0) {
+  if (!Array.isArray(data) || data.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <p className="text-muted-foreground">{emptyMessage}</p>
@@ -179,7 +182,7 @@ export function DataTable<T extends Record<string, any>>({
         <div className="flex items-center justify-between px-2">
           <div className="text-sm text-muted-foreground">
             Showing {((currentPage - 1) * itemsPerPage) + 1} to{' '}
-            {Math.min(currentPage * itemsPerPage, data.length)} of {data.length} entries
+            {Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length} entries
           </div>
           <div className="flex items-center space-x-2">
             <Button

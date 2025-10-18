@@ -190,4 +190,235 @@ describe('AuditService - Simple Tests', () => {
     expect(result2.entries.length).toBe(1);
     expect(result2.entries[0].changed_by).toBe('admin');
   });
+
+  test('should cleanup expired entries', async () => {
+    // Create an old entry (35 days ago, beyond retention)
+    const oldDate = new Date();
+    oldDate.setDate(oldDate.getDate() - 35);
+
+    await db('audit_log').insert({
+      id: 'old-entry',
+      table_name: 'people',
+      record_id: 'user-1',
+      action: 'CREATE',
+      changed_at: oldDate
+    });
+
+    // Create a recent entry (10 days ago, within retention)
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 10);
+
+    await db('audit_log').insert({
+      id: 'recent-entry',
+      table_name: 'people',
+      record_id: 'user-2',
+      action: 'CREATE',
+      changed_at: recentDate
+    });
+
+    const deletedCount = await auditService.cleanupExpiredEntries();
+
+    expect(deletedCount).toBe(1);
+
+    const remaining = await db('audit_log').select('*');
+    expect(remaining.length).toBe(1);
+    expect(remaining[0].id).toBe('recent-entry');
+  });
+
+  test('should get audit statistics', async () => {
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'CREATE',
+      changedBy: 'admin'
+    });
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'UPDATE',
+      changedBy: 'admin'
+    });
+
+    await auditService.logChange({
+      tableName: 'projects',
+      recordId: 'project-1',
+      action: 'CREATE',
+      changedBy: 'user'
+    });
+
+    const stats = await auditService.getAuditStats();
+
+    expect(stats.totalEntries).toBe(3);
+    expect(stats.entriesByAction.CREATE).toBe(2);
+    expect(stats.entriesByAction.UPDATE).toBe(1);
+    expect(stats.entriesByTable.people).toBe(2);
+    expect(stats.entriesByTable.projects).toBe(1);
+    expect(stats.oldestEntry).toBeDefined();
+    expect(stats.newestEntry).toBeDefined();
+  });
+
+  test('should get audit entry by ID', async () => {
+    const auditId = await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-123',
+      action: 'CREATE',
+      changedBy: 'admin',
+      newValues: { name: 'John Doe' }
+    });
+
+    const entry = await auditService.getAuditEntryById(auditId);
+
+    expect(entry).toBeDefined();
+    expect(entry?.id).toBe(auditId);
+    expect(entry?.table_name).toBe('people');
+    expect(entry?.record_id).toBe('user-123');
+    expect(entry?.action).toBe('CREATE');
+
+    const nonExistent = await auditService.getAuditEntryById('non-existent-id');
+    expect(nonExistent).toBeNull();
+  });
+
+  test('should get audit summary by table', async () => {
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'CREATE'
+    });
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-2',
+      action: 'UPDATE'
+    });
+
+    await auditService.logChange({
+      tableName: 'projects',
+      recordId: 'project-1',
+      action: 'CREATE'
+    });
+
+    const summary = await auditService.getAuditSummaryByTable();
+
+    expect(summary.people).toBeDefined();
+    expect(summary.people.CREATE).toBe(1);
+    expect(summary.people.UPDATE).toBe(1);
+    expect(summary.people.DELETE).toBe(0);
+
+    expect(summary.projects).toBeDefined();
+    expect(summary.projects.CREATE).toBe(1);
+
+    expect(summary.roles).toBeDefined();
+    expect(summary.roles.CREATE).toBe(0);
+  });
+
+  test('should get audit timeline by hour', async () => {
+    const start = new Date();
+    start.setHours(start.getHours() - 2);
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'CREATE'
+    });
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-2',
+      action: 'CREATE'
+    });
+
+    const end = new Date();
+    const timeline = await auditService.getAuditTimeline(start, end, 'hour');
+
+    expect(timeline.length).toBeGreaterThan(0);
+    expect(timeline[0]).toHaveProperty('timestamp');
+    expect(timeline[0]).toHaveProperty('action_count');
+  });
+
+  test('should get audit timeline by day', async () => {
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'CREATE'
+    });
+
+    const end = new Date();
+    const timeline = await auditService.getAuditTimeline(start, end, 'day');
+
+    expect(timeline.length).toBeGreaterThan(0);
+    expect(timeline[0].timestamp).toBeDefined();
+    expect(timeline[0].action_count).toBeGreaterThan(0);
+  });
+
+  test('should get user activity', async () => {
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'CREATE',
+      changedBy: 'admin'
+    });
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-2',
+      action: 'CREATE',
+      changedBy: 'admin'
+    });
+
+    await auditService.logChange({
+      tableName: 'projects',
+      recordId: 'project-1',
+      action: 'CREATE',
+      changedBy: 'user1'
+    });
+
+    const activity = await auditService.getUserActivity();
+
+    expect(activity.admin).toBeDefined();
+    expect(activity.admin.total_actions).toBe(2);
+    expect(activity.admin.last_activity).toBeDefined();
+
+    expect(activity.user1).toBeDefined();
+    expect(activity.user1.total_actions).toBe(1);
+  });
+
+  test('should get actual change history excluding undo operations', async () => {
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'CREATE',
+      newValues: { name: 'John' }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 5));
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'DELETE',
+      oldValues: { name: 'John' },
+      comment: 'Undo CREATE operation (audit_id: test)'
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 5));
+
+    await auditService.logChange({
+      tableName: 'people',
+      recordId: 'user-1',
+      action: 'UPDATE',
+      oldValues: { name: 'John' },
+      newValues: { name: 'Jane' }
+    });
+
+    const actualHistory = await auditService.getActualChangeHistory('people', 'user-1');
+
+    expect(actualHistory.length).toBe(2);
+    expect(actualHistory[0].action).toBe('UPDATE');
+    expect(actualHistory[1].action).toBe('CREATE');
+    expect(actualHistory.every(entry => !entry.comment || !entry.comment.includes('Undo'))).toBe(true);
+  });
 });

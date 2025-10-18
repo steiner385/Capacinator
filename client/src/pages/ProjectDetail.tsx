@@ -1,20 +1,38 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  ArrowLeft, Edit2, Save, X, Calendar, Users, Briefcase, Clock, 
-  MapPin, Target, ChevronDown, ChevronUp, Plus, Trash2
+import {
+  ArrowLeft, Edit2, Save, Users, Briefcase, Clock,
+  MapPin, Target, Trash2, AlertTriangle, AlertCircle,
+  CheckCircle, Circle, XCircle, RefreshCw
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../components/ui/dialog';
+import { Button } from '../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Skeleton } from '../components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { api } from '../lib/api-client';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
-import EnhancedProjectTimeline from '../components/EnhancedProjectTimeline';
-import '../components/EnhancedProjectTimeline.css';
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table';
+import { InlineEdit } from '../components/ui/InlineEdit';
+import { CollapsibleSection } from '../components/ui/CollapsibleSection';
+import { AssignmentTable } from '../components/ui/AssignmentTable';
 import type { Project } from '../types';
-import './PersonDetails.css'; // Reuse existing styles
-import '../components/Charts.css';
+import './ProjectDetail.css';
 
 interface ProjectDetail {
   id: string;
@@ -74,7 +92,6 @@ export function ProjectDetail() {
   
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
-    phases: true,
     demand: true,
     assignments: true,
     history: false
@@ -194,136 +211,17 @@ export function ProjectDetail() {
     }
   };
 
-  // Inline editing component
-  const InlineEdit = ({ 
-    field, 
-    value, 
-    type = 'text', 
-    options = [], 
-    placeholder = '',
-    icon = null
-  }: {
-    field: string;
-    value: any;
-    type?: 'text' | 'email' | 'tel' | 'number' | 'select' | 'checkbox' | 'textarea';
-    options?: Array<{ value: any; label: string }>;
-    placeholder?: string;
-    icon?: any;
-  }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(value);
-
-    const handleSave = () => {
-      if (editValue !== value) {
-        if (type === 'number') {
-          handleFieldUpdate(field, parseInt(editValue));
-        } else if (type === 'checkbox') {
-          handleFieldUpdate(field, editValue ? 1 : 0);
-        } else {
-          handleFieldUpdate(field, editValue);
-        }
-      }
-      setIsEditing(false);
-    };
-
-    const handleCancel = () => {
-      setEditValue(value);
-      setIsEditing(false);
-    };
-
-    if (isEditing) {
-      return (
-        <div className="inline-edit-container">
-          {type === 'select' ? (
-            <select
-              value={editValue || ''}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="form-select"
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') handleCancel();
-              }}
-              autoFocus
-            >
-              <option value="">{placeholder || 'Select...'}</option>
-              {options.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : type === 'checkbox' ? (
-            <input
-              type="checkbox"
-              checked={editValue}
-              onChange={(e) => setEditValue(e.target.checked)}
-              className="form-checkbox"
-              onBlur={handleSave}
-              autoFocus
-            />
-          ) : type === 'textarea' ? (
-            <textarea
-              value={editValue || ''}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="form-textarea"
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) handleSave();
-                if (e.key === 'Escape') handleCancel();
-              }}
-              placeholder={placeholder}
-              rows={3}
-              autoFocus
-            />
-          ) : (
-            <input
-              type={type}
-              value={editValue || ''}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="form-input"
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') handleCancel();
-              }}
-              placeholder={placeholder}
-              autoFocus
-            />
-          )}
-        </div>
-      );
-    }
-
-    // For display, show the label if it's a select, otherwise show the value
-    let displayValue;
-    if (type === 'select') {
-      displayValue = options.find(opt => opt.value === value)?.label || placeholder || 'Not specified';
-    } else if (type === 'checkbox') {
-      displayValue = (
-        <span className={`badge ${value ? 'badge-success' : 'badge-gray'}`}>
-          {value ? 'Yes' : 'No'}
-        </span>
-      );
+  // Handle field updates with proper type conversion
+  const createFieldHandler = (field: string) => (value: string | number | boolean) => {
+    if (field === 'include_in_demand') {
+      handleFieldUpdate(field, value ? 1 : 0);
+    } else if (typeof value === 'string' && ['priority'].includes(field)) {
+      handleFieldUpdate(field, parseInt(value));
     } else {
-      displayValue = value || placeholder || 'Not specified';
+      handleFieldUpdate(field, value);
     }
-
-    return (
-      <div className="info-value inline-editable" onClick={() => canEdit && setIsEditing(true)}>
-        {icon && React.createElement(icon, { size: 16 })}
-        <span>{displayValue}</span>
-        {canEdit && <Edit2 size={14} className="edit-icon" />}
-      </div>
-    );
   };
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
 
   const getPriorityColor = (priority: number) => {
     switch (priority) {
@@ -345,301 +243,307 @@ export function ProjectDetail() {
     }
   };
 
-  if (isLoading) return <div className="loading">Loading project details...</div>;
-  if (error || !project) return <div className="error">Failed to load project details</div>;
+  const getPriorityVariant = (priority: number) => {
+    switch (priority) {
+      case 1: return 'destructive';
+      case 2: return 'warning';
+      case 3: return 'secondary';
+      case 4: return 'success';
+      default: return 'outline';
+    }
+  };
 
-  return (
-    <div className="page-container person-details">
-      <div className="page-header">
-        <div className="header-left">
-          <button className="btn btn-icon" onClick={() => navigate('/projects')}>
-            <ArrowLeft size={20} />
-          </button>
-          <h1 style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{
-              backgroundColor: project.project_type?.color_code || '#6b7280',
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              marginRight: '12px',
-              flexShrink: 0
-            }} />
-            {project.name}
-          </h1>
-          <span className={`badge badge-${getPriorityColor(project.priority)}`}>
-            {getPriorityLabel(project.priority)}
-          </span>
+  const getPriorityIcon = (priority: number) => {
+    switch (priority) {
+      case 1: return AlertTriangle; // Critical
+      case 2: return AlertCircle;   // High
+      case 3: return Circle;        // Medium
+      case 4: return CheckCircle;   // Low
+      default: return Circle;
+    }
+  };
+
+  // Enhanced loading state with skeleton
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-8 w-64" />
+                </div>
+              </div>
+              <Skeleton className="h-7 w-20 rounded-full" />
+            </div>
+          </CardHeader>
+        </Card>
+        
+        <div className="space-y-6">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-5 w-5" />
+                  <Skeleton className="h-6 w-32" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
+    );
+  }
 
-      <div className="person-details-content">
-        {/* Basic Information Section */}
-        <div className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('basic')}>
-            <h2>
-              <Target size={20} />
-              Project Information
-            </h2>
-            {expandedSections.basic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+  // Enhanced error state
+  if (error || !project) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Project</AlertTitle>
+          <AlertDescription className="mt-2">
+            Failed to load project details. This could be due to a network issue or the project may not exist.
+          </AlertDescription>
+          <div className="mt-4 flex space-x-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/projects')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Projects
+            </Button>
           </div>
-          
-          {expandedSections.basic && (
-            <div className="section-content">
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>Project Type</label>
-                  <InlineEdit
-                    field="project_type_id"
-                    value={project.project_type_id}
-                    type="select"
-                    options={Array.isArray(projectTypes) ? projectTypes.map((type: any) => ({
-                      value: type.id,
-                      label: type.name
-                    })) : []}
-                    placeholder="Select project type"
-                  />
-                </div>
+        </Alert>
+      </div>
+    );
+  }
 
-                <div className="info-item">
-                  <label>Location</label>
-                  <InlineEdit
-                    field="location_id"
-                    value={project.location_id}
-                    type="select"
-                    options={Array.isArray(locations) ? locations.map((loc: any) => ({
-                      value: loc.id,
-                      label: loc.name
-                    })) : []}
-                    placeholder="Select location"
-                    icon={MapPin}
-                  />
-                </div>
-
-                <div className="info-item">
-                  <label>Priority</label>
-                  <InlineEdit
-                    field="priority"
-                    value={project.priority}
-                    type="select"
-                    options={[
-                      { value: 1, label: 'Critical' },
-                      { value: 2, label: 'High' },
-                      { value: 3, label: 'Medium' },
-                      { value: 4, label: 'Low' }
-                    ]}
-                    placeholder="Select priority"
-                  />
-                </div>
-
-                <div className="info-item">
-                  <label>Owner</label>
-                  <div className="info-value">{project.owner_name || 'Not assigned'}</div>
-                </div>
-
-                <div className="info-item">
-                  <label>External ID</label>
-                  <InlineEdit
-                    field="external_id"
-                    value={project.external_id}
-                    placeholder="Enter external ID"
-                  />
-                </div>
-
-                <div className="info-item">
-                  <label>Include in Demand</label>
-                  <InlineEdit
-                    field="include_in_demand"
-                    value={project.include_in_demand === 1}
-                    type="checkbox"
-                  />
-                </div>
-
-                <div className="info-item info-item-full">
-                  <label>Description</label>
-                  <InlineEdit
-                    field="description"
-                    value={project.description}
-                    type="textarea"
-                    placeholder="Enter project description"
-                  />
-                </div>
-
-                <div className="info-item info-item-full">
-                  <label>Data Restrictions</label>
-                  <InlineEdit
-                    field="data_restrictions"
-                    value={project.data_restrictions}
-                    type="textarea"
-                    placeholder="Enter data restrictions"
-                  />
-                </div>
+  return (
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="icon" onClick={() => navigate('/projects')}>
+                <ArrowLeft size={20} />
+              </Button>
+              <div className="flex items-center space-x-3">
+                <div 
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: project.project_type?.color_code || '#6b7280' }}
+                />
+                <CardTitle className="text-2xl font-bold">{project.name}</CardTitle>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Project Phases Section */}
-        <div className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('phases')}>
-            <h2>
-              <Calendar size={20} />
-              Project Timeline
-            </h2>
-            {expandedSections.phases ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <Badge
+              variant={getPriorityVariant(project.priority) as any}
+              className="text-sm px-3 py-1 flex items-center gap-1"
+            >
+              {(() => {
+                const PriorityIcon = getPriorityIcon(project.priority);
+                return <PriorityIcon size={14} className="mr-1" />;
+              })()}
+              {getPriorityLabel(project.priority)}
+            </Badge>
           </div>
-          
-          {expandedSections.phases && (
-            <div className="section-content">
-              <EnhancedProjectTimeline projectId={project.id} />
+        </CardHeader>
+      </Card>
+
+      <div className="space-y-6">
+        {/* Basic Information Section */}
+        <CollapsibleSection
+          title="Project Information"
+          icon={Target}
+          expanded={expandedSections.basic}
+          onToggle={(expanded) => setExpandedSections(prev => ({ ...prev, basic: expanded }))}
+        >
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Project Type</label>
+              <InlineEdit
+                value={project.project_type_id || ''}
+                onSave={createFieldHandler('project_type_id')}
+                type="select"
+                options={Array.isArray(projectTypes) ? projectTypes.map((type: any) => ({
+                  value: type.id,
+                  label: type.name
+                })) : []}
+                placeholder="Select project type"
+                disabled={!canEdit}
+              />
             </div>
-          )}
-        </div>
+
+            <div className="info-item">
+              <label>Location</label>
+              <InlineEdit
+                value={project.location_id || ''}
+                onSave={createFieldHandler('location_id')}
+                type="select"
+                options={Array.isArray(locations) ? locations.map((loc: any) => ({
+                  value: loc.id,
+                  label: loc.name
+                })) : []}
+                placeholder="Select location"
+                icon={MapPin}
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="info-item">
+              <label>Priority</label>
+              <InlineEdit
+                value={project.priority || ''}
+                onSave={createFieldHandler('priority')}
+                type="select"
+                options={[
+                  { value: 1, label: 'Critical' },
+                  { value: 2, label: 'High' },
+                  { value: 3, label: 'Medium' },
+                  { value: 4, label: 'Low' }
+                ]}
+                placeholder="Select priority"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="info-item">
+              <label>Owner</label>
+              <div className="info-value">{project.owner_name || 'Not assigned'}</div>
+            </div>
+
+            <div className="info-item">
+              <label>External ID</label>
+              <InlineEdit
+                value={project.external_id || ''}
+                onSave={createFieldHandler('external_id')}
+                placeholder="Enter external ID"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="info-item">
+              <label>Include in Demand</label>
+              <InlineEdit
+                value={project.include_in_demand === 1}
+                onSave={createFieldHandler('include_in_demand')}
+                type="checkbox"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="info-item info-item-full">
+              <label>Description</label>
+              <InlineEdit
+                value={project.description || ''}
+                onSave={createFieldHandler('description')}
+                type="textarea"
+                placeholder="Enter project description"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="info-item info-item-full">
+              <label>Data Restrictions</label>
+              <InlineEdit
+                value={project.data_restrictions || ''}
+                onSave={createFieldHandler('data_restrictions')}
+                type="textarea"
+                placeholder="Enter data restrictions"
+                disabled={!canEdit}
+              />
+            </div>
+          </div>
+        </CollapsibleSection>
 
         {/* Resource Demand Section */}
-        <div className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('demand')}>
-            <h2>
-              <Briefcase size={20} />
-              Resource Demand
-            </h2>
-            {expandedSections.demand ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </div>
-          
-          {expandedSections.demand && (
-            <div className="section-content">
-              <ProjectDemandChart projectId={project.id} projectName={project.name} />
-            </div>
-          )}
-        </div>
+        <CollapsibleSection
+          title="Resource Demand"
+          icon={Briefcase}
+          expanded={expandedSections.demand}
+          onToggle={(expanded) => setExpandedSections(prev => ({ ...prev, demand: expanded }))}
+        >
+          <ProjectDemandChart projectId={project.id} projectName={project.name} />
+        </CollapsibleSection>
 
         {/* Current Assignments Section */}
-        <div className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('assignments')}>
-            <h2>
-              <Users size={20} />
-              Team Assignments
-            </h2>
-            {expandedSections.assignments ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </div>
-          
-          {expandedSections.assignments && (
-            <div className="section-content">
-              {project.assignments && project.assignments.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Allocation</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      {canEdit && <TableHead className="text-right text-muted-foreground">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {project.assignments.map((assignment) => (
-                      <TableRow
-                        key={assignment.id}
-                        onClick={() => handleAssignmentClick(assignment)}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                      >
-                        <TableCell>
-                          <Link 
-                            to={`/people/${assignment.person_id}`} 
-                            className="text-primary hover:text-primary/80"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {assignment.person_name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{assignment.role_name}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">{assignment.allocation_percentage}%</span>
-                        </TableCell>
-                        <TableCell>{formatDate(new Date(assignment.start_date).toISOString())}</TableCell>
-                        <TableCell>{formatDate(new Date(assignment.end_date).toISOString())}</TableCell>
-                        {canEdit && (
-                          <TableCell className="text-right text-muted-foreground">
-                            <button
-                              className="inline-flex items-center justify-center rounded-md p-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteAssignmentMutation.mutate(assignment.id);
-                              }}
-                              title="Delete assignment"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="empty-state">
-                  <Users size={48} />
-                  <p>No team assignments</p>
-                  <Link to="/assignments" className="btn btn-primary">
-                    <Plus size={16} />
-                    Add Assignment
-                  </Link>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <CollapsibleSection
+          title="Team Assignments"
+          icon={Users}
+          expanded={expandedSections.assignments}
+          onToggle={(expanded) => setExpandedSections(prev => ({ ...prev, assignments: expanded }))}
+        >
+          <AssignmentTable
+            assignments={project.assignments || []}
+            onRowClick={handleAssignmentClick}
+            onDelete={(assignment) => deleteAssignmentMutation.mutate(assignment.id)}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            emptyMessage="No team assignments"
+            emptyActionText="Add Assignment"
+            emptyActionUrl="/assignments"
+            showPersonColumn={true}
+            showProjectColumn={false}
+          />
+        </CollapsibleSection>
 
         {/* History Section */}
-        <div className="detail-section">
-          <div className="section-header" onClick={() => toggleSection('history')}>
-            <h2>
-              <Clock size={20} />
-              History
-            </h2>
-            {expandedSections.history ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </div>
-          
-          {expandedSections.history && (
-            <div className="section-content">
-              <div className="history-timeline">
-                <div className="timeline-item">
-                  <div className="timeline-date">{formatDate(new Date(project.created_at).toISOString())}</div>
-                  <div className="timeline-content">
-                    <strong>Project created</strong>
-                  </div>
-                </div>
-                <div className="timeline-item">
-                  <div className="timeline-date">{formatDate(new Date(project.updated_at).toISOString())}</div>
-                  <div className="timeline-content">
-                    <strong>Last updated</strong>
-                  </div>
-                </div>
+        <CollapsibleSection
+          title="History"
+          icon={Clock}
+          expanded={expandedSections.history}
+          onToggle={(expanded) => setExpandedSections(prev => ({ ...prev, history: expanded }))}
+        >
+          <div className="history-timeline">
+            <div className="timeline-item">
+              <div className="timeline-date">{formatDate(new Date(project.created_at).toISOString())}</div>
+              <div className="timeline-content">
+                <strong>Project created</strong>
               </div>
             </div>
-          )}
-        </div>
+            <div className="timeline-item">
+              <div className="timeline-date">{formatDate(new Date(project.updated_at).toISOString())}</div>
+              <div className="timeline-content">
+                <strong>Last updated</strong>
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
 
         {/* Assignment Modal */}
-        {selectedAssignment && (
-          <div className="modal-overlay">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h3 className="modal-title">
-                  {isEditingAssignment ? 'Edit Assignment' : 'Assignment Details'}
-                </h3>
-                <button
-                  onClick={() => {
-                    setSelectedAssignment(null);
-                    setIsEditingAssignment(false);
-                  }}
-                  className="modal-close"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="modal-body">
+        <Dialog 
+          open={!!selectedAssignment} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedAssignment(null);
+              setIsEditingAssignment(false);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {isEditingAssignment ? 'Edit Assignment' : 'Assignment Details'}
+              </DialogTitle>
+              <DialogDescription>
+                {isEditingAssignment ? 'Update assignment details' : 'View assignment information'}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {selectedAssignment && (
+                <>
                 <div className="assignment-modal-info">
                   <div className="info-item">
                     <label>Person</label>
@@ -699,23 +603,22 @@ export function ProjectDetail() {
                       </div>
                     </div>
                     
-                    <div className="modal-actions">
-                      <button
+                    <DialogFooter>
+                      <Button
                         type="button"
+                        variant="outline"
                         onClick={() => setIsEditingAssignment(false)}
-                        className="btn btn-secondary"
                       >
                         Cancel
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="submit"
-                        className="btn btn-primary"
                         disabled={updateAssignmentMutation.isPending}
                       >
                         <Save size={16} />
                         Save Changes
-                      </button>
-                    </div>
+                      </Button>
+                    </DialogFooter>
                   </form>
                 ) : (
                   <div>
@@ -738,38 +641,38 @@ export function ProjectDetail() {
                       </div>
                     </div>
                     
-                    <div className="modal-actions">
-                      <button
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
                         onClick={() => setSelectedAssignment(null)}
-                        className="btn btn-secondary"
                       >
                         Close
-                      </button>
+                      </Button>
                       {canEdit && (
                         <>
-                          <button
+                          <Button
                             onClick={() => setIsEditingAssignment(true)}
-                            className="btn btn-primary"
                           >
                             <Edit2 size={16} />
                             Edit
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="destructive"
                             onClick={handleAssignmentDelete}
-                            className="btn btn-danger"
                           >
                             <Trash2 size={16} />
                             Delete
-                          </button>
+                          </Button>
                         </>
                       )}
-                    </div>
+                    </DialogFooter>
                   </div>
                 )}
-              </div>
+                </>
+              )}
             </div>
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

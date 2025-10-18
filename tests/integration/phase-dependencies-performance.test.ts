@@ -331,14 +331,27 @@ describe('Phase Dependencies Performance Tests', () => {
       await db('project_phases').insert(masterPhases);
       await db('project_phases_timeline').insert(projectPhases);
 
-      // Create random dependencies
+      // Create random dependencies (ensuring uniqueness)
       const dependencies = [];
-      for (let i = 1; i <= numDependencies; i++) {
+      const usedPairs = new Set<string>();
+      let depCount = 0;
+
+      while (depCount < numDependencies) {
         const predIndex = Math.floor(Math.random() * (numPhases - 1)) + 1;
         const succIndex = Math.min(predIndex + Math.floor(Math.random() * 5) + 1, numPhases);
-        
+
+        const pairKey = `${predIndex}-${succIndex}`;
+
+        // Skip if this pair already exists
+        if (usedPairs.has(pairKey)) {
+          continue;
+        }
+
+        usedPairs.add(pairKey);
+        depCount++;
+
         dependencies.push({
-          id: `query-dep-${i}`,
+          id: `query-dep-${depCount}`,
           project_id: testProjectId,
           predecessor_phase_timeline_id: `query-phase-timeline-${predIndex}`,
           successor_phase_timeline_id: `query-phase-timeline-${succIndex}`,

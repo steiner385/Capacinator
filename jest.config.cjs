@@ -60,7 +60,8 @@ module.exports = {
       testMatch: [
         '<rootDir>/tests/unit/client/**/*.test.tsx',
         '<rootDir>/tests/unit/client/**/*.test.ts',
-        '<rootDir>/client/src/**/__tests__/**/*.test.tsx'
+        '<rootDir>/client/src/**/__tests__/**/*.test.tsx',
+        '<rootDir>/client/src/**/__tests__/**/*.test.ts'
       ],
       moduleNameMapper: {
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',

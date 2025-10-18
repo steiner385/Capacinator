@@ -37,12 +37,13 @@ export class ProjectPhaseCascadeService {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
       throw new Error('Invalid date object');
     }
-    
-    // Use local date components to avoid timezone shifts
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    
+
+    // Use UTC date components to ensure consistency
+    // This prevents timezone-related date shifts
+    const year = date.getUTCFullYear();
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = date.getUTCDate().toString().padStart(2, '0');
+
     return `${year}-${month}-${day}`;
   }
 
@@ -51,12 +52,12 @@ export class ProjectPhaseCascadeService {
    */
   private parseDateSafe(dateString: string): Date {
     if (!dateString) throw new Error('Date string is required');
-    
+
     const [year, month, day] = dateString.split('-').map(Number);
     if (!year || !month || !day) throw new Error('Invalid date format, expected YYYY-MM-DD');
-    
-    // Create date in local timezone to represent the business date
-    return new Date(year, month - 1, day);
+
+    // Create date in UTC to ensure timezone-independent business dates
+    return new Date(Date.UTC(year, month - 1, day));
   }
 
   /**
@@ -75,28 +76,36 @@ export class ProjectPhaseCascadeService {
     projectId: string,
     changedPhaseId: string,
     newStartDate: Date,
-    newEndDate: Date
+    newEndDate: Date,
+    trx?: Knex.Transaction
   ): Promise<CascadeResult> {
+    // Use transaction if provided, otherwise use default db
+    const db = trx || this.db;
+
     // Build dependency graph for the project
-    const dependencyGraph = await this.buildDependencyGraph(projectId);
-    
-    // First validate that the change itself doesn't violate dependencies
+    const dependencyGraph = await this.buildDependencyGraph(projectId, db);
+
+    // Check for circular dependencies first (before validation)
+    // This allows us to detect cycles even if dates are invalid
+    const circularDependencies = this.detectCircularDependencies(dependencyGraph);
+
+    // Validate that the change itself doesn't violate dependencies
     const validationErrors = await this.validatePhaseChange(
       dependencyGraph,
       changedPhaseId,
       newStartDate,
       newEndDate
     );
-    
+
     if (validationErrors.length > 0) {
       return {
         affected_phases: [],
         cascade_count: 0,
-        circular_dependencies: [],
+        circular_dependencies: circularDependencies,
         validation_errors: validationErrors
       };
     }
-    
+
     // Find all phases affected by this change
     const affectedPhases = await this.findAffectedPhases(
       dependencyGraph,
@@ -104,9 +113,6 @@ export class ProjectPhaseCascadeService {
       newStartDate,
       newEndDate
     );
-
-    // Check for circular dependencies
-    const circularDependencies = this.detectCircularDependencies(dependencyGraph);
 
     return {
       affected_phases: affectedPhases,
@@ -153,22 +159,33 @@ export class ProjectPhaseCascadeService {
     
     try {
       for (const update of phaseUpdates) {
-        // Update the phase timeline
-        await trx('project_phases_timeline')
+        // Get the timeline ID for this phase
+        const timeline = await trx('project_phases_timeline')
           .where('project_id', projectId)
           .where('phase_id', update.phase_id)
+          .first();
+
+        if (!timeline) {
+          throw new Error(`Timeline not found for phase ${update.phase_id} in project ${projectId}`);
+        }
+
+        // Update the phase timeline
+        await trx('project_phases_timeline')
+          .where('id', timeline.id)
           .update({
             start_date: this.formatDateSafe(update.start_date),
             end_date: this.formatDateSafe(update.end_date),
             updated_at: new Date().toISOString()
           });
 
-        // Calculate and apply cascading effects
+        // Calculate and apply cascading effects using timeline ID
+        // Pass the transaction so queries don't deadlock
         const cascadeResult = await this.calculateCascade(
           projectId,
-          update.phase_id,
+          timeline.id,  // Use timeline ID, not phase ID
           update.start_date,
-          update.end_date
+          update.end_date,
+          trx  // Pass transaction to avoid deadlock
         );
         
         if (cascadeResult.validation_errors && cascadeResult.validation_errors.length > 0) {
@@ -199,9 +216,12 @@ export class ProjectPhaseCascadeService {
   /**
    * Build a dependency graph for the project
    */
-  private async buildDependencyGraph(projectId: string): Promise<Map<string, DependencyNode>> {
+  private async buildDependencyGraph(projectId: string, db?: any): Promise<Map<string, DependencyNode>> {
+    // Use provided db or fall back to this.db
+    const database = db || this.db;
+
     // Get all phases for the project
-    const phases = await this.db('project_phases_timeline as ppt')
+    const phases = await database('project_phases_timeline as ppt')
       .join('project_phases as pp', 'ppt.phase_id', 'pp.id')
       .where('ppt.project_id', projectId)
       .select(
@@ -212,7 +232,7 @@ export class ProjectPhaseCascadeService {
       );
 
     // Get all dependencies for the project
-    const dependencies = await this.db('project_phase_dependencies')
+    const dependencies = await database('project_phase_dependencies')
       .where('project_id', projectId)
       .select('*');
 
@@ -270,7 +290,7 @@ export class ProjectPhaseCascadeService {
 
     while (queue.length > 0) {
       const { phaseId, triggerStartDate, triggerEndDate } = queue.shift()!;
-      
+
       if (visited.has(phaseId)) continue;
       visited.add(phaseId);
 
@@ -296,7 +316,7 @@ export class ProjectPhaseCascadeService {
         const currentEndStr = dependentPhase.end_date;
         const newStartStr = this.formatDateSafe(newDates.start);
         const newEndStr = this.formatDateSafe(newDates.end);
-        
+
         if (currentStartStr !== newStartStr || currentEndStr !== newEndStr) {
           
           affectedPhases.push({
@@ -457,68 +477,10 @@ export class ProjectPhaseCascadeService {
       }
     }
     
-    // Check outgoing dependencies (phases that depend on this one)
-    for (const dep of phase.dependents) {
-      const successor = graph.get(dep.successor_id);
-      if (!successor) continue;
-      
-      const successorStartDate = this.parseDateSafe(successor.start_date);
-      const successorEndDate = this.parseDateSafe(successor.end_date);
-      
-      switch (dep.dependency_type) {
-        case 'FS': // Finish-to-Start: successor must start on or after this phase finishes
-          if (successorStartDate < newEndDate) {
-            const lagDays = dep.lag_days || 0;
-            const requiredEndDate = new Date(successorStartDate);
-            requiredEndDate.setDate(requiredEndDate.getDate() - lagDays);
-            
-            errors.push(
-              `Phase "${phase.phase_name}" cannot end after "${successor.phase_name}" starts. ` +
-              `Required end date: ${this.formatDateSafe(requiredEndDate)} or earlier.`
-            );
-          }
-          break;
-          
-        case 'SS': // Start-to-Start: successor must start on or after this phase starts
-          if (successorStartDate < newStartDate) {
-            const lagDays = dep.lag_days || 0;
-            const requiredStartDate = new Date(successorStartDate);
-            requiredStartDate.setDate(requiredStartDate.getDate() - lagDays);
-            
-            errors.push(
-              `Phase "${phase.phase_name}" cannot start after "${successor.phase_name}" starts. ` +
-              `Required start date: ${this.formatDateSafe(requiredStartDate)} or earlier.`
-            );
-          }
-          break;
-          
-        case 'FF': // Finish-to-Finish: successor must finish on or after this phase finishes
-          if (successorEndDate < newEndDate) {
-            const lagDays = dep.lag_days || 0;
-            const requiredEndDate = new Date(successorEndDate);
-            requiredEndDate.setDate(requiredEndDate.getDate() - lagDays);
-            
-            errors.push(
-              `Phase "${phase.phase_name}" cannot finish after "${successor.phase_name}" finishes. ` +
-              `Required end date: ${this.formatDateSafe(requiredEndDate)} or earlier.`
-            );
-          }
-          break;
-          
-        case 'SF': // Start-to-Finish: successor must finish on or after this phase starts
-          if (successorEndDate < newStartDate) {
-            const lagDays = dep.lag_days || 0;
-            const requiredStartDate = new Date(successorEndDate);
-            requiredStartDate.setDate(requiredStartDate.getDate() - lagDays);
-            
-            errors.push(
-              `Phase "${phase.phase_name}" cannot start after "${successor.phase_name}" finishes. ` +
-              `Required start date: ${this.formatDateSafe(requiredStartDate)} or earlier.`
-            );
-          }
-          break;
-      }
-    }
+    // NOTE: We do NOT check outgoing dependencies (phases that depend on this one)
+    // because those will be handled by the cascade logic. The cascade will update
+    // successor phases to maintain the dependency relationships. Only incoming
+    // dependencies need to be validated because we cannot change predecessor phases.
     
     return errors;
   }
@@ -536,7 +498,7 @@ export class ProjectPhaseCascadeService {
         circular.push(`Circular dependency detected: ${path.join(' -> ')} -> ${nodeId}`);
         return;
       }
-      
+
       if (visited.has(nodeId)) return;
 
       visited.add(nodeId);

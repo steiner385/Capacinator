@@ -152,17 +152,27 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Create timeline viewport - use external if provided, otherwise calculate from data
   const timelineViewport = React.useMemo((): TimelineViewport => {
+    // Validate external viewport has proper Date objects (not empty objects {})
+    const isValidViewport = (viewport: TimelineViewport | undefined): boolean => {
+      if (!viewport) return false;
+      if (!viewport.startDate || !viewport.endDate) return false;
+      // Check if dates are actually Date objects with valid time values
+      if (!(viewport.startDate instanceof Date) || isNaN(viewport.startDate.getTime())) return false;
+      if (!(viewport.endDate instanceof Date) || isNaN(viewport.endDate.getTime())) return false;
+      return true;
+    };
+
     // If we have external viewport AND alignment constraints, adjust pixelsPerDay to fit
-    if (externalViewport && alignmentDimensions && compact) {
+    if (externalViewport && alignmentDimensions && compact && isValidViewport(externalViewport)) {
       const totalDays = (externalViewport.endDate.getTime() - externalViewport.startDate.getTime()) / (1000 * 60 * 60 * 24);
       const availableWidth = alignmentDimensions.width;
       const fittedPixelsPerDay = Math.max(0.5, availableWidth / totalDays); // Ensure it fits exactly
-      
+
       const adjustedViewport = {
         ...externalViewport,
         pixelsPerDay: fittedPixelsPerDay
       };
-      
+
       console.log('📈 VisualPhaseManager adjusted viewport for alignment:', {
         original: externalViewport,
         adjusted: adjustedViewport,
@@ -170,14 +180,19 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         availableWidth,
         fittedPixelsPerDay
       });
-      
+
       return adjustedViewport;
     }
-    
-    // ALWAYS use external viewport if provided (for shared timeline control)
-    if (externalViewport) {
+
+    // ALWAYS use external viewport if provided (for shared timeline control) - but only if valid
+    if (externalViewport && isValidViewport(externalViewport)) {
       console.log('📈 VisualPhaseManager using external viewport:', externalViewport);
       return externalViewport;
+    }
+
+    // If external viewport is invalid, log warning
+    if (externalViewport && !isValidViewport(externalViewport)) {
+      console.warn('⚠️ VisualPhaseManager received invalid external viewport (empty date objects), falling back to internal calculation:', externalViewport);
     }
     
     // Only calculate own viewport if no external control AND not in compact mode
@@ -554,6 +569,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               viewport={timelineViewport}
               mode="phase-manager"
               height={170}
+              width={alignmentDimensions?.width} // Pass explicit width for precise alignment
               dependencies={dependenciesData?.data?.map((dep: any) => ({
                 id: dep.id,
                 predecessorId: dep.predecessor_phase_timeline_id,
@@ -574,7 +590,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               minItemDuration={1}
               className="project-phase-timeline"
               chartTimeData={chartTimeData} // Pass chart data for exact time axis alignment
-              style={{ 
+              style={{
                 backgroundColor: 'hsl(var(--background))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '8px 8px 0 0',

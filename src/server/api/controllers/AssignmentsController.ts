@@ -317,7 +317,7 @@ export class AssignmentsController extends EnhancedBaseController {
       }
 
       if (!assignment) {
-        this.handleNotFound(res, 'Assignment');
+        this.handleNotFound(req, res, 'Assignment');
         return null;
       }
 
@@ -346,16 +346,16 @@ export class AssignmentsController extends EnhancedBaseController {
       }
       
       existing = await this.db(tableName).where('id', actualId).first();
-      
+
       // If not found in scenario table, check legacy table
       if (!existing) {
         tableName = 'project_assignments';
         isScenarioAssignment = false;
         existing = await this.db(tableName).where('id', actualId).first();
       }
-      
+
       if (!existing) {
-        this.handleNotFound(res, 'Assignment');
+        this.handleNotFound(req, res, 'Assignment');
         return null;
       }
 
@@ -540,7 +540,7 @@ export class AssignmentsController extends EnhancedBaseController {
       }
 
       if (!assignment || deleted === 0) {
-        this.handleNotFound(res, 'Assignment');
+        this.handleNotFound(req, res, 'Assignment');
         return null;
       }
 

@@ -18,7 +18,7 @@ describe('Utilization Report Simple Tests', () => {
       created_at: new Date(),
       updated_at: new Date()
     });
-    
+
     testProjectTypeId = uuidv4();
     await db('project_types').insert({
       id: testProjectTypeId,
@@ -26,25 +26,30 @@ describe('Utilization Report Simple Tests', () => {
       created_at: new Date(),
       updated_at: new Date()
     });
-    
-    testRoleId = uuidv4();
-    await db('roles').insert({
-      id: testRoleId,
-      name: 'Developer',
-      created_at: new Date(),
-      updated_at: new Date()
-    });
-    
+
+    // Check if a role exists and reuse it, or create a unique one
+    const existingRole = await db('roles').where('name', 'Developer').first();
+    if (existingRole) {
+      testRoleId = existingRole.id;
+    } else {
+      testRoleId = uuidv4();
+      await db('roles').insert({
+        id: testRoleId,
+        name: `Test-Developer-${testRoleId.substring(0, 8)}`, // Unique name
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+
     testPersonId = uuidv4();
     await db('people').insert({
       id: testPersonId,
       name: 'Test Person',
       email: 'test@example.com',
-      is_active: true,
-      worker_type: 'employee',
+      is_active: 1, // SQLite uses INTEGER for booleans
+      worker_type: 'FTE', // Must be 'FTE', 'Contractor', or 'Consultant'
       default_hours_per_day: 8,
       default_availability_percentage: 100,
-      location_id: testLocationId,
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -71,7 +76,6 @@ describe('Utilization Report Simple Tests', () => {
         description: 'Baseline scenario',
         status: 'active',
         scenario_type: 'baseline',
-        created_by: testPersonId, // Use the test person as creator
         created_at: new Date(),
         updated_at: new Date()
       });
