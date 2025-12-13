@@ -8,12 +8,29 @@ You are tasked with systematically implementing a solution for a GitHub issue. T
 
 ## Phase 1: Issue Analysis & Branch Setup
 
-### Step 0: Sync with Latest Main (CRITICAL)
-**IMPORTANT**: Always pull the latest changes from main before starting new work:
+### Step 0: Sync with Default Branch (CRITICAL)
+**IMPORTANT**: Always pull the latest changes from the default branch before starting new work.
+
+First, detect the default branch (handles both `main` and `master`):
 
 ```bash
-git checkout main
-git pull origin main
+# Detect default branch
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+if [ -z "$DEFAULT_BRANCH" ]; then
+  # Fallback: check if main exists, otherwise use master
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    DEFAULT_BRANCH="main"
+  else
+    DEFAULT_BRANCH="master"
+  fi
+fi
+echo "Default branch: $DEFAULT_BRANCH"
+```
+
+Then sync:
+```bash
+git checkout $DEFAULT_BRANCH
+git pull origin $DEFAULT_BRANCH
 ```
 
 This ensures:
@@ -23,7 +40,7 @@ This ensures:
 
 Display confirmation:
 ```
-Synced with latest main (latest commit: [HASH])
+Synced with latest [DEFAULT_BRANCH] (latest commit: [HASH])
 ```
 
 ### Step 1: Fetch and Analyze Issue
@@ -77,7 +94,7 @@ This ensures:
 
 ### Step 2: Create Dedicated Branch
 - Create a descriptive branch name: `git checkout -b issue-[ISSUE_NUMBER]-brief-description`
-- (Latest main already synced in Step 0)
+- (Latest default branch already synced in Step 0)
 
 ### Step 3: Plan Implementation
 - Break down the issue into specific, actionable tasks
@@ -155,7 +172,7 @@ EOF
 
 ### Step 8: Mandatory PR Merge with Verification
 
-**Merge Process**:
+**Merge Process** (uses detected DEFAULT_BRANCH from Step 0):
 ```bash
 # Merge the PR (use --squash for clean history)
 gh pr merge --squash
@@ -175,9 +192,9 @@ else
   gh issue close [ISSUE_NUMBER] --comment "Implemented and merged via PR #[PR_NUMBER]. Auto-close did not trigger - closing manually."
 fi
 
-# Confirm merge was successful
-git checkout main
-git pull origin main
+# Confirm merge was successful (use DEFAULT_BRANCH detected in Step 0)
+git checkout $DEFAULT_BRANCH
+git pull origin $DEFAULT_BRANCH
 git log --oneline -5  # Should show your squashed commit
 ```
 
@@ -186,7 +203,7 @@ git log --oneline -5  # Should show your squashed commit
 - [ ] Waited 60 seconds for GitHub processing
 - [ ] Issue state verified (should be CLOSED)
 - [ ] If still open after 60 seconds, manually closed with reference to PR
-- [ ] Local main branch updated and shows merged commit
+- [ ] Local default branch updated and shows merged commit
 
 ### Step 8.5: Remove In-Progress Status (CRITICAL)
 **IMPORTANT**: After successful merge, remove the in-progress label to signal completion:
@@ -203,9 +220,9 @@ Removed in-progress status from issue #[ISSUE_NUMBER]
 (Issue is now marked as completed)
 ```
 
-### Step 9: Cleanup & Return to Main
-- Switch to main branch: `git checkout main`
-- Pull latest changes: `git pull origin main`
+### Step 9: Cleanup & Return to Default Branch
+- Switch to default branch: `git checkout $DEFAULT_BRANCH`
+- Pull latest changes: `git pull origin $DEFAULT_BRANCH`
 - Delete the feature branch: `git branch -d issue-[ISSUE_NUMBER]-brief-description`
 - Clean up remote branch: `git push origin --delete issue-[ISSUE_NUMBER]-brief-description`
 - Verify clean state: `git status` should show "working tree clean"
@@ -219,6 +236,7 @@ Removed in-progress status from issue #[ISSUE_NUMBER]
 - **Always verify the issue was closed** after PR merge - manually close if needed
 - **Always remove the in-progress label** (Step 8.5) after completion
 - **Check dependencies** before starting (Step 1.5) - implementing blocked dependencies first is recommended
+- **Branch Flexibility**: Works with both `main` and `master` default branches
 - If the issue is complex, consider breaking it into smaller sub-issues
 - Communicate progress in issue comments if implementation takes multiple sessions
 - Ask for clarification if requirements are unclear before implementing
@@ -228,7 +246,7 @@ Removed in-progress status from issue #[ISSUE_NUMBER]
 If any step fails:
 - **PR merge fails**: Check for conflicts, resolve, and retry merge
 - **Issue not auto-closed**: Use the manual close command in Step 8
-- **Branch conflicts**: Rebase or merge main into your feature branch
+- **Branch conflicts**: Rebase or merge default branch into your feature branch
 - **CI/CD failures**: Fix issues before merging - never bypass checks
 - **Dependencies warning**: Either implement dependencies first or document the risk and proceed
 - **Session abandoned mid-work**: The in-progress label remains - another session can remove it if the issue appears stale (no commits in 24+ hours)

@@ -17,12 +17,29 @@ The priority calculator queries GitHub live for all open issues and their labels
 
 Follow these steps:
 
-## Step 0: Sync with Latest Main (CRITICAL)
-**IMPORTANT**: Always pull the latest changes from main before querying for issues:
+## Step 0: Sync with Default Branch (CRITICAL)
+**IMPORTANT**: Always pull the latest changes from the default branch before querying for issues.
+
+First, detect the default branch (handles both `main` and `master`):
 
 ```bash
-git checkout main
-git pull origin main
+# Detect default branch
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+if [ -z "$DEFAULT_BRANCH" ]; then
+  # Fallback: check if main exists, otherwise use master
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    DEFAULT_BRANCH="main"
+  else
+    DEFAULT_BRANCH="master"
+  fi
+fi
+echo "Default branch: $DEFAULT_BRANCH"
+```
+
+Then sync:
+```bash
+git checkout $DEFAULT_BRANCH
+git pull origin $DEFAULT_BRANCH
 ```
 
 This ensures:
@@ -32,7 +49,7 @@ This ensures:
 
 Display confirmation:
 ```
-Synced with latest main (latest commit: [HASH])
+Synced with latest [DEFAULT_BRANCH] (latest commit: [HASH])
 ```
 
 ## Step 1: Query Open Issues with Labels
@@ -145,6 +162,7 @@ Immediately invoke the implementation command with the claimed issue number:
 - **In-Progress Exclusion**: Issues with `status: in-progress` are automatically skipped
 - **Dependency Checking**: Blocked issues (open dependencies) are excluded
 - **Multi-Session Safe**: Each session claims its own issue before starting work
+- **Branch Flexibility**: Works with both `main` and `master` default branches
 
 - **If No Eligible Issues**:
   - Check for in-progress issues from abandoned sessions
