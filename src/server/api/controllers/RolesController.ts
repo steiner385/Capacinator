@@ -1,8 +1,13 @@
 import type { Request, Response } from 'express';
-import { EnhancedBaseController } from './EnhancedBaseController.js';
-import { RequestWithLogging } from '../../middleware/requestLogger.js';
+import { BaseController, RequestWithContext } from './BaseController.js';
 
-export class RolesController extends EnhancedBaseController {
+// Alias for backward compatibility
+type RequestWithLogging = RequestWithContext;
+
+export class RolesController extends BaseController {
+  constructor() {
+    super({ enableLogging: true });
+  }
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {
       const roles = await this.db('roles')

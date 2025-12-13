@@ -1,10 +1,15 @@
 import type { Request, Response } from 'express';
-import { EnhancedBaseController } from './EnhancedBaseController.js';
-import { RequestWithLogging } from '../../middleware/requestLogger.js';
+import { BaseController, RequestWithContext } from './BaseController.js';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 import { validateDateRange, formatDateForDB } from '../../utils/dateValidation.js';
 
-export class ProjectPhasesController extends EnhancedBaseController {
+// Alias for backward compatibility
+type RequestWithLogging = RequestWithContext;
+
+export class ProjectPhasesController extends BaseController {
+  constructor() {
+    super({ enableLogging: true });
+  }
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;

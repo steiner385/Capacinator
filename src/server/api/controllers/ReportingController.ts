@@ -1,8 +1,13 @@
 import type { Request, Response } from 'express';
-import { EnhancedBaseController } from './EnhancedBaseController.js';
-import { RequestWithLogging } from '../../middleware/requestLogger.js';
+import { BaseController, RequestWithContext } from './BaseController.js';
 
-export class ReportingController extends EnhancedBaseController {
+// Alias for backward compatibility
+type RequestWithLogging = RequestWithContext;
+
+export class ReportingController extends BaseController {
+  constructor() {
+    super({ enableLogging: true });
+  }
   getDashboard = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     req.logger.info('Dashboard endpoint called');
     const result = await this.executeQuery(async () => {

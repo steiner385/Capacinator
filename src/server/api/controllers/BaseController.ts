@@ -1,55 +1,341 @@
 import type { Request, Response, NextFunction } from 'express';
-import { db } from '../../database/index.js';
+import { db, getAuditedDb } from '../../database/index.js';
+import { AuditContext } from '../../database/AuditedDatabase.js';
+import { logger } from '../../services/logging/config.js';
 
+/**
+ * Extended Request interface with logging context
+ */
+export interface RequestWithContext extends Request {
+  requestId?: string;
+  startTime?: number;
+  logger?: any;
+  user?: {
+    id: string;
+    role?: string;
+    [key: string]: any;
+  };
+}
+
+/**
+ * Operational error that is safe to show to users
+ */
+export interface OperationalError extends Error {
+  isOperational: boolean;
+  statusCode: number;
+}
+
+/**
+ * Configuration options for controller features
+ */
+export interface ControllerOptions {
+  /** Enable audit context for database operations */
+  enableAudit?: boolean;
+  /** Enable enhanced logging (requires request logger middleware) */
+  enableLogging?: boolean;
+}
+
+/**
+ * Unified BaseController with composable features
+ *
+ * This consolidates the functionality of:
+ * - Original BaseController (basic error handling, pagination, filters)
+ * - EnhancedBaseController (logging, request context, operational errors)
+ * - AuditedBaseController (audit context injection)
+ *
+ * Usage:
+ * - For basic controllers: extend BaseController (defaults work)
+ * - For controllers needing audit: override options with enableAudit: true
+ * - For controllers needing logging: override options with enableLogging: true
+ */
 export abstract class BaseController {
+  /** Database instance - use this for simple queries */
   protected db = db;
 
-  protected handleError(error: any, res: Response, message = 'Internal server error') {
-    console.error('Controller error:', error);
-    if (error.code === 'SQLITE_ERROR') {
-      console.error('SQL Error details:', error.message);
+  /** Audited database instance - initialized on first access */
+  private _auditedDb: any = null;
+
+  /** Controller feature options */
+  protected options: ControllerOptions;
+
+  constructor(options: ControllerOptions = {}) {
+    this.options = {
+      enableAudit: false,
+      enableLogging: false,
+      ...options
+    };
+  }
+
+  /**
+   * Get audited database instance with lazy initialization
+   */
+  protected get auditedDb(): any {
+    if (!this._auditedDb) {
+      this._auditedDb = getAuditedDb();
     }
+    return this._auditedDb;
+  }
+
+  /**
+   * Get database instance with optional audit context from request
+   * Use this when you need audit trail for database operations
+   */
+  protected getDb(req?: RequestWithContext): any {
+    if (!this.options.enableAudit || !req) {
+      return this.db;
+    }
+
+    const auditContext: AuditContext = {
+      userId: req.user?.id,
+      requestId: req.requestId,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    };
+
+    this.auditedDb.setDefaultContext(auditContext);
+    return this.auditedDb;
+  }
+
+  /**
+   * Create an operational error that is safe to show to users
+   */
+  protected createOperationalError(message: string, statusCode: number = 400): OperationalError {
+    const error = new Error(message) as OperationalError;
+    error.isOperational = true;
+    error.statusCode = statusCode;
+    return error;
+  }
+
+  /**
+   * Handle errors with optional logging support
+   * Automatically detects if request has logging context
+   */
+  protected handleError(
+    error: any,
+    reqOrRes: RequestWithContext | Response,
+    resOrMessage?: Response | string,
+    message: string = 'Internal server error'
+  ): void {
+    // Support both signatures:
+    // handleError(error, res, message?) - legacy
+    // handleError(error, req, res, message?) - with logging
+    let req: RequestWithContext | undefined;
+    let res: Response;
+    let errorMessage: string;
+
+    if (resOrMessage && typeof resOrMessage !== 'string') {
+      // New signature: handleError(error, req, res, message?)
+      req = reqOrRes as RequestWithContext;
+      res = resOrMessage as Response;
+      errorMessage = message;
+    } else {
+      // Legacy signature: handleError(error, res, message?)
+      res = reqOrRes as Response;
+      errorMessage = (resOrMessage as string) || message;
+    }
+
+    // Log error with context if available
+    if (req?.logger && this.options.enableLogging) {
+      req.logger.error('Controller error', error, {
+        controller: this.constructor.name,
+        sqlError: error.code === 'SQLITE_ERROR' ? error.message : undefined
+      });
+    } else {
+      // Fallback to console for backwards compatibility
+      console.error('Controller error:', error);
+      if (error.code === 'SQLITE_ERROR') {
+        console.error('SQL Error details:', error.message);
+      }
+    }
+
+    // Handle operational errors (safe to show to users)
+    if (error.isOperational) {
+      res.status(error.statusCode).json({
+        error: error.message,
+        requestId: req?.requestId
+      });
+      return;
+    }
+
+    // Generic error response
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'e2e';
     res.status(500).json({
-      error: message,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: errorMessage,
+      requestId: req?.requestId,
+      details: isDev ? error.message : undefined
     });
   }
 
-  protected handleNotFound(res: Response, resource = 'Resource') {
+  /**
+   * Handle not found responses
+   */
+  protected handleNotFound(
+    reqOrRes: RequestWithContext | Response,
+    resOrResource?: Response | string,
+    resource: string = 'Resource'
+  ): void {
+    // Support both signatures
+    let req: RequestWithContext | undefined;
+    let res: Response;
+    let resourceName: string;
+
+    if (resOrResource && typeof resOrResource !== 'string') {
+      req = reqOrRes as RequestWithContext;
+      res = resOrResource as Response;
+      resourceName = resource;
+    } else {
+      res = reqOrRes as Response;
+      resourceName = (resOrResource as string) || resource;
+    }
+
+    if (req?.logger && this.options.enableLogging) {
+      req.logger.info(`${resourceName} not found`, {
+        controller: this.constructor.name
+      });
+    }
+
     res.status(404).json({
-      error: `${resource} not found`
+      error: `${resourceName} not found`,
+      requestId: req?.requestId
     });
   }
 
-  protected handleValidationError(res: Response, errors: any) {
+  /**
+   * Handle validation errors
+   */
+  protected handleValidationError(
+    reqOrRes: RequestWithContext | Response,
+    resOrErrors?: Response | any,
+    errors?: any
+  ): void {
+    // Support both signatures
+    let req: RequestWithContext | undefined;
+    let res: Response;
+    let validationErrors: any;
+
+    if (resOrErrors && typeof resOrErrors === 'object' && 'status' in resOrErrors) {
+      req = reqOrRes as RequestWithContext;
+      res = resOrErrors as Response;
+      validationErrors = errors;
+    } else {
+      res = reqOrRes as Response;
+      validationErrors = resOrErrors;
+    }
+
+    if (req?.logger && this.options.enableLogging) {
+      req.logger.warn('Validation failed', {
+        controller: this.constructor.name,
+        validationErrors
+      });
+    }
+
     res.status(400).json({
       error: 'Validation failed',
-      details: errors
+      details: validationErrors,
+      requestId: req?.requestId
     });
   }
 
+  /**
+   * Execute a query with error handling
+   * Supports both legacy (queryFn, res, message) and enhanced (queryFn, req, res, message) signatures
+   */
   protected async executeQuery<T>(
     queryFn: () => Promise<T>,
-    res: Response,
+    reqOrRes: RequestWithContext | Response,
+    resOrMessage?: Response | string,
     errorMessage?: string
   ): Promise<T | undefined> {
+    // Determine signature
+    let req: RequestWithContext | undefined;
+    let res: Response;
+    let message: string | undefined;
+
+    if (resOrMessage && typeof resOrMessage !== 'string') {
+      req = reqOrRes as RequestWithContext;
+      res = resOrMessage as Response;
+      message = errorMessage;
+    } else {
+      res = reqOrRes as Response;
+      message = resOrMessage as string;
+    }
+
+    const startTime = Date.now();
+
     try {
-      return await queryFn();
+      const result = await queryFn();
+
+      // Log slow queries if logging enabled
+      if (req?.logger && this.options.enableLogging) {
+        const duration = Date.now() - startTime;
+        if (duration > 100) {
+          req.logger.logPerformance?.('Database Query', duration, {
+            controller: this.constructor.name
+          });
+        }
+      }
+
+      return result;
     } catch (error) {
-      this.handleError(error, res, errorMessage);
+      if (req) {
+        this.handleError(error, req, res, message);
+      } else {
+        this.handleError(error, res, message);
+      }
       return undefined;
     }
   }
 
-  protected paginate(query: any, page: number = 1, limit: number = 50) {
+  /**
+   * Execute a query with audit context
+   */
+  protected async executeAuditedQuery<T>(
+    req: RequestWithContext,
+    queryFn: (db: any) => Promise<T>,
+    res: Response,
+    errorMessage?: string
+  ): Promise<T | undefined> {
+    const startTime = Date.now();
+
+    try {
+      const auditedDb = this.getDb(req);
+      const result = await queryFn(auditedDb);
+
+      // Log slow queries
+      if (req.logger && this.options.enableLogging) {
+        const duration = Date.now() - startTime;
+        if (duration > 100) {
+          req.logger.logPerformance?.('Audited Database Query', duration, {
+            controller: this.constructor.name
+          });
+        }
+      }
+
+      return result;
+    } catch (error) {
+      this.handleError(error, req, res, errorMessage);
+      return undefined;
+    }
+  }
+
+  /**
+   * Apply pagination to a query
+   */
+  protected paginate(query: any, page: number = 1, limit: number = 50): any {
     const offset = (page - 1) * limit;
     return query.limit(limit).offset(offset);
   }
 
-  protected buildFilters(query: any, filters: Record<string, any>) {
+  /**
+   * Build WHERE filters from a record
+   * Supports exact match, LIKE patterns (%), and arrays (IN clause)
+   */
+  protected buildFilters(query: any, filters: Record<string, any>): any {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        if (typeof value === 'string' && value.includes('%')) {
+        if (Array.isArray(value)) {
+          query.whereIn(key, value);
+        } else if (typeof value === 'string' && value.includes('%')) {
           query.where(key, 'like', value);
         } else {
           query.where(key, value);
@@ -57,5 +343,105 @@ export abstract class BaseController {
       }
     });
     return query;
+  }
+
+  /**
+   * Log a business operation (requires enableLogging: true)
+   */
+  protected logBusinessOperation(
+    req: RequestWithContext,
+    operation: string,
+    entityType: string,
+    entityId: string,
+    metadata: Record<string, any> = {}
+  ): void {
+    if (req.logger?.logBusinessOperation) {
+      req.logger.logBusinessOperation(
+        operation,
+        entityType,
+        entityId,
+        req.user?.id,
+        {
+          controller: this.constructor.name,
+          ...metadata
+        }
+      );
+    }
+  }
+
+  /**
+   * Wrap async route handlers to catch errors
+   */
+  protected asyncHandler(
+    fn: (req: RequestWithContext, res: Response, next: NextFunction) => Promise<any>
+  ): (req: RequestWithContext, res: Response, next: NextFunction) => void {
+    return (req: RequestWithContext, res: Response, next: NextFunction) => {
+      Promise.resolve(fn(req, res, next)).catch(next);
+    };
+  }
+
+  /**
+   * Send a success response with standard format
+   */
+  protected sendSuccess(
+    req: RequestWithContext,
+    res: Response,
+    data: any,
+    message?: string
+  ): void {
+    const response: any = {
+      success: true,
+      data,
+      requestId: req.requestId
+    };
+
+    if (message) {
+      response.message = message;
+    }
+
+    res.json(response);
+  }
+
+  /**
+   * Send a paginated response with metadata
+   */
+  protected sendPaginatedResponse(
+    req: RequestWithContext,
+    res: Response,
+    data: any[],
+    total: number,
+    page: number,
+    limit: number
+  ): void {
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      requestId: req.requestId
+    });
+  }
+
+  /**
+   * Send an error response
+   */
+  protected sendError(
+    req: RequestWithContext,
+    res: Response,
+    message: string,
+    statusCode: number = 400
+  ): void {
+    res.status(statusCode).json({
+      error: message,
+      requestId: req.requestId
+    });
   }
 }
