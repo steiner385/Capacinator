@@ -1,8 +1,10 @@
 import type { Request, Response } from 'express';
-import { EnhancedBaseController } from './EnhancedBaseController.js';
-import { RequestWithLogging } from '../../middleware/requestLogger.js';
+import { BaseController, RequestWithContext } from './BaseController.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
+
+// Alias for backward compatibility with existing code
+type RequestWithLogging = RequestWithContext;
 
 interface AssignmentConflict {
   person_id: string;
@@ -17,7 +19,10 @@ interface AssignmentConflict {
   available_capacity: number;
 }
 
-export class AssignmentsController extends EnhancedBaseController {
+export class AssignmentsController extends BaseController {
+  constructor() {
+    super({ enableLogging: true });
+  }
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;

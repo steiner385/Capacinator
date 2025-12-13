@@ -1,10 +1,21 @@
-import { BaseController } from '../BaseController';
-import type { Response } from 'express';
+// Unmock the controller to test the real implementation
+jest.unmock('../BaseController.js');
+
+import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController';
+import type { Response, NextFunction } from 'express';
 
 // Create a concrete implementation for testing
 class TestController extends BaseController {
+  constructor(options?: ControllerOptions) {
+    super(options);
+  }
+
   public testHandleError(error: any, res: Response, message?: string) {
     return this.handleError(error, res, message);
+  }
+
+  public testHandleNotFound(res: Response, resource?: string) {
+    return this.handleNotFound(res, resource);
   }
 
   public testHandleValidationError(res: Response, errors: any) {
@@ -13,6 +24,87 @@ class TestController extends BaseController {
 
   public testBuildFilters(query: any, filters: Record<string, any>) {
     return this.buildFilters(query, filters);
+  }
+
+  public testPaginate(query: any, page?: number, limit?: number) {
+    return this.paginate(query, page, limit);
+  }
+
+  public testCreateOperationalError(message: string, statusCode?: number) {
+    return this.createOperationalError(message, statusCode);
+  }
+
+  public async testExecuteQuery<T>(
+    queryFn: () => Promise<T>,
+    res: Response,
+    errorMessage?: string
+  ) {
+    return this.executeQuery(queryFn, res, errorMessage);
+  }
+}
+
+// Create enhanced controller for testing logging features
+class TestEnhancedController extends BaseController {
+  constructor() {
+    super({ enableLogging: true });
+  }
+
+  public testHandleError(error: any, req: RequestWithContext, res: Response, message?: string) {
+    return this.handleError(error, req, res, message);
+  }
+
+  public testHandleNotFound(req: RequestWithContext, res: Response, resource?: string) {
+    return this.handleNotFound(req, res, resource);
+  }
+
+  public testHandleValidationError(req: RequestWithContext, res: Response, errors: any) {
+    return this.handleValidationError(req, res, errors);
+  }
+
+  public async testExecuteQuery<T>(
+    queryFn: () => Promise<T>,
+    req: RequestWithContext,
+    res: Response,
+    errorMessage?: string
+  ) {
+    return this.executeQuery(queryFn, req, res, errorMessage);
+  }
+
+  public testLogBusinessOperation(
+    req: RequestWithContext,
+    operation: string,
+    entityType: string,
+    entityId: string,
+    metadata?: Record<string, any>
+  ) {
+    return this.logBusinessOperation(req, operation, entityType, entityId, metadata);
+  }
+
+  public testAsyncHandler(fn: (req: RequestWithContext, res: Response, next: NextFunction) => Promise<any>) {
+    return this.asyncHandler(fn);
+  }
+
+  public testSendSuccess(req: RequestWithContext, res: Response, data: any, message?: string) {
+    return this.sendSuccess(req, res, data, message);
+  }
+
+  public testSendPaginatedResponse(
+    req: RequestWithContext,
+    res: Response,
+    data: any[],
+    total: number,
+    page: number,
+    limit: number
+  ) {
+    return this.sendPaginatedResponse(req, res, data, total, page, limit);
+  }
+
+  public testSendError(req: RequestWithContext, res: Response, message: string, statusCode?: number) {
+    return this.sendError(req, res, message, statusCode);
+  }
+
+  public testCreateOperationalError(message: string, statusCode?: number) {
+    return this.createOperationalError(message, statusCode);
   }
 }
 
@@ -31,12 +123,13 @@ describe('BaseController', () => {
 
     mockQuery = {
       where: jest.fn().mockReturnThis(),
+      whereIn: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       offset: jest.fn().mockReturnThis()
     };
   });
 
-  describe('handleError', () => {
+  describe('handleError (legacy signature)', () => {
     it('should log SQL error details for SQLITE errors', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -65,9 +158,25 @@ describe('BaseController', () => {
 
       consoleErrorSpy.mockRestore();
     });
+
+    it('should handle operational errors', () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const operationalError = controller.testCreateOperationalError('Validation failed', 400);
+
+      controller.testHandleError(operationalError, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Validation failed',
+        requestId: undefined
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
   });
 
-  describe('handleValidationError', () => {
+  describe('handleValidationError (legacy signature)', () => {
     it('should return 400 with validation errors', () => {
       const errors = { field: 'is required' };
 
@@ -76,7 +185,30 @@ describe('BaseController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Validation failed',
-        details: errors
+        details: errors,
+        requestId: undefined
+      });
+    });
+  });
+
+  describe('handleNotFound (legacy signature)', () => {
+    it('should return 404 with default resource name', () => {
+      controller.testHandleNotFound(mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Resource not found',
+        requestId: undefined
+      });
+    });
+
+    it('should return 404 with custom resource name', () => {
+      controller.testHandleNotFound(mockRes as Response, 'User');
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'User not found',
+        requestId: undefined
       });
     });
   });
@@ -99,6 +231,14 @@ describe('BaseController', () => {
       expect(mockQuery.where).toHaveBeenCalledWith('status', 'active');
     });
 
+    it('should handle array filters with whereIn', () => {
+      const filters = { status: ['active', 'pending'] };
+
+      controller.testBuildFilters(mockQuery, filters);
+
+      expect(mockQuery.whereIn).toHaveBeenCalledWith('status', ['active', 'pending']);
+    });
+
     it('should skip null, undefined, and empty string values', () => {
       const filters = { a: null, b: undefined, c: '', d: 'valid' };
 
@@ -106,6 +246,465 @@ describe('BaseController', () => {
 
       expect(mockQuery.where).toHaveBeenCalledTimes(1);
       expect(mockQuery.where).toHaveBeenCalledWith('d', 'valid');
+    });
+  });
+
+  describe('paginate', () => {
+    it('should paginate with default values', () => {
+      controller.testPaginate(mockQuery);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(50);
+      expect(mockQuery.offset).toHaveBeenCalledWith(0);
+    });
+
+    it('should paginate with custom page and limit', () => {
+      controller.testPaginate(mockQuery, 3, 20);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(20);
+      expect(mockQuery.offset).toHaveBeenCalledWith(40); // (3-1) * 20
+    });
+  });
+
+  describe('createOperationalError', () => {
+    it('should create operational error with default status code', () => {
+      const error = controller.testCreateOperationalError('Test error');
+
+      expect(error.message).toBe('Test error');
+      expect(error.isOperational).toBe(true);
+      expect(error.statusCode).toBe(400);
+    });
+
+    it('should create operational error with custom status code', () => {
+      const error = controller.testCreateOperationalError('Not found', 404);
+
+      expect(error.message).toBe('Not found');
+      expect(error.isOperational).toBe(true);
+      expect(error.statusCode).toBe(404);
+    });
+  });
+
+  describe('executeQuery (legacy signature)', () => {
+    it('should execute query successfully', async () => {
+      const queryFn = jest.fn().mockResolvedValue({ id: 1, name: 'Test' });
+
+      const result = await controller.testExecuteQuery(
+        queryFn,
+        mockRes as Response
+      );
+
+      expect(queryFn).toHaveBeenCalled();
+      expect(result).toEqual({ id: 1, name: 'Test' });
+    });
+
+    it('should handle query errors', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const error = new Error('Query failed');
+      const queryFn = jest.fn().mockRejectedValue(error);
+
+      const result = await controller.testExecuteQuery(
+        queryFn,
+        mockRes as Response,
+        'Custom error message'
+      );
+
+      expect(result).toBeUndefined();
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+});
+
+describe('BaseController with enableLogging', () => {
+  let controller: TestEnhancedController;
+  let mockReq: Partial<RequestWithContext>;
+  let mockRes: Partial<Response>;
+  let mockNext: jest.Mock;
+  let mockQuery: any;
+
+  beforeEach(() => {
+    controller = new TestEnhancedController();
+
+    mockReq = {
+      requestId: 'test-request-id',
+      logger: {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        logPerformance: jest.fn(),
+        logBusinessOperation: jest.fn()
+      } as any
+    };
+
+    mockRes = {
+      json: jest.fn().mockReturnThis(),
+      status: jest.fn().mockReturnThis()
+    };
+
+    mockNext = jest.fn();
+
+    mockQuery = {
+      where: jest.fn().mockReturnThis(),
+      whereIn: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis()
+    };
+  });
+
+  describe('handleError (enhanced signature)', () => {
+    it('should handle operational errors', () => {
+      const operationalError = controller.testCreateOperationalError('Validation failed', 400);
+
+      controller.testHandleError(operationalError, mockReq as RequestWithContext, mockRes as Response);
+
+      expect(mockReq.logger?.error).toHaveBeenCalledWith(
+        'Controller error',
+        operationalError,
+        expect.objectContaining({
+          controller: 'TestEnhancedController'
+        })
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Validation failed',
+        requestId: 'test-request-id'
+      });
+    });
+
+    it('should handle non-operational errors', () => {
+      const error = new Error('Unexpected error');
+
+      controller.testHandleError(error, mockReq as RequestWithContext, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Internal server error',
+        requestId: 'test-request-id',
+        details: undefined
+      });
+    });
+
+    it('should handle non-operational errors with custom message', () => {
+      const error = new Error('Database error');
+
+      controller.testHandleError(error, mockReq as RequestWithContext, mockRes as Response, 'Custom error message');
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Custom error message',
+        requestId: 'test-request-id',
+        details: undefined
+      });
+    });
+
+    it('should include error details in development mode', () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      const error = new Error('Database error');
+
+      controller.testHandleError(error, mockReq as RequestWithContext, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Internal server error',
+        requestId: 'test-request-id',
+        details: 'Database error'
+      });
+
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should log SQLite errors with code', () => {
+      const sqliteError = new Error('SQLITE error') as any;
+      sqliteError.code = 'SQLITE_ERROR';
+
+      controller.testHandleError(sqliteError, mockReq as RequestWithContext, mockRes as Response);
+
+      expect(mockReq.logger?.error).toHaveBeenCalledWith(
+        'Controller error',
+        sqliteError,
+        expect.objectContaining({
+          controller: 'TestEnhancedController',
+          sqlError: 'SQLITE error'
+        })
+      );
+    });
+  });
+
+  describe('handleNotFound (enhanced signature)', () => {
+    it('should handle not found with default resource', () => {
+      controller.testHandleNotFound(mockReq as RequestWithContext, mockRes as Response);
+
+      expect(mockReq.logger?.info).toHaveBeenCalledWith(
+        'Resource not found',
+        expect.objectContaining({ controller: 'TestEnhancedController' })
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Resource not found',
+        requestId: 'test-request-id'
+      });
+    });
+
+    it('should handle not found with custom resource', () => {
+      controller.testHandleNotFound(mockReq as RequestWithContext, mockRes as Response, 'User');
+
+      expect(mockReq.logger?.info).toHaveBeenCalledWith(
+        'User not found',
+        expect.objectContaining({ controller: 'TestEnhancedController' })
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'User not found',
+        requestId: 'test-request-id'
+      });
+    });
+  });
+
+  describe('handleValidationError (enhanced signature)', () => {
+    it('should handle validation errors', () => {
+      const errors = { field: 'is required', email: 'invalid format' };
+
+      controller.testHandleValidationError(mockReq as RequestWithContext, mockRes as Response, errors);
+
+      expect(mockReq.logger?.warn).toHaveBeenCalledWith(
+        'Validation failed',
+        expect.objectContaining({
+          controller: 'TestEnhancedController',
+          validationErrors: errors
+        })
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Validation failed',
+        details: errors,
+        requestId: 'test-request-id'
+      });
+    });
+  });
+
+  describe('executeQuery (enhanced signature)', () => {
+    it('should execute query successfully', async () => {
+      const queryFn = jest.fn().mockResolvedValue({ id: 1, name: 'Test' });
+
+      const result = await controller.testExecuteQuery(
+        queryFn,
+        mockReq as RequestWithContext,
+        mockRes as Response
+      );
+
+      expect(queryFn).toHaveBeenCalled();
+      expect(result).toEqual({ id: 1, name: 'Test' });
+    });
+
+    it('should log performance for slow queries', async () => {
+      const queryFn = jest.fn().mockImplementation(() =>
+        new Promise(resolve => setTimeout(() => resolve({ id: 1 }), 150))
+      );
+
+      await controller.testExecuteQuery(
+        queryFn,
+        mockReq as RequestWithContext,
+        mockRes as Response
+      );
+
+      expect(mockReq.logger?.logPerformance).toHaveBeenCalledWith(
+        'Database Query',
+        expect.any(Number),
+        expect.objectContaining({ controller: 'TestEnhancedController' })
+      );
+    });
+
+    it('should handle query errors', async () => {
+      const error = new Error('Query failed');
+      const queryFn = jest.fn().mockRejectedValue(error);
+
+      const result = await controller.testExecuteQuery(
+        queryFn,
+        mockReq as RequestWithContext,
+        mockRes as Response,
+        'Custom error message'
+      );
+
+      expect(result).toBeUndefined();
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('asyncHandler', () => {
+    it('should wrap async function and handle success', async () => {
+      const asyncFn = jest.fn().mockResolvedValue('success');
+      const handler = controller.testAsyncHandler(asyncFn);
+
+      await handler(mockReq as RequestWithContext, mockRes as Response, mockNext);
+
+      expect(asyncFn).toHaveBeenCalledWith(mockReq, mockRes, mockNext);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should catch errors and pass to next', async () => {
+      const error = new Error('Async error');
+      const asyncFn = jest.fn().mockRejectedValue(error);
+      const handler = controller.testAsyncHandler(asyncFn);
+
+      await handler(mockReq as RequestWithContext, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('sendSuccess', () => {
+    it('should send success response without message', () => {
+      const data = { id: 1, name: 'Test' };
+
+      controller.testSendSuccess(mockReq as RequestWithContext, mockRes as Response, data);
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data,
+        requestId: 'test-request-id'
+      });
+    });
+
+    it('should send success response with message', () => {
+      const data = { id: 1, name: 'Test' };
+
+      controller.testSendSuccess(mockReq as RequestWithContext, mockRes as Response, data, 'Operation completed');
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data,
+        requestId: 'test-request-id',
+        message: 'Operation completed'
+      });
+    });
+  });
+
+  describe('sendPaginatedResponse', () => {
+    it('should send paginated response', () => {
+      const data = [{ id: 1 }, { id: 2 }];
+
+      controller.testSendPaginatedResponse(
+        mockReq as RequestWithContext,
+        mockRes as Response,
+        data,
+        50,
+        2,
+        10
+      );
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data,
+        pagination: {
+          page: 2,
+          limit: 10,
+          total: 50,
+          totalPages: 5,
+          hasNextPage: true,
+          hasPrevPage: true
+        },
+        requestId: 'test-request-id'
+      });
+    });
+
+    it('should indicate no next page on last page', () => {
+      const data = [{ id: 1 }];
+
+      controller.testSendPaginatedResponse(
+        mockReq as RequestWithContext,
+        mockRes as Response,
+        data,
+        21,
+        3,
+        10
+      );
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data,
+        pagination: {
+          page: 3,
+          limit: 10,
+          total: 21,
+          totalPages: 3,
+          hasNextPage: false,
+          hasPrevPage: true
+        },
+        requestId: 'test-request-id'
+      });
+    });
+
+    it('should indicate no previous page on first page', () => {
+      const data = [{ id: 1 }];
+
+      controller.testSendPaginatedResponse(
+        mockReq as RequestWithContext,
+        mockRes as Response,
+        data,
+        10,
+        1,
+        10
+      );
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        data,
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 10,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false
+        },
+        requestId: 'test-request-id'
+      });
+    });
+  });
+
+  describe('sendError', () => {
+    it('should send error response with default status code', () => {
+      controller.testSendError(mockReq as RequestWithContext, mockRes as Response, 'Something went wrong');
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Something went wrong',
+        requestId: 'test-request-id'
+      });
+    });
+
+    it('should send error response with custom status code', () => {
+      controller.testSendError(mockReq as RequestWithContext, mockRes as Response, 'Not found', 404);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Not found',
+        requestId: 'test-request-id'
+      });
+    });
+  });
+
+  describe('logBusinessOperation', () => {
+    it('should log business operation', () => {
+      controller.testLogBusinessOperation(
+        mockReq as RequestWithContext,
+        'CREATE',
+        'project',
+        'project-123',
+        { priority: 'high' }
+      );
+
+      expect(mockReq.logger?.logBusinessOperation).toHaveBeenCalledWith(
+        'CREATE',
+        'project',
+        'project-123',
+        undefined,
+        expect.objectContaining({
+          controller: 'TestEnhancedController',
+          priority: 'high'
+        })
+      );
     });
   });
 });

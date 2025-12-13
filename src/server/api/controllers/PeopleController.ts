@@ -1,7 +1,10 @@
 import type { Request, Response } from 'express';
-import { AuditedBaseController } from './AuditedBaseController.js';
+import { BaseController, RequestWithContext } from './BaseController.js';
 
-export class PeopleController extends AuditedBaseController {
+export class PeopleController extends BaseController {
+  constructor() {
+    super({ enableAudit: true });
+  }
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;

@@ -1,11 +1,16 @@
 import type { Request, Response } from 'express';
-import { EnhancedBaseController } from './EnhancedBaseController.js';
-import { RequestWithLogging } from '../../middleware/requestLogger.js';
+import { BaseController, RequestWithContext } from './BaseController.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
 import { PhaseTemplateValidationService, type PhaseUpdateRequest } from '../../services/PhaseTemplateValidationService.js';
 import { CustomPhaseManagementService, type CustomPhaseData, type PhaseUpdateData } from '../../services/CustomPhaseManagementService.js';
 
-export class ProjectsController extends EnhancedBaseController {
+// Alias for backward compatibility
+type RequestWithLogging = RequestWithContext;
+
+export class ProjectsController extends BaseController {
+  constructor() {
+    super({ enableLogging: true });
+  }
   /**
    * Automatically inherits phases from project type template when creating a new project.
    * Creates project_phases_timeline entries with template tracking and duration constraints.
