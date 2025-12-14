@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
@@ -160,8 +161,8 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
       </div>
 
       <div className="space-y-3">
-        <Label className="text-base font-semibold">Merge Strategy</Label>
-        <RadioGroup value={mergeStrategy} onValueChange={(value) => setMergeStrategy(value as any)}>
+        <Label className="text-base font-semibold" id="merge-strategy-label">Merge Strategy</Label>
+        <RadioGroup value={mergeStrategy} onValueChange={(value) => setMergeStrategy(value as any)} aria-labelledby="merge-strategy-label">
           <div className="space-y-3">
             <Label
               htmlFor="strategy-manual"
@@ -221,7 +222,7 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
       </div>
 
       {error && (
-        <div className="mt-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
+        <div className="mt-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -468,9 +469,12 @@ export const ScenarioMergeModal: React.FC<ScenarioMergeModalProps> = ({
       <DialogContent className="scenario-merge-modal max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <GitMerge size={20} />
+            <GitMerge size={20} aria-hidden="true" />
             Scenario Merge
           </DialogTitle>
+          <DialogDescription>
+            Merge changes from this scenario back to its parent scenario.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="modal-body">

@@ -125,11 +125,11 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Role *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       });
 
       // Proficiency should default to level 3 - verify through the label
-      expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
 
       // Primary role checkbox should be unchecked
       const primaryCheckbox = screen.getByRole('checkbox', { name: /Set as Primary Role/i });
@@ -200,7 +200,7 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Role *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       });
     });
 
@@ -212,7 +212,7 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Role *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       });
     });
 
@@ -224,7 +224,7 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Role *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       });
     });
 
@@ -243,7 +243,7 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
       });
     });
 
@@ -251,18 +251,18 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
       });
 
       // Verify the proficiency level field is present and has default behavior
-      expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
     });
 
     it('allows changing proficiency level in add mode', async () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
       });
     });
 
@@ -277,7 +277,7 @@ describe('PersonRoleModal', () => {
       renderComponent({ editingRole });
 
       await waitFor(() => {
-        expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
       });
     });
   });
@@ -537,8 +537,8 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Role *')).toBeInTheDocument();
-        expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
         expect(screen.getByText('Start Date')).toBeInTheDocument();
         expect(screen.getByText('End Date')).toBeInTheDocument();
       });
@@ -556,8 +556,8 @@ describe('PersonRoleModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Role *')).toBeInTheDocument();
-        expect(screen.getByText('Proficiency Level *')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /proficiency/i })).toBeInTheDocument();
       });
     });
   });

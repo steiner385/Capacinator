@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -90,18 +91,23 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{location ? 'Edit Location' : 'Add Location'}</DialogTitle>
+          <DialogDescription>
+            {location
+              ? 'Update the location details below.'
+              : 'Fill in the information to create a new location.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" role="alert" aria-live="assertive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
                 <Input
                   id="name"
                   type="text"
@@ -109,6 +115,7 @@ export function LocationModal({ location, onSave, onCancel }: LocationModalProps
                   onChange={(e) => handleChange('name', e.target.value)}
                   placeholder="e.g., New York City, Remote, London"
                   required
+                  aria-required="true"
                 />
               </div>
 

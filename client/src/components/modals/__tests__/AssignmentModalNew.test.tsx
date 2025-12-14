@@ -88,8 +88,8 @@ describe('AssignmentModalNew', () => {
     // Default mock responses
     (api.projects.list as jest.Mock).mockResolvedValue(mockProjects);
     (api.people.list as jest.Mock).mockResolvedValue(mockPeople);
-    (api.roles.list as jest.Mock).mockResolvedValue({ data: mockRoles });
-    (api.phases.list as jest.Mock).mockResolvedValue({ data: mockPhases });
+    (api.roles.list as jest.Mock).mockResolvedValue({ data: { data: mockRoles } });
+    (api.phases.list as jest.Mock).mockResolvedValue({ data: { data: mockPhases } });
     (api.projects.get as jest.Mock).mockResolvedValue({ data: { phases: mockProjectPhases } });
 
     // Mock scrollIntoView for Radix Select
@@ -140,9 +140,9 @@ describe('AssignmentModalNew', () => {
     it('renders all form fields', async () => {
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Person \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /person/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/Start Date \*/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/End Date \*/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Allocation % \*/i)).toBeInTheDocument();
@@ -217,6 +217,39 @@ describe('AssignmentModalNew', () => {
       renderComponent();
       await waitFor(() => {
         expect(api.phases.list).toHaveBeenCalled();
+      });
+    });
+
+    it('handles roles API returning undefined data gracefully', async () => {
+      (api.roles.list as jest.Mock).mockResolvedValue({ data: undefined });
+
+      renderComponent();
+
+      // Should not crash, component should render
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Create New Assignment/i })).toBeInTheDocument();
+      });
+    });
+
+    it('handles roles API returning non-array data gracefully', async () => {
+      (api.roles.list as jest.Mock).mockResolvedValue({ data: { data: null } });
+
+      renderComponent();
+
+      // Should not crash, component should render
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Create New Assignment/i })).toBeInTheDocument();
+      });
+    });
+
+    it('handles malformed roles API response gracefully', async () => {
+      (api.roles.list as jest.Mock).mockResolvedValue({ data: { wrongKey: [] } });
+
+      renderComponent();
+
+      // Should not crash when roles is undefined
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Create New Assignment/i })).toBeInTheDocument();
       });
     });
   });
@@ -474,9 +507,9 @@ describe('AssignmentModalNew', () => {
     it('has proper labels for form fields', async () => {
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Person \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /person/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/Start Date \*/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/End Date \*/i)).toBeInTheDocument();
       });

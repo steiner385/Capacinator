@@ -810,7 +810,7 @@ export function SmartAssignmentModal({
                 <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="project-select">
-                    Project *
+                    Project <span aria-hidden="true">*</span><span className="sr-only">(required)</span>
                     {!isLoadingAllocations && projectsWithDemand.length > 0 && projectsWithDemand.length < (projects?.data?.length || 0) && (
                       <span className="text-xs text-muted-foreground font-normal ml-2">
                         ({projectsWithDemand.length} with resource needs)
@@ -822,7 +822,7 @@ export function SmartAssignmentModal({
                     onValueChange={(value) => handleFormChange('project_id', value)}
                     disabled={!isLoadingAllocations && projectsWithDemand.length === 0}
                   >
-                    <SelectTrigger id="project-select">
+                    <SelectTrigger id="project-select" aria-required="true">
                       <SelectValue placeholder={
                         isLoadingAllocations
                           ? 'Loading projects...'
@@ -843,7 +843,7 @@ export function SmartAssignmentModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="role-select">
-                    Role *
+                    Role <span aria-hidden="true">*</span><span className="sr-only">(required)</span>
                     {formData.project_id && projectRoles.length > 0 && (
                       <span className="text-xs text-muted-foreground font-normal ml-2">
                         ({projectRoles.length} roles needed)
@@ -855,7 +855,7 @@ export function SmartAssignmentModal({
                     onValueChange={(value) => handleFormChange('role_id', value)}
                     disabled={!formData.project_id || projectRoles.length === 0 || projectsWithDemand.length === 0}
                   >
-                    <SelectTrigger id="role-select">
+                    <SelectTrigger id="role-select" aria-required="true">
                       <SelectValue placeholder={
                         formData.project_id && projectRoles.length === 0
                           ? 'No roles needed for this project'
@@ -969,7 +969,7 @@ export function SmartAssignmentModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="start-date">
-                    Start Date *
+                    Start Date <span aria-hidden="true">*</span><span className="sr-only">(required)</span>
                     {formData.phase_id && (
                       <span className="text-xs text-primary font-normal ml-2">
                         (Linked to phase)
@@ -982,6 +982,7 @@ export function SmartAssignmentModal({
                     value={formData.start_date}
                     onChange={(e) => handleFormChange('start_date', e.target.value)}
                     required
+                    aria-required="true"
                     disabled={!!formData.phase_id}
                     className={formData.phase_id ? 'opacity-70 cursor-not-allowed' : ''}
                   />
@@ -989,7 +990,7 @@ export function SmartAssignmentModal({
 
                 <div className="space-y-2">
                   <Label htmlFor="end-date">
-                    End Date *
+                    End Date <span aria-hidden="true">*</span><span className="sr-only">(required)</span>
                     {formData.phase_id && (
                       <span className="text-xs text-primary font-normal ml-2">
                         (Linked to phase)
@@ -1003,6 +1004,7 @@ export function SmartAssignmentModal({
                     onChange={(e) => handleFormChange('end_date', e.target.value)}
                     min={formData.start_date}
                     required
+                    aria-required="true"
                     disabled={!!formData.phase_id}
                     className={formData.phase_id ? 'opacity-70 cursor-not-allowed' : ''}
                   />
@@ -1017,12 +1019,12 @@ export function SmartAssignmentModal({
             <div className={cn(
               "impact-preview",
               impactPreview.isOverallocated ? "warning" : "success"
-            )}>
+            )} role="status" aria-live="polite">
               <div className="impact-header">
                 {impactPreview.isOverallocated ? (
-                  <AlertTriangle size={20} />
+                  <AlertTriangle size={20} aria-hidden="true" />
                 ) : (
-                  <CheckCircle size={20} />
+                  <CheckCircle size={20} aria-hidden="true" />
                 )}
                 <h4>Assignment Impact</h4>
               </div>

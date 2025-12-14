@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -243,17 +244,17 @@ export const PersonModal: React.FC<PersonModalProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Person' : 'Add New Person'}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Update the person\'s information below.'
+              : 'Fill in the information to create a new person.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            {isEditing 
-              ? 'Update the person\'s information below.' 
-              : 'Fill in the information to create a new person.'}
-          </p>
 
           {hasErrors && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-6" role="alert" aria-live="assertive">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>
                 Please fix the errors below before submitting.
               </AlertDescription>
@@ -263,19 +264,22 @@ export const PersonModal: React.FC<PersonModalProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder="Enter full name"
                 className={errors.name ? 'border-destructive' : ''}
+                aria-required="true"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              {errors.name && <p id="name-error" className="text-sm text-destructive" role="alert">{errors.name}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">Email <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 type="email"
                 id="email"
@@ -283,8 +287,11 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="Enter email address"
                 className={errors.email ? 'border-destructive' : ''}
+                aria-required="true"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'email-error' : undefined}
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+              {errors.email && <p id="email-error" className="text-sm text-destructive" role="alert">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -321,7 +328,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
             <div className="space-y-2">
               <Label htmlFor="location_id">Location</Label>
               <Select value={formData.location_id || 'none'} onValueChange={(value) => handleChange('location_id', value === 'none' ? '' : value)}>
-                <SelectTrigger>
+                <SelectTrigger id="location_id">
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -336,12 +343,18 @@ export const PersonModal: React.FC<PersonModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="primary_person_role_id">Primary Role *</Label>
-              <Select 
-                value={formData.primary_person_role_id} 
+              <Label htmlFor="primary_person_role_id">Primary Role <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
+              <Select
+                value={formData.primary_person_role_id}
                 onValueChange={(value) => handleChange('primary_person_role_id', value)}
               >
-                <SelectTrigger className={errors.primary_person_role_id ? 'border-destructive' : ''}>
+                <SelectTrigger
+                  id="primary_person_role_id"
+                  className={errors.primary_person_role_id ? 'border-destructive' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.primary_person_role_id}
+                  aria-describedby={errors.primary_person_role_id ? 'primary_person_role_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select primary role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -352,13 +365,13 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                   )) : []}
                 </SelectContent>
               </Select>
-              {errors.primary_person_role_id && <p className="text-sm text-destructive">{errors.primary_person_role_id}</p>}
+              {errors.primary_person_role_id && <p id="primary_person_role_id-error" className="text-sm text-destructive" role="alert">{errors.primary_person_role_id}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="supervisor_id">Supervisor</Label>
               <Select value={formData.supervisor_id || 'none'} onValueChange={(value) => handleChange('supervisor_id', value === 'none' ? '' : value)}>
-                <SelectTrigger>
+                <SelectTrigger id="supervisor_id">
                   <SelectValue placeholder="Select supervisor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -375,7 +388,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
             <div className="space-y-2">
               <Label htmlFor="worker_type">Worker Type</Label>
               <Select value={formData.worker_type} onValueChange={(value) => handleChange('worker_type', value)}>
-                <SelectTrigger>
+                <SelectTrigger id="worker_type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -437,7 +450,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={formData.status} onValueChange={(value) => handleChange('status', value)}>
-                <SelectTrigger>
+                <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

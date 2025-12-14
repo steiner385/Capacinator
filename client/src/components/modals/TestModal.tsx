@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -26,6 +27,9 @@ export const TestModal: React.FC<TestModalProps> = ({ isOpen, onClose }) => {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Test Modal - Dialog Version</DialogTitle>
+          <DialogDescription>
+            A test modal to verify the dialog system is working correctly.
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <h2 className="text-lg font-bold mb-2">
