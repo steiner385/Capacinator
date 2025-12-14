@@ -109,6 +109,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(401);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Authentication required',
+        code: 'NO_USER',
         message: 'User ID not provided'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -151,6 +152,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Insufficient permissions',
+        code: 'PERMISSION_DENIED',
         message: 'User does not have permission: project:delete'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -169,6 +171,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Permission check failed',
+        code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -189,6 +192,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Permission check failed',
+        code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
       expect(consoleSpy).toHaveBeenCalled();
@@ -241,6 +245,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(401);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Authentication required',
+        code: 'NO_USER',
         message: 'User ID not provided'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -263,6 +268,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'System admin access required',
+        code: 'NOT_ADMIN',
         message: 'Only system administrators can access this resource'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -280,6 +286,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Authorization check failed',
+        code: 'AUTH_ERROR',
         message: 'Could not verify system admin status'
       });
       expect(consoleSpy).toHaveBeenCalledWith('System admin check error:', expect.any(Error));
@@ -358,6 +365,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(401);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Authentication required',
+        code: 'NO_USER',
         message: 'User ID not provided'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -381,6 +389,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Insufficient permissions',
+        code: 'PERMISSION_DENIED',
         message: 'User does not have any of the required permissions: project:delete, project:admin'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -398,6 +407,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Permission check failed',
+        code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
       expect(consoleSpy).toHaveBeenCalled();
@@ -455,6 +465,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(401);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Authentication required',
+        code: 'NO_USER',
         message: 'User ID not provided'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -480,6 +491,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Insufficient permissions',
+        code: 'PERMISSION_DENIED',
         message: 'User does not have permission: project:delete'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -521,6 +533,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Permission check failed',
+        code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
       expect(consoleSpy).toHaveBeenCalled();
@@ -752,6 +765,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(401);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Authentication required',
+        code: 'NO_USER',
         message: 'User ID not provided'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -775,6 +789,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Insufficient permissions',
+        code: 'PERMISSION_DENIED',
         message: 'User does not have permission to manage projects'
       });
       expect(mockNext).not.toHaveBeenCalled();
@@ -792,6 +807,7 @@ describe('Permissions Middleware', () => {
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith({
         error: 'Access check failed',
+        code: 'ACCESS_ERROR',
         message: 'Could not verify resource access'
       });
       expect(consoleSpy).toHaveBeenCalledWith('Resource access check error:', expect.any(Error));

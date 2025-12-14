@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
-import { Person } from '../types';
+import type { Person } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Button } from './ui/button';
@@ -14,7 +14,9 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [selectedPersonId, setSelectedPersonId] = useState<string>('');
-  const { setCurrentUser } = useUser();
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { login } = useUser();
 
   // Fetch all people for the dropdown
   const { data: people, isLoading, error } = useQuery({
@@ -34,15 +36,22 @@ export const Login: React.FC<LoginProps> = ({ onClose }) => {
   //   selectedPersonId 
   // });
 
-  const handleLogin = () => {
-    if (!selectedPersonId || !people) return;
+  const handleLogin = async () => {
+    if (!selectedPersonId) return;
 
-    const selectedPerson = people.find(person => person.id === selectedPersonId);
-    if (selectedPerson) {
-      setCurrentUser(selectedPerson);
+    setIsLoggingIn(true);
+    setLoginError(null);
+
+    try {
+      await login(selectedPersonId);
       if (onClose) {
         onClose();
       }
+    } catch (err) {
+      console.error('Login failed:', err);
+      setLoginError('Failed to log in. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -126,14 +135,19 @@ export const Login: React.FC<LoginProps> = ({ onClose }) => {
               </SelectContent>
             </Select>
           </div>
+          {loginError && (
+            <div className="text-sm text-destructive text-center">
+              {loginError}
+            </div>
+          )}
           <DialogFooter className="pt-6">
             <div className="w-full space-y-3">
               <Button
                 type="submit"
-                disabled={!selectedPersonId}
+                disabled={!selectedPersonId || isLoggingIn}
                 className="w-full"
               >
-                Continue
+                {isLoggingIn ? 'Signing in...' : 'Continue'}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
                 Your selection will be saved for future visits
