@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
 import { PhaseTemplateValidationService, type PhaseUpdateRequest } from '../../services/PhaseTemplateValidationService.js';
 import { CustomPhaseManagementService, type CustomPhaseData, type PhaseUpdateData } from '../../services/CustomPhaseManagementService.js';
@@ -8,8 +9,12 @@ import { CustomPhaseManagementService, type CustomPhaseData, type PhaseUpdateDat
 type RequestWithLogging = RequestWithContext;
 
 export class ProjectsController extends BaseController {
-  constructor() {
-    super({ enableLogging: true });
+  /**
+   * Create a new ProjectsController
+   * @param container - Optional ServiceContainer for dependency injection
+   */
+  constructor(container?: ServiceContainer) {
+    super({ enableLogging: true }, { container });
   }
   /**
    * Automatically inherits phases from project type template when creating a new project.

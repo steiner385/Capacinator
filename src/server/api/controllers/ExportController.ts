@@ -1,9 +1,13 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import ExcelJS from 'exceljs';
 
 export class ExportController extends BaseController {
-  
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   async exportReportAsExcel(req: Request, res: Response) {
     try {
       const { reportType, filters = {} } = req.body;

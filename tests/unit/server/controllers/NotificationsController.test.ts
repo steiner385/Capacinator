@@ -60,7 +60,7 @@ describe('NotificationsController', () => {
     mockDb.mockReset();
     mockDb.mockImplementation(() => createMockQuery());
     
-    controller = new NotificationsController(mockDb);
+    controller = new NotificationsController();
 
     mockReq = {
       body: {},

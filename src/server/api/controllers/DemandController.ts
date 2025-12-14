@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 interface DemandCalculation {
   project_id: string;
@@ -16,7 +17,10 @@ interface DemandCalculation {
 }
 
 export class DemandController extends BaseController {
-  
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   private calculateWorkDays(startDate: string, endDate: string): number {
     const start = new Date(startDate);
     const end = new Date(endDate);

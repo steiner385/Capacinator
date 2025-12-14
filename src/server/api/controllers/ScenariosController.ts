@@ -1,9 +1,14 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 
 export class ScenariosController extends BaseController {
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   // Get all scenarios
   async getAll(req: Request, res: Response) {
     const result = await this.executeQuery(async () => {

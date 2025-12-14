@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { auditModelChanges } from '../../middleware/auditMiddleware.js';
 import { validateDateRange, formatDateForDB } from '../../utils/dateValidation.js';
 
@@ -7,8 +8,8 @@ import { validateDateRange, formatDateForDB } from '../../utils/dateValidation.j
 type RequestWithLogging = RequestWithContext;
 
 export class ProjectPhasesController extends BaseController {
-  constructor() {
-    super({ enableLogging: true });
+  constructor(container?: ServiceContainer) {
+    super({ enableLogging: true }, { container });
   }
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;

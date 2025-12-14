@@ -1,8 +1,13 @@
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class ProjectTypesController extends BaseController {
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;

@@ -1,8 +1,15 @@
 import type { Request, Response } from 'express';
-import { db } from '../../database/index.js';
+import { db as globalDb } from '../../database/index.js';
 import { emailService } from '../../services/EmailService.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class NotificationsController {
+  private db: any;
+
+  constructor(container?: ServiceContainer) {
+    this.db = container ? container.getDb() : globalDb;
+  }
+
   // Send immediate notification
   async sendNotification(req: Request, res: Response): Promise<void> {
     try {
@@ -43,7 +50,7 @@ export class NotificationsController {
     try {
       const { userId } = req.params;
 
-      const preferences = await db('notification_preferences')
+      const preferences = await this.db('notification_preferences')
         .where('user_id', userId)
         .orderBy('type');
 
@@ -76,7 +83,7 @@ export class NotificationsController {
 
       // Update each preference
       for (const pref of preferences) {
-        await db('notification_preferences')
+        await this.db('notification_preferences')
           .where('user_id', userId)
           .where('type', pref.type)
           .update({
@@ -102,7 +109,7 @@ export class NotificationsController {
   // Get available email templates
   async getEmailTemplates(req: Request, res: Response): Promise<void> {
     try {
-      const templates = await db('email_templates')
+      const templates = await this.db('email_templates')
         .where('is_active', true)
         .orderBy('type')
         .orderBy('name');
@@ -131,7 +138,7 @@ export class NotificationsController {
       const { userId } = req.params;
       const { limit = 50, offset = 0, type } = req.query;
 
-      let query = db('notification_history')
+      let query = this.db('notification_history')
         .select(
           'notification_history.*',
           'people.name as user_name',
@@ -242,7 +249,7 @@ export class NotificationsController {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - parseInt(days as string));
 
-      let baseQuery = db('notification_history')
+      let baseQuery = this.db('notification_history')
         .where('sent_at', '>=', startDate);
 
       if (userId) {

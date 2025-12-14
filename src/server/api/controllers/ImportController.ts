@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { ExcelImporter } from '../../services/import/ExcelImporter.js';
 import { ExcelImporterV2 } from '../../services/import/ExcelImporterV2.js';
 import multer from 'multer';
@@ -37,6 +38,10 @@ interface ImportSettings {
  * Usage: npm run import:excel -- --file=data.xlsx [options]
  */
 export class ImportController extends BaseController {
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   private upload = multer({
     dest: 'uploads/',
     fileFilter: (req, file, cb) => {
@@ -62,6 +67,21 @@ export class ImportController extends BaseController {
 
   private async getImportSettings(): Promise<ImportSettings> {
     try {
+      // Check if settings table exists first
+      const tableExists = await this.db.schema.hasTable('settings');
+
+      if (!tableExists) {
+        // Return default settings if table doesn't exist
+        return {
+          clearExistingData: false,
+          validateDuplicates: true,
+          autoCreateMissingRoles: false,
+          autoCreateMissingLocations: false,
+          defaultProjectPriority: 2,
+          dateFormat: 'MM/DD/YYYY'
+        };
+      }
+
       const result = await this.db('settings')
         .where('category', 'import')
         .first();
@@ -80,8 +100,7 @@ export class ImportController extends BaseController {
 
       return JSON.parse(result.value || '{}');
     } catch (error) {
-      console.error('Failed to load import settings:', error);
-      // Return default settings on error
+      // Silently return default settings on error - settings table is optional
       return {
         clearExistingData: false,
         validateDuplicates: true,

@@ -2,11 +2,13 @@ import { RecommendationsController } from '../RecommendationsController.js';
 import type { Request, Response } from 'express';
 
 describe('RecommendationsController', () => {
+  let controller: RecommendationsController;
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    controller = new RecommendationsController();
 
     mockReq = {
       query: {},
@@ -23,7 +25,7 @@ describe('RecommendationsController', () => {
 
   describe('getRecommendations', () => {
     it('returns recommendation structure successfully', async () => {
-      await RecommendationsController.getRecommendations(mockReq as Request, mockRes as Response);
+      await controller.getRecommendations(mockReq as Request, mockRes as Response);
 
       expect(mockRes.json).toHaveBeenCalledWith({
         underutilized: [],
@@ -33,7 +35,7 @@ describe('RecommendationsController', () => {
     });
 
     it('returns empty arrays for each recommendation type', async () => {
-      await RecommendationsController.getRecommendations(mockReq as Request, mockRes as Response);
+      await controller.getRecommendations(mockReq as Request, mockRes as Response);
 
       const response = (mockRes.json as jest.Mock).mock.calls[0][0];
 
@@ -56,12 +58,12 @@ describe('RecommendationsController', () => {
         .mockImplementationOnce(() => {
           throw new Error('Test error');
         })
-        .mockImplementation((...args) => {
+        .mockImplementation(() => {
           errorHandlerCalled = true;
           return mockRes;
         });
 
-      await RecommendationsController.getRecommendations(mockReq as Request, mockRes as Response);
+      await controller.getRecommendations(mockReq as Request, mockRes as Response);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error generating recommendations:',

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
 
 interface ProjectAllocation {
@@ -14,6 +15,9 @@ interface ProjectAllocation {
 }
 
 export class ProjectAllocationController extends BaseController {
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
 
   // Get all effective allocations for a project (inherited + overridden)
   getProjectAllocations = async (req: Request, res: Response): Promise<void> => {

@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { db, getAuditedDb } from '../../database/index.js';
 import { AuditContext } from '../../database/AuditedDatabase.js';
 import { logger } from '../../services/logging/config.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 /**
  * Extended Request interface with logging context
@@ -36,7 +37,15 @@ export interface ControllerOptions {
 }
 
 /**
- * Unified BaseController with composable features
+ * Dependencies that can be injected into controllers
+ */
+export interface ControllerDependencies {
+  /** Service container instance */
+  container?: ServiceContainer;
+}
+
+/**
+ * Unified BaseController with composable features and dependency injection support
  *
  * This consolidates the functionality of:
  * - Original BaseController (basic error handling, pagination, filters)
@@ -47,10 +56,24 @@ export interface ControllerOptions {
  * - For basic controllers: extend BaseController (defaults work)
  * - For controllers needing audit: override options with enableAudit: true
  * - For controllers needing logging: override options with enableLogging: true
+ *
+ * Dependency Injection:
+ * - Controllers can optionally receive a ServiceContainer via constructor
+ * - If no container is provided, falls back to global singletons (backward compatible)
+ * - For new code, prefer using ServiceContainer for better testability
+ *
+ * Example with DI:
+ * ```typescript
+ * class MyController extends BaseController {
+ *   constructor(container: ServiceContainer) {
+ *     super({ enableLogging: true }, { container });
+ *   }
+ * }
+ * ```
  */
 export abstract class BaseController {
   /** Database instance - use this for simple queries */
-  protected db = db;
+  protected db: any;
 
   /** Audited database instance - initialized on first access */
   private _auditedDb: any = null;
@@ -58,12 +81,31 @@ export abstract class BaseController {
   /** Controller feature options */
   protected options: ControllerOptions;
 
-  constructor(options: ControllerOptions = {}) {
+  /** Service container for dependency injection (optional) */
+  protected container?: ServiceContainer;
+
+  /**
+   * Create a new controller instance
+   * @param options - Controller feature options (enableAudit, enableLogging)
+   * @param deps - Optional dependencies including ServiceContainer
+   */
+  constructor(options: ControllerOptions = {}, deps: ControllerDependencies = {}) {
     this.options = {
       enableAudit: false,
       enableLogging: false,
       ...options
     };
+
+    // Store container reference for DI
+    this.container = deps.container;
+
+    // Use injected database or fall back to global singleton
+    if (deps.container) {
+      this.db = deps.container.getDb();
+    } else {
+      // Backward compatible: use global db singleton
+      this.db = db;
+    }
   }
 
   /**

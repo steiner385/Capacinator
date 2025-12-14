@@ -4,11 +4,12 @@ import { ProjectPhaseDependenciesController } from '../../../../src/server/api/c
 
 // Simple test focusing on basic functionality without complex mocks
 describe('ProjectPhaseDependenciesController - Simple Tests', () => {
-  it('should have static methods', () => {
-    expect(typeof ProjectPhaseDependenciesController.getAll).toBe('function');
-    expect(typeof ProjectPhaseDependenciesController.getById).toBe('function');
-    expect(typeof ProjectPhaseDependenciesController.create).toBe('function');
-    expect(typeof ProjectPhaseDependenciesController.update).toBe('function');
-    expect(typeof ProjectPhaseDependenciesController.delete).toBe('function');
+  it('should have instance methods', () => {
+    const controller = new ProjectPhaseDependenciesController();
+    expect(typeof controller.getAll).toBe('function');
+    expect(typeof controller.getById).toBe('function');
+    expect(typeof controller.create).toBe('function');
+    expect(typeof controller.update).toBe('function');
+    expect(typeof controller.delete).toBe('function');
   });
 });

@@ -22,11 +22,14 @@ jest.mock('../../../../src/server/services/ProjectPhaseCascadeService', () => ({
 }));
 
 describe('ProjectPhaseDependenciesController', () => {
+  let controller: ProjectPhaseDependenciesController;
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
   let mockQuery: any;
 
   beforeEach(() => {
+    // Create controller instance (uses mocked global db)
+    controller = new ProjectPhaseDependenciesController();
     // Create a mock query builder
     mockQuery = {
       select: jest.fn().mockReturnThis(),
@@ -98,7 +101,7 @@ describe('ProjectPhaseDependenciesController', () => {
         .mockReturnValueOnce(countMockQuery)  // First call is for count
         .mockReturnValueOnce(dataMockQuery);  // Second call is for data
 
-      await ProjectPhaseDependenciesController.getAll(mockReq as Request, mockRes as Response);
+      await controller.getAll(mockReq as Request, mockRes as Response);
 
       expect(db).toHaveBeenNthCalledWith(1, 'project_phase_dependencies');  // count query
       expect(db).toHaveBeenNthCalledWith(2, 'project_phase_dependencies as pd');  // data query
@@ -122,7 +125,7 @@ describe('ProjectPhaseDependenciesController', () => {
       const error = new Error('Database error');
       mockQuery.orderBy.mockRejectedValue(error);
 
-      await ProjectPhaseDependenciesController.getAll(mockReq as Request, mockRes as Response);
+      await controller.getAll(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to fetch dependencies' });
@@ -142,7 +145,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.params = { id: 'dep-1' };
       mockQuery.first.mockResolvedValue(mockDependency);
 
-      await ProjectPhaseDependenciesController.getById(mockReq as Request, mockRes as Response);
+      await controller.getById(mockReq as Request, mockRes as Response);
 
       expect(db).toHaveBeenCalledWith('project_phase_dependencies as pd');
       expect(mockQuery.join).toHaveBeenCalledTimes(4); // 4 joins for phase names
@@ -155,7 +158,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.params = { id: 'nonexistent' };
       mockQuery.first.mockResolvedValue(null);
 
-      await ProjectPhaseDependenciesController.getById(mockReq as Request, mockRes as Response);
+      await controller.getById(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Dependency not found' });
@@ -165,7 +168,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.params = { id: 'dep-1' };
       mockQuery.first.mockRejectedValue(new Error('Database error'));
 
-      await ProjectPhaseDependenciesController.getById(mockReq as Request, mockRes as Response);
+      await controller.getById(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to fetch dependency' });
@@ -204,7 +207,7 @@ describe('ProjectPhaseDependenciesController', () => {
       
       (db as jest.Mock).mockReturnValueOnce(mockQuery).mockReturnValueOnce(secondMockQuery);
 
-      await ProjectPhaseDependenciesController.create(mockReq as Request, mockRes as Response);
+      await controller.create(mockReq as Request, mockRes as Response);
 
       expect(db).toHaveBeenCalledWith('project_phase_dependencies');
       expect(mockQuery.insert).toHaveBeenCalledWith({
@@ -227,7 +230,7 @@ describe('ProjectPhaseDependenciesController', () => {
         lag_days: 0
       };
 
-      await ProjectPhaseDependenciesController.create(mockReq as Request, mockRes as Response);
+      await controller.create(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'A phase cannot depend on itself' });
@@ -244,7 +247,7 @@ describe('ProjectPhaseDependenciesController', () => {
       };
       mockQuery.returning.mockRejectedValue(new Error('Insert failed'));
 
-      await ProjectPhaseDependenciesController.create(mockReq as Request, mockRes as Response);
+      await controller.create(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to create dependency' });
@@ -264,7 +267,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.body = updateData;
       mockQuery.returning.mockResolvedValue([updatedDependency]);
 
-      await ProjectPhaseDependenciesController.update(mockReq as Request, mockRes as Response);
+      await controller.update(mockReq as Request, mockRes as Response);
 
       expect(db).toHaveBeenCalledWith('project_phase_dependencies');
       expect(mockQuery.where).toHaveBeenCalledWith({ id: 'dep-1' });
@@ -277,7 +280,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.body = { lag_days: 5 };
       mockQuery.returning.mockResolvedValue([]);
 
-      await ProjectPhaseDependenciesController.update(mockReq as Request, mockRes as Response);
+      await controller.update(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Dependency not found' });
@@ -288,7 +291,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.body = { lag_days: 5 };
       mockQuery.returning.mockRejectedValue(new Error('Update failed'));
 
-      await ProjectPhaseDependenciesController.update(mockReq as Request, mockRes as Response);
+      await controller.update(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to update dependency' });
@@ -300,7 +303,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.params = { id: 'dep-1' };
       mockQuery.delete.mockResolvedValue(1);
 
-      await ProjectPhaseDependenciesController.delete(mockReq as Request, mockRes as Response);
+      await controller.delete(mockReq as Request, mockRes as Response);
 
       expect(db).toHaveBeenCalledWith('project_phase_dependencies');
       expect(mockQuery.where).toHaveBeenCalledWith({ id: 'dep-1' });
@@ -313,7 +316,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.params = { id: 'nonexistent' };
       mockQuery.delete.mockResolvedValue(0);
 
-      await ProjectPhaseDependenciesController.delete(mockReq as Request, mockRes as Response);
+      await controller.delete(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Dependency not found' });
@@ -323,7 +326,7 @@ describe('ProjectPhaseDependenciesController', () => {
       mockReq.params = { id: 'dep-1' };
       mockQuery.delete.mockRejectedValue(new Error('Delete failed'));
 
-      await ProjectPhaseDependenciesController.delete(mockReq as Request, mockRes as Response);
+      await controller.delete(mockReq as Request, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to delete dependency' });
@@ -345,7 +348,7 @@ describe('ProjectPhaseDependenciesController', () => {
       };
 
       // The ProjectPhaseCascadeService is mocked at the top of the file
-      await ProjectPhaseDependenciesController.calculateCascade(mockReq as Request, mockRes as Response);
+      await controller.calculateCascade(mockReq as Request, mockRes as Response);
 
       expect(mockRes.json).toHaveBeenCalledWith({
         affected: [],
@@ -364,7 +367,7 @@ describe('ProjectPhaseDependenciesController', () => {
         }
       };
 
-      await ProjectPhaseDependenciesController.applyCascade(mockReq as Request, mockRes as Response);
+      await controller.applyCascade(mockReq as Request, mockRes as Response);
 
       expect(mockRes.json).toHaveBeenCalledWith({
         message: 'Cascade changes applied successfully'
