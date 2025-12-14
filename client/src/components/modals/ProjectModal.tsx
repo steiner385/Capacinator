@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import { useModalForm } from '../../hooks/useModalForm';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -39,69 +40,83 @@ interface ProjectModalProps {
   editingProject?: any;
 }
 
-export const ProjectModal: React.FC<ProjectModalProps> = ({ 
-  isOpen, 
-  onClose, 
+const initialValues: ProjectFormData = {
+  name: '',
+  project_type_id: '',
+  location_id: '',
+  priority: 3,
+  description: '',
+  data_restrictions: '',
+  include_in_demand: true,
+  external_id: '',
+  owner_id: '',
+  current_phase_id: ''
+};
+
+const validateProject = (values: ProjectFormData): Partial<Record<keyof ProjectFormData, string>> => {
+  const errors: Partial<Record<keyof ProjectFormData, string>> = {};
+
+  if (!values.name.trim()) errors.name = 'Project name is required';
+  if (!values.project_type_id) errors.project_type_id = 'Project type is required';
+  if (!values.location_id) errors.location_id = 'Location is required';
+  if (!values.owner_id) errors.owner_id = 'Project owner is required';
+
+  return errors;
+};
+
+export const ProjectModal: React.FC<ProjectModalProps> = ({
+  isOpen,
+  onClose,
   onSuccess,
-  editingProject 
+  editingProject
 }) => {
-  const queryClient = useQueryClient();
-  const isEditing = !!editingProject;
-  
-  const [formData, setFormData] = useState<ProjectFormData>({
-    name: '',
-    project_type_id: '',
-    location_id: '',
-    priority: 3,
-    description: '',
-    data_restrictions: '',
-    include_in_demand: true,
-    external_id: '',
-    owner_id: '',
-    current_phase_id: ''
+  const {
+    values: formData,
+    errors,
+    hasErrors,
+    isEditing,
+    isSubmitting,
+    handleChange,
+    handleSubmit,
+    handleClose,
+    reset,
+  } = useModalForm<ProjectFormData>({
+    initialValues,
+    validate: validateProject,
+    onCreate: async (data) => {
+      const response = await api.projects.create(data);
+      return response.data;
+    },
+    onUpdate: async (id, data) => {
+      const response = await api.projects.update(id, data);
+      return response.data;
+    },
+    queryKeysToInvalidate: [['projects']],
+    additionalUpdateQueryKeys: (item) => [['project', item.id]],
+    onSuccess: (data) => {
+      if (onSuccess) onSuccess(data);
+    },
+    onClose,
+    editingItem: editingProject,
+    getValuesFromItem: (item) => ({
+      name: item.name || '',
+      project_type_id: item.project_type_id || '',
+      location_id: item.location_id || '',
+      priority: item.priority || 3,
+      description: item.description || '',
+      data_restrictions: item.data_restrictions || '',
+      include_in_demand: item.include_in_demand ?? true,
+      external_id: item.external_id || '',
+      owner_id: item.owner_id || '',
+      current_phase_id: item.current_phase_id || ''
+    }),
   });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Update form data when editingProject changes
-  useEffect(() => {
-    if (editingProject) {
-      setFormData({
-        name: editingProject.name || '',
-        project_type_id: editingProject.project_type_id || '',
-        location_id: editingProject.location_id || '',
-        priority: editingProject.priority || 3,
-        description: editingProject.description || '',
-        data_restrictions: editingProject.data_restrictions || '',
-        include_in_demand: editingProject.include_in_demand ?? true,
-        external_id: editingProject.external_id || '',
-        owner_id: editingProject.owner_id || '',
-        current_phase_id: editingProject.current_phase_id || ''
-      });
-    } else {
-      setFormData({
-        name: '',
-        project_type_id: '',
-        location_id: '',
-        priority: 3,
-        description: '',
-        data_restrictions: '',
-        include_in_demand: true,
-        external_id: '',
-        owner_id: '',
-        current_phase_id: ''
-      });
-    }
-    // Clear errors when switching between add/edit
-    setErrors({});
-  }, [editingProject]);
 
   // Fetch data for dropdowns
   const { data: projectTypes } = useQuery({
     queryKey: ['project-types'],
     queryFn: async () => {
       const response = await api.projectTypes.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
       return response.data?.data || response.data || [];
     }
   });
@@ -110,7 +125,6 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     queryKey: ['locations'],
     queryFn: async () => {
       const response = await api.locations.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
       return response.data?.data || response.data || [];
     }
   });
@@ -119,7 +133,6 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
       return response.data?.data || response.data || [];
     }
   });
@@ -132,106 +145,24 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     }
   });
 
-  // Mutations
-  const createProjectMutation = useMutation({
-    mutationFn: async (data: ProjectFormData) => {
-      const response = await api.projects.create(data);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      if (onSuccess) {
-        onSuccess(data);
-      }
-      onClose();
-    }
-  });
-
-  const updateProjectMutation = useMutation({
-    mutationFn: async (data: ProjectFormData) => {
-      const response = await api.projects.update(editingProject.id, data);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['project', editingProject.id] });
-      if (onSuccess) {
-        onSuccess(data);
-      }
-      onClose();
-    }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Basic validation
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'Project name is required';
-    if (!formData.project_type_id) newErrors.project_type_id = 'Project type is required';
-    if (!formData.location_id) newErrors.location_id = 'Location is required';
-    if (!formData.owner_id) newErrors.owner_id = 'Project owner is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setErrors({});
-    if (isEditing) {
-      updateProjectMutation.mutate(formData);
-    } else {
-      createProjectMutation.mutate(formData);
-    }
-  };
-
-  const handleChange = (field: keyof ProjectFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleClose = () => {
-    setFormData({
-      name: '',
-      project_type_id: '',
-      location_id: '',
-      priority: 1,
-      description: '',
-      data_restrictions: '',
-      include_in_demand: true,
-      external_id: '',
-      owner_id: '',
-      current_phase_id: ''
-    });
-    setErrors({});
-    onClose();
-  };
-
   // Filter project types to only show project sub-types (not main project types)
   const filteredProjectTypes = useMemo(() => {
     if (!projectTypes || !Array.isArray(projectTypes)) return [];
-    
-    // Only show project sub-types (those with parent_id)
-    // Projects should not be associated with main project types
     return projectTypes.filter((type: any) => type.parent_id !== null);
   }, [projectTypes]);
 
   // Filter potential owners based on location
   const filteredOwners = useMemo(() => {
     if (!people || !Array.isArray(people)) return [];
-    
+
     return people.filter((person: any) => {
-      // If location is selected, prefer owners from same location
       if (formData.location_id) {
         return person.location_id === formData.location_id ||
                person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('manager')) ||
                person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('owner'));
       }
-      
-      // Default to people with management roles
-      return person.roles?.some((role: any) => 
+
+      return person.roles?.some((role: any) =>
         role.role_name?.toLowerCase().includes('manager') ||
         role.role_name?.toLowerCase().includes('owner') ||
         role.role_name?.toLowerCase().includes('lead')
@@ -239,12 +170,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     });
   }, [people, formData.location_id]);
 
-  const isLoading = createProjectMutation.isPending || updateProjectMutation.isPending;
-
-  const hasErrors = Object.keys(errors).length > 0;
+  // Custom close handler that also resets form
+  const onCloseWithReset = () => {
+    reset();
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCloseWithReset()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Project' : 'Add New Project'}</DialogTitle>
@@ -431,11 +364,11 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleClose}>
+              <Button type="button" variant="outline" onClick={onCloseWithReset}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Spinner className="mr-2" size="sm" />}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Spinner className="mr-2" size="sm" />}
                 {isEditing ? 'Update Project' : 'Create Project'}
               </Button>
             </DialogFooter>

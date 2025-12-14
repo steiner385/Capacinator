@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 import { api } from '../../lib/api-client';
+import { useModalForm } from '../../hooks/useModalForm';
 import {
   Dialog,
   DialogContent,
@@ -39,29 +40,79 @@ interface AssignmentModalProps {
   editingAssignment?: any;
 }
 
-export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({ 
-  isOpen, 
-  onClose, 
+const initialValues: AssignmentFormData = {
+  project_id: '',
+  person_id: '',
+  role_id: '',
+  phase_id: '',
+  assignment_date_mode: 'fixed',
+  start_date: '',
+  end_date: '',
+  allocation_percentage: 100,
+  billable: true,
+  notes: ''
+};
+
+const validateAssignment = (values: AssignmentFormData): Partial<Record<keyof AssignmentFormData, string>> => {
+  const errors: Partial<Record<keyof AssignmentFormData, string>> = {};
+
+  if (!values.project_id) errors.project_id = 'Project is required';
+  if (!values.person_id) errors.person_id = 'Person is required';
+  if (!values.role_id) errors.role_id = 'Role is required';
+  if (!values.start_date) errors.start_date = 'Start date is required';
+  if (!values.end_date) errors.end_date = 'End date is required';
+  if (values.allocation_percentage <= 0 || values.allocation_percentage > 100) {
+    errors.allocation_percentage = 'Allocation must be between 1 and 100';
+  }
+
+  return errors;
+};
+
+export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
+  isOpen,
+  onClose,
   onSuccess,
-  editingAssignment 
+  editingAssignment
 }) => {
-  const queryClient = useQueryClient();
-  const isEditing = !!editingAssignment;
-  
-  const [formData, setFormData] = useState<AssignmentFormData>({
-    project_id: '',
-    person_id: '',
-    role_id: '',
-    phase_id: '',
-    assignment_date_mode: 'fixed',
-    start_date: '',
-    end_date: '',
-    allocation_percentage: 100,
-    billable: true,
-    notes: ''
+  const {
+    values: formData,
+    errors,
+    hasErrors,
+    isEditing,
+    isSubmitting,
+    handleChange,
+    handleSubmit,
+    handleClose,
+  } = useModalForm<AssignmentFormData>({
+    initialValues,
+    validate: validateAssignment,
+    onCreate: async (data) => {
+      const response = await api.assignments.create(data);
+      return response.data.data;
+    },
+    onUpdate: async (id, data) => {
+      const response = await api.assignments.update(id, data);
+      return response.data.data;
+    },
+    queryKeysToInvalidate: [['assignments']],
+    onSuccess: (data) => {
+      if (onSuccess) onSuccess(data);
+    },
+    onClose,
+    editingItem: editingAssignment,
+    getValuesFromItem: (item) => ({
+      project_id: item.project_id || '',
+      person_id: item.person_id || '',
+      role_id: item.role_id || '',
+      phase_id: item.phase_id || '',
+      assignment_date_mode: item.assignment_date_mode || 'fixed',
+      start_date: item.start_date?.split('T')[0] || '',
+      end_date: item.end_date?.split('T')[0] || '',
+      allocation_percentage: item.allocation_percentage || 100,
+      billable: item.billable ?? true,
+      notes: item.notes || ''
+    }),
   });
-  
-  const [errors, setErrors] = useState<Partial<Record<keyof AssignmentFormData, string>>>({});
 
   // Fetch data
   const { data: projects } = useQuery({
@@ -106,94 +157,10 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
     enabled: !!formData.project_id
   });
 
-  // Initialize form data when editing
-  useEffect(() => {
-    if (editingAssignment) {
-      setFormData({
-        project_id: editingAssignment.project_id || '',
-        person_id: editingAssignment.person_id || '',
-        role_id: editingAssignment.role_id || '',
-        phase_id: editingAssignment.phase_id || '',
-        assignment_date_mode: editingAssignment.assignment_date_mode || 'fixed',
-        start_date: editingAssignment.start_date?.split('T')[0] || '',
-        end_date: editingAssignment.end_date?.split('T')[0] || '',
-        allocation_percentage: editingAssignment.allocation_percentage || 100,
-        billable: editingAssignment.billable ?? true,
-        notes: editingAssignment.notes || ''
-      });
-    }
-  }, [editingAssignment]);
-
-  // Mutations
-  const createAssignmentMutation = useMutation({
-    mutationFn: async (data: AssignmentFormData) => {
-      const response = await api.assignments.create(data);
-      return response.data.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      if (onSuccess) onSuccess(data);
-      onClose();
-    },
-    onError: (error: any) => {
-      console.error('Failed to create assignment:', error);
-    }
-  });
-
-  const updateAssignmentMutation = useMutation({
-    mutationFn: async (data: AssignmentFormData) => {
-      const response = await api.assignments.update(editingAssignment.id, data);
-      return response.data.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      if (onSuccess) onSuccess(data);
-      onClose();
-    },
-    onError: (error: any) => {
-      console.error('Failed to update assignment:', error);
-    }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate
-    const newErrors: Partial<Record<keyof AssignmentFormData, string>> = {};
-    
-    if (!formData.project_id) newErrors.project_id = 'Project is required';
-    if (!formData.person_id) newErrors.person_id = 'Person is required';
-    if (!formData.role_id) newErrors.role_id = 'Role is required';
-    if (!formData.start_date) newErrors.start_date = 'Start date is required';
-    if (!formData.end_date) newErrors.end_date = 'End date is required';
-    if (formData.allocation_percentage <= 0 || formData.allocation_percentage > 100) {
-      newErrors.allocation_percentage = 'Allocation must be between 1 and 100';
-    }
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setErrors({});
-    if (isEditing) {
-      updateAssignmentMutation.mutate(formData);
-    } else {
-      createAssignmentMutation.mutate(formData);
-    }
-  };
-
-  const handleChange = (field: keyof AssignmentFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   // Get phases for the selected project
   const availablePhases = useMemo(() => {
     if (!projectPhases || !phases || !Array.isArray(projectPhases)) return [];
-    
+
     return projectPhases.map((pp: any) => {
       const phaseDetail = phases.find((p: any) => p.id === pp.phase_id);
       return {
@@ -205,22 +172,14 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
     });
   }, [projectPhases, phases]);
 
-  const isLoading = createAssignmentMutation.isPending || updateAssignmentMutation.isPending;
-  const hasErrors = Object.keys(errors).length > 0;
-
-  const handleClose = () => {
-    // Give time for animation before calling onClose
-    setTimeout(() => onClose(), 200);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Assignment' : 'Create New Assignment'}</DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? 'Update the assignment details below.' 
+            {isEditing
+              ? 'Update the assignment details below.'
               : 'Fill in the information to create a new assignment.'}
           </DialogDescription>
         </DialogHeader>
@@ -412,8 +371,8 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <>
                     <Spinner className="mr-2 h-4 w-4" />
                     {isEditing ? 'Updating...' : 'Creating...'}
