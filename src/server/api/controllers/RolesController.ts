@@ -1,12 +1,13 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 // Alias for backward compatibility
 type RequestWithLogging = RequestWithContext;
 
 export class RolesController extends BaseController {
-  constructor() {
-    super({ enableLogging: true });
+  constructor(container?: ServiceContainer) {
+    super({ enableLogging: true }, { container });
   }
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const result = await this.executeQuery(async () => {

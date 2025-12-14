@@ -1,8 +1,12 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class UserPermissionsController extends BaseController {
-  
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   // Get all system permissions
   async getSystemPermissions(req: Request, res: Response) {
     try {

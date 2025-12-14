@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 interface ProjectTypeWithHierarchy {
   id: string;
@@ -15,6 +16,9 @@ interface ProjectTypeWithHierarchy {
 }
 
 export class ProjectTypeHierarchyController extends BaseController {
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
 
   // Get all project types with hierarchy structure
   getHierarchy = async (req: Request, res: Response): Promise<void> => {

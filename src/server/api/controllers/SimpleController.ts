@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class SimpleController extends BaseController {
-  constructor(private tableName: string) {
-    super();
+  constructor(private tableName: string, container?: ServiceContainer) {
+    super({}, { container });
   }
 
   async getAll(req: Request, res: Response) {

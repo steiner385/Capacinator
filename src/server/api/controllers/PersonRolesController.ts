@@ -1,8 +1,12 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class PersonRolesController extends BaseController {
-  
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   /**
    * Get all roles for a specific person with expertise levels
    */

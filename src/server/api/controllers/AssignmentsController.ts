@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
 
@@ -20,8 +21,8 @@ interface AssignmentConflict {
 }
 
 export class AssignmentsController extends BaseController {
-  constructor() {
-    super({ enableLogging: true });
+  constructor(container?: ServiceContainer) {
+    super({ enableLogging: true }, { container });
   }
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;

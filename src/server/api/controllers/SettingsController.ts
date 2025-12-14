@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 interface SystemSettings {
   defaultWorkHoursPerWeek: number;
@@ -23,7 +24,10 @@ interface ImportSettings {
 }
 
 export class SettingsController extends BaseController {
-  
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   // Get system settings
   getSystemSettings = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {

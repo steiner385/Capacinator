@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class PeopleController extends BaseController {
-  constructor() {
-    super({ enableAudit: true });
+  constructor(container?: ServiceContainer) {
+    super({ enableAudit: true }, { container });
   }
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;

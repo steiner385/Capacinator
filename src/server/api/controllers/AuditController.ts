@@ -1,12 +1,18 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { AuditService } from '../../services/audit/AuditService.js';
 
 export class AuditController extends BaseController {
   private auditService: AuditService;
 
-  constructor(auditService: AuditService) {
-    super();
+  /**
+   * Create a new AuditController
+   * @param auditService - The audit service instance (required)
+   * @param container - Optional ServiceContainer for dependency injection
+   */
+  constructor(auditService: AuditService, container?: ServiceContainer) {
+    super({}, { container });
     this.auditService = auditService;
   }
 

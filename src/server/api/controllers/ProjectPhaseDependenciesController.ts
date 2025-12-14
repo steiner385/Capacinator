@@ -1,15 +1,22 @@
 import type { Request, Response } from 'express';
-import { db } from '../../database/index.js';
+import { db as globalDb } from '../../database/index.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class ProjectPhaseDependenciesController {
-  static async getAll(req: Request, res: Response) {
+  private db: any;
+
+  constructor(container?: ServiceContainer) {
+    this.db = container ? container.getDb() : globalDb;
+  }
+
+  async getAll(req: Request, res: Response) {
     try {
       const { project_id, page = 1, limit = 10 } = req.query;
       const pageNum = parseInt(page as string, 10);
       const limitNum = parseInt(limit as string, 10);
       const offset = (pageNum - 1) * limitNum;
 
-      let query = db('project_phase_dependencies as pd')
+      let query = this.db('project_phase_dependencies as pd')
         .join('project_phases_timeline as ppt1', 'pd.predecessor_phase_timeline_id', 'ppt1.id')
         .join('project_phases_timeline as ppt2', 'pd.successor_phase_timeline_id', 'ppt2.id')
         .join('project_phases as pp1', 'ppt1.phase_id', 'pp1.id')
@@ -25,7 +32,7 @@ export class ProjectPhaseDependenciesController {
       }
 
       // Get total count
-      const [{ total }] = await db('project_phase_dependencies')
+      const [{ total }] = await this.db('project_phase_dependencies')
         .where(project_id ? { project_id } : {})
         .count('* as total');
 
@@ -50,10 +57,10 @@ export class ProjectPhaseDependenciesController {
     }
   }
 
-  static async getById(req: Request, res: Response) {
+  async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const dependency = await db('project_phase_dependencies as pd')
+      const dependency = await this.db('project_phase_dependencies as pd')
         .join('project_phases_timeline as ppt1', 'pd.predecessor_phase_timeline_id', 'ppt1.id')
         .join('project_phases_timeline as ppt2', 'pd.successor_phase_timeline_id', 'ppt2.id')
         .join('project_phases as pp1', 'ppt1.phase_id', 'pp1.id')
@@ -65,11 +72,11 @@ export class ProjectPhaseDependenciesController {
           'pp2.name as successor_phase_name'
         )
         .first();
-      
+
       if (!dependency) {
         return res.status(404).json({ error: 'Dependency not found' });
       }
-      
+
       res.json(dependency);
     } catch (error) {
       console.error('Error fetching dependency:', error);
@@ -77,15 +84,15 @@ export class ProjectPhaseDependenciesController {
     }
   }
 
-  static async create(req: Request, res: Response) {
+  async create(req: Request, res: Response) {
     try {
       const { predecessor_phase_timeline_id, successor_phase_timeline_id } = req.body;
-      
+
       // Validate no self-dependency
       if (predecessor_phase_timeline_id === successor_phase_timeline_id) {
         return res.status(400).json({ error: 'A phase cannot depend on itself' });
       }
-      
+
       const now = new Date();
       const dependencyData = {
         ...req.body,
@@ -93,13 +100,13 @@ export class ProjectPhaseDependenciesController {
         created_at: now,
         updated_at: now
       };
-      
-      const [insertedDep] = await db('project_phase_dependencies')
+
+      const [insertedDep] = await this.db('project_phase_dependencies')
         .insert(dependencyData)
         .returning('*');
-      
+
       // Fetch with phase names
-      const dependency = await db('project_phase_dependencies as pd')
+      const dependency = await this.db('project_phase_dependencies as pd')
         .join('project_phases_timeline as ppt1', 'pd.predecessor_phase_timeline_id', 'ppt1.id')
         .join('project_phases_timeline as ppt2', 'pd.successor_phase_timeline_id', 'ppt2.id')
         .join('project_phases as pp1', 'ppt1.phase_id', 'pp1.id')
@@ -111,7 +118,7 @@ export class ProjectPhaseDependenciesController {
           'pp2.name as successor_phase_name'
         )
         .first();
-      
+
       res.status(201).json({ data: dependency });
     } catch (error) {
       console.error('Error creating dependency:', error);
@@ -119,18 +126,18 @@ export class ProjectPhaseDependenciesController {
     }
   }
 
-  static async update(req: Request, res: Response) {
+  async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const [dependency] = await db('project_phase_dependencies')
+      const [dependency] = await this.db('project_phase_dependencies')
         .where({ id })
         .update({ ...req.body, updated_at: new Date() })
         .returning('*');
-      
+
       if (!dependency) {
         return res.status(404).json({ error: 'Dependency not found' });
       }
-      
+
       res.json(dependency);
     } catch (error) {
       console.error('Error updating dependency:', error);
@@ -138,17 +145,17 @@ export class ProjectPhaseDependenciesController {
     }
   }
 
-  static async delete(req: Request, res: Response) {
+  async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await db('project_phase_dependencies')
+      const result = await this.db('project_phase_dependencies')
         .where({ id })
         .delete();
-      
+
       if (!result) {
         return res.status(404).json({ error: 'Dependency not found' });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error('Error deleting dependency:', error);
@@ -156,13 +163,13 @@ export class ProjectPhaseDependenciesController {
     }
   }
 
-  static async calculateCascade(req: Request, res: Response) {
+  async calculateCascade(req: Request, res: Response) {
     try {
       const { project_id, phase_timeline_id, new_start_date, new_end_date } = req.body;
 
       // Import cascade service
       const { ProjectPhaseCascadeService } = await import('../../services/ProjectPhaseCascadeService.js');
-      const cascadeService = new ProjectPhaseCascadeService(db);
+      const cascadeService = new ProjectPhaseCascadeService(this.db);
 
       // Calculate cascade effects
       const result = await cascadeService.calculateCascade(
@@ -179,13 +186,13 @@ export class ProjectPhaseDependenciesController {
     }
   }
 
-  static async applyCascade(req: Request, res: Response) {
+  async applyCascade(req: Request, res: Response) {
     try {
       const { project_id, cascade_data } = req.body;
 
       // Import cascade service
       const { ProjectPhaseCascadeService } = await import('../../services/ProjectPhaseCascadeService.js');
-      const cascadeService = new ProjectPhaseCascadeService(db);
+      const cascadeService = new ProjectPhaseCascadeService(this.db);
 
       // Apply cascade changes
       await cascadeService.applyCascade(project_id, cascade_data);

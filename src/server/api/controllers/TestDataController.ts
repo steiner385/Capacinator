@@ -1,12 +1,16 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
+import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 /**
  * Controller for test data cleanup endpoints
  * Used by e2e tests to clean up test data
  */
 export class TestDataController extends BaseController {
-  
+  constructor(container?: ServiceContainer) {
+    super({}, { container });
+  }
+
   async deleteProjectPhases(req: Request, res: Response) {
     const result = await this.executeQuery(async () => {
       const deleted = await this.db('project_phases_timeline')
