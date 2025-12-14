@@ -3,6 +3,25 @@ import axios from 'axios';
 // Force use of proxy for E2E testing
 const API_BASE_URL = '/api';
 
+// Auth token storage keys
+const AUTH_TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+
+// Flag to prevent multiple refresh attempts
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+// Helper to add subscribers waiting for token refresh
+function subscribeTokenRefresh(callback: (token: string) => void) {
+  refreshSubscribers.push(callback);
+}
+
+// Helper to notify subscribers when token is refreshed
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach((callback) => callback(token));
+  refreshSubscribers = [];
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -12,12 +31,12 @@ export const apiClient = axios.create({
 
 // Request interceptor for auth token and scenario context
 apiClient.interceptors.request.use((config) => {
-  // TODO: Add auth token when authentication is implemented
-  // const token = localStorage.getItem('auth_token');
-  // if (token) {
-  //   config.headers.Authorization = `Bearer ${token}`;
-  // }
-  
+  // Add auth token if available
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   // Add scenario context from localStorage
   const scenarioContext = localStorage.getItem('currentScenario');
   if (scenarioContext) {
@@ -30,21 +49,107 @@ apiClient.interceptors.request.use((config) => {
       console.error('Failed to parse scenario context:', error);
     }
   }
-  
+
   return config;
 });
 
-// Response interceptor for error handling
+// Response interceptor for error handling and token refresh
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // TODO: Handle unauthorized
-      // window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const errorCode = error.response?.data?.code;
+
+      // If token expired, try to refresh
+      if (errorCode === 'TOKEN_EXPIRED') {
+        if (isRefreshing) {
+          // Wait for the ongoing refresh to complete
+          return new Promise((resolve) => {
+            subscribeTokenRefresh((token: string) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(apiClient(originalRequest));
+            });
+          });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+        if (refreshToken) {
+          try {
+            // Use a new axios instance to avoid interceptor loop
+            const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+              refreshToken
+            });
+
+            const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+            // Save new tokens
+            localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+            localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+
+            // Notify waiting requests
+            onTokenRefreshed(accessToken);
+            isRefreshing = false;
+
+            // Retry the original request
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return apiClient(originalRequest);
+          } catch (refreshError) {
+            // Refresh failed, clear tokens and redirect to login
+            isRefreshing = false;
+            clearAuthTokens();
+            redirectToLogin();
+            return Promise.reject(refreshError);
+          }
+        } else {
+          // No refresh token, redirect to login
+          clearAuthTokens();
+          redirectToLogin();
+        }
+      } else {
+        // Other 401 errors (invalid token, no token, etc.) - redirect to login
+        clearAuthTokens();
+        redirectToLogin();
+      }
     }
+
     return Promise.reject(error);
   }
 );
+
+// Helper to clear auth tokens
+export function clearAuthTokens() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+// Helper to save auth tokens
+export function saveAuthTokens(accessToken: string, refreshToken: string) {
+  localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+}
+
+// Helper to get current access token
+export function getAccessToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+// Helper to check if user is authenticated
+export function isAuthenticated(): boolean {
+  return !!localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+// Helper to redirect to login
+function redirectToLogin() {
+  // Dispatch a custom event that the app can listen to
+  window.dispatchEvent(new CustomEvent('auth:logout'));
+}
 
 // Type-safe API endpoints
 export const api = {
@@ -413,4 +518,13 @@ export const api = {
 
   // Health check
   health: () => apiClient.get('/health'),
+
+  // Authentication
+  auth: {
+    login: (personId: string) => apiClient.post('/auth/login', { personId }),
+    logout: () => apiClient.post('/auth/logout'),
+    refresh: (refreshToken: string) => apiClient.post('/auth/refresh', { refreshToken }),
+    me: () => apiClient.get('/auth/me'),
+    verify: () => apiClient.get('/auth/verify'),
+  },
 };
