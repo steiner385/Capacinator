@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import { useModalForm } from '../../hooks/useModalForm';
 import {
   Dialog,
   DialogContent,
@@ -41,74 +42,84 @@ interface PersonModalProps {
   editingPerson?: any;
 }
 
-export const PersonModal: React.FC<PersonModalProps> = ({ 
-  isOpen, 
-  onClose, 
+const initialValues: PersonFormData = {
+  name: '',
+  email: '',
+  phone: '',
+  title: '',
+  department: '',
+  location_id: '',
+  primary_person_role_id: '',
+  supervisor_id: '',
+  worker_type: 'FTE',
+  default_availability_percentage: 100,
+  default_hours_per_day: 8,
+  start_date: '',
+  end_date: '',
+  status: 'active'
+};
+
+const validatePerson = (values: PersonFormData): Partial<Record<keyof PersonFormData, string>> => {
+  const errors: Partial<Record<keyof PersonFormData, string>> = {};
+
+  if (!values.name.trim()) errors.name = 'Name is required';
+  if (!values.email.trim()) errors.email = 'Email is required';
+  if (values.email && !values.email.includes('@')) errors.email = 'Valid email is required';
+  if (!values.primary_person_role_id) errors.primary_person_role_id = 'Primary role is required';
+
+  return errors;
+};
+
+export const PersonModal: React.FC<PersonModalProps> = ({
+  isOpen,
+  onClose,
   onSuccess,
-  editingPerson 
+  editingPerson
 }) => {
-  const queryClient = useQueryClient();
-  const isEditing = !!editingPerson;
-  
-  const [formData, setFormData] = useState<PersonFormData>({
-    name: '',
-    email: '',
-    phone: '',
-    title: '',
-    department: '',
-    location_id: '',
-    primary_person_role_id: '',
-    supervisor_id: '',
-    worker_type: 'FTE',
-    default_availability_percentage: 100,
-    default_hours_per_day: 8,
-    start_date: '',
-    end_date: '',
-    status: 'active'
+  const {
+    values: formData,
+    errors,
+    hasErrors,
+    isEditing,
+    isSubmitting,
+    handleChange,
+    handleSubmit,
+    handleClose,
+  } = useModalForm<PersonFormData>({
+    initialValues,
+    validate: validatePerson,
+    onCreate: async (data) => {
+      const response = await api.people.create(data);
+      return response.data;
+    },
+    onUpdate: async (id, data) => {
+      const response = await api.people.update(id, data);
+      return response.data;
+    },
+    queryKeysToInvalidate: [['people']],
+    additionalUpdateQueryKeys: (item) => [['person', item.id]],
+    onSuccess: (data) => {
+      if (onSuccess) onSuccess(data);
+    },
+    onClose,
+    editingItem: editingPerson,
+    getValuesFromItem: (item) => ({
+      name: item.name || '',
+      email: item.email || '',
+      phone: item.phone || '',
+      title: item.title || '',
+      department: item.department || '',
+      location_id: item.location_id || '',
+      primary_person_role_id: item.primary_person_role_id || '',
+      supervisor_id: item.supervisor_id || '',
+      worker_type: item.worker_type || 'FTE',
+      default_availability_percentage: item.default_availability_percentage || 100,
+      default_hours_per_day: item.default_hours_per_day || 8,
+      start_date: item.start_date || '',
+      end_date: item.end_date || '',
+      status: item.status || 'active'
+    }),
   });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Update form data when editingPerson changes
-  useEffect(() => {
-    if (editingPerson) {
-      setFormData({
-        name: editingPerson.name || '',
-        email: editingPerson.email || '',
-        phone: editingPerson.phone || '',
-        title: editingPerson.title || '',
-        department: editingPerson.department || '',
-        location_id: editingPerson.location_id || '',
-        primary_person_role_id: editingPerson.primary_person_role_id || '',
-        supervisor_id: editingPerson.supervisor_id || '',
-        worker_type: editingPerson.worker_type || 'FTE',
-        default_availability_percentage: editingPerson.default_availability_percentage || 100,
-        default_hours_per_day: editingPerson.default_hours_per_day || 8,
-        start_date: editingPerson.start_date || '',
-        end_date: editingPerson.end_date || '',
-        status: editingPerson.status || 'active'
-      });
-    } else {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        title: '',
-        department: '',
-        location_id: '',
-        primary_person_role_id: '',
-        supervisor_id: '',
-        worker_type: 'FTE',
-        default_availability_percentage: 100,
-        default_hours_per_day: 8,
-        start_date: '',
-        end_date: '',
-        status: 'active'
-      });
-    }
-    // Clear errors when switching between add/edit
-    setErrors({});
-  }, [editingPerson]);
 
   // Fetch data for dropdowns
   const { data: roles } = useQuery({
@@ -123,7 +134,6 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     queryKey: ['locations'],
     queryFn: async () => {
       const response = await api.locations.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
       return response.data?.data || response.data || [];
     }
   });
@@ -132,112 +142,36 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     queryKey: ['people'],
     queryFn: async () => {
       const response = await api.people.list();
-      // Handle both wrapped {data: [...]} and direct array [...] responses
       return response.data?.data || response.data || [];
     }
   });
 
-  // Mutations
-  const createPersonMutation = useMutation({
-    mutationFn: async (data: PersonFormData) => {
-      const response = await api.people.create(data);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      if (onSuccess) {
-        onSuccess(data);
-      }
-      onClose();
-    }
-  });
-
-  const updatePersonMutation = useMutation({
-    mutationFn: async (data: PersonFormData) => {
-      const response = await api.people.update(editingPerson.id, data);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      queryClient.invalidateQueries({ queryKey: ['person', editingPerson.id] });
-      if (onSuccess) {
-        onSuccess(data);
-      }
-      onClose();
-    }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Basic validation
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (formData.email && !formData.email.includes('@')) newErrors.email = 'Valid email is required';
-    if (!formData.primary_person_role_id) newErrors.primary_person_role_id = 'Primary role is required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setErrors({});
-    if (isEditing) {
-      updatePersonMutation.mutate(formData);
-    } else {
-      createPersonMutation.mutate(formData);
-    }
-  };
-
-  const handleChange = (field: keyof PersonFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   // Filtered data based on selections
   const filteredSupervisors = useMemo(() => {
     if (!people || !Array.isArray(people)) return [];
-    
+
     return people.filter((person: any) => {
-      // Don't allow a person to be their own supervisor
       if (person.id === formData.supervisor_id) return false;
-      
-      // If location is selected, prefer supervisors from same location
+
       if (formData.location_id) {
-        return person.location_id === formData.location_id || 
+        return person.location_id === formData.location_id ||
                person.is_supervisor === true;
       }
-      
-      return person.is_supervisor === true || 
+
+      return person.is_supervisor === true ||
              person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('manager'));
     });
   }, [people, formData.location_id, formData.supervisor_id]);
 
   const filteredRoles = useMemo(() => {
     if (!roles) return [];
-    
-    // If location is selected, prefer roles that are common in that location
+
     if (formData.location_id) {
-      return roles.sort((a: any, b: any) => {
-        // This is a simple example - in a real app you might have location-specific role preferences
-        return a.name.localeCompare(b.name);
-      });
+      return roles.sort((a: any, b: any) => a.name.localeCompare(b.name));
     }
-    
+
     return roles;
   }, [roles, formData.location_id]);
-
-  const isLoading = createPersonMutation.isPending || updatePersonMutation.isPending;
-
-  const hasErrors = Object.keys(errors).length > 0;
-
-  const handleClose = () => {
-    // Give time for animation before calling onClose
-    setTimeout(() => onClose(), 200);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -466,8 +400,8 @@ export const PersonModal: React.FC<PersonModalProps> = ({
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Spinner className="mr-2" size="sm" />}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Spinner className="mr-2" size="sm" />}
                 {isEditing ? 'Update Person' : 'Create Person'}
               </Button>
             </DialogFooter>
