@@ -302,7 +302,9 @@ describe('LocationModal', () => {
         new Error('API Error')
       );
 
-      renderComponent();
+      // Recreate component with fresh mock to avoid race conditions
+      const freshOnSave = jest.fn();
+      render(<LocationModal onSave={freshOnSave} onCancel={mockOnCancel} />);
 
       fireEvent.change(screen.getByLabelText(/Name/i), {
         target: { value: 'Test' }
@@ -314,7 +316,10 @@ describe('LocationModal', () => {
         expect(screen.getByText('Failed to save location')).toBeInTheDocument();
       });
 
-      expect(mockOnSave).not.toHaveBeenCalled();
+      // Wait a bit to ensure all async operations complete
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(freshOnSave).not.toHaveBeenCalled();
     });
   });
 
@@ -344,13 +349,14 @@ describe('LocationModal', () => {
   describe('Accessibility', () => {
     it('has proper labels for form fields', () => {
       renderComponent();
-      expect(screen.getByLabelText(/Name \*/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
     });
 
     it('shows asterisk for required field', () => {
       renderComponent();
-      expect(screen.getByText(/Name \*/i)).toBeInTheDocument();
+      // The asterisk is now hidden from screen readers with aria-hidden
+      expect(screen.getByText('*')).toBeInTheDocument();
     });
 
     it('has proper dialog structure', () => {

@@ -138,10 +138,10 @@ describe('ProjectModal', () => {
     it('renders form fields', async () => {
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByLabelText(/Project Name \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Project Type \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Location \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Project Owner \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: /project name/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project type/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /location/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project owner/i })).toBeInTheDocument();
       });
     });
   });
@@ -150,7 +150,7 @@ describe('ProjectModal', () => {
     it('initializes with empty values for new project', async () => {
       renderComponent();
       await waitFor(() => {
-        const nameInput = screen.getByLabelText(/Project Name \*/i) as HTMLInputElement;
+        const nameInput = screen.getByRole('textbox', { name: /project name/i }) as HTMLInputElement;
         expect(nameInput.value).toBe('');
       });
     });
@@ -159,7 +159,7 @@ describe('ProjectModal', () => {
       renderComponent();
       await waitFor(() => {
         // Priority select exists and has a default value
-        const nameInput = screen.getByLabelText(/Project Name \*/i);
+        const nameInput = screen.getByRole('textbox', { name: /project name/i });
         expect(nameInput).toBeInTheDocument();
       });
     });
@@ -175,7 +175,7 @@ describe('ProjectModal', () => {
     it('populates form with project data when editing', async () => {
       renderComponent({ editingProject: mockProject });
       await waitFor(() => {
-        const nameInput = screen.getByLabelText(/Project Name \*/i) as HTMLInputElement;
+        const nameInput = screen.getByRole('textbox', { name: /project name/i }) as HTMLInputElement;
         const descriptionInput = screen.getByLabelText(/Description/i) as HTMLTextAreaElement;
         const externalIdInput = screen.getByLabelText(/External ID/i) as HTMLInputElement;
 
@@ -220,7 +220,7 @@ describe('ProjectModal', () => {
     it('allows typing in name field', async () => {
       renderComponent();
       await waitFor(() => {
-        const nameInput = screen.getByLabelText(/Project Name \*/i);
+        const nameInput = screen.getByRole('textbox', { name: /project name/i });
         fireEvent.change(nameInput, { target: { value: 'New Project' } });
         expect(nameInput).toHaveValue('New Project');
       });
@@ -320,7 +320,7 @@ describe('ProjectModal', () => {
         expect(screen.getByText('Project name is required')).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByLabelText(/Project Name \*/i);
+      const nameInput = screen.getByRole('textbox', { name: /project name/i });
       fireEvent.change(nameInput, { target: { value: 'New Project' } });
 
       expect(screen.queryByText('Project name is required')).not.toBeInTheDocument();
@@ -375,7 +375,7 @@ describe('ProjectModal', () => {
       renderComponent({ editingProject: mockProject });
 
       await waitFor(() => {
-        const nameInput = screen.getByLabelText(/Project Name \*/i);
+        const nameInput = screen.getByRole('textbox', { name: /project name/i });
         fireEvent.change(nameInput, { target: { value: 'Updated Project' } });
       });
 
@@ -455,7 +455,7 @@ describe('ProjectModal', () => {
       renderComponent();
 
       await waitFor(() => {
-        const nameInput = screen.getByLabelText(/Project Name \*/i);
+        const nameInput = screen.getByRole('textbox', { name: /project name/i });
         fireEvent.change(nameInput, { target: { value: 'Test' } });
       });
 
@@ -470,7 +470,7 @@ describe('ProjectModal', () => {
     it('has proper labels for form fields', async () => {
       renderComponent();
       await waitFor(() => {
-        expect(screen.getByLabelText(/Project Name \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: /project name/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/External ID/i)).toBeInTheDocument();
       });

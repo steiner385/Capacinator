@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 
@@ -153,17 +154,17 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Project Type' : 'Create Project Type'}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Update the project type details below.'
+              : 'Fill in the information to create a new project type.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          {isEditing 
-            ? 'Update the project type details below.' 
-            : 'Fill in the information to create a new project type.'}
-        </p>
 
           {hasErrors && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-6" role="alert" aria-live="assertive">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>
                 Please fix the errors below before submitting.
               </AlertDescription>
@@ -172,7 +173,7 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="name">Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
             <Input
               id="name"
               value={formData.name}
@@ -180,8 +181,11 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
               placeholder="Enter project type name"
               maxLength={100}
               className={errors.name ? 'border-destructive' : ''}
+              aria-required="true"
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? 'name-error' : undefined}
             />
-            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            {errors.name && <p id="name-error" className="text-sm text-destructive" role="alert">{errors.name}</p>}
           </div>
 
           <div className="space-y-2">
@@ -209,20 +213,21 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
                 <span className="text-sm text-muted-foreground">{formData.color_code}</span>
               </div>
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Color selection">
                 {DEFAULT_COLORS.map((color) => (
                   <button
                     key={color}
                     type="button"
                     className={cn(
                       "h-8 w-8 rounded-md border-2 transition-all",
-                      formData.color_code === color 
-                        ? "border-primary scale-110" 
+                      formData.color_code === color
+                        ? "border-primary scale-110"
                         : "border-transparent hover:scale-105"
                     )}
                     style={{ backgroundColor: color }}
                     onClick={() => handleChange('color_code', color)}
-                    title={`Select ${color}`}
+                    aria-label={`Select color ${color}`}
+                    aria-pressed={formData.color_code === color}
                   />
                 ))}
               </div>

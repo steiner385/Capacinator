@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 
@@ -247,17 +248,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Project' : 'Add New Project'}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Update the project details below.'
+              : 'Fill in the information to create a new project.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            {isEditing 
-              ? 'Update the project details below.' 
-              : 'Fill in the information to create a new project.'}
-          </p>
 
           {hasErrors && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-6" role="alert" aria-live="assertive">
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>
                 Please fix the errors below before submitting.
               </AlertDescription>
@@ -267,21 +268,30 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Project Name *</Label>
+              <Label htmlFor="name">Project Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder="Enter project name"
                 className={errors.name ? 'border-destructive' : ''}
+                aria-required="true"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'name-error' : undefined}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              {errors.name && <p id="name-error" className="text-sm text-destructive" role="alert">{errors.name}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project_type_id">Project Type *</Label>
+              <Label htmlFor="project_type_id">Project Type <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Select value={formData.project_type_id} onValueChange={(value) => handleChange('project_type_id', value)}>
-                <SelectTrigger className={errors.project_type_id ? 'border-destructive' : ''}>
+                <SelectTrigger
+                  id="project_type_id"
+                  className={errors.project_type_id ? 'border-destructive' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.project_type_id}
+                  aria-describedby={errors.project_type_id ? 'project_type_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select project type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -292,13 +302,19 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.project_type_id && <p className="text-sm text-destructive">{errors.project_type_id}</p>}
+              {errors.project_type_id && <p id="project_type_id-error" className="text-sm text-destructive" role="alert">{errors.project_type_id}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="location_id">Location *</Label>
+              <Label htmlFor="location_id">Location <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Select value={formData.location_id} onValueChange={(value) => handleChange('location_id', value)}>
-                <SelectTrigger className={errors.location_id ? 'border-destructive' : ''}>
+                <SelectTrigger
+                  id="location_id"
+                  className={errors.location_id ? 'border-destructive' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.location_id}
+                  aria-describedby={errors.location_id ? 'location_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,13 +325,19 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.location_id && <p className="text-sm text-destructive">{errors.location_id}</p>}
+              {errors.location_id && <p id="location_id-error" className="text-sm text-destructive" role="alert">{errors.location_id}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="owner_id">Project Owner *</Label>
+              <Label htmlFor="owner_id">Project Owner <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Select value={formData.owner_id} onValueChange={(value) => handleChange('owner_id', value)}>
-                <SelectTrigger className={errors.owner_id ? 'border-destructive' : ''}>
+                <SelectTrigger
+                  id="owner_id"
+                  className={errors.owner_id ? 'border-destructive' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.owner_id}
+                  aria-describedby={errors.owner_id ? 'owner_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select project owner" />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,13 +348,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.owner_id && <p className="text-sm text-destructive">{errors.owner_id}</p>}
+              {errors.owner_id && <p id="owner_id-error" className="text-sm text-destructive" role="alert">{errors.owner_id}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
               <Select value={formData.priority.toString()} onValueChange={(value) => handleChange('priority', Number(value))}>
-                <SelectTrigger>
+                <SelectTrigger id="priority">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -358,7 +380,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             <div className="space-y-2 col-span-2">
               <Label htmlFor="current_phase_id">Current Phase</Label>
               <Select value={formData.current_phase_id || 'none'} onValueChange={(value) => handleChange('current_phase_id', value === 'none' ? '' : value)}>
-                <SelectTrigger>
+                <SelectTrigger id="current_phase_id">
                   <SelectValue placeholder="Select current phase" />
                 </SelectTrigger>
                 <SelectContent>
@@ -400,10 +422,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               id="include_in_demand"
               checked={formData.include_in_demand}
               onCheckedChange={(checked) => handleChange('include_in_demand', checked)}
+              aria-describedby="include_in_demand-description"
             />
             <Label htmlFor="include_in_demand" className="cursor-pointer">
               Include in demand planning
             </Label>
+            <span id="include_in_demand-description" className="sr-only">Include this project in demand planning calculations</span>
           </div>
 
             <DialogFooter>

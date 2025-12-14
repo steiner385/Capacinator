@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -136,23 +137,23 @@ export default function PersonRoleModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{editingRole ? 'Edit Role' : 'Add Role'}</DialogTitle>
+          <DialogDescription>
+            {editingRole
+              ? 'Update the role details for this person.'
+              : 'Add a new role for this person.'}
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            {editingRole 
-              ? 'Update the role details for this person.' 
-              : 'Add a new role for this person.'}
-          </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="role_id">Role *</Label>
-            <Select 
-              value={formData.role_id} 
+            <Label htmlFor="role_id">Role <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
+            <Select
+              value={formData.role_id}
               onValueChange={(value) => handleInputChange('role_id', value)}
               disabled={isSubmitting || rolesLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger id="role_id" aria-required="true">
                 <SelectValue placeholder="Select a role..." />
               </SelectTrigger>
               <SelectContent>
@@ -166,13 +167,13 @@ export default function PersonRoleModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="proficiency_level">Proficiency Level *</Label>
-            <Select 
-              value={formData.proficiency_level} 
+            <Label htmlFor="proficiency_level">Proficiency Level <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
+            <Select
+              value={formData.proficiency_level}
               onValueChange={(value) => handleInputChange('proficiency_level', value)}
               disabled={isSubmitting}
             >
-              <SelectTrigger>
+              <SelectTrigger id="proficiency_level" aria-required="true">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -192,12 +193,13 @@ export default function PersonRoleModal({
                 checked={formData.is_primary}
                 onCheckedChange={(checked) => handleInputChange('is_primary', checked)}
                 disabled={isSubmitting}
+                aria-describedby="is_primary-description"
               />
               <Label htmlFor="is_primary" className="cursor-pointer">
                 Set as Primary Role
               </Label>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p id="is_primary-description" className="text-sm text-muted-foreground">
               If checked, this role will become the person's primary role.
             </p>
           </div>

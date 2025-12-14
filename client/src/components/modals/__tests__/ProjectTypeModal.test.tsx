@@ -75,9 +75,9 @@ describe('ProjectTypeModal', () => {
 
     it('renders form fields', () => {
       renderComponent();
-      expect(screen.getByLabelText(/Name \*/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Color/i)).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /name/i })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /description/i })).toBeInTheDocument();
+      expect(screen.getByLabelText('Color')).toBeInTheDocument();
     });
 
     it('shows descriptive text for create mode', () => {
@@ -94,8 +94,8 @@ describe('ProjectTypeModal', () => {
   describe('Form Initialization', () => {
     it('initializes with empty values for new project type', () => {
       renderComponent();
-      const nameInput = screen.getByLabelText(/Name \*/i) as HTMLInputElement;
-      const descriptionInput = screen.getByLabelText(/Description/i) as HTMLTextAreaElement;
+      const nameInput = screen.getByRole('textbox', { name: /name/i }) as HTMLInputElement;
+      const descriptionInput = screen.getByRole('textbox', { name: /description/i }) as HTMLTextAreaElement;
 
       expect(nameInput.value).toBe('');
       expect(descriptionInput.value).toBe('');
@@ -103,15 +103,15 @@ describe('ProjectTypeModal', () => {
 
     it('initializes with default color', () => {
       renderComponent();
-      const colorInput = screen.getByLabelText(/Color/i) as HTMLInputElement;
+      const colorInput = screen.getByLabelText('Color') as HTMLInputElement;
       expect(colorInput.value).toBe('#4f46e5'); // Default indigo color
     });
 
     it('populates form with project type data when editing', () => {
       renderComponent({ editingProjectType: mockProjectType });
-      const nameInput = screen.getByLabelText(/Name \*/i) as HTMLInputElement;
-      const descriptionInput = screen.getByLabelText(/Description/i) as HTMLTextAreaElement;
-      const colorInput = screen.getByLabelText(/Color/i) as HTMLInputElement;
+      const nameInput = screen.getByRole('textbox', { name: /name/i }) as HTMLInputElement;
+      const descriptionInput = screen.getByRole('textbox', { name: /description/i }) as HTMLTextAreaElement;
+      const colorInput = screen.getByLabelText('Color') as HTMLInputElement;
 
       expect(nameInput.value).toBe('Product Development');
       expect(descriptionInput.value).toBe('Software product development projects');
@@ -130,7 +130,7 @@ describe('ProjectTypeModal', () => {
   describe('Form Interactions', () => {
     it('allows typing in name field', () => {
       renderComponent();
-      const nameInput = screen.getByLabelText(/Name \*/i);
+      const nameInput = screen.getByRole('textbox', { name: /name/i });
 
       fireEvent.change(nameInput, { target: { value: 'Consulting' } });
       expect(nameInput).toHaveValue('Consulting');
@@ -146,7 +146,7 @@ describe('ProjectTypeModal', () => {
 
     it('allows selecting color from color input', () => {
       renderComponent();
-      const colorInput = screen.getByLabelText(/Color/i);
+      const colorInput = screen.getByLabelText('Color');
 
       fireEvent.change(colorInput, { target: { value: '#10b981' } });
       expect(colorInput).toHaveValue('#10b981');
@@ -154,7 +154,7 @@ describe('ProjectTypeModal', () => {
 
     it('displays selected color code as text', () => {
       renderComponent();
-      const colorInput = screen.getByLabelText(/Color/i);
+      const colorInput = screen.getByLabelText('Color');
 
       fireEvent.change(colorInput, { target: { value: '#ef4444' } });
       expect(screen.getByText('#ef4444')).toBeInTheDocument();
@@ -162,7 +162,7 @@ describe('ProjectTypeModal', () => {
 
     it('enforces 100 character limit on name', () => {
       renderComponent();
-      const nameInput = screen.getByLabelText(/Name \*/i) as HTMLInputElement;
+      const nameInput = screen.getByRole('textbox', { name: /name/i }) as HTMLInputElement;
 
       expect(nameInput.maxLength).toBe(100);
     });
@@ -172,7 +172,7 @@ describe('ProjectTypeModal', () => {
     it('renders all preset color buttons', () => {
       renderComponent();
       const colorButtons = screen.getAllByRole('button').filter(
-        btn => btn.getAttribute('title')?.includes('Select #')
+        btn => btn.getAttribute('aria-label')?.includes('Select color #')
       );
       expect(colorButtons.length).toBe(10); // DEFAULT_COLORS has 10 colors
     });
@@ -180,7 +180,7 @@ describe('ProjectTypeModal', () => {
     it('highlights selected preset color', () => {
       renderComponent();
       const firstColorButton = screen.getAllByRole('button').find(
-        btn => btn.getAttribute('title') === 'Select #4f46e5'
+        btn => btn.getAttribute('aria-label') === 'Select color #4f46e5'
       );
       expect(firstColorButton).toHaveClass('border-primary');
     });
@@ -188,7 +188,7 @@ describe('ProjectTypeModal', () => {
     it('changes color when preset button is clicked', () => {
       renderComponent();
       const emeraldButton = screen.getAllByRole('button').find(
-        btn => btn.getAttribute('title') === 'Select #10b981'
+        btn => btn.getAttribute('aria-label') === 'Select color #10b981'
       );
 
       fireEvent.click(emeraldButton!);
@@ -197,9 +197,9 @@ describe('ProjectTypeModal', () => {
 
     it('updates color input when preset button is clicked', () => {
       renderComponent();
-      const colorInput = screen.getByLabelText(/Color/i) as HTMLInputElement;
+      const colorInput = screen.getByLabelText('Color') as HTMLInputElement;
       const amberButton = screen.getAllByRole('button').find(
-        btn => btn.getAttribute('title') === 'Select #f59e0b'
+        btn => btn.getAttribute('aria-label') === 'Select color #f59e0b'
       );
 
       fireEvent.click(amberButton!);
@@ -221,7 +221,7 @@ describe('ProjectTypeModal', () => {
 
     it('shows error when submitting with whitespace-only name', async () => {
       renderComponent();
-      const nameInput = screen.getByLabelText(/Name \*/i);
+      const nameInput = screen.getByRole('textbox', { name: /name/i });
       const submitButton = screen.getByRole('button', { name: /Create Project Type/i });
 
       fireEvent.change(nameInput, { target: { value: '   ' } });
@@ -245,7 +245,7 @@ describe('ProjectTypeModal', () => {
 
     it('clears errors when user starts typing', async () => {
       renderComponent();
-      const nameInput = screen.getByLabelText(/Name \*/i);
+      const nameInput = screen.getByRole('textbox', { name: /name/i });
       const submitButton = screen.getByRole('button', { name: /Create Project Type/i });
 
       // Trigger validation error
@@ -279,7 +279,7 @@ describe('ProjectTypeModal', () => {
       (api.projectTypes.create as jest.Mock).mockResolvedValue({ data: {} });
 
       renderComponent();
-      const nameInput = screen.getByLabelText(/Name \*/i);
+      const nameInput = screen.getByRole('textbox', { name: /name/i });
       const submitButton = screen.getByRole('button', { name: /Create Project Type/i });
 
       fireEvent.change(nameInput, { target: { value: 'Consulting' } });
@@ -301,13 +301,13 @@ describe('ProjectTypeModal', () => {
 
       renderComponent();
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Research & Development' }
       });
       fireEvent.change(screen.getByLabelText(/Description/i), {
         target: { value: 'R&D projects' }
       });
-      fireEvent.change(screen.getByLabelText(/Color/i), {
+      fireEvent.change(screen.getByLabelText('Color'), {
         target: { value: '#8b5cf6' }
       });
 
@@ -329,7 +329,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent();
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'New Type' }
       });
 
@@ -345,7 +345,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent();
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'New Type' }
       });
 
@@ -363,7 +363,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent();
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Test Type' }
       });
 
@@ -382,7 +382,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent();
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Test Type' }
       });
 
@@ -401,7 +401,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent();
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'New Type' }
       });
 
@@ -422,7 +422,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent({ editingProjectType: mockProjectType });
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Updated Name' }
       });
 
@@ -444,7 +444,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent({ editingProjectType: mockProjectType });
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Updated' }
       });
 
@@ -460,7 +460,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent({ editingProjectType: mockProjectType });
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Updated' }
       });
 
@@ -477,7 +477,7 @@ describe('ProjectTypeModal', () => {
 
       renderComponent({ editingProjectType: mockProjectType });
 
-      fireEvent.change(screen.getByLabelText(/Name \*/i), {
+      fireEvent.change(screen.getByRole('textbox', { name: /name/i }), {
         target: { value: 'Updated' }
       });
 
@@ -528,7 +528,7 @@ describe('ProjectTypeModal', () => {
       );
 
       // Verify it's populated
-      expect(screen.getByLabelText(/Name \*/i)).toHaveValue('Product Development');
+      expect(screen.getByRole('textbox', { name: /name/i })).toHaveValue('Product Development');
 
       // Switch to create mode
       rerender(
@@ -538,7 +538,7 @@ describe('ProjectTypeModal', () => {
       );
 
       // Verify form is cleared
-      expect(screen.getByLabelText(/Name \*/i)).toHaveValue('');
+      expect(screen.getByRole('textbox', { name: /name/i })).toHaveValue('');
     });
 
     it('clears errors when switching between modes', async () => {
@@ -570,14 +570,15 @@ describe('ProjectTypeModal', () => {
   describe('Accessibility', () => {
     it('has proper labels for form fields', () => {
       renderComponent();
-      expect(screen.getByLabelText(/Name \*/i)).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /name/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Color/i)).toBeInTheDocument();
+      expect(screen.getByLabelText('Color')).toBeInTheDocument();
     });
 
     it('shows asterisk for required field', () => {
       renderComponent();
-      expect(screen.getByText(/Name \*/i)).toBeInTheDocument();
+      // The asterisk is now hidden from screen readers with aria-hidden
+      expect(screen.getByText('*')).toBeInTheDocument();
     });
 
     it('has proper dialog structure', () => {
@@ -585,16 +586,36 @@ describe('ProjectTypeModal', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    it('color preset buttons have descriptive titles', () => {
+    it('color preset buttons have descriptive aria-labels', () => {
       renderComponent();
       const colorButtons = screen.getAllByRole('button').filter(
-        btn => btn.getAttribute('title')?.includes('Select #')
+        btn => btn.getAttribute('aria-label')?.includes('Select color #')
       );
 
       colorButtons.forEach(button => {
-        expect(button).toHaveAttribute('title');
-        expect(button.getAttribute('title')).toMatch(/Select #[0-9a-f]{6}/i);
+        expect(button).toHaveAttribute('aria-label');
+        expect(button.getAttribute('aria-label')).toMatch(/Select color #[0-9a-f]{6}/i);
       });
+    });
+
+    it('has aria-required on required fields', () => {
+      renderComponent();
+      const nameInput = screen.getByRole('textbox', { name: /name/i });
+      expect(nameInput).toHaveAttribute('aria-required', 'true');
+    });
+
+    it('has color selection group with proper aria-label', () => {
+      renderComponent();
+      expect(screen.getByRole('group', { name: /Color selection/i })).toBeInTheDocument();
+    });
+
+    it('has aria-pressed state on color buttons', () => {
+      renderComponent();
+      const selectedButton = screen.getByRole('button', { name: /Select color #4f46e5/i });
+      expect(selectedButton).toHaveAttribute('aria-pressed', 'true');
+
+      const unselectedButton = screen.getByRole('button', { name: /Select color #10b981/i });
+      expect(unselectedButton).toHaveAttribute('aria-pressed', 'false');
     });
   });
 });

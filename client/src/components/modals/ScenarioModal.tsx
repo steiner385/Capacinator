@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -66,18 +67,21 @@ export const CreateScenarioModal: React.FC<CreateScenarioModalProps> = ({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Scenario</DialogTitle>
+          <DialogDescription>
+            Create a new scenario to plan and test different resource allocations.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {parentScenario && (
-              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
-                <GitBranch size={16} />
+              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md" role="status">
+                <GitBranch size={16} aria-hidden="true" />
                 <span className="text-sm">Branching from: <strong>{parentScenario.name}</strong></span>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="scenario-name">Scenario Name *</Label>
+              <Label htmlFor="scenario-name">Scenario Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 id="scenario-name"
                 type="text"
@@ -85,6 +89,7 @@ export const CreateScenarioModal: React.FC<CreateScenarioModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter scenario name"
                 required
+                aria-required="true"
               />
             </div>
 
@@ -176,11 +181,14 @@ export const EditScenarioModal: React.FC<EditScenarioModalProps> = ({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Scenario</DialogTitle>
+          <DialogDescription>
+            Update the scenario details below.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-scenario-name">Scenario Name *</Label>
+              <Label htmlFor="edit-scenario-name">Scenario Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 id="edit-scenario-name"
                 type="text"
@@ -188,6 +196,7 @@ export const EditScenarioModal: React.FC<EditScenarioModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter scenario name"
                 required
+                aria-required="true"
               />
             </div>
 
@@ -253,9 +262,12 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Delete Scenario</DialogTitle>
+          <DialogDescription>
+            Permanently delete this scenario and all associated data.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
+          <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md" role="alert">
             <p className="text-sm text-red-800 dark:text-red-200">
               <strong>Warning:</strong> This action cannot be undone. This will permanently delete
               the scenario <strong>{scenario?.name}</strong> and all associated data.
@@ -264,7 +276,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 
           <div className="space-y-2">
             <Label htmlFor="confirm-delete">
-              Type <strong>{scenario?.name}</strong> to confirm deletion
+              Type <strong>{scenario?.name}</strong> to confirm deletion <span aria-hidden="true">*</span><span className="sr-only">(required)</span>
             </Label>
             <Input
               id="confirm-delete"
@@ -272,7 +284,10 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="Enter scenario name"
+              aria-required="true"
+              aria-describedby="delete-warning"
             />
+            <span id="delete-warning" className="sr-only">You must type the scenario name exactly to enable the delete button</span>
           </div>
         </div>
 

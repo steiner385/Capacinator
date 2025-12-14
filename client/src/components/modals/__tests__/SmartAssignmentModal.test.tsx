@@ -235,7 +235,8 @@ describe('SmartAssignmentModal', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        // Look for the label text (ARIA-enhanced structure now has asterisk in separate span)
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
 
@@ -250,7 +251,7 @@ describe('SmartAssignmentModal', () => {
     it('defaults to manual tab when triggerContext is manual_add', async () => {
       renderComponent({ triggerContext: 'manual_add' });
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
   });
@@ -287,16 +288,16 @@ describe('SmartAssignmentModal', () => {
     beforeEach(async () => {
       renderComponent({ triggerContext: 'manual_add' });
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
 
     it('renders all form fields', () => {
-      expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
-      expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       expect(screen.getByText(/Phase/i)).toBeInTheDocument();
-      expect(screen.getByText(/Start Date \*/i)).toBeInTheDocument();
-      expect(screen.getByText(/End Date \*/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
     });
 
     it('renders allocation slider', () => {
@@ -314,7 +315,7 @@ describe('SmartAssignmentModal', () => {
     beforeEach(async () => {
       renderComponent({ triggerContext: 'manual_add' });
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
 
@@ -381,7 +382,7 @@ describe('SmartAssignmentModal', () => {
     beforeEach(async () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
 
@@ -402,7 +403,7 @@ describe('SmartAssignmentModal', () => {
     beforeEach(async () => {
       renderComponent({ triggerContext: 'manual_add' });
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
 
@@ -419,7 +420,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // Form is populated with project, now submit
@@ -459,7 +460,7 @@ describe('SmartAssignmentModal', () => {
     beforeEach(async () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
     });
 
@@ -506,10 +507,10 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/Start Date \*/i)).toBeInTheDocument();
-        expect(screen.getByText(/End Date \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
+        expect(screen.getByLabelText(/Start Date/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/End Date/i)).toBeInTheDocument();
       });
     });
 
@@ -804,7 +805,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // Date inputs should exist
@@ -855,7 +856,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // The form submission logic includes phase_id and date mode
@@ -888,7 +889,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       }, { timeout: 3000 });
 
       // Should show only Project Alpha and Project Gamma (with demand)
@@ -914,7 +915,7 @@ describe('SmartAssignmentModal', () => {
 
       // Wait for the manual tab to render
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // Wait for projects to be fetched
@@ -923,7 +924,7 @@ describe('SmartAssignmentModal', () => {
       });
 
       // Component should render without error, showing project selection
-      expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
     });
 
     it('extracts required roles from project allocations', async () => {
@@ -946,7 +947,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // Required roles should be extracted from allocations > 0
@@ -974,7 +975,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       });
 
       // Only roles with demand should be shown in the dropdown
@@ -996,7 +997,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
       });
 
       // Primary role should be pre-selected (role-1 from mockPerson)
@@ -1017,7 +1018,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent(formWithInvalidRole);
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // If role validation fails, alert should be shown
@@ -1030,7 +1031,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       const submitButton = screen.getByRole('button', { name: /Create Assignment/i });
@@ -1043,7 +1044,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // The payload should include assignment_date_mode: 'fixed' or 'phase'
@@ -1066,7 +1067,7 @@ describe('SmartAssignmentModal', () => {
       renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
       await waitFor(() => {
-        expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
       });
 
       // Error handling is tested through the mutation onError callback
@@ -1168,7 +1169,7 @@ describe('SmartAssignmentModal', () => {
         renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
         await waitFor(() => {
-          expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
         });
 
         // Wait for project allocations to load and form to be ready
@@ -1221,7 +1222,7 @@ describe('SmartAssignmentModal', () => {
         renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
         await waitFor(() => {
-          expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
         });
 
         // Fill form and attempt submission
@@ -1247,7 +1248,7 @@ describe('SmartAssignmentModal', () => {
         renderComponent({ triggerContext: 'manual_add' });
 
         await waitFor(() => {
-          expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
         });
 
         // Submit button should be disabled when no project selected
@@ -1284,7 +1285,7 @@ describe('SmartAssignmentModal', () => {
         renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
         await waitFor(() => {
-          expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
         });
 
         // Wait for utilization data to load and check remaining capacity
@@ -1331,7 +1332,7 @@ describe('SmartAssignmentModal', () => {
         renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
         await waitFor(() => {
-          expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
         });
 
         // Should auto-adjust to not exceed 100%
@@ -1348,12 +1349,12 @@ describe('SmartAssignmentModal', () => {
         renderComponent({ triggerContext: 'manual_add', projectId: 'project-2' });
 
         await waitFor(() => {
-          expect(screen.getByText(/Project \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /project/i })).toBeInTheDocument();
         });
 
         // Project is pre-selected, now the role field should be available
         await waitFor(() => {
-          expect(screen.getByText(/Role \*/i)).toBeInTheDocument();
+          expect(screen.getByRole('combobox', { name: /role/i })).toBeInTheDocument();
         });
 
         // Form should be in a valid state

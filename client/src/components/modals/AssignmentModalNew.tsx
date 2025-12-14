@@ -227,8 +227,8 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
         <div className="py-4">
 
           {hasErrors && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-4" role="alert" aria-live="assertive">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               <AlertDescription>
                 Please fix the errors below before submitting.
               </AlertDescription>
@@ -238,9 +238,15 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="project_id">Project *</Label>
+              <Label htmlFor="project_id">Project <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Select value={formData.project_id} onValueChange={(value) => handleChange('project_id', value)}>
-                <SelectTrigger className={errors.project_id ? 'border-red-500' : ''}>
+                <SelectTrigger
+                  id="project_id"
+                  className={errors.project_id ? 'border-red-500' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.project_id}
+                  aria-describedby={errors.project_id ? 'project_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,13 +257,19 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.project_id && <span className="text-sm text-red-500">{errors.project_id}</span>}
+              {errors.project_id && <span id="project_id-error" className="text-sm text-red-500" role="alert">{errors.project_id}</span>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="person_id">Person *</Label>
+              <Label htmlFor="person_id">Person <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Select value={formData.person_id} onValueChange={(value) => handleChange('person_id', value)}>
-                <SelectTrigger className={errors.person_id ? 'border-red-500' : ''}>
+                <SelectTrigger
+                  id="person_id"
+                  className={errors.person_id ? 'border-red-500' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.person_id}
+                  aria-describedby={errors.person_id ? 'person_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select person" />
                 </SelectTrigger>
                 <SelectContent>
@@ -268,30 +280,36 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.person_id && <span className="text-sm text-red-500">{errors.person_id}</span>}
+              {errors.person_id && <span id="person_id-error" className="text-sm text-red-500" role="alert">{errors.person_id}</span>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role_id">Role *</Label>
+              <Label htmlFor="role_id">Role <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Select value={formData.role_id} onValueChange={(value) => handleChange('role_id', value)}>
-                <SelectTrigger className={errors.role_id ? 'border-red-500' : ''}>
+                <SelectTrigger
+                  id="role_id"
+                  className={errors.role_id ? 'border-red-500' : ''}
+                  aria-required="true"
+                  aria-invalid={!!errors.role_id}
+                  aria-describedby={errors.role_id ? 'role_id-error' : undefined}
+                >
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles?.map((role: any) => (
+                  {Array.isArray(roles) && roles.map((role: any) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.role_id && <span className="text-sm text-red-500">{errors.role_id}</span>}
+              {errors.role_id && <span id="role_id-error" className="text-sm text-red-500" role="alert">{errors.role_id}</span>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="phase_id">Phase</Label>
               <Select value={formData.phase_id} onValueChange={(value) => handleChange('phase_id', value)}>
-                <SelectTrigger>
+                <SelectTrigger id="phase_id">
                   <SelectValue placeholder="Select phase (optional)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -305,31 +323,37 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date *</Label>
+              <Label htmlFor="start_date">Start Date <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 type="date"
                 id="start_date"
                 value={formData.start_date}
                 onChange={(e) => handleChange('start_date', e.target.value)}
                 className={errors.start_date ? 'border-red-500' : ''}
+                aria-required="true"
+                aria-invalid={!!errors.start_date}
+                aria-describedby={errors.start_date ? 'start_date-error' : undefined}
               />
-              {errors.start_date && <span className="text-sm text-red-500">{errors.start_date}</span>}
+              {errors.start_date && <span id="start_date-error" className="text-sm text-red-500" role="alert">{errors.start_date}</span>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date *</Label>
+              <Label htmlFor="end_date">End Date <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 type="date"
                 id="end_date"
                 value={formData.end_date}
                 onChange={(e) => handleChange('end_date', e.target.value)}
                 className={errors.end_date ? 'border-red-500' : ''}
+                aria-required="true"
+                aria-invalid={!!errors.end_date}
+                aria-describedby={errors.end_date ? 'end_date-error' : undefined}
               />
-              {errors.end_date && <span className="text-sm text-red-500">{errors.end_date}</span>}
+              {errors.end_date && <span id="end_date-error" className="text-sm text-red-500" role="alert">{errors.end_date}</span>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="allocation_percentage">Allocation % *</Label>
+              <Label htmlFor="allocation_percentage">Allocation % <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
               <Input
                 type="number"
                 id="allocation_percentage"
@@ -338,14 +362,17 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                 min="1"
                 max="100"
                 className={errors.allocation_percentage ? 'border-red-500' : ''}
+                aria-required="true"
+                aria-invalid={!!errors.allocation_percentage}
+                aria-describedby={errors.allocation_percentage ? 'allocation_percentage-error' : undefined}
               />
-              {errors.allocation_percentage && <span className="text-sm text-red-500">{errors.allocation_percentage}</span>}
+              {errors.allocation_percentage && <span id="allocation_percentage-error" className="text-sm text-red-500" role="alert">{errors.allocation_percentage}</span>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="assignment_date_mode">Date Mode</Label>
               <Select value={formData.assignment_date_mode} onValueChange={(value: any) => handleChange('assignment_date_mode', value)}>
-                <SelectTrigger>
+                <SelectTrigger id="assignment_date_mode">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -365,7 +392,9 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
               onChange={(e) => handleChange('notes', e.target.value)}
               rows={3}
               placeholder="Additional notes about this assignment..."
+              aria-describedby="notes-description"
             />
+            <span id="notes-description" className="sr-only">Optional additional notes about this assignment</span>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -373,8 +402,10 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
               id="billable"
               checked={formData.billable}
               onCheckedChange={(checked) => handleChange('billable', checked === true)}
+              aria-describedby="billable-description"
             />
             <Label htmlFor="billable">Billable assignment</Label>
+            <span id="billable-description" className="sr-only">Mark this assignment as billable to client</span>
           </div>
 
             <DialogFooter>
