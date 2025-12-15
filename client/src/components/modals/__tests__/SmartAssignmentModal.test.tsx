@@ -1299,7 +1299,7 @@ describe('SmartAssignmentModal', () => {
 
         // Verify slider was auto-adjusted to remaining capacity (10%)
         await waitFor(() => {
-          const sliderValue = parseInt(slider.getAttribute('value') || '0');
+          const sliderValue = parseInt(slider.getAttribute('value') || '0', 10);
           expect(sliderValue).toBeLessThanOrEqual(10); // Auto-adjusted to not exceed capacity
         });
 
@@ -1338,7 +1338,7 @@ describe('SmartAssignmentModal', () => {
         // Should auto-adjust to not exceed 100%
         await waitFor(() => {
           const slider = screen.getByRole('slider');
-          const sliderValue = parseInt(slider.getAttribute('value') || '0');
+          const sliderValue = parseInt(slider.getAttribute('value') || '0', 10);
           expect(sliderValue).toBeLessThanOrEqual(10); // Remaining capacity is 5%, should be capped
         });
       });

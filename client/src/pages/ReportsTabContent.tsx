@@ -38,7 +38,7 @@ interface ReportFilters {
 const formatMonthYear = (monthStr: string): string => {
   if (!monthStr || !monthStr.includes('-')) return monthStr;
   const [year, month] = monthStr.split('-');
-  const date = new Date(parseInt(year), parseInt(month) - 1);
+  const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1);
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 

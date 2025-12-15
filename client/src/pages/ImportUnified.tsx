@@ -395,7 +395,7 @@ function ImportUnified() {
                           value={settingsOverrides.defaultProjectPriority ?? importSettings.defaultProjectPriority}
                           onChange={(e) => setSettingsOverrides({
                             ...settingsOverrides,
-                            defaultProjectPriority: parseInt(e.target.value)
+                            defaultProjectPriority: parseInt(e.target.value, 10)
                           })}
                           disabled={uploading}
                           className="form-select"

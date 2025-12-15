@@ -95,10 +95,10 @@ async function saveSettings() {
             ...config.database,
             autoBackup: document.getElementById('autoBackup').checked,
             backupInterval: document.getElementById('backupInterval').value,
-            backupRetention: parseInt(document.getElementById('backupRetention').value)
+            backupRetention: parseInt(document.getElementById('backupRetention').value, 10)
         },
         server: {
-            port: parseInt(document.getElementById('serverPort').value),
+            port: parseInt(document.getElementById('serverPort').value, 10),
             host: document.getElementById('serverHost').value,
             requireAuth: document.getElementById('requireAuth').checked,
             enableHttps: document.getElementById('enableHttps').checked
@@ -109,7 +109,7 @@ async function saveSettings() {
         advanced: {
             logLevel: document.getElementById('logLevel').value,
             logLocation: document.getElementById('logLocation').value,
-            maxConnections: parseInt(document.getElementById('connectionPool').value),
+            maxConnections: parseInt(document.getElementById('connectionPool').value, 10),
             enableCache: document.getElementById('enableCache').checked,
             compressResponses: document.getElementById('compressResponses').checked,
             enableDevTools: document.getElementById('enableDevTools').checked

@@ -953,7 +953,7 @@ export function SmartAssignmentModal({
                     max="100"
                     step="5"
                     value={formData.allocation_percentage}
-                    onChange={(e) => handleFormChange('allocation_percentage', parseInt(e.target.value))}
+                    onChange={(e) => handleFormChange('allocation_percentage', parseInt(e.target.value, 10))}
                     className="allocation-slider"
                   />
                   <div className="allocation-guide">

@@ -105,7 +105,7 @@ function validateCurrentStep() {
             break;
             
         case 'server':
-            const port = parseInt(document.getElementById('serverPort').value);
+            const port = parseInt(document.getElementById('serverPort').value, 10);
             if (isNaN(port) || port < 1024 || port > 65535) {
                 showError('Please enter a valid port number between 1024 and 65535');
                 return false;
@@ -125,18 +125,18 @@ function saveCurrentStep() {
             config.database.filename = document.getElementById('dbName').value.trim();
             config.database.autoBackup = document.getElementById('autoBackup').checked;
             config.database.backupInterval = document.getElementById('backupInterval').value;
-            config.database.backupRetention = parseInt(document.getElementById('backupRetention').value);
+            config.database.backupRetention = parseInt(document.getElementById('backupRetention').value, 10);
             break;
             
         case 'server':
-            config.server.port = parseInt(document.getElementById('serverPort').value);
+            config.server.port = parseInt(document.getElementById('serverPort').value, 10);
             config.server.host = document.getElementById('serverHost').value;
             config.server.requireAuth = document.getElementById('requireAuth').checked;
             break;
             
         case 'advanced':
             config.advanced.logLevel = document.getElementById('logLevel').value;
-            config.advanced.maxConnections = parseInt(document.getElementById('maxConnections').value);
+            config.advanced.maxConnections = parseInt(document.getElementById('maxConnections').value, 10);
             config.advanced.enableCache = document.getElementById('enableCache').checked;
             config.advanced.compressResponses = document.getElementById('compressResponses').checked;
             config.advanced.enableDevTools = document.getElementById('devTools').checked;

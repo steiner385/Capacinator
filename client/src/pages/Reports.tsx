@@ -16,7 +16,7 @@ import { getDefaultReportDateRange } from '../utils/date';
 const formatMonthYear = (monthStr: string): string => {
   if (!monthStr || !monthStr.includes('-')) return monthStr;
   const [year, month] = monthStr.split('-');
-  const date = new Date(parseInt(year), parseInt(month) - 1);
+  const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1);
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 import {
@@ -998,7 +998,7 @@ export default function Reports() {
                           <button
                             onClick={async () => {
                               const allocationInput = document.getElementById(`allocation-${project.id}`) as HTMLInputElement;
-                              const allocation = parseInt(allocationInput.value) || project.suggestedAllocation;
+                              const allocation = parseInt(allocationInput.value, 10) || project.suggestedAllocation;
                               
                               try {
                                 // Validate allocation fits within available capacity

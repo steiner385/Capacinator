@@ -163,7 +163,7 @@ export async function backupDatabase(): Promise<string> {
   fs.copyFileSync(sourceFile, backupFile);
   
   // Clean old backups
-  const retentionDays = parseInt(process.env.DB_BACKUP_RETENTION_DAYS || '30');
+  const retentionDays = parseInt(process.env.DB_BACKUP_RETENTION_DAYS || '30', 10);
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
   

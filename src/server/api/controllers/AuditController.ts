@@ -19,7 +19,7 @@ export class AuditController extends BaseController {
   getAuditHistory = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {
       const { tableName, recordId } = req.params;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
 
       if (!tableName || !recordId) {
         return res.status(400).json({
@@ -44,8 +44,8 @@ export class AuditController extends BaseController {
   getRecentChanges = async (req: Request, res: Response): Promise<void> => {
     await this.executeQuery(async () => {
       const changedBy = req.query.changedBy as string;
-      const limit = parseInt((req.query.limit as string) || '50');
-      const offset = parseInt((req.query.offset as string) || '0');
+      const limit = parseInt((req.query.limit as string) || '50', 10);
+      const offset = parseInt((req.query.offset as string) || '0', 10);
 
       const changes = await this.auditService.getRecentChanges(changedBy, limit, offset);
       
@@ -72,8 +72,8 @@ export class AuditController extends BaseController {
         requestId: req.query.requestId as string,
         fromDate: req.query.fromDate ? new Date(req.query.fromDate as string) : undefined,
         toDate: req.query.toDate ? new Date(req.query.toDate as string) : undefined,
-        limit: parseInt((req.query.limit as string) || '50'),
-        offset: parseInt((req.query.offset as string) || '0')
+        limit: parseInt((req.query.limit as string) || '50', 10),
+        offset: parseInt((req.query.offset as string) || '0', 10)
       };
 
       // Remove undefined values
@@ -161,7 +161,7 @@ export class AuditController extends BaseController {
         });
       }
 
-      const countNum = parseInt(count);
+      const countNum = parseInt(count, 10);
       if (isNaN(countNum) || countNum <= 0 || countNum > 100) {
         return res.status(400).json({
           error: 'count must be a number between 1 and 100'

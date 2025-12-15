@@ -603,7 +603,7 @@ export class ExcelImporter {
           name: projectName,
           project_type_id: projectTypeId,
           location_id: locationId,
-          priority: parseInt(values[expectedColumns.priority]?.toString()) || 3,
+          priority: parseInt(values[expectedColumns.priority]?.toString(), 10) || 3,
           description: values[expectedColumns.description]?.toString() || '',
           include_in_demand: 1,
           aspiration_start: this.parseDate(values[expectedColumns.aspirationStart]),

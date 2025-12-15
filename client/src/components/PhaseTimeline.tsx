@@ -1087,7 +1087,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
                       value={dependencyForm.lag_days}
                       onChange={(e) => setDependencyForm(prev => ({ 
                         ...prev, 
-                        lag_days: parseInt(e.target.value) || 0
+                        lag_days: parseInt(e.target.value, 10) || 0
                       }))}
                       className="form-input"
                       min="0"

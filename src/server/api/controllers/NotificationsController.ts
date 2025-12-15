@@ -146,8 +146,8 @@ export class NotificationsController {
         )
         .join('people', 'notification_history.user_id', 'people.id')
         .orderBy('notification_history.sent_at', 'desc')
-        .limit(parseInt(limit as string))
-        .offset(parseInt(offset as string));
+        .limit(parseInt(limit as string, 10))
+        .offset(parseInt(offset as string, 10));
 
       if (userId) {
         query = query.where('notification_history.user_id', userId);
@@ -247,7 +247,7 @@ export class NotificationsController {
       const { days = 30 } = req.query;
 
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - parseInt(days as string));
+      startDate.setDate(startDate.getDate() - parseInt(days as string, 10));
 
       let baseQuery = this.db('notification_history')
         .where('sent_at', '>=', startDate);
