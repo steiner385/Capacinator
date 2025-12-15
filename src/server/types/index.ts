@@ -1,27 +1,22 @@
 /**
- * Client Type Definitions
+ * Server Type Definitions
  *
- * This module re-exports shared types from @shared/types and adds any
- * client-specific type extensions if needed.
+ * This module re-exports shared types from shared/types and provides
+ * any server-specific type extensions.
  *
- * Import types using: import type { Project, Person, Role } from '../types';
+ * Import types using: import type { Project, Person, Role } from '../types/index.js';
+ * Or: import type { Project } from '../../../shared/types/entities.js';
  */
 
-// Re-export all shared types
-// Using relative path since Vite handles the alias resolution at build time
-// and we need this to work with both TypeScript compiler and Vite
-
-// Base types
+// Re-export all shared types for convenience
 export type {
+  // Base types
   BaseEntity,
   ApiError,
   ApiSuccessResponse,
   PaginationParams,
   PaginatedResponse,
-} from '../../../shared/types/base';
-
-// Entity types
-export type {
+  // Entity types
   Location,
   ProjectType,
   ProjectSubType,
@@ -44,10 +39,7 @@ export type {
   RolePlanner,
   ProjectPermissionLevel,
   ProjectPlanner,
-} from '../../../shared/types/entities';
-
-// View types
-export type {
+  // View types
   ProjectDemand,
   AllocationStatus,
   PersonUtilization,
@@ -55,10 +47,7 @@ export type {
   CapacityGap,
   ProjectHealthStatus,
   ProjectHealth,
-} from '../../../shared/types/views';
-
-// API types
-export type {
+  // API types
   DashboardSummary,
   CapacityReport,
   ImportResult,
@@ -69,10 +58,7 @@ export type {
   RefreshTokenRequest,
   RefreshTokenResponse,
   HealthCheckResponse,
-} from '../../../shared/types/api';
-
-// Scenario types
-export type {
+  // Scenario types
   ScenarioStatus,
   ScenarioType,
   Scenario,
@@ -86,4 +72,4 @@ export type {
   ScenarioMergeConflict,
   ScenarioComparison,
   ScenarioAssignmentsView,
-} from '../../../shared/types/scenarios';
+} from '../../../shared/types/index.js';

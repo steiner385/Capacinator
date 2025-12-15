@@ -1,15 +1,16 @@
 /**
- * Client Type Definitions
+ * Shared Type Definitions
  *
- * This module re-exports shared types from @shared/types and adds any
- * client-specific type extensions if needed.
+ * This module provides type definitions shared between frontend and backend.
+ * All types are defined once here and imported by both client and server.
  *
- * Import types using: import type { Project, Person, Role } from '../types';
+ * Organization:
+ * - base.ts: Base interfaces (BaseEntity, PaginatedResponse, etc.)
+ * - entities.ts: Core business entities (Project, Person, Role, etc.)
+ * - views.ts: Computed/aggregated views (ProjectDemand, PersonUtilization, etc.)
+ * - api.ts: API-specific types (DashboardSummary, ImportResult, etc.)
+ * - scenarios.ts: Scenario planning types (Scenario, ScenarioComparison, etc.)
  */
-
-// Re-export all shared types
-// Using relative path since Vite handles the alias resolution at build time
-// and we need this to work with both TypeScript compiler and Vite
 
 // Base types
 export type {
@@ -18,18 +19,21 @@ export type {
   ApiSuccessResponse,
   PaginationParams,
   PaginatedResponse,
-} from '../../../shared/types/base';
+} from './base.js';
 
 // Entity types
 export type {
+  // Reference/Lookup entities
   Location,
   ProjectType,
   ProjectSubType,
   ProjectPhase,
   Role,
+  // Core entities
   Project,
   Person,
   WorkerType,
+  // Relationship entities
   ProjectPhaseTimeline,
   DependencyType,
   ProjectPhaseDependency,
@@ -44,7 +48,7 @@ export type {
   RolePlanner,
   ProjectPermissionLevel,
   ProjectPlanner,
-} from '../../../shared/types/entities';
+} from './entities.js';
 
 // View types
 export type {
@@ -55,7 +59,7 @@ export type {
   CapacityGap,
   ProjectHealthStatus,
   ProjectHealth,
-} from '../../../shared/types/views';
+} from './views.js';
 
 // API types
 export type {
@@ -69,7 +73,7 @@ export type {
   RefreshTokenRequest,
   RefreshTokenResponse,
   HealthCheckResponse,
-} from '../../../shared/types/api';
+} from './api.js';
 
 // Scenario types
 export type {
@@ -86,4 +90,4 @@ export type {
   ScenarioMergeConflict,
   ScenarioComparison,
   ScenarioAssignmentsView,
-} from '../../../shared/types/scenarios';
+} from './scenarios.js';
