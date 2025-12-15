@@ -5,7 +5,7 @@ import { PeopleController } from '../../../../src/server/api/controllers/PeopleC
 
 // Mock the audit middleware
 const mockAuditModelChanges = jest.fn();
-jest.mock('../../../../src/server/middleware/auditMiddleware', () => ({
+jest.mock('../../../../src/server/middleware/enhancedAuditMiddleware', () => ({
   auditModelChanges: mockAuditModelChanges
 }));
 

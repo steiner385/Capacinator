@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db as globalDb } from '../../database/index.js';
-import { auditModelChanges } from '../../middleware/auditMiddleware.js';
+import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class ProjectSubTypesController {

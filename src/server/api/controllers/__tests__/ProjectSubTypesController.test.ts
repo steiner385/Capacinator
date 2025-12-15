@@ -72,12 +72,12 @@ jest.mock('../../../database/index.js', () => ({
 }));
 
 // Mock audit middleware
-jest.mock('../../../middleware/auditMiddleware.js', () => ({
+jest.mock('../../../middleware/enhancedAuditMiddleware.js', () => ({
   auditModelChanges: jest.fn().mockResolvedValue(undefined)
 }));
 
 import { db } from '../../../database/index.js';
-import { auditModelChanges } from '../../../middleware/auditMiddleware.js';
+import { auditModelChanges } from '../../../middleware/enhancedAuditMiddleware.js';
 import {
   getProjectSubTypes,
   getProjectSubType,

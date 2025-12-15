@@ -31,4 +31,17 @@ export function getAuditService(): AuditService | null {
 }
 
 export { AuditService, type AuditConfig } from './AuditService.js';
-export { auditModelChanges, createAuditMiddleware } from '../../middleware/auditMiddleware.js';
+
+// Export unified audit middleware functions (consolidated from legacy auditMiddleware.ts)
+export {
+  auditModelChanges,
+  createAuditMiddleware,
+  auditableController,
+  createEnhancedAuditMiddleware,
+  createAutoAuditMiddleware,
+  autoAuditMiddleware,
+  enhancedAuditMiddleware,
+  type AuditContext,
+  type LegacyAuditContext,
+  type RequestWithAudit,
+} from '../../middleware/enhancedAuditMiddleware.js';

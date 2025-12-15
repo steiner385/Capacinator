@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
-import { auditModelChanges } from '../../middleware/auditMiddleware.js';
+import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
 import { validateDateRange, formatDateForDB } from '../../utils/dateValidation.js';
 
 // Alias for backward compatibility

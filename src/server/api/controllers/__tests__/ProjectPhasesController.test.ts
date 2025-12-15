@@ -18,7 +18,7 @@ jest.mock('../../../utils/dateValidation', () => ({
 }));
 
 // Mock audit middleware
-jest.mock('../../../middleware/auditMiddleware', () => ({
+jest.mock('../../../middleware/enhancedAuditMiddleware', () => ({
   auditModelChanges: jest.fn().mockResolvedValue(undefined)
 }));
 
