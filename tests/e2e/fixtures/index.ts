@@ -1,6 +1,12 @@
 /**
  * Unified E2E Test Fixtures
  * Provides consistent test setup across all e2e tests
+ *
+ * Key fixtures:
+ * - testContextManager: Per-test data isolation with automatic cleanup
+ * - testHelpers: Common UI interaction helpers
+ * - authenticatedPage: Pre-authenticated browser page
+ * - testDataHelpers: Legacy test data creation helpers
  */
 
 import { test as base, Page, APIRequestContext } from '@playwright/test';
@@ -8,6 +14,11 @@ import { TestHelpers } from '../utils/test-helpers';
 import { TestDataGenerator } from '../helpers/test-data-generator';
 import { TestDataHelpers } from '../utils/test-data-helpers';
 import { E2ETestDataBuilder } from '../helpers/e2e-test-data-builder';
+import {
+  TestContextManager,
+  TestContext,
+  createTestContextManager,
+} from '../helpers/test-context-manager';
 import fs from 'fs';
 import path from 'path';
 
@@ -20,6 +31,10 @@ type TestFixtures = {
   testDataHelpers: TestDataHelpers;
   e2eTestDataBuilder: E2ETestDataBuilder;
   seededDatabase: void;
+  /** New: Per-test data isolation manager */
+  testContextManager: TestContextManager;
+  /** New: Isolated test context (auto-created and cleaned up) */
+  isolatedContext: TestContext;
 };
 
 // Extend base test with our fixtures
@@ -129,8 +144,29 @@ export const test = base.extend<TestFixtures>({
     // TODO: Implement database seeding
     // For now, we'll assume the dev database has sufficient data
     await use();
-    
+
     // Cleanup can go here if needed
+  },
+
+  // Per-test data isolation manager
+  testContextManager: async ({ page, apiContext }, use) => {
+    const manager = createTestContextManager(apiContext, page);
+    await use(manager);
+  },
+
+  // Isolated test context - automatically created and cleaned up per test
+  isolatedContext: async ({ testContextManager }, use, testInfo) => {
+    // Create a new isolated context for this test
+    const context = await testContextManager.createContext({
+      testFile: testInfo.file,
+      testName: testInfo.title,
+    });
+
+    // Use the context during the test
+    await use(context);
+
+    // Automatically clean up after the test
+    await testContextManager.cleanup();
   },
 });
 
@@ -138,6 +174,7 @@ export const test = base.extend<TestFixtures>({
 export { expect } from '@playwright/test';
 export { TestHelpers } from '../utils/test-helpers';
 export { testConfig } from '../helpers/test-config';
+export { TestContextManager, TestContext } from '../helpers/test-context-manager';
 
 // Test tags for categorization
 export const tags = {

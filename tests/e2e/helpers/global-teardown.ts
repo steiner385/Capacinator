@@ -3,9 +3,10 @@
  * Ensures proper cleanup of test environment after all tests complete
  */
 
-import { FullConfig, chromium } from '@playwright/test';
+import { FullConfig, chromium, request } from '@playwright/test';
 import type { E2EProcessManager } from './process-manager.js';
 import { portCleanup, E2E_PORTS } from './port-cleanup.js';
+import { postTestCleanup } from './test-data-cleanup.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -17,12 +18,23 @@ async function globalTeardown(config: FullConfig) {
   const processManager = (global as any).__E2E_PROCESS_MANAGER__ as E2EProcessManager | undefined;
   
   try {
-    // Step 1: Clean up test data if we have a test run ID
-    if (testRunId) {
-      console.log(`🗑️ Cleaning up test data for run: ${testRunId}`);
-      await cleanupTestData(baseURL, testRunId);
+    // Step 1: Clean up test data using new context-based cleanup
+    console.log('🗑️ Cleaning up test data...');
+    try {
+      const apiBaseUrl = baseURL.replace(/:\d+$/, ':' + (process.env.E2E_SERVER_PORT || '3111'));
+      const cleanupApiContext = await request.newContext({
+        baseURL: apiBaseUrl,
+      });
+      await postTestCleanup(cleanupApiContext, apiBaseUrl);
+      await cleanupApiContext.dispose();
+    } catch (cleanupError) {
+      console.warn('⚠️ Context-based cleanup failed, falling back to legacy cleanup:', cleanupError);
+      // Fall back to legacy cleanup
+      if (testRunId) {
+        await cleanupTestData(baseURL, testRunId);
+      }
     }
-    
+
     // Step 2: E2E database cleanup handled by server shutdown
     console.log('🗄️ E2E database will be cleaned up with server...');
     
