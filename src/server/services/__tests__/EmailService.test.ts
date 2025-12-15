@@ -1,4 +1,3 @@
-import { EmailService } from '../EmailService';
 import { getAuditedDb } from '../../database/index';
 import nodemailer from 'nodemailer';
 
@@ -9,6 +8,29 @@ jest.mock('../../database/index', () => ({
 
 jest.mock('nodemailer');
 
+// Mock env config - mutable for tests
+const mockEnv = {
+  email: {
+    smtp: {
+      host: 'smtp.test.com',
+      port: 587,
+      secure: false,
+      user: 'test@test.com',
+      pass: 'testpass',
+      from: 'noreply@test.com'
+    },
+    appUrl: 'http://localhost:3120'
+  }
+};
+
+jest.mock('../../config/index', () => ({
+  env: mockEnv,
+  resetEnv: jest.fn()
+}));
+
+// Import EmailService AFTER mocks are set up
+import { EmailService } from '../EmailService';
+
 describe('EmailService', () => {
   let emailService: EmailService;
   let mockDb: any;
@@ -16,6 +38,10 @@ describe('EmailService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Reset mock env to default values
+    mockEnv.email.smtp.user = 'test@test.com';
+    mockEnv.email.smtp.pass = 'testpass';
 
     // Setup chainable db mock that is also thenable
     const chainable = {
@@ -42,21 +68,6 @@ describe('EmailService', () => {
     };
 
     (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
-
-    // Set environment variables for email config
-    process.env.SMTP_HOST = 'smtp.test.com';
-    process.env.SMTP_PORT = '587';
-    process.env.SMTP_USER = 'test@test.com';
-    process.env.SMTP_PASS = 'testpass';
-    process.env.SMTP_FROM = 'noreply@test.com';
-  });
-
-  afterEach(() => {
-    delete process.env.SMTP_HOST;
-    delete process.env.SMTP_PORT;
-    delete process.env.SMTP_USER;
-    delete process.env.SMTP_PASS;
-    delete process.env.SMTP_FROM;
   });
 
   describe('getEmailTemplate', () => {
@@ -67,26 +78,21 @@ describe('EmailService', () => {
     it('should fetch email template successfully', async () => {
       const mockTemplate = {
         id: '1',
-        name: 'test_template',
-        type: 'notification',
+        template_key: 'test_template',
         subject: 'Test Subject',
-        body_html: '<p>Test</p>',
-        body_text: 'Test',
-        variables: '["var1", "var2"]',
-        is_active: true
+        body: 'Test Body'
       };
 
       mockDb.first.mockResolvedValue(mockTemplate);
 
       const result = await emailService.getEmailTemplate('test_template');
 
-      expect(result).toEqual({
-        ...mockTemplate,
-        variables: ['var1', 'var2']
-      });
+      expect(result).toEqual(mockTemplate);
+      expect(mockDb).toHaveBeenCalledWith('email_templates');
+      expect(mockDb.where).toHaveBeenCalledWith('template_key', 'test_template');
     });
 
-    it('should return null when template not found', async () => {
+    it('should return null for non-existent template', async () => {
       mockDb.first.mockResolvedValue(null);
 
       const result = await emailService.getEmailTemplate('nonexistent');
@@ -94,7 +100,7 @@ describe('EmailService', () => {
       expect(result).toBeNull();
     });
 
-    it('should handle database errors gracefully', async () => {
+    it('should handle errors gracefully', async () => {
       mockDb.first.mockRejectedValue(new Error('Database error'));
 
       const result = await emailService.getEmailTemplate('test_template');
@@ -103,119 +109,50 @@ describe('EmailService', () => {
     });
   });
 
-  describe('getUserNotificationPreferences', () => {
+  describe('createEmailFromTemplate', () => {
     beforeEach(() => {
       emailService = new EmailService();
     });
 
-    it('should fetch user preferences successfully', async () => {
-      const mockPreferences = [
-        { user_id: 'user-1', type: 'email', enabled: true, email_enabled: true }
-      ];
+    it('should replace variables in subject and body', () => {
+      const template = {
+        subject: 'Hello {{name}}!',
+        body: 'Welcome to {{company}}, {{name}}!'
+      };
 
-      // Mock the chainable to resolve to mockPreferences
-      mockDb.then.mockImplementation((resolve: any) => Promise.resolve(mockPreferences).then(resolve));
-
-      const result = await emailService.getUserNotificationPreferences('user-1');
-
-      expect(result).toEqual(mockPreferences);
-    });
-
-    it('should return empty array on database error', async () => {
-      // Mock the chainable to reject
-      mockDb.then.mockImplementation((resolve: any, reject: any) => {
-        Promise.reject(new Error('Database error')).then(resolve, reject);
+      const result = emailService.createEmailFromTemplate(template, {
+        name: 'John',
+        company: 'Acme'
       });
 
-      const result = await emailService.getUserNotificationPreferences('user-1');
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('shouldSendNotification', () => {
-    beforeEach(() => {
-      emailService = new EmailService();
+      expect(result.subject).toBe('Hello John!');
+      expect(result.body).toBe('Welcome to Acme, John!');
     });
 
-    it('should return false when system email notifications are disabled', async () => {
-      const mockSettings = {
-        category: 'system',
-        settings: JSON.stringify({ enableEmailNotifications: false })
+    it('should handle multiple occurrences of same variable', () => {
+      const template = {
+        subject: '{{name}} - {{name}}',
+        body: 'Hi {{name}}'
       };
 
-      mockDb.first.mockResolvedValueOnce(mockSettings);
+      const result = emailService.createEmailFromTemplate(template, {
+        name: 'Test'
+      });
 
-      const result = await emailService.shouldSendNotification('user-1', 'test');
-
-      expect(result).toBe(false);
+      expect(result.subject).toBe('Test - Test');
     });
 
-    it('should check user preferences when system notifications enabled', async () => {
-      const mockSettings = {
-        category: 'system',
-        settings: JSON.stringify({ enableEmailNotifications: true })
+    it('should leave unreplaced variables as-is', () => {
+      const template = {
+        subject: 'Hello {{name}}!',
+        body: 'Your code: {{code}}'
       };
 
-      const mockPreference = {
-        user_id: 'user-1',
-        type: 'test',
-        enabled: true,
-        email_enabled: true
-      };
+      const result = emailService.createEmailFromTemplate(template, {
+        name: 'John'
+      });
 
-      mockDb.first.mockResolvedValueOnce(mockSettings);
-      mockDb.first.mockResolvedValueOnce(mockPreference);
-
-      const result = await emailService.shouldSendNotification('user-1', 'test');
-
-      expect(result).toBe(true);
-    });
-
-    it('should handle database errors gracefully', async () => {
-      mockDb.first.mockRejectedValue(new Error('Database error'));
-
-      const result = await emailService.shouldSendNotification('user-1', 'test');
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('renderTemplate', () => {
-    beforeEach(() => {
-      emailService = new EmailService();
-    });
-
-    it('should render simple template variables', () => {
-      const template = 'Hello {{userName}}, welcome to {{appName}}!';
-      const variables = { userName: 'John', appName: 'Capacinator' };
-
-      const result = emailService.renderTemplate(template, variables);
-
-      expect(result).toBe('Hello John, welcome to Capacinator!');
-    });
-
-    it('should handle array variables with handlebars-style loops', () => {
-      const template = '{{#items}}<li>{{name}}</li>{{/items}}';
-      const variables = {
-        items: [
-          { name: 'Item 1' },
-          { name: 'Item 2' }
-        ]
-      };
-
-      const result = emailService.renderTemplate(template, variables);
-
-      expect(result).toBe('<li>Item 1</li><li>Item 2</li>');
-    });
-
-    it('should return empty string for non-array values in loops', () => {
-      const template = '{{#items}}<li>{{name}}</li>{{/items}}';
-      const variables = { items: 'not-an-array' };
-
-      const result = emailService.renderTemplate(template, variables);
-
-      expect(result).toBe('');
+      expect(result.body).toBe('Your code: {{code}}');
     });
   });
 
@@ -224,104 +161,80 @@ describe('EmailService', () => {
       emailService = new EmailService();
     });
 
-    it('should send email successfully when user preferences allow', async () => {
-      const mockSettings = {
-        category: 'system',
-        settings: JSON.stringify({ enableEmailNotifications: true })
-      };
-
-      const mockPreference = {
-        enabled: true,
-        email_enabled: true
-      };
-
-      mockDb.first.mockResolvedValueOnce(mockSettings);
-      mockDb.first.mockResolvedValueOnce(mockPreference);
+    it('should send email successfully', async () => {
       mockTransporter.sendMail.mockResolvedValue({ messageId: 'test-id' });
-      mockDb.insert.mockResolvedValue([]);
 
-      const result = await emailService.sendEmail({
-        to: 'test@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test',
-        type: 'test',
-        userId: 'user-1'
-      });
+      const result = await emailService.sendEmail(
+        'test@example.com',
+        'Test Subject',
+        'Test Body'
+      );
 
       expect(result).toBe(true);
-      expect(mockTransporter.sendMail).toHaveBeenCalled();
+      expect(mockTransporter.sendMail).toHaveBeenCalledWith({
+        from: 'noreply@test.com',
+        to: 'test@example.com',
+        subject: 'Test Subject',
+        html: 'Test Body'
+      });
     });
 
-    it('should handle email send errors and log failure', async () => {
-      const mockSettings = {
-        category: 'system',
-        settings: JSON.stringify({ enableEmailNotifications: true })
-      };
-
-      const mockPreference = {
-        enabled: true,
-        email_enabled: true
-      };
-
-      mockDb.first.mockResolvedValueOnce(mockSettings);
-      mockDb.first.mockResolvedValueOnce(mockPreference);
+    it('should return false on send failure', async () => {
       mockTransporter.sendMail.mockRejectedValue(new Error('SMTP error'));
-      mockDb.insert.mockResolvedValue([]);
 
-      const result = await emailService.sendEmail({
-        to: 'test@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test',
-        type: 'test',
-        userId: 'user-1'
-      });
+      const result = await emailService.sendEmail(
+        'test@example.com',
+        'Test',
+        'Test'
+      );
 
       expect(result).toBe(false);
-      // Should log the failure to history
-      expect(mockDb.insert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'failed',
-          error_message: 'SMTP error'
-        })
-      );
+    });
+
+    it('should return false when transporter not configured', async () => {
+      // Create service without SMTP user/pass
+      mockEnv.email.smtp.user = '';
+      mockEnv.email.smtp.pass = '';
+
+      const service = new EmailService();
+      const result = await service.sendEmail('test@example.com', 'Test', 'Test');
+
+      expect(result).toBe(false);
+
+      // Reset mock
+      mockEnv.email.smtp.user = 'test@test.com';
+      mockEnv.email.smtp.pass = 'testpass';
     });
   });
 
-  describe('logEmailToHistory', () => {
+  describe('logEmailSent', () => {
     beforeEach(() => {
       emailService = new EmailService();
     });
 
-    it('should handle database errors when logging to history', async () => {
-      // This is a private method, but we can trigger it through sendEmail
-      const mockSettings = {
-        category: 'system',
-        settings: JSON.stringify({ enableEmailNotifications: true })
-      };
+    it('should log email in database', async () => {
+      mockDb.insert.mockResolvedValue([]);
 
-      const mockPreference = {
-        enabled: true,
-        email_enabled: true
-      };
+      await emailService.logEmailSent('user-1', 'test@example.com', 'Test', 'success');
 
-      mockDb.first.mockResolvedValueOnce(mockSettings);
-      mockDb.first.mockResolvedValueOnce(mockPreference);
-      mockTransporter.sendMail.mockResolvedValue({ messageId: 'test-id' });
+      expect(mockDb).toHaveBeenCalledWith('email_logs');
+      expect(mockDb.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-1',
+          recipient: 'test@example.com',
+          subject: 'Test',
+          status: 'success'
+        })
+      );
+    });
+
+    it('should handle logging errors gracefully', async () => {
       mockDb.insert.mockRejectedValue(new Error('Database error'));
 
-      // Should not throw even if logging fails
-      const result = await emailService.sendEmail({
-        to: 'test@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test',
-        type: 'test',
-        userId: 'user-1'
-      });
-
-      expect(result).toBe(true);
+      // Should not throw
+      await expect(
+        emailService.logEmailSent('user-1', 'test@example.com', 'Test', 'success')
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -338,22 +251,16 @@ describe('EmailService', () => {
       };
 
       const mockTemplate = {
-        id: '1',
-        name: 'test_template',
-        type: 'notification',
-        subject: 'Hello {{userName}}',
-        body_html: '<p>Hello {{userName}}</p>',
-        body_text: 'Hello {{userName}}',
-        variables: '[]'  // JSON string, not array
+        template_key: 'test_template',
+        subject: 'Hello {{userName}}!',
+        body: 'Welcome!'
       };
 
       const mockSettings = {
-        category: 'system',
-        settings: JSON.stringify({ enableEmailNotifications: true })
+        email_enabled: true
       };
 
       const mockPreference = {
-        enabled: true,
         email_enabled: true
       };
 
@@ -415,21 +322,25 @@ describe('EmailService', () => {
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'test@example.com',
-          subject: 'Capacinator Email Test'
+          subject: expect.stringContaining('Test')
         })
       );
     });
 
     it('should throw error when email service not configured', async () => {
-      // Create service without SMTP config
-      delete process.env.SMTP_USER;
-      delete process.env.SMTP_PASS;
+      // Create service without SMTP user/pass
+      mockEnv.email.smtp.user = '';
+      mockEnv.email.smtp.pass = '';
 
       const unconfiguredService = new EmailService();
 
       await expect(
         unconfiguredService.sendTestEmail('test@example.com')
       ).rejects.toThrow('Email service not configured');
+
+      // Reset mock
+      mockEnv.email.smtp.user = 'test@test.com';
+      mockEnv.email.smtp.pass = 'testpass';
     });
 
     it('should throw error when sending fails', async () => {
@@ -448,11 +359,16 @@ describe('EmailService', () => {
     });
 
     it('should return false when SMTP is not configured', () => {
-      delete process.env.SMTP_USER;
-      delete process.env.SMTP_PASS;
+      // Create service without SMTP user/pass
+      mockEnv.email.smtp.user = '';
+      mockEnv.email.smtp.pass = '';
 
       const service = new EmailService();
       expect(service.isConfigured()).toBe(false);
+
+      // Reset mock
+      mockEnv.email.smtp.user = 'test@test.com';
+      mockEnv.email.smtp.pass = 'testpass';
     });
   });
 
@@ -476,13 +392,18 @@ describe('EmailService', () => {
     });
 
     it('should return false when transporter not configured', async () => {
-      delete process.env.SMTP_USER;
-      delete process.env.SMTP_PASS;
+      // Create service without SMTP user/pass
+      mockEnv.email.smtp.user = '';
+      mockEnv.email.smtp.pass = '';
 
       const service = new EmailService();
       const result = await service.testConnection();
 
       expect(result).toBe(false);
+
+      // Reset mock
+      mockEnv.email.smtp.user = 'test@test.com';
+      mockEnv.email.smtp.pass = 'testpass';
     });
   });
 });

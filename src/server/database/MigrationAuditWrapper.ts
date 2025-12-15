@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { getAuditService } from '../services/audit/index.js';
 import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
+import { env } from '../config/index.js';
 
 export interface MigrationAuditContext {
   migrationName: string;
@@ -183,13 +184,13 @@ export async function withMigrationAudit(
   callback: (auditDb: MigrationAuditWrapper) => Promise<void>
 ): Promise<void> {
   // Use transactions in production but direct database access in test environment
-  if (process.env.NODE_ENV === 'test') {
+  if (env.server.isTest) {
     const auditWrapper = createMigrationAuditWrapper(db, {
       migrationName,
       operation: 'migration',
       comment: `Schema migration: ${migrationName}`
     });
-    
+
     return callback(auditWrapper);
   } else {
     return db.transaction(async (trx) => {
@@ -211,13 +212,13 @@ export async function withSeedAudit(
   callback: (auditDb: MigrationAuditWrapper) => Promise<void>
 ): Promise<void> {
   // Use transactions in production but direct database access in test environment
-  if (process.env.NODE_ENV === 'test') {
+  if (env.server.isTest) {
     const auditWrapper = createMigrationAuditWrapper(db, {
       migrationName: seedName,
       operation: 'seed',
       comment: `Data seeding: ${seedName}`
     });
-    
+
     return callback(auditWrapper);
   } else {
     return db.transaction(async (trx) => {

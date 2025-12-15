@@ -3,6 +3,7 @@ import { db, getAuditedDb } from '../../database/index.js';
 import { AuditContext } from '../../database/AuditedDatabase.js';
 import { logger } from '../../services/logging/config.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { env } from '../../config/index.js';
 
 /**
  * Extended Request interface with logging context
@@ -200,7 +201,7 @@ export abstract class BaseController {
     }
 
     // Generic error response
-    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'e2e';
+    const isDev = env.server.isDevelopment || env.server.isE2E;
     res.status(500).json({
       error: errorMessage,
       requestId: req?.requestId,

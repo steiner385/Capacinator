@@ -2,42 +2,43 @@ import { Knex } from 'knex';
 import path from 'path';
 import fs from 'fs';
 import e2eConfig from './knexfile.e2e.js';
+import { env } from '../config/index.js';
 
 // Determine which config to use based on environment
 const getConfig = (): Knex.Config => {
   // Use E2E config when in E2E mode
-  if (process.env.NODE_ENV === 'e2e') {
+  if (env.server.isE2E) {
     console.log('🧪 Using E2E database configuration');
     return e2eConfig;
   }
 
   // Get the appropriate data directory based on platform
   const getDataPath = () => {
-  if (process.env.NODE_ENV === 'development') {
-    return path.join(process.cwd(), 'data');
-  }
-  
-  // In production, try to get electron path, fallback to current directory
-  try {
-    const { app } = require('electron');
-    return app.getPath('userData');
-  } catch {
-    return path.join(process.cwd(), 'data');
-  }
-};
+    if (env.server.isDevelopment) {
+      return path.join(process.cwd(), 'data');
+    }
 
-// Ensure data directory exists (skip for in-memory database)
-const dataPath = getDataPath();
-if (!process.env.DATABASE_URL && !fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true });
-}
+    // In production, try to get electron path, fallback to current directory
+    try {
+      const { app } = require('electron');
+      return app.getPath('userData');
+    } catch {
+      return path.join(process.cwd(), 'data');
+    }
+  };
+
+  // Ensure data directory exists (skip for in-memory database)
+  const dataPath = getDataPath();
+  if (!env.database.databaseUrl && !fs.existsSync(dataPath)) {
+    fs.mkdirSync(dataPath, { recursive: true });
+  }
 
   const config: Knex.Config = {
     client: 'better-sqlite3',
-    connection: process.env.DATABASE_URL ? {
-      filename: process.env.DATABASE_URL
+    connection: env.database.databaseUrl ? {
+      filename: env.database.databaseUrl
     } : {
-      filename: path.join(dataPath, process.env.DB_FILENAME || 'capacinator.db')
+      filename: path.join(dataPath, env.database.filename)
     },
     useNullAsDefault: true,
     acquireConnectionTimeout: 30000, // Increased to 30 seconds for bulk operations

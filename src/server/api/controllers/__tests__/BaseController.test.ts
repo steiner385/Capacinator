@@ -3,6 +3,7 @@ jest.unmock('../BaseController.js');
 
 import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController';
 import type { Response, NextFunction } from 'express';
+import { resetEnv } from '../../../config/index';
 
 // Create a concrete implementation for testing
 class TestController extends BaseController {
@@ -400,6 +401,7 @@ describe('BaseController with enableLogging', () => {
     it('should include error details in development mode', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
+      resetEnv(); // Reset cached config to pick up new NODE_ENV
 
       const error = new Error('Database error');
 
@@ -412,6 +414,7 @@ describe('BaseController with enableLogging', () => {
       });
 
       process.env.NODE_ENV = originalEnv;
+      resetEnv(); // Reset back to original
     });
 
     it('should log SQLite errors with code', () => {

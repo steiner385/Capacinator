@@ -14,6 +14,22 @@ jest.mock('../../../../src/server/services/logging/config.js', () => ({
   logger: mockLogger
 }));
 
+// Mock env config - mutable for tests
+const mockEnv = {
+  server: {
+    nodeEnv: 'test',
+    port: 3110,
+    isDevelopment: false,
+    isProduction: false,
+    isTest: true,
+    isE2E: false
+  }
+};
+
+jest.mock('../../../../src/server/config/index.js', () => ({
+  env: mockEnv
+}));
+
 import {
   enhancedErrorHandler,
   setupGlobalErrorHandlers
@@ -300,7 +316,9 @@ describe('Enhanced Error Handler Middleware', () => {
 
     describe('Development vs Production Mode', () => {
       it('should include error details in development mode', () => {
-        process.env.NODE_ENV = 'development';
+        // Set mock to development mode
+        mockEnv.server.isDevelopment = true;
+        mockEnv.server.isProduction = false;
         const error: ErrorWithStatus = new Error('Detailed error message');
         error.status = 500;
 
@@ -311,10 +329,15 @@ describe('Enhanced Error Handler Middleware', () => {
             details: 'Detailed error message'
           })
         );
+
+        // Reset mock
+        mockEnv.server.isDevelopment = false;
       });
 
       it('should include stack trace in development for 500+ errors', () => {
-        process.env.NODE_ENV = 'development';
+        // Set mock to development mode
+        mockEnv.server.isDevelopment = true;
+        mockEnv.server.isProduction = false;
         const error: ErrorWithStatus = new Error('Server error');
         error.status = 500;
         error.stack = 'Error: Server error\n    at test.ts:10:5';
@@ -326,10 +349,15 @@ describe('Enhanced Error Handler Middleware', () => {
             stack: 'Error: Server error\n    at test.ts:10:5'
           })
         );
+
+        // Reset mock
+        mockEnv.server.isDevelopment = false;
       });
 
       it('should not include stack trace in development for 4xx errors', () => {
-        process.env.NODE_ENV = 'development';
+        // Set mock to development mode
+        mockEnv.server.isDevelopment = true;
+        mockEnv.server.isProduction = false;
         const error: ErrorWithStatus = new Error('Client error');
         error.status = 400;
         error.stack = 'Error: Client error\n    at test.ts:10:5';
@@ -338,10 +366,15 @@ describe('Enhanced Error Handler Middleware', () => {
 
         const call = jsonMock.mock.calls[0][0];
         expect(call).not.toHaveProperty('stack');
+
+        // Reset mock
+        mockEnv.server.isDevelopment = false;
       });
 
       it('should not include stack trace in production', () => {
-        process.env.NODE_ENV = 'production';
+        // Set mock to production mode
+        mockEnv.server.isDevelopment = false;
+        mockEnv.server.isProduction = true;
         const error: ErrorWithStatus = new Error('Production error');
         error.status = 500;
         error.stack = 'Error: Production error\n    at test.ts:10:5';
@@ -350,10 +383,15 @@ describe('Enhanced Error Handler Middleware', () => {
 
         const call = jsonMock.mock.calls[0][0];
         expect(call).not.toHaveProperty('stack');
+
+        // Reset mock
+        mockEnv.server.isProduction = false;
       });
 
       it('should not include error details in production for non-operational errors', () => {
-        process.env.NODE_ENV = 'production';
+        // Set mock to production mode
+        mockEnv.server.isDevelopment = false;
+        mockEnv.server.isProduction = true;
         const error: ErrorWithStatus = new Error('Sensitive error details');
         error.status = 500;
 
@@ -361,6 +399,9 @@ describe('Enhanced Error Handler Middleware', () => {
 
         const call = jsonMock.mock.calls[0][0];
         expect(call).not.toHaveProperty('details');
+
+        // Reset mock
+        mockEnv.server.isProduction = false;
       });
     });
 
@@ -539,7 +580,9 @@ describe('Enhanced Error Handler Middleware', () => {
     });
 
     it('should handle unhandled rejections in E2E mode without exiting', () => {
-      process.env.NODE_ENV = 'e2e';
+      // Set mock to E2E mode
+      mockEnv.server.isE2E = true;
+      mockEnv.server.isProduction = false;
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
       setupGlobalErrorHandlers();
@@ -554,10 +597,14 @@ describe('Enhanced Error Handler Middleware', () => {
       expect(mockProcessExit).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
+      // Reset mock
+      mockEnv.server.isE2E = false;
     });
 
     it('should not exit on unhandled rejection in production', () => {
-      process.env.NODE_ENV = 'production';
+      // Set mock to production mode
+      mockEnv.server.isProduction = true;
+      mockEnv.server.isE2E = false;
 
       setupGlobalErrorHandlers();
 
@@ -569,10 +616,16 @@ describe('Enhanced Error Handler Middleware', () => {
 
       expect(mockLogger.error).toHaveBeenCalled();
       expect(mockProcessExit).not.toHaveBeenCalled();
+
+      // Reset mock
+      mockEnv.server.isProduction = false;
     });
 
     it('should exit on unhandled rejection in development', () => {
-      process.env.NODE_ENV = 'development';
+      // Set mock to development mode (not production, not E2E)
+      mockEnv.server.isDevelopment = true;
+      mockEnv.server.isProduction = false;
+      mockEnv.server.isE2E = false;
 
       setupGlobalErrorHandlers();
 
@@ -583,6 +636,9 @@ describe('Enhanced Error Handler Middleware', () => {
       handler?.(testError, testPromise);
 
       expect(mockProcessExit).toHaveBeenCalledWith(1);
+
+      // Reset mock
+      mockEnv.server.isDevelopment = false;
     });
 
     it('should handle graceful shutdown on SIGTERM', () => {

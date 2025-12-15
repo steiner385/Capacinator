@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { env } from '../../config/index.js';
 
 /**
  * Represents a registered test context
@@ -327,8 +328,7 @@ export class TestContextController extends BaseController {
    * Check if running in test environment
    */
   private isTestEnvironment(): boolean {
-    const env = process.env.NODE_ENV;
-    return env === 'test' || env === 'e2e' || env === 'development';
+    return env.server.isTest || env.server.isE2E || env.server.isDevelopment;
   }
 
   /**

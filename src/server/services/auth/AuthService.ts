@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { db } from '../../database/index.js';
+import { env } from '../../config/index.js';
 
 export interface TokenPayload {
   userId: string;
@@ -29,9 +30,9 @@ export class AuthService {
   private readonly refreshExpiresIn: string;
 
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'dev-jwt-secret';
-    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '15m';
-    this.refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+    this.jwtSecret = env.auth.jwtSecret;
+    this.jwtExpiresIn = env.auth.jwtExpiresIn;
+    this.refreshExpiresIn = env.auth.jwtRefreshExpiresIn;
   }
 
   /**

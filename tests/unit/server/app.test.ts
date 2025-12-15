@@ -93,8 +93,22 @@ const mockConfig = {
     audit: true
   }
 };
+const mockEnv = {
+  server: {
+    nodeEnv: 'test',
+    port: 3110,
+    isDevelopment: false,
+    isProduction: false,
+    isTest: true,
+    isE2E: false
+  },
+  audit: {
+    enabled: true
+  }
+};
 jest.mock('../../../src/server/config/index.js', () => ({
-  config: mockConfig
+  config: mockConfig,
+  env: mockEnv
 }));
 
 // Mock logger

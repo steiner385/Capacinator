@@ -6,6 +6,7 @@ import { ExcelImporterV2 } from '../../services/import/ExcelImporterV2.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
+import { env } from '../../config/index.js';
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
 
@@ -57,7 +58,7 @@ export class ImportController extends BaseController {
       }
     },
     limits: {
-      fileSize: parseInt(process.env.MAX_FILE_SIZE || '52428800') // 50MB default
+      fileSize: env.fileUpload.maxFileSize
     }
   });
 

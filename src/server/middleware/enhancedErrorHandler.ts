@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { logger } from '../services/logging/config.js';
+import { env } from '../config/index.js';
 
 export interface ErrorWithStatus extends Error {
   status?: number;
@@ -35,7 +36,7 @@ export function enhancedErrorHandler(err: ErrorWithStatus, req: Request, res: Re
   }
 
   // Send appropriate response
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = env.server.isDevelopment;
   const response: any = {
     error: getErrorMessage(err, status),
     requestId: (req as any).requestId
@@ -99,13 +100,13 @@ export function setupGlobalErrorHandlers() {
     });
     
     // In E2E mode, don't exit the process - just log the error
-    if (process.env.NODE_ENV === 'e2e') {
+    if (env.server.isE2E) {
       console.error('❌ Unhandled Promise Rejection -', reason?.message || reason || 'Unknown reason');
       return;
     }
-    
+
     // Don't exit in production, just log
-    if (process.env.NODE_ENV !== 'production') {
+    if (!env.server.isProduction) {
       process.exit(1);
     }
   });

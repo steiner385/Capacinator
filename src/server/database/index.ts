@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { initializeAuditService, getAuditService } from '../services/audit/index.js';
 import { createAuditedDatabase } from './AuditedDatabase.js';
+import { env } from '../config/index.js';
 
 // Store database instance
 let _db: Knex | null = null;
@@ -12,7 +13,7 @@ let _auditedDb: any = null;
 // Create and export the database connection
 export function getDb(): Knex {
   // In E2E mode, use the file-based database configuration
-  if (process.env.NODE_ENV === 'e2e') {
+  if (env.server.isE2E) {
     // Check for global E2E DB first (set during init) - for backward compatibility
     const globalE2EDb = (global as any).__E2E_DB__;
     if (globalE2EDb) {
@@ -21,18 +22,18 @@ export function getDb(): Knex {
     // For E2E, we now use file-based database through knexConfig
     // which already handles E2E mode internally
   }
-  
+
   if (!_db) {
     _db = knex(knexConfig);
-    
+
     // Log which database we're using (only on first connection)
-    if (process.env.NODE_ENV === 'e2e') {
+    if (env.server.isE2E) {
       console.log('🧪 Using E2E test database');
     } else {
       console.log('🔧 Using development database');
     }
   }
-  
+
   return _db;
 }
 
@@ -60,7 +61,7 @@ export function createDbFunction(): any {
     }
     return actualDb;
   };
-  
+
   // Copy all properties and methods from Knex to the function
   return new Proxy(dbFunction, {
     get(target, prop) {
@@ -126,16 +127,16 @@ export async function testConnection(): Promise<boolean> {
 export async function initializeDatabase(): Promise<void> {
   try {
     const database = getDb();
-    
+
     // Run migrations
     await database.migrate.latest();
     console.log('Database migrations completed');
-    
+
     // Initialize audit service after migrations
     initializeAuditService(database);
-    
+
     // Seed initial data if needed (skip for E2E)
-    if (process.env.NODE_ENV !== 'e2e') {
+    if (!env.server.isE2E) {
       const hasData = await database('roles').count('* as count').first();
       if (hasData?.count === 0) {
         await database.seed.run();
@@ -154,19 +155,19 @@ export async function backupDatabase(): Promise<string> {
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
   }
-  
+
   const timestamp = new Date().toISOString().replace(/:/g, '-');
   const backupFile = path.join(backupDir, `backup-${timestamp}.db`);
-  
+
   // SQLite backup is just a file copy
-  const sourceFile = path.join(getDataPath(), process.env.DB_FILENAME || 'capacinator.db');
+  const sourceFile = path.join(getDataPath(), env.database.filename);
   fs.copyFileSync(sourceFile, backupFile);
-  
+
   // Clean old backups
-  const retentionDays = parseInt(process.env.DB_BACKUP_RETENTION_DAYS || '30');
+  const retentionDays = env.database.backupRetentionDays;
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-  
+
   const backups = fs.readdirSync(backupDir);
   for (const backup of backups) {
     const backupPath = path.join(backupDir, backup);
@@ -175,13 +176,13 @@ export async function backupDatabase(): Promise<string> {
       fs.unlinkSync(backupPath);
     }
   }
-  
+
   return backupFile;
 }
 
 // Helper functions
 function getDataPath(): string {
-  if (process.env.NODE_ENV === 'development') {
+  if (env.server.isDevelopment) {
     return path.join(process.cwd(), 'data');
   }
   // In production, try to get electron path, fallback to current directory
