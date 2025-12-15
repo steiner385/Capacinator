@@ -1,6 +1,25 @@
 import { APIRequestContext } from '@playwright/test';
 
 /**
+ * @deprecated This class is deprecated. Use UnifiedTestDataFactory from './unified-test-data-factory' instead.
+ *
+ * The UnifiedTestDataFactory provides:
+ * - Automatic cleanup tracking for all entity types
+ * - Retry logic for API failures
+ * - Pre-built test scenarios (utilization, conflicts, bulk, etc.)
+ * - Type-safe entity creation
+ *
+ * Migration:
+ * ```typescript
+ * // Old (deprecated)
+ * import { TestDataFactory } from './test-data-factory';
+ * const factory = new TestDataFactory(apiContext);
+ *
+ * // New (recommended)
+ * import { UnifiedTestDataFactory } from './unified-test-data-factory';
+ * const factory = new UnifiedTestDataFactory(apiContext);
+ * ```
+ *
  * Test data factory for creating consistent test data
  */
 export class TestDataFactory {

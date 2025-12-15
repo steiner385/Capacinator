@@ -1,6 +1,26 @@
 /**
+ * @deprecated This class is deprecated. Use UnifiedTestDataFactory from './unified-test-data-factory' instead.
+ *
+ * The UnifiedTestDataFactory provides the same test scenarios plus:
+ * - Automatic cleanup tracking for all entity types
+ * - Retry logic for API failures
+ * - Consistent API across all entity types
+ *
+ * Migration:
+ * ```typescript
+ * // Old (deprecated)
+ * import { E2ETestDataBuilder } from './e2e-test-data-builder';
+ * const builder = new E2ETestDataBuilder(apiContext, 'e2e');
+ * const data = await builder.createUtilizationTestScenario();
+ *
+ * // New (recommended)
+ * import { UnifiedTestDataFactory } from './unified-test-data-factory';
+ * const factory = new UnifiedTestDataFactory(apiContext);
+ * const data = await factory.scenarios.utilization();
+ * ```
+ *
  * E2E Test Data Builder
- * 
+ *
  * Creates consistent test data scenarios to ensure all E2E tests
  * have the required data conditions, eliminating conditional skips.
  */
