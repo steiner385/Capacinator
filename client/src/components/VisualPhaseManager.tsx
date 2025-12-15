@@ -1269,7 +1269,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 <input
                   type="number"
                   value={dependencyForm.lag_days}
-                  onChange={(e) => setDependencyForm(prev => ({ ...prev, lag_days: parseInt(e.target.value) || 0 }))}
+                  onChange={(e) => setDependencyForm(prev => ({ ...prev, lag_days: parseInt(e.target.value, 10) || 0 }))}
                   min="-365"
                   max="365"
                   className="form-input"

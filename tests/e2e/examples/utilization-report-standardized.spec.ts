@@ -76,9 +76,9 @@ test.describe('Utilization Report - Standardized', () => {
     // Get and verify utilization stats
     const stats = await utilizationPage.getUtilizationStats();
     
-    expect(parseInt(stats.overutilized)).toBeGreaterThanOrEqual(0);
-    expect(parseInt(stats.underutilized)).toBeGreaterThanOrEqual(0);
-    expect(parseInt(stats.optimal)).toBeGreaterThanOrEqual(0);
+    expect(parseInt(stats.overutilized, 10)).toBeGreaterThanOrEqual(0);
+    expect(parseInt(stats.underutilized, 10)).toBeGreaterThanOrEqual(0);
+    expect(parseInt(stats.optimal, 10)).toBeGreaterThanOrEqual(0);
     
     // Verify table has data
     const hasData = await utilizationPage.verifyUtilizationDisplay();

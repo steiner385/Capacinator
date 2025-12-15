@@ -10,7 +10,8 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: [
         '<rootDir>/src/server/**/__tests__/**/*.test.ts',
-        '<rootDir>/tests/unit/server/**/*.test.ts'
+        '<rootDir>/tests/unit/server/**/*.test.ts',
+        '<rootDir>/shared/**/__tests__/**/*.test.ts'
       ],
       moduleNameMapper: {
         '^(\\.{1,2}/.*)\\.js$': '$1'

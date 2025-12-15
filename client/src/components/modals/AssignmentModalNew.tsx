@@ -317,7 +317,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                 type="number"
                 id="allocation_percentage"
                 value={formData.allocation_percentage}
-                onChange={(e) => handleChange('allocation_percentage', parseInt(e.target.value) || 0)}
+                onChange={(e) => handleChange('allocation_percentage', parseInt(e.target.value, 10) || 0)}
                 min="1"
                 max="100"
                 className={errors.allocation_percentage ? 'border-red-500' : ''}

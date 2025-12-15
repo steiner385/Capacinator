@@ -6,8 +6,8 @@
 export const E2E_CONFIG = {
   // Server ports - must match .env.e2e
   ports: {
-    backend: parseInt(process.env.E2E_PORT || process.env.PORT || '3110'),
-    frontend: parseInt(process.env.E2E_CLIENT_PORT || process.env.CLIENT_PORT || '3120'),
+    backend: parseInt(process.env.E2E_PORT || process.env.PORT || '3110', 10),
+    frontend: parseInt(process.env.E2E_CLIENT_PORT || process.env.CLIENT_PORT || '3120', 10),
   },
 
   // URLs

@@ -123,7 +123,7 @@ test.describe('Scenario Comparison Modal Styling', () => {
     // Verify overlay has solid dark background
     expect(overlayStyles.backgroundColor).toMatch(/rgba?\(0,\s*0,\s*0/); // Should be black with opacity
     expect(overlayStyles.position).toBe('fixed');
-    expect(parseInt(overlayStyles.zIndex)).toBeGreaterThan(100);
+    expect(parseInt(overlayStyles.zIndex, 10)).toBeGreaterThan(100);
 
     // Check for opacity in rgba
     if (overlayStyles.backgroundColor.includes('rgba')) {

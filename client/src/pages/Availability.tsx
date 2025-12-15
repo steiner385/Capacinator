@@ -399,7 +399,7 @@ export default function Availability() {
                   <input
                     type="number"
                     value={formData.hours_per_day}
-                    onChange={(e) => setFormData({...formData, hours_per_day: parseInt(e.target.value) || 0})}
+                    onChange={(e) => setFormData({...formData, hours_per_day: parseInt(e.target.value, 10) || 0})}
                     className="form-input"
                     min="0"
                     max="8"

@@ -170,10 +170,10 @@ describe('Projects API Integration Tests - Simple', () => {
         )
         .first();
 
-      expect(parseInt(metrics.total_projects)).toBeGreaterThanOrEqual(3);
-      expect(parseInt(metrics.total_budget)).toBeGreaterThanOrEqual(600000);
-      expect(parseInt(metrics.active_projects)).toBeGreaterThanOrEqual(2);
-      expect(parseInt(metrics.completed_projects)).toBeGreaterThanOrEqual(1);
+      expect(parseInt(metrics.total_projects, 10)).toBeGreaterThanOrEqual(3);
+      expect(parseInt(metrics.total_budget, 10)).toBeGreaterThanOrEqual(600000);
+      expect(parseInt(metrics.active_projects, 10)).toBeGreaterThanOrEqual(2);
+      expect(parseInt(metrics.completed_projects, 10)).toBeGreaterThanOrEqual(1);
 
       // Cleanup
       for (const id of projectIds) {

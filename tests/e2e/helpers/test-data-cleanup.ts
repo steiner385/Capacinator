@@ -150,7 +150,7 @@ async function cleanupEntitiesByPattern(
       const response = await apiContext.delete(`${apiBaseUrl}${path}`);
       if (response.ok()) {
         const data = await response.json();
-        const count = parseInt(data.message?.match(/\d+/)?.[0] || '0');
+        const count = parseInt(data.message?.match(/\d+/, 10)?.[0] || '0');
         result.deletedCounts[name] = count;
         log(`Deleted ${count} ${name}`);
       }

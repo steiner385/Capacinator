@@ -75,7 +75,7 @@ test.describe('Utilization Report Modals', () => {
       // Utilization (%) is in the 3rd column (0-indexed: Name, Role, Utilization)
       const utilizationCell = row.locator('td:nth-child(3)');
       const utilizationText = await utilizationCell.textContent();
-      const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+      const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
       console.log(`Person utilization: ${utilizationText} -> ${utilization}%`);
       
       
@@ -100,7 +100,7 @@ test.describe('Utilization Report Modals', () => {
       // Utilization (%) is in the 3rd column (0-indexed: Name, Role, Utilization)
       const utilizationCell = row.locator('td:nth-child(3)');
       const utilizationText = await utilizationCell.textContent();
-      const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+      const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
       console.log(`Person utilization: ${utilizationText} -> ${utilization}%`);
       
       
@@ -214,11 +214,11 @@ test.describe('Utilization Report Modals', () => {
         if (progressBar > 0) {
           // Extract from progress bar if present
           const progressValue = await utilizationCell.locator('.report-progress-bar').getAttribute('data-value');
-          utilization = parseInt(progressValue || '0');
+          utilization = parseInt(progressValue || '0', 10);
         } else {
           // Otherwise extract from text
           const utilizationText = await utilizationCell.textContent(); // Utilization & Projects column
-          utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+          utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         }
         
         if (utilization > 0) {
@@ -275,7 +275,7 @@ test.describe('Utilization Report Modals', () => {
       // Check that utilization has decreased (or assignment count reduced)
       const updatedRow = authenticatedPage.locator('.team-utilization-overview tbody tr').first();
       const newUtilizationText = await updatedRow.locator('td:nth-child(6)').textContent();
-      const newUtilization = parseInt((newUtilizationText || '').replace('%', '') || '0');
+      const newUtilization = parseInt((newUtilizationText || '', 10).replace('%', '') || '0');
       
       // Utilization should be lower or equal (equal if person has other assignments)
       expect(newUtilization).toBeLessThanOrEqual(initialUtilization);
@@ -288,7 +288,7 @@ test.describe('Utilization Report Modals', () => {
       
       for (const row of personRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization > 0) {
           await row.locator('button:has-text("Reduce Load")').click();
@@ -324,7 +324,7 @@ test.describe('Utilization Report Modals', () => {
       
       for (const row of personRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization === 0) {
           await row.locator('button:has-text("Reduce Load")').click();
@@ -363,11 +363,11 @@ test.describe('Utilization Report Modals', () => {
         if (progressBar > 0) {
           // Extract from progress bar if present
           const progressValue = await utilizationCell.locator('.report-progress-bar').getAttribute('data-value');
-          utilization = parseInt(progressValue || '0');
+          utilization = parseInt(progressValue || '0', 10);
         } else {
           // Otherwise extract from text
           const utilizationText = await utilizationCell.textContent(); // Utilization & Projects column
-          utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+          utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         }
         
         if (utilization < 100) {
@@ -427,7 +427,7 @@ test.describe('Utilization Report Modals', () => {
       
       for (const row of personRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization < 80) { // Find someone with capacity
           selectedRow = row;
@@ -489,7 +489,7 @@ test.describe('Utilization Report Modals', () => {
       // Check that utilization has increased
       const updatedRow = authenticatedPage.locator('.team-utilization-overview tbody tr').first();
       const newUtilizationText = await updatedRow.locator('td:nth-child(6)').textContent();
-      const newUtilization = parseInt((newUtilizationText || '').replace('%', '') || '0');
+      const newUtilization = parseInt((newUtilizationText || '', 10).replace('%', '') || '0');
       
       // Utilization should be higher
       expect(newUtilization).toBeGreaterThan(initialUtilization);
@@ -501,7 +501,7 @@ test.describe('Utilization Report Modals', () => {
       
       for (const row of personRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization < 100) {
           await row.locator('button:has-text("Add Projects")').click();
@@ -538,7 +538,7 @@ test.describe('Utilization Report Modals', () => {
       
       for (const row of personRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization < 100) {
           await row.locator('button:has-text("Add Projects")').click();
@@ -560,7 +560,7 @@ test.describe('Utilization Report Modals', () => {
         // Extract hours estimate
         const hoursMatch = projectText ? projectText.match(/~(\d+)h\/week/) : null;
         if (hoursMatch) {
-          const estimatedHours = parseInt(hoursMatch[1]);
+          const estimatedHours = parseInt(hoursMatch[1], 10);
           
           // Should be reasonable (between 5-30 hours per week)
           expect(estimatedHours).toBeGreaterThanOrEqual(5);
@@ -586,7 +586,7 @@ test.describe('Utilization Report Modals', () => {
       let testPersonRow = null;
       for (const row of initialRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization > 0 && utilization < 100) {
           testPersonRow = row;
@@ -679,7 +679,7 @@ test.describe('Utilization Report Modals', () => {
       
       for (const row of personRows) {
         const utilizationText = await row.locator('td:nth-child(6)').textContent();
-        const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+        const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
         
         if (utilization > 20 && utilization < 80) { // Good candidate for testing
           testRow = row;

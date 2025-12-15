@@ -251,7 +251,7 @@ test.describe('Reports Functionality', () => {
       let initialCount = 0;
       if (await projectCountElement.count() > 0) {
         const countText = await projectCountElement.textContent();
-        initialCount = parseInt(countText || '0');
+        initialCount = parseInt(countText || '0', 10);
       }
       // Create new project via API
       const newProjectData = {
@@ -273,7 +273,7 @@ test.describe('Reports Functionality', () => {
         // Verify count increased if element exists
         if (await projectCountElement.count() > 0) {
           const newCount = await projectCountElement.textContent();
-          expect(parseInt(newCount || '0')).toBeGreaterThan(initialCount);
+          expect(parseInt(newCount || '0', 10)).toBeGreaterThan(initialCount);
         }
       }
     });

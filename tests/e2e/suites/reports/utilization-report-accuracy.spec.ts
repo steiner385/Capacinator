@@ -59,7 +59,7 @@ test.describe('Utilization Report Accuracy', () => {
         if (value && metric.pattern) {
           expect(value).toMatch(metric.pattern);
           if (metric.selector.includes('utilized') || metric.selector.includes('Optimal')) {
-            const count = parseInt(value?.match(/\d+/)?.[0] || '0');
+            const count = parseInt(value?.match(/\d+/, 10)?.[0] || '0');
             totalPeople += count;
           }
         }

@@ -58,7 +58,7 @@ test.describe('Gaps Analysis Report Accuracy', () => {
         if (value && metric.pattern) {
           expect(value).toMatch(metric.pattern);
           if (metric.minValue !== undefined) {
-            const numValue = parseInt(value?.match(/\d+/)?.[0] || '0');
+            const numValue = parseInt(value?.match(/\d+/, 10)?.[0] || '0');
             expect(numValue).toBeGreaterThanOrEqual(metric.minValue);
           }
         }

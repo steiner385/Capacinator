@@ -374,16 +374,16 @@ export class AssignmentHelpers {
 
     // Get summary cards
     const totalCard = this.page.locator('.summary-card:has-text("Total Assignments")');
-    summary.totalAssignments = parseInt(await totalCard.locator('.value').textContent() || '0');
+    summary.totalAssignments = parseInt(await totalCard.locator('.value', 10).textContent() || '0');
 
     const activeCard = this.page.locator('.summary-card:has-text("Active")');
-    summary.activeAssignments = parseInt(await activeCard.locator('.value').textContent() || '0');
+    summary.activeAssignments = parseInt(await activeCard.locator('.value', 10).textContent() || '0');
 
     const overCard = this.page.locator('.summary-card:has-text("Overallocated")');
-    summary.overallocated = parseInt(await overCard.locator('.value').textContent() || '0');
+    summary.overallocated = parseInt(await overCard.locator('.value', 10).textContent() || '0');
 
     const underCard = this.page.locator('.summary-card:has-text("Underallocated")');
-    summary.underallocated = parseInt(await underCard.locator('.value').textContent() || '0');
+    summary.underallocated = parseInt(await underCard.locator('.value', 10).textContent() || '0');
 
     return summary;
   }

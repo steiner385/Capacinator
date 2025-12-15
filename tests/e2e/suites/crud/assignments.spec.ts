@@ -357,7 +357,7 @@ test.describe('Assignment CRUD Operations', () => {
         await allocationInput.fill('150');
         const actualValue = await allocationInput.inputValue();
         // Check if input was clamped to 100
-        expect(parseInt(actualValue)).toBeLessThanOrEqual(100);
+        expect(parseInt(actualValue, 10)).toBeLessThanOrEqual(100);
         await authenticatedPage.keyboard.press('Escape');
       });
     });

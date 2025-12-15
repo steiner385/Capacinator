@@ -42,7 +42,7 @@ test.describe('Report Navigation Context', () => {
         if (await personRow.count() > 0) {
           const utilizationText = await personRow.locator('td').nth(2).textContent();
           if (utilizationText?.includes('%')) {
-            const utilization = parseInt(utilizationText.match(/(\d+)%/)?.[1] || '0');
+            const utilization = parseInt(utilizationText.match(/(\d+, 10)%/)?.[1] || '0');
             if (utilization < 50) {
               underutilizedPerson = person;
               underutilizedRow = personRow;
@@ -290,7 +290,7 @@ test.describe('Report Navigation Context', () => {
       if (await underutilizedCard.count() > 0) {
         const valueElement = underutilizedCard.locator('.card-value, .metric, .value').first();
         const underutilizedCount = await valueElement.textContent();
-        const count = parseInt(underutilizedCount?.match(/\d+/)?.[0] || '0');
+        const count = parseInt(underutilizedCount?.match(/\d+/, 10)?.[0] || '0');
         const viewDetailsLink = underutilizedCard.locator('a:has-text("View Details"), button:has-text("View")').first();
         if (await viewDetailsLink.count() > 0) {
           await viewDetailsLink.click();

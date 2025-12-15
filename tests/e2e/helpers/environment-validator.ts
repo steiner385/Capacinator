@@ -208,7 +208,7 @@ export class EnvironmentValidator {
       if (process.platform === 'linux' || process.platform === 'darwin') {
         const output = execSync('df -h . | tail -1', { encoding: 'utf-8' });
         const parts = output.trim().split(/\s+/);
-        const usePercent = parseInt(parts[4]);
+        const usePercent = parseInt(parts[4], 10);
         
         if (usePercent > 90) {
           this.errors.push(`Disk usage is at ${usePercent}% - insufficient space for tests`);

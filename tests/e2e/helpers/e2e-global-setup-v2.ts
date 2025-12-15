@@ -8,8 +8,8 @@ import { preTestCleanup } from './test-data-cleanup';
 
 // Use consistent ports for E2E tests
 const E2E_PORTS = {
-  server: parseInt(process.env.E2E_SERVER_PORT || '3111'),
-  client: parseInt(process.env.E2E_CLIENT_PORT || '3121')
+  server: parseInt(process.env.E2E_SERVER_PORT || '3111', 10),
+  client: parseInt(process.env.E2E_CLIENT_PORT || '3121', 10)
 };
 
 const processManager = new E2EProcessManager();

@@ -57,7 +57,7 @@ export class ImportController extends BaseController {
       }
     },
     limits: {
-      fileSize: parseInt(process.env.MAX_FILE_SIZE || '52428800') // 50MB default
+      fileSize: parseInt(process.env.MAX_FILE_SIZE || '52428800', 10) // 50MB default
     }
   });
 
@@ -143,7 +143,7 @@ export class ImportController extends BaseController {
         validateDuplicates: req.body.validateDuplicates === 'true' || req.body.validateDuplicates === true || savedSettings.validateDuplicates,
         autoCreateMissingRoles: req.body.autoCreateMissingRoles === 'true' || req.body.autoCreateMissingRoles === true || savedSettings.autoCreateMissingRoles,
         autoCreateMissingLocations: req.body.autoCreateMissingLocations === 'true' || req.body.autoCreateMissingLocations === true || savedSettings.autoCreateMissingLocations,
-        defaultProjectPriority: req.body.defaultProjectPriority ? parseInt(req.body.defaultProjectPriority) : savedSettings.defaultProjectPriority,
+        defaultProjectPriority: req.body.defaultProjectPriority ? parseInt(req.body.defaultProjectPriority, 10) : savedSettings.defaultProjectPriority,
         dateFormat: req.body.dateFormat || savedSettings.dateFormat
       };
       
@@ -315,13 +315,13 @@ export class ImportController extends BaseController {
 
   async getImportHistory(req: Request, res: Response) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const limit = parseInt(req.query.limit as string, 10) || 50;
       const offset = (page - 1) * limit;
       
       // Get total count
       const totalCountResult = await this.db('import_history').count('* as count').first();
-      const totalCount = parseInt(totalCountResult.count);
+      const totalCount = parseInt(totalCountResult.count, 10);
       
       // Get import history records
       const imports = await this.db('import_history')
@@ -583,7 +583,7 @@ export class ImportController extends BaseController {
         validateDuplicates: req.body.validateDuplicates === 'true' || req.body.validateDuplicates === true || savedSettings.validateDuplicates,
         autoCreateMissingRoles: req.body.autoCreateMissingRoles === 'true' || req.body.autoCreateMissingRoles === true || savedSettings.autoCreateMissingRoles,
         autoCreateMissingLocations: req.body.autoCreateMissingLocations === 'true' || req.body.autoCreateMissingLocations === true || savedSettings.autoCreateMissingLocations,
-        defaultProjectPriority: req.body.defaultProjectPriority ? parseInt(req.body.defaultProjectPriority) : savedSettings.defaultProjectPriority,
+        defaultProjectPriority: req.body.defaultProjectPriority ? parseInt(req.body.defaultProjectPriority, 10) : savedSettings.defaultProjectPriority,
         dateFormat: req.body.dateFormat || savedSettings.dateFormat,
         dryRun: true // Force dry-run mode for analysis
       };

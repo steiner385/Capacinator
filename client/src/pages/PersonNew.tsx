@@ -344,7 +344,7 @@ export function PersonNew() {
                   <input
                     type="number"
                     value={formData.default_availability_percentage}
-                    onChange={(e) => handleChange('default_availability_percentage', parseInt(e.target.value))}
+                    onChange={(e) => handleChange('default_availability_percentage', parseInt(e.target.value, 10))}
                     className="form-input"
                     min="0"
                     max="100"
@@ -356,7 +356,7 @@ export function PersonNew() {
                   <input
                     type="number"
                     value={formData.default_hours_per_day}
-                    onChange={(e) => handleChange('default_hours_per_day', parseInt(e.target.value))}
+                    onChange={(e) => handleChange('default_hours_per_day', parseInt(e.target.value, 10))}
                     className="form-input"
                     min="0"
                     max="12"

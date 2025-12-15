@@ -252,7 +252,7 @@ test.describe('Feature Name - Brief Description', () => {
       const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
       let lastLevel = 0;
       headings.forEach(heading => {
-        const level = parseInt(heading.tagName[1]);
+        const level = parseInt(heading.tagName[1], 10);
         if (level - lastLevel > 1) {
           issues.push(`Heading hierarchy skip: ${heading.tagName} after H${lastLevel}`);
         }

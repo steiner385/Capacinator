@@ -30,7 +30,7 @@ export function validateAndParseDate(dateInput: any, fieldName: string): DateVal
     } 
     // Check if it's a numeric string (timestamp)
     else if (/^\d+$/.test(dateInput)) {
-      parsedDate = new Date(parseInt(dateInput));
+      parsedDate = new Date(parseInt(dateInput, 10));
     } 
     // Try to parse other string formats
     else {

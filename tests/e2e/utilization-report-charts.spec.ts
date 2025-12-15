@@ -27,14 +27,14 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     
     // Verify summary cards show correct values
     const utilizationPercentage = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
-    expect(parseInt(utilizationPercentage)).toBeGreaterThan(0);
-    expect(parseInt(utilizationPercentage)).toBeLessThan(200); // Reasonable range
+    expect(parseInt(utilizationPercentage, 10)).toBeGreaterThan(0);
+    expect(parseInt(utilizationPercentage, 10)).toBeLessThan(200); // Reasonable range
     
     const overutilizedCount = await authenticatedPage.textContent('[data-testid="people-overutilized-count"]');
-    expect(parseInt(overutilizedCount)).toBe(1); // E2E Over Utilized
+    expect(parseInt(overutilizedCount, 10)).toBe(1); // E2E Over Utilized
     
     const underutilizedCount = await authenticatedPage.textContent('[data-testid="people-underutilized-count"]');
-    expect(parseInt(underutilizedCount)).toBeGreaterThan(0);
+    expect(parseInt(underutilizedCount, 10)).toBeGreaterThan(0);
   });
 
   test('should update charts when date range changes', async ({ authenticatedPage }) => {
@@ -58,7 +58,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     
     // Verify utilization changed
     const updatedUtilization = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
-    expect(parseInt(updatedUtilization)).not.toBe(parseInt(initialUtilization));
+    expect(parseInt(updatedUtilization, 10)).not.toBe(parseInt(initialUtilization, 10));
   });
 
   test('should display person utilization table with correct data', async ({ authenticatedPage }) => {
@@ -77,7 +77,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await expect(normalRow).toBeVisible();
     
     const normalUtilization = await normalRow.locator('[data-testid="utilization-percentage"]').textContent();
-    expect(parseInt(normalUtilization)).toBe(80); // 80% allocation
+    expect(parseInt(normalUtilization, 10)).toBe(80); // 80% allocation
     
     // Verify E2E Over Utilized overallocation is highlighted
     const overRow = authenticatedPage.locator('tr', { has: authenticatedPage.locator('text="E2E Over Utilized"') });
@@ -85,7 +85,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await expect(overRow.locator('[data-testid="overallocation-indicator"]')).toBeVisible();
     
     const overUtilization = await overRow.locator('[data-testid="utilization-percentage"]').textContent();
-    expect(parseInt(overUtilization)).toBe(120); // 80% + 40% = 120%
+    expect(parseInt(overUtilization, 10)).toBe(120); // 80% + 40% = 120%
   });
 
   test('should handle edge cases gracefully', async ({ authenticatedPage }) => {
@@ -146,7 +146,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await expect(frankRow).toBeVisible();
     
     const frankUtilization = await frankRow.locator('[data-testid="utilization-percentage"]').textContent();
-    expect(parseInt(frankUtilization)).toBe(250); // 150% + 100%
+    expect(parseInt(frankUtilization, 10)).toBe(250); // 150% + 100%
     
     // Verify the chart Y-axis can accommodate high values
     // This would depend on your chart implementation
