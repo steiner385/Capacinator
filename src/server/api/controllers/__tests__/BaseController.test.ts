@@ -708,3 +708,233 @@ describe('BaseController with enableLogging', () => {
     });
   });
 });
+
+// Create audited controller for testing audit features
+class TestAuditedController extends BaseController {
+  constructor() {
+    super({ enableAudit: true, enableLogging: true });
+  }
+
+  public testGetDb(req?: RequestWithContext) {
+    return this.getDb(req);
+  }
+
+  public async testExecuteAuditedQuery<T>(
+    req: RequestWithContext,
+    queryFn: (db: any) => Promise<T>,
+    res: Response,
+    errorMessage?: string
+  ) {
+    return this.executeAuditedQuery(req, queryFn, res, errorMessage);
+  }
+}
+
+describe('BaseController with enableAudit', () => {
+  let controller: TestAuditedController;
+  let mockReq: Partial<RequestWithContext>;
+  let mockRes: Partial<Response>;
+
+  beforeEach(() => {
+    controller = new TestAuditedController();
+
+    mockReq = {
+      requestId: 'test-request-id',
+      ip: '127.0.0.1',
+      user: {
+        id: 'user-123',
+        role: 'admin'
+      },
+      get: jest.fn().mockReturnValue('Test User Agent'),
+      logger: {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        logPerformance: jest.fn(),
+        logBusinessOperation: jest.fn()
+      } as any
+    };
+
+    mockRes = {
+      json: jest.fn().mockReturnThis(),
+      status: jest.fn().mockReturnThis()
+    };
+  });
+
+  describe('getDb', () => {
+    it('should return regular db when audit is disabled or no request', () => {
+      // When no request is provided, should return regular db
+      const db = controller.testGetDb();
+      expect(db).toBeDefined();
+    });
+
+    it('should return audited db with context when request provided', () => {
+      const db = controller.testGetDb(mockReq as RequestWithContext);
+      expect(db).toBeDefined();
+    });
+  });
+
+  describe('executeAuditedQuery', () => {
+    it('should execute query successfully with audit context', async () => {
+      const queryFn = jest.fn().mockResolvedValue({ id: 1, name: 'Test' });
+
+      const result = await controller.testExecuteAuditedQuery(
+        mockReq as RequestWithContext,
+        queryFn,
+        mockRes as Response
+      );
+
+      expect(queryFn).toHaveBeenCalled();
+      expect(result).toEqual({ id: 1, name: 'Test' });
+    });
+
+    it('should log performance for slow audited queries', async () => {
+      const queryFn = jest.fn().mockImplementation(() =>
+        new Promise(resolve => setTimeout(() => resolve({ id: 1 }), 150))
+      );
+
+      await controller.testExecuteAuditedQuery(
+        mockReq as RequestWithContext,
+        queryFn,
+        mockRes as Response
+      );
+
+      expect(mockReq.logger?.logPerformance).toHaveBeenCalledWith(
+        'Audited Database Query',
+        expect.any(Number),
+        expect.objectContaining({ controller: 'TestAuditedController' })
+      );
+    });
+
+    it('should handle query errors in audited query', async () => {
+      const error = new Error('Audited query failed');
+      const queryFn = jest.fn().mockRejectedValue(error);
+
+      const result = await controller.testExecuteAuditedQuery(
+        mockReq as RequestWithContext,
+        queryFn,
+        mockRes as Response,
+        'Custom audit error message'
+      );
+
+      expect(result).toBeUndefined();
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+  });
+});
+
+describe('BaseController edge cases', () => {
+  let controller: TestController;
+  let mockRes: Partial<Response>;
+  let mockQuery: any;
+
+  beforeEach(() => {
+    controller = new TestController();
+
+    mockRes = {
+      json: jest.fn().mockReturnThis(),
+      status: jest.fn().mockReturnThis()
+    };
+
+    mockQuery = {
+      where: jest.fn().mockReturnThis(),
+      whereIn: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis()
+    };
+  });
+
+  describe('buildFilters edge cases', () => {
+    it('should handle numeric values', () => {
+      const filters = { count: 5, score: 0 };
+
+      controller.testBuildFilters(mockQuery, filters);
+
+      expect(mockQuery.where).toHaveBeenCalledWith('count', 5);
+      expect(mockQuery.where).toHaveBeenCalledWith('score', 0);
+    });
+
+    it('should handle boolean values', () => {
+      const filters = { active: true, deleted: false };
+
+      controller.testBuildFilters(mockQuery, filters);
+
+      expect(mockQuery.where).toHaveBeenCalledWith('active', true);
+      expect(mockQuery.where).toHaveBeenCalledWith('deleted', false);
+    });
+
+    it('should handle empty object', () => {
+      const filters = {};
+
+      controller.testBuildFilters(mockQuery, filters);
+
+      expect(mockQuery.where).not.toHaveBeenCalled();
+      expect(mockQuery.whereIn).not.toHaveBeenCalled();
+    });
+
+    it('should handle mixed filters with LIKE at start', () => {
+      const filters = { name: 'test%' };
+
+      controller.testBuildFilters(mockQuery, filters);
+
+      expect(mockQuery.where).toHaveBeenCalledWith('name', 'like', 'test%');
+    });
+
+    it('should handle mixed filters with LIKE at end', () => {
+      const filters = { name: '%test' };
+
+      controller.testBuildFilters(mockQuery, filters);
+
+      expect(mockQuery.where).toHaveBeenCalledWith('name', 'like', '%test');
+    });
+  });
+
+  describe('paginate edge cases', () => {
+    it('should handle page 0 (invalid - defaults calculation)', () => {
+      controller.testPaginate(mockQuery, 0, 10);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(10);
+      // (0-1) * 10 = -10, which is the calculation result
+      expect(mockQuery.offset).toHaveBeenCalledWith(-10);
+    });
+
+    it('should handle large page numbers', () => {
+      controller.testPaginate(mockQuery, 1000, 50);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(50);
+      expect(mockQuery.offset).toHaveBeenCalledWith(49950); // (1000-1) * 50
+    });
+
+    it('should handle limit of 1', () => {
+      controller.testPaginate(mockQuery, 5, 1);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(1);
+      expect(mockQuery.offset).toHaveBeenCalledWith(4); // (5-1) * 1
+    });
+  });
+
+  describe('createOperationalError edge cases', () => {
+    it('should create error with status code 500', () => {
+      const error = controller.testCreateOperationalError('Server error', 500);
+
+      expect(error.message).toBe('Server error');
+      expect(error.isOperational).toBe(true);
+      expect(error.statusCode).toBe(500);
+    });
+
+    it('should create error with status code 403', () => {
+      const error = controller.testCreateOperationalError('Forbidden', 403);
+
+      expect(error.message).toBe('Forbidden');
+      expect(error.isOperational).toBe(true);
+      expect(error.statusCode).toBe(403);
+    });
+
+    it('should create error with status code 422', () => {
+      const error = controller.testCreateOperationalError('Unprocessable entity', 422);
+
+      expect(error.message).toBe('Unprocessable entity');
+      expect(error.isOperational).toBe(true);
+      expect(error.statusCode).toBe(422);
+    });
+  });
+});
