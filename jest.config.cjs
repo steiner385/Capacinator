@@ -100,5 +100,53 @@ module.exports = {
   ],
   
   // Module file extensions
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node']
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+
+  // Coverage configuration
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    'client/src/**/*.{ts,tsx}',
+    // Exclude type definition files
+    '!**/*.d.ts',
+    // Exclude node_modules
+    '!**/node_modules/**',
+    // Exclude test files
+    '!**/__tests__/**',
+    '!**/tests/**',
+    // Exclude build output
+    '!**/dist/**',
+    '!**/build/**',
+    // Exclude config files
+    '!**/*.config.{ts,js,cjs}',
+    // Exclude index/barrel files (often just re-exports)
+    '!**/index.ts',
+    // Exclude migrations (database schema, not application logic)
+    '!**/migrations/**',
+    // Exclude Electron main process (separate runtime)
+    '!src/electron/**'
+  ],
+
+  // Coverage thresholds - baselines based on current coverage levels
+  // Current coverage (as of initial setup):
+  //   Statements: 49.46%, Branches: 48.77%, Functions: 43.04%, Lines: 50.81%
+  // These thresholds prevent regression and can be increased incrementally
+  coverageThreshold: {
+    global: {
+      branches: 45,
+      functions: 40,
+      lines: 45,
+      statements: 45
+    }
+  },
+
+  // Coverage output directory
+  coverageDirectory: '<rootDir>/coverage',
+
+  // Coverage report formats
+  coverageReporters: [
+    'text',           // Console output
+    'text-summary',   // Condensed console summary
+    'lcov',           // HTML report + lcov.info for CI tools
+    'json'            // JSON for programmatic access
+  ]
 };
