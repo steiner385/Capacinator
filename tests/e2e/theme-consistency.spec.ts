@@ -27,7 +27,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     ];
     for (const pageInfo of pagesToCheck) {
       await authenticatedPage.goto(pageInfo.path);
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Check main background
       const mainContent = authenticatedPage.locator('.main-content');
       await expect(mainContent).toHaveCSS('background-color', lightTheme.bgPrimary);
@@ -61,7 +61,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     // Check table row hover state
     const tableRow = authenticatedPage.locator('.table tbody tr').first();
     await tableRow.hover();
-    await authenticatedPage.waitForTimeout(300);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
     const hoverBg = await tableRow.evaluate(el => 
       window.getComputedStyle(el).backgroundColor
     );
@@ -73,7 +73,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     const primaryBtn = authenticatedPage.locator('button:not([class*="outline"]):not([class*="ghost"]):not([class*="secondary"])').first();
     await expect(primaryBtn).toHaveCSS('background-color', lightTheme.primary);
     await primaryBtn.hover();
-    await authenticatedPage.waitForTimeout(300);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
     await expect(primaryBtn).toHaveCSS('background-color', lightTheme.primaryHover);
     // Secondary button
     const secondaryBtn = authenticatedPage.locator('button[class*="outline"], button[class*="secondary"]').first();
@@ -119,7 +119,7 @@ test.describe('Theme Consistency - Light Mode', () => {
   });
   test('should have correct chart colors', async ({ authenticatedPage, testHelpers }) => {
     await testHelpers.navigateTo('/reports');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Check if charts are rendered with correct colors
     const chartBars = authenticatedPage.locator('.recharts-bar-rectangle');
     if (await chartBars.count() > 0) {
@@ -155,7 +155,7 @@ test.describe('Theme Consistency - Light Mode', () => {
     const pagesToCheck = ['/dashboard', '/projects', '/people', '/reports'];
     for (const path of pagesToCheck) {
       await authenticatedPage.goto(path);
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Check various elements don't have dark backgrounds
       const elements = await authenticatedPage.locator('div, section, main, table').all();
       for (const element of elements.slice(0, 10)) { // Check first 10 elements

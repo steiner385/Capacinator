@@ -24,7 +24,7 @@ test.describe('Utilization Report Accuracy', () => {
     const utilizationTab = authenticatedPage.locator('button:has-text("Utilization Report"), button:has-text("Utilization")').first();
     if (await utilizationTab.isVisible()) {
       await utilizationTab.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
   test.afterEach(async ({ testDataHelpers }) => {
@@ -91,7 +91,7 @@ test.describe('Utilization Report Accuracy', () => {
       if (elementCount > 0) {
         // Verify chart is interactive
         await dataElements.first().hover();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       }
     }
   });
@@ -239,7 +239,7 @@ test.describe('Utilization Report Accuracy', () => {
       const overUtilizedButton = authenticatedPage.locator('button:has-text("Over-utilized")').first();
       if (await overUtilizedButton.isVisible()) {
         await overUtilizedButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Check filtered results
         const filteredRows = await table.locator('tbody tr').count();
         // Should have filtered some results (or show empty state)

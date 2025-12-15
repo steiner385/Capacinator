@@ -11,7 +11,7 @@ test.describe('Project Roadmap UI Fixes Validation', () => {
     
     // Wait for roadmap to load
     await page.waitForSelector('.project-roadmap', { timeout: 10000 });
-    await page.waitForTimeout(2000); // Allow content to settle
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Allow content to settle
   });
 
   test('should validate UI consolidation fixes are applied', async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe('Project Roadmap UI Fixes Validation', () => {
   test('should capture detailed roadmap screenshot for comparison', async ({ page }) => {
     // Wait for all content to load
     await page.waitForSelector('.projects-timeline', { timeout: 10000 });
-    await page.waitForTimeout(3000); // Extra time for all phase bars to render
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {}); // Extra time for all phase bars to render
     
     // Take a detailed screenshot
     await page.screenshot({ 

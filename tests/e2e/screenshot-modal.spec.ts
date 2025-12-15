@@ -14,7 +14,7 @@ test('Screenshot scenario comparison modal', async ({ authenticatedPage, testHel
   
   // Wait for modal
   await authenticatedPage.waitForSelector('.modal-content', { timeout: 5000 });
-  await authenticatedPage.waitForTimeout(1000);
+  await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   
   // Take screenshot
   await authenticatedPage.screenshot({ 

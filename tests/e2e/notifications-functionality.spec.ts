@@ -3,7 +3,7 @@ test.describe('Email Notifications Functionality', () => {
   test.describe('Email Configuration Status', () => {
     test('should display email configuration status', async ({ authenticatedPage, testHelpers }) => {
       // Wait for configuration check to complete
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check configuration status section exists
       await expect(authenticatedPage.locator('.config-status')).toBeVisible();
       await expect(authenticatedPage.locator('.status-indicator')).toBeVisible();
@@ -14,7 +14,7 @@ test.describe('Email Notifications Functionality', () => {
       expect(statusText).toMatch(/Configured|Not Configured/);
     });
     test('should show connection test results when configured', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // If email is configured, should show connection test
       const statusBadge = authenticatedPage.locator('.status-badge').first();
       const statusText = await statusBadge.textContent();
@@ -51,7 +51,7 @@ test.describe('Email Notifications Functionality', () => {
       await expect(authenticatedPage.locator('.success-message, .text-destructive, .save-message')).toBeVisible({ timeout: 5000 });
     });
     test('should disable send button when email service not configured', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const statusBadge = authenticatedPage.locator('.status-badge').first();
       const statusText = await statusBadge.textContent();
       if (statusText?.includes('Not Configured')) {
@@ -75,7 +75,7 @@ test.describe('Email Notifications Functionality', () => {
     });
     test('should load and display email templates', async ({ authenticatedPage, testHelpers }) => {
       // Wait for templates to load
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Check if templates are loaded (they should exist in a fresh system)
       const templates = authenticatedPage.locator('.template-item');
       const templateCount = await templates.count();
@@ -91,7 +91,7 @@ test.describe('Email Notifications Functionality', () => {
       }
     });
     test('should display different template types', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       const templates = authenticatedPage.locator('.template-item');
       const templateCount = await templates.count();
       if (templateCount > 0) {
@@ -142,7 +142,7 @@ test.describe('Email Notifications Functionality', () => {
       await authenticatedPage.reload();
       await authenticatedPage.click('button:has-text("Email Notifications")');
       // Wait for settings to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Setting should still be enabled
       const reloadedCheckbox = authenticatedPage.locator('input[type="checkbox"]:near(:text("Enable Email Notifications System-wide"))');
       await expect(reloadedCheckbox).toBeChecked();
@@ -159,7 +159,7 @@ test.describe('Email Notifications Functionality', () => {
       await testHelpers.navigateTo('/settings');
       await authenticatedPage.click('button:has-text("Email Notifications")');
       // Verify system is ready (configuration exists)
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       await expect(authenticatedPage.locator('.config-status')).toBeVisible();
     });
   });
@@ -180,19 +180,19 @@ test.describe('Email Notifications Functionality', () => {
       await authenticatedPage.fill('input[type="email"]', 'test@example.com');
       await authenticatedPage.click('button:has-text("Send Test Email")');
       // Should handle errors gracefully (either success or error message)
-      await authenticatedPage.waitForTimeout(5000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Should not crash or hang
       await expect(authenticatedPage.locator('button:has-text("Send Test Email")')).toBeVisible();
     });
     test('should handle template loading errors', async ({ authenticatedPage, testHelpers }) => {
       // Wait for templates to attempt loading
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Templates section should still be visible even if loading fails
       await expect(authenticatedPage.locator('.templates-list')).toBeVisible();
     });
     test('should handle configuration check timeouts', async ({ authenticatedPage, testHelpers }) => {
       // Wait for configuration check
-      await authenticatedPage.waitForTimeout(5000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Configuration section should still be visible
       await expect(authenticatedPage.locator('.config-status')).toBeVisible();
       await expect(authenticatedPage.locator('.status-indicator')).toBeVisible();
@@ -209,7 +209,7 @@ test.describe('Email Notifications Functionality', () => {
       await expect(authenticatedPage.locator('h3:has-text("Test Email")')).toBeVisible();
     });
     test('should provide helpful status messages', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Should show status message
       await expect(authenticatedPage.locator('.status-message')).toBeVisible();
       // Status message should be informative

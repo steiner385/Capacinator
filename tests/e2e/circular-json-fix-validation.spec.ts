@@ -40,7 +40,7 @@ test.describe('Circular JSON Structure Fix Validation', () => {
     // Submit the form
     await authenticatedPage.click('button[type="submit"], button:has-text("Create"), button:has-text("Save")');
     // Wait for the API call to complete
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify no circular JSON errors occurred
     expect(consoleErrors).toHaveLength(0);
     console.log('✅ No circular JSON structure errors detected in console');
@@ -95,7 +95,7 @@ test.describe('Circular JSON Structure Fix Validation', () => {
     }).not.toThrow();
     console.log('✅ Assignment creation with notification scheduler completed without circular reference errors');
     // Wait a moment for any async notification processing
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify no console errors occurred
     expect(consoleErrors).toHaveLength(0);
     // Clean up

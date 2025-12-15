@@ -11,7 +11,7 @@ test.describe('Utilization Modal Tests - Final Version', () => {
     await testHelpers.navigateTo('/reports');
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   });
 
   test('should successfully add project through modal', async ({ authenticatedPage }) => {
@@ -26,7 +26,7 @@ test.describe('Utilization Modal Tests - Final Version', () => {
     
     // Wait for modal to appear with longer timeout
     await authenticatedPage.waitForSelector('text="Add Projects:"', { timeout: 5000 });
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // The modal is visible, work with the entire page context
     // We know the modal is showing when "Add Projects:" is visible
@@ -48,7 +48,7 @@ test.describe('Utilization Modal Tests - Final Version', () => {
     
     // Click Assign
     await assignButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Modal should still be open, close it
     // The close button might be the X in top right
@@ -57,7 +57,7 @@ test.describe('Utilization Modal Tests - Final Version', () => {
       await modalCloseButton.click();
     }
     
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Verify modal is closed - the "Add Projects:" text should not be visible
     await expect(authenticatedPage.locator('text="Add Projects:"')).not.toBeVisible();
@@ -98,7 +98,7 @@ test.describe('Utilization Modal Tests - Final Version', () => {
     
     // Wait for modal to appear with longer timeout
     await authenticatedPage.waitForSelector('text="Add Projects:"', { timeout: 5000 });
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check for our unassigned test projects
     for (const project of testData.projects.unassigned) {
@@ -131,7 +131,7 @@ test.describe('Utilization Modal Tests - Final Version', () => {
     
     if (await reduceButton.isVisible()) {
       await reduceButton.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Wait for modal to appear - look for "Reduce" in the modal header
       await expect(authenticatedPage.locator('text="Reduce"')).toBeVisible();

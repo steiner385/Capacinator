@@ -58,7 +58,7 @@ test.describe('Error Handling and Edge Cases', () => {
           buffer: buffer
         });
         // Should show validation error
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const errorMessage = authenticatedPage.locator('text=/invalid|error|not supported|xlsx|excel/i');
         if (await errorMessage.count() > 0) {
           console.log('File validation error shown correctly');
@@ -77,7 +77,7 @@ test.describe('Error Handling and Edge Cases', () => {
     try {
       await authenticatedPage.goto('/non-existent-page-12345');
       // Wait a bit for any redirects
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       const currentUrl = authenticatedPage.url();
       // Either we got redirected or we're on a 404 page - both are acceptable
@@ -108,7 +108,7 @@ test.describe('Error Handling and Edge Cases', () => {
       if (await submitButton.isVisible()) {
         await submitButton.click();
         // Should show validation errors
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         const validationErrors = authenticatedPage.locator('.error-message, .field-error, [aria-invalid="true"]');
         const hasValidationErrors = await validationErrors.count() > 0;
         if (hasValidationErrors) {
@@ -152,7 +152,7 @@ test.describe('Error Handling and Edge Cases', () => {
       try {
         // Try to navigate
         await authenticatedPage.click('text=Projects');
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Check for offline indicator
         const offlineIndicator = authenticatedPage.locator('text=/offline|no connection|network error/i');
         if (await offlineIndicator.count() > 0) {

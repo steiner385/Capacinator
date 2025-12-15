@@ -50,7 +50,7 @@ test.describe('Project Roadmap Today Line', () => {
     await expect(todayButton).toBeVisible();
     await todayButton.click();
     // Wait for viewport to adjust
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     // Verify today line is still visible and positioned correctly
     const todayLine = page.locator('.today-line');
     await expect(todayLine).toBeVisible();
@@ -99,14 +99,14 @@ test.describe('Project Roadmap Today Line', () => {
     const leftNavButton = page.locator('.timeline-nav-side.left');
     if (await leftNavButton.isVisible()) {
       await leftNavButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
     }
     // Today line might not be visible if scrolled away
     const todayLineAfterScroll = await todayLine.isVisible();
     // Navigate back to today
     const todayButton = page.locator('button:has-text("Today")');
     await todayButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     // Today line should be visible again
     await expect(todayLine).toBeVisible();
     console.log('✅ Today line visibility managed correctly during navigation');

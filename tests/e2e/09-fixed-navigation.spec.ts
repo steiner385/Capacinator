@@ -55,7 +55,7 @@ test.describe('Fixed Navigation Tests', () => {
     // Try to navigate to a non-existent page
     await authenticatedPage.goto('/non-existent-page-123');
     // Wait a bit for redirect or error handling
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Should either show 404 or redirect to valid page
     const currentUrl = authenticatedPage.url();
     const is404 = await authenticatedPage.locator('text=/404|not found/i').count() > 0;

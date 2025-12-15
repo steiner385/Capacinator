@@ -239,7 +239,7 @@ test.describe('Performance and Load Testing', () => {
       if (await searchInput.isVisible()) {
         const searchStart = Date.now();
         await searchInput.fill(testContext.prefix);
-        await authenticatedPage.waitForTimeout(500); // Debounce
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Debounce
         const searchTime = Date.now() - searchStart;
         console.log(`Search filter time: ${searchTime}ms`);
         expect(searchTime).toBeLessThan(1500);

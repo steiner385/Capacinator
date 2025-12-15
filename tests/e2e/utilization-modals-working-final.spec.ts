@@ -11,7 +11,7 @@ test.describe('Utilization Modal Tests - Working Version', () => {
     await testHelpers.navigateTo('/reports');
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   });
 
   test('should successfully add project through modal', async ({ authenticatedPage }) => {
@@ -21,14 +21,14 @@ test.describe('Utilization Modal Tests - Working Version', () => {
     
     // Scroll and click
     await addButton.scrollIntoViewIfNeeded();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     await addButton.click();
     
     // Use multiple strategies to wait for modal
     await Promise.race([
       authenticatedPage.waitForSelector('text="Add Projects:"', { timeout: 5000 }),
       authenticatedPage.waitForSelector('text=/Add Projects/i', { timeout: 5000 }),
-      authenticatedPage.waitForTimeout(3000)
+      authenticatedPage.waitForLoadState('networkidle', { timeout: 5000 })
     ]);
     
     // Verify modal is showing
@@ -41,7 +41,7 @@ test.describe('Utilization Modal Tests - Working Version', () => {
     await assignButton.click();
     
     // Wait for assignment to process
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Close modal - look for X button
     const closeButton = authenticatedPage.locator('button[aria-label="Close"]')
@@ -65,7 +65,7 @@ test.describe('Utilization Modal Tests - Working Version', () => {
       await reduceButton.click();
       
       // Wait for reduce modal
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Look for checkboxes in the modal
       const checkboxes = authenticatedPage.locator('input[type="checkbox"]');
@@ -125,7 +125,7 @@ test.describe('Utilization Modal Tests - Working Version', () => {
     await firstButton.click();
     
     // Wait for any modal to appear
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Check if any modal content is visible
     const modalIndicators = [

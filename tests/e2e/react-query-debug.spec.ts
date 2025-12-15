@@ -27,9 +27,9 @@ test('Debug React Query behavior with console monitoring', async ({ authenticate
   console.log('🚀 Starting React Query debug test...');
   // Navigate to reports page
   await authenticatedPage.goto('https://localhost:3121/reports');
-  // Wait longer to observe behavior
-  console.log('⏳ Waiting 10 seconds to observe React Query behavior...');
-  await authenticatedPage.waitForTimeout(10000);
+  // Wait for page to fully load and observe React Query behavior
+  console.log('⏳ Waiting for network to settle and observe React Query behavior...');
+  await authenticatedPage.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
   // Check current state
   const currentState = await authenticatedPage.evaluate(() => {
     return {

@@ -14,7 +14,7 @@ test.describe('Utilization Report Modal Tests', () => {
     
     // Wait for the report to load
     await authenticatedPage.waitForSelector('h3:has-text("Team Utilization Details")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(1000); // Allow data to fully render
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Allow data to fully render
   });
 
   test('should display utilization table with seeded test data', async ({ authenticatedPage }) => {
@@ -88,7 +88,7 @@ test.describe('Utilization Report Modal Tests', () => {
       await reduceButton.click();
       
       // Wait for modal to appear
-      await authenticatedPage.waitForTimeout(1000); // Give modal time to animate in
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Give modal time to animate in
       
       // Look for the modal backdrop first
       const modalBackdrop = authenticatedPage.locator('.modal-backdrop');
@@ -143,7 +143,7 @@ test.describe('Utilization Report Modal Tests', () => {
       await addButton.click();
       
       // Wait for modal to appear
-      await authenticatedPage.waitForTimeout(1000); // Give modal time to animate in
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Give modal time to animate in
       
       // Look for the modal backdrop first
       const modalBackdrop = authenticatedPage.locator('.modal-backdrop');

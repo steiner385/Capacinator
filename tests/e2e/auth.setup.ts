@@ -23,7 +23,7 @@ setup('authenticate', async ({ page, context }) => {
     // Handle profile selection
     const selectTrigger = page.locator('#person-select');
     await selectTrigger.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Select first available option
     const firstOption = page.locator('[role="option"]').first();

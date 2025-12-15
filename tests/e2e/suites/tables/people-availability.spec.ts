@@ -83,7 +83,7 @@ test.describe('People Availability Table', () => {
         const availabilityCell = firstRow.locator('td:nth-child(5)');
         // Try clicking on availability cell
         await availabilityCell.click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Check if edit mode is activated
         const input = availabilityCell.locator('input, select');
         const editButton = availabilityCell.locator('button:has-text("Edit"), svg[class*="edit"]');
@@ -101,7 +101,7 @@ test.describe('People Availability Table', () => {
           }
           // Save changes (Enter or blur)
           await input.press('Enter');
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Verify no errors
           await testHelpers.verifyNoErrors();
         } else if (await editButton.isVisible()) {
@@ -138,7 +138,7 @@ test.describe('People Availability Table', () => {
           const firstOption = authenticatedPage.locator('[role="menuitem"]').first();
           await firstOption.click();
         }
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await testHelpers.waitForDataTable();
         const filteredRowCount = await testHelpers.getTableRowCount();
         expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);
@@ -153,7 +153,7 @@ test.describe('People Availability Table', () => {
       const availabilityHeader = authenticatedPage.locator('th:has-text("AVAILABILITY")');
       // Click to sort
       await availabilityHeader.click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Check for sort indicator
       const sortIcon = availabilityHeader.locator('svg, .sort-icon, [aria-label*="sort"]');
       if (await sortIcon.count() > 0) {
@@ -161,7 +161,7 @@ test.describe('People Availability Table', () => {
       }
       // Click again for reverse sort
       await availabilityHeader.click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify no errors
       await testHelpers.verifyNoErrors();
     });
@@ -220,7 +220,7 @@ test.describe('People Availability Table', () => {
         const availabilityCell = authenticatedPage.locator('tbody tr').first().locator('td:nth-child(5)');
         // Hover over availability
         await availabilityCell.hover();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Check for tooltip
         const tooltip = authenticatedPage.locator('[role="tooltip"], .tooltip, .popover');
         if (await tooltip.isVisible()) {
@@ -329,7 +329,7 @@ test.describe('People Availability Table', () => {
           const availabilityCell = authenticatedPage.locator('tbody tr').first().locator('td:nth-child(5)');
           await availabilityCell.click();
           // Check if live region updated
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           const liveText = await liveRegion.textContent();
           if (liveText) {
             expect(liveText).toMatch(/availability|updated|changed/i);

@@ -9,7 +9,7 @@ test.describe('Utilization Modal Simple Debug', () => {
     await testHelpers.navigateTo('/reports');
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Debug: Look for any buttons in the table
     console.log('Looking for buttons in the utilization table...');

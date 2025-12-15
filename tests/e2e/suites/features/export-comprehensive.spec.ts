@@ -103,7 +103,7 @@ test.describe('Comprehensive Export Tests', () => {
         await selectScenario(page, scenario);
         
         // Wait for data to refresh
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         // Export gaps report as CSV (most reliable format)
         const download = await setupDownloadHandler(page, context);
@@ -179,7 +179,7 @@ test.describe('Comprehensive Export Tests', () => {
         const download = setupDownloadHandler(page, context);
         await performExport(page, 'csv');
         downloads.push(download);
-        await page.waitForTimeout(100); // Small delay between requests
+        await page.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {}); // Small delay between requests
       }
       
       // All exports should succeed or fail gracefully
@@ -348,7 +348,7 @@ test.describe('Comprehensive Export Tests', () => {
     const button = page.locator(reportButtons[reportType]);
     if (await button.isVisible()) {
       await button.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   }
 
@@ -367,7 +367,7 @@ test.describe('Comprehensive Export Tests', () => {
   async function performExport(page, format: string) {
     const exportButton = await getExportButton(page);
     await exportButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     const formatButtons = {
       csv: 'button:has-text("CSV"), [role="menuitem"]:has-text("CSV")',
@@ -403,7 +403,7 @@ test.describe('Comprehensive Export Tests', () => {
       await endInput.fill(endDate);
     }
     
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   }
 
   async function checkForWarningMessage(page): Promise<boolean> {

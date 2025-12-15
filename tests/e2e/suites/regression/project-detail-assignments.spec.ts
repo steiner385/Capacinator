@@ -57,7 +57,7 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
     if (await assignmentsSection.isVisible()) {
       // Click to expand assignments section if it exists
       await assignmentsSection.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Should show "No assignments found" or similar message instead of crashing
       const noAssignmentsMessage = authenticatedPage.locator('text=/no assignments|no data|empty/i');
@@ -114,7 +114,7 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
     
     if (await assignmentsSection.isVisible()) {
       await assignmentsSection.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Should show assignments table with our test assignment
       const assignmentsTable = authenticatedPage.locator('table, [role="table"]');
@@ -131,7 +131,7 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
       pageErrors.push(error.message);
     });
 
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     expect(pageErrors).toHaveLength(0);
   });
 
@@ -142,10 +142,10 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
     // Navigate to project detail multiple times quickly to test for race conditions
     for (let i = 0; i < 3; i++) {
       await testHelpers.navigateTo(`/projects/${testProject.id}`);
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       await testHelpers.navigateTo('/projects');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     }
 
     // Final navigation to project detail
@@ -161,7 +161,7 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
     if (await assignmentsSection.isVisible()) {
       await assignmentsSection.click();
       // Should not crash
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
 
@@ -184,7 +184,7 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
 
     // Refresh the page to trigger the API error
     await authenticatedPage.reload();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Page should still load without crashing
     const pageTitle = authenticatedPage.locator('h1, [data-testid="project-title"]').first();
@@ -194,7 +194,7 @@ test.describe('ProjectDetail Assignments Regression Tests', () => {
     const assignmentsSection = authenticatedPage.locator('text=/assignments/i').first();
     if (await assignmentsSection.isVisible()) {
       await assignmentsSection.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Should show error message or empty state, not crash
       const errorMessage = authenticatedPage.locator('text=/error|failed|unable/i');

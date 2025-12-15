@@ -23,7 +23,7 @@ test.describe('Capacity Report Accuracy', () => {
     const capacityTab = authenticatedPage.locator('button:has-text("Capacity Report"), button:has-text("Capacity")').first();
     if (await capacityTab.isVisible()) {
       await capacityTab.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
   test.afterEach(async ({ testDataHelpers }) => {
@@ -281,7 +281,7 @@ test.describe('Capacity Report Accuracy', () => {
       if (await applyButton.isVisible()) {
         await applyButton.click();
         await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Get updated capacity
         const updatedCapacity = await capacityCard.locator('.metric').textContent();
         const updatedValue = parseInt(updatedCapacity?.match(/\d+/)?.[0] || '0');

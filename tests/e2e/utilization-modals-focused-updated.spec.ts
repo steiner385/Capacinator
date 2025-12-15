@@ -20,7 +20,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     // Wait for utilization overview to appear
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
     await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
-    await authenticatedPage.waitForTimeout(3000); // Allow data to fully load
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {}); // Allow data to fully load
   });
 
   test('should open and validate Add Projects modal functionality', async ({ authenticatedPage, testHelpers }) => {
@@ -39,7 +39,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     
     // Click the button to open modal
     await addButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Look for modal - wait for it to appear as it may take time
     let modal = null;
@@ -118,7 +118,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     
     // Click the button to open modal
     await reduceButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Look for modal
     const modalSelectors = [
@@ -184,7 +184,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     await expect(modal).not.toBeVisible({ timeout: 10000 });
     
     // Verify utilization updated (was 60%, now should be 90%)
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const utilizationCell = underUtilizedRow.locator('td').filter({ hasText: /\d+%/ });
     await expect(utilizationCell).toContainText('90%');
   });
@@ -216,7 +216,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     await expect(modal).not.toBeVisible({ timeout: 10000 });
     
     // Verify utilization updated (was 110%, now should be 60%)
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     await expect(utilizationCell).toContainText('60%');
   });
 
@@ -302,7 +302,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     await submitButton.click();
     
     await expect(modal).not.toBeVisible();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Refresh page
     await authenticatedPage.reload();

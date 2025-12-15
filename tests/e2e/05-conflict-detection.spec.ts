@@ -7,7 +7,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       // Check if form dialog opened
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const formDialog = authenticatedPage.locator('[role="dialog"], .modal, .form-container');
       if (await formDialog.count() > 0) {
         console.log('✅ Time overlap conflict detection UI is accessible');
@@ -30,7 +30,7 @@ test.describe('Assignment Conflict Detection', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       // Check if form dialog opened
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const formDialog = authenticatedPage.locator('[role="dialog"], .modal, .form-container');
       if (await formDialog.count() > 0) {
         console.log('✅ Over-allocation conflict detection UI is accessible');
@@ -58,7 +58,7 @@ test.describe('Assignment Conflict Detection', () => {
       if (await firstConflict.isVisible()) {
         await firstConflict.click();
         // Check for suggestions popup
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const suggestionsModal = authenticatedPage.locator('.suggestions-modal, [role="dialog"]:has-text("suggest")');
         if (await suggestionsModal.count() > 0) {
           console.log('✅ Conflict suggestions modal displayed');

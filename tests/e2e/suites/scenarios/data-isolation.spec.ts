@@ -32,7 +32,7 @@ test.describe('Scenario Data Isolation', () => {
     // Switch to the new scenario
     await page.click('.scenario-selector');
     await page.click('text="Isolation Test 1"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Create an assignment in scenario 1
     await page.goto('/assignments');
@@ -60,7 +60,7 @@ test.describe('Scenario Data Isolation', () => {
     // Switch to scenario 2
     await page.click('.scenario-selector');
     await page.click('text="Isolation Test 2"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check assignments in scenario 2
     await page.goto('/assignments');
@@ -83,7 +83,7 @@ test.describe('Scenario Data Isolation', () => {
     // Switch to the new scenario
     await page.click('.scenario-selector');
     await page.click('text="Report Isolation Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Navigate to demand report
     await page.goto('/reports?tab=demand');
@@ -95,7 +95,7 @@ test.describe('Scenario Data Isolation', () => {
     // Switch back to baseline
     await page.click('.scenario-selector');
     await page.click('text="Baseline"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Refresh report
     await page.goto('/reports?tab=demand');
@@ -118,7 +118,7 @@ test.describe('Scenario Data Isolation', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Assignment Isolation Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Add a specific assignment
     await page.goto('/assignments');
@@ -140,7 +140,7 @@ test.describe('Scenario Data Isolation', () => {
     // Switch to baseline
     await page.click('.scenario-selector');
     await page.click('text="Baseline"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     await page.goto('/assignments');
     await page.waitForLoadState('networkidle');
@@ -174,7 +174,7 @@ test.describe('Scenario Data Isolation', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Aggregation Test Scenario"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check utilization in new scenario
     await page.goto('/reports?tab=utilization');
@@ -247,7 +247,7 @@ test.describe('Scenario Data Isolation', () => {
     // Add assignment to scenario A
     await page.click('.scenario-selector');
     await page.click('text="Leakage Test A"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     await page.goto('/assignments');
     await page.click('button:has-text("New Assignment")');
@@ -264,7 +264,7 @@ test.describe('Scenario Data Isolation', () => {
     // Switch to scenario B and verify no leakage
     await page.click('.scenario-selector');
     await page.click('text="Leakage Test B"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     await page.goto('/assignments');
     await page.waitForLoadState('networkidle');

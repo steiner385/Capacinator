@@ -69,7 +69,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
       await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
     }
     // Wait for utilization data to load
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     // Look for our test people
     console.log('🔍 Looking for test people in utilization report...');
     // Find all rows in utilization table
@@ -240,7 +240,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
       const utilizationTabAfter = authenticatedPage.locator('button').filter({ hasText: 'Utilization Report' });
       if (await utilizationTabAfter.isVisible()) {
         await utilizationTabAfter.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       }
       // Re-locate the person row and check new utilization
       const updatedRow = authenticatedPage.locator('table tbody tr').filter({
@@ -339,7 +339,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
       console.log(`People page utilization: ${peopleUtilization}`);
       // Click on person to see assignments
       await peopleRow.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Count assignments for this person
       const assignmentsList = authenticatedPage.locator('.assignments-list, .assignment-item, table tbody tr');
       const assignmentCount = await assignmentsList.count();

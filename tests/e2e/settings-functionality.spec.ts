@@ -112,7 +112,7 @@ test.describe('Settings Functionality', () => {
     test('should display user roles and permissions', async ({ authenticatedPage, testHelpers }) => {
       await authenticatedPage.click('button:has-text("User Permissions")');
       // Wait for data to load
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for roles grid (may be empty in test environment)
       await expect(authenticatedPage.locator('.roles-grid')).toBeVisible();
       // Check for permissions grid
@@ -132,7 +132,7 @@ test.describe('Settings Functionality', () => {
     test('should show email configuration status', async ({ authenticatedPage, testHelpers }) => {
       await authenticatedPage.click('button:has-text("Email Notifications")');
       // Wait for configuration check
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for configuration status
       await expect(authenticatedPage.locator('.config-status')).toBeVisible();
       await expect(authenticatedPage.locator('.status-badge')).toBeVisible();
@@ -159,7 +159,7 @@ test.describe('Settings Functionality', () => {
     test('should display notification templates', async ({ authenticatedPage, testHelpers }) => {
       await authenticatedPage.click('button:has-text("Email Notifications")');
       // Wait for templates to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for templates list
       await expect(authenticatedPage.locator('.templates-list')).toBeVisible();
       // Templates may be empty in test environment, but container should exist
@@ -208,7 +208,7 @@ test.describe('Settings Functionality', () => {
       // Save and expect no errors for valid data
       await authenticatedPage.click('button:has-text("Save Settings")');
       // Should not show error messages for valid data
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     });
     test('should show loading states during save operations', async ({ authenticatedPage, testHelpers }) => {
       // Change a setting

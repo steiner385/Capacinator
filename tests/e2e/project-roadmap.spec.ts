@@ -113,7 +113,7 @@ test.describe('Project Roadmap', () => {
         // Hover over phase to reveal resize handles
         await firstPhase.hover();
         // Wait for hover effects
-        await authenticatedPage.waitForTimeout(300);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
         // Check that phase gets hover styling (should have elevated appearance)
         await expect(firstPhase).toHaveClass(/phase-bar/);
         console.log('✅ Phase hover interactions work');
@@ -134,7 +134,7 @@ test.describe('Project Roadmap', () => {
           const searchTerm = firstProjectName.split(' ')[0];
           await authenticatedPage.locator('.search-box input').fill(searchTerm);
           // Wait for search to be applied (debounced)
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Verify filtered results
           const filteredRows = authenticatedPage.locator('.project-row');
           const filteredCount = await filteredRows.count();
@@ -154,13 +154,13 @@ test.describe('Project Roadmap', () => {
       const statusFilter = authenticatedPage.locator('select').first();
       // Test "Active" filter
       await statusFilter.selectOption('active');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify URL or query state changed (projects may or may not be filtered depending on data)
       // The important thing is that the filter doesn't break the page
       await expect(authenticatedPage.locator('.timeline-container')).toBeVisible();
       // Test "All Statuses" (reset)
       await statusFilter.selectOption('');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       await expect(authenticatedPage.locator('.timeline-container')).toBeVisible();
       console.log('✅ Status filtering works without errors');
     });
@@ -171,10 +171,10 @@ test.describe('Project Roadmap', () => {
       const initialCount = await authenticatedPage.locator('.project-row').count();
       // Enter search term
       await searchInput.fill('nonexistentproject');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Clear search
       await searchInput.clear();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Should show all projects again
       const finalCount = await authenticatedPage.locator('.project-row').count();
       expect(finalCount).toBe(initialCount);
@@ -189,13 +189,13 @@ test.describe('Project Roadmap', () => {
       const initialZoomText = await authenticatedPage.locator('.zoom-level').textContent();
       // Zoom in
       await authenticatedPage.locator('.zoom-controls button').last().click(); // Zoom in button
-      await authenticatedPage.waitForTimeout(200);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       // Check zoom level changed
       const zoomedInText = await authenticatedPage.locator('.zoom-level').textContent();
       expect(zoomedInText).not.toBe(initialZoomText);
       // Zoom out
       await authenticatedPage.locator('.zoom-controls button').first().click(); // Zoom out button
-      await authenticatedPage.waitForTimeout(200);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       // Should be back to original or different level
       const zoomedOutText = await authenticatedPage.locator('.zoom-level').textContent();
       expect(zoomedOutText).not.toBe(zoomedInText);
@@ -210,7 +210,7 @@ test.describe('Project Roadmap', () => {
       // Zoom in significantly
       for (let i = 0; i < 3; i++) {
         await authenticatedPage.locator('.zoom-controls button').last().click();
-        await authenticatedPage.waitForTimeout(100);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       }
       // Timeline should be more detailed now (visual verification)
       await expect(timelineHeader).toBeVisible();
@@ -465,13 +465,13 @@ test.describe('Project Roadmap', () => {
       const initialText = await expandCollapseButton.textContent();
       // Click the button
       await expandCollapseButton.click();
-      await authenticatedPage.waitForTimeout(300); // Wait for animation
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {}); // Wait for animation
       // Text should change
       const newText = await expandCollapseButton.textContent();
       expect(newText).not.toBe(initialText);
       // Click again to toggle back
       await expandCollapseButton.click();
-      await authenticatedPage.waitForTimeout(300);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       const finalText = await expandCollapseButton.textContent();
       expect(finalText).toBe(initialText);
       console.log(`✅ Expand/collapse toggle works: ${initialText} → ${newText} → ${finalText}`);
@@ -482,7 +482,7 @@ test.describe('Project Roadmap', () => {
       const collapseButton = authenticatedPage.locator('button:has-text("Collapse All")');
       if (await collapseButton.count() > 0) {
         await collapseButton.click();
-        await authenticatedPage.waitForTimeout(300);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       }
       // Verify layout is still intact
       await expect(authenticatedPage.locator('.timeline-header')).toBeVisible();
@@ -504,7 +504,7 @@ test.describe('Project Roadmap', () => {
       const initialTimelineBox = await projectTimeline.boundingBox();
       // Zoom in
       await authenticatedPage.locator('.zoom-controls button').last().click();
-      await authenticatedPage.waitForTimeout(200);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       // Check alignment is maintained
       const zoomedHeaderBox = await timelineHeader.boundingBox();
       const zoomedTimelineBox = await projectTimeline.boundingBox();

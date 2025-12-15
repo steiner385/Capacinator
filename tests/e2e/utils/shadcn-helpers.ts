@@ -79,12 +79,22 @@ export function mapToShadcnSelector(oldSelector: string): string {
  * Helper to wait for shadcn dialog to be visible
  */
 export async function waitForDialog(page: any, timeout = 5000) {
-  await page.waitForSelector(SHADCN_SELECTORS.dialog, { 
-    state: 'visible', 
-    timeout 
+  await page.waitForSelector(SHADCN_SELECTORS.dialog, {
+    state: 'visible',
+    timeout
   });
-  // Wait a bit for animations to complete
-  await page.waitForTimeout(300);
+  // Wait for animations to complete by checking element stability
+  const dialog = page.locator(SHADCN_SELECTORS.dialog);
+  await dialog.evaluate((el: Element) => {
+    return new Promise<void>((resolve) => {
+      const animations = el.getAnimations();
+      if (animations.length === 0) {
+        resolve();
+        return;
+      }
+      Promise.all(animations.map(a => a.finished)).then(() => resolve());
+    });
+  }).catch(() => {});
 }
 
 /**

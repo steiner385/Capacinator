@@ -41,7 +41,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       if (retries === 0) {
         throw new Error('Server failed to become ready for audit tests');
       }
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
 
@@ -80,7 +80,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       projectId = project.id;
 
       // Wait a bit for audit log to be written
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Check audit log for CREATE entry
       const auditResponse = await page.request.get(`${apiURL}/api/audit/projects/${projectId}`);
@@ -127,7 +127,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(response.ok()).toBeTruthy();
 
       // Wait for audit log to be written
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
       // Check audit log for UPDATE entry
       const auditResponse = await page.request.get(`${apiURL}/api/audit/projects/${projectId}`);
@@ -166,7 +166,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(response.ok()).toBeTruthy();
 
       // Wait for audit log to be written
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
       // Check audit log for DELETE entry
       const auditResponse = await page.request.get(`${apiURL}/api/audit/projects/${projectId}`);
@@ -288,7 +288,7 @@ test.describe('Comprehensive Audit Functionality', () => {
         const personId = person.id || person.data?.id;
 
         // Wait for audit log to be written
-        await page.waitForTimeout(500);
+        await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         
         // Check audit log
         const auditResponse = await page.request.get(`${apiURL}/api/audit/people/${personId}`);
@@ -365,7 +365,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(updateResponse.ok()).toBeTruthy();
       
       // Wait for audit log
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Undo the last change
       const undoResponse = await page.request.post(`${apiURL}/api/audit/undo/projects/${projectId}`, {
@@ -407,7 +407,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(deleteResponse.ok()).toBeTruthy();
       
       // Wait for audit log
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Undo the deletion
       const undoResponse = await page.request.post(`${apiURL}/api/audit/undo/projects/${projectId}`, {
@@ -453,7 +453,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(updateResponse.ok()).toBeTruthy();
       
       // Wait for audit log
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Undo the update
       const undoResponse = await page.request.post(`${apiURL}/api/audit/undo/projects/${projectId}`, {
@@ -470,7 +470,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(afterUndo.data.priority).toBe(2);
       
       // Get the audit log to find the undo entry
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       const auditResponse = await page.request.get(`${apiURL}/api/audit/projects/${projectId}`);
       const auditData = await auditResponse.json();
       const auditLog = auditData.data || auditData;
@@ -588,11 +588,11 @@ test.describe('Comprehensive Audit Functionality', () => {
         expect(updateResponse.ok()).toBeTruthy();
         
         // Small delay to ensure audit entries are created in order
-        await page.waitForTimeout(100);
+        await page.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       }
 
       // Wait for all audit logs to be written
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Check audit log
       const auditResponse = await page.request.get(`${apiURL}/api/audit/projects/${historyProjectId}`);
@@ -662,7 +662,7 @@ test.describe('Comprehensive Audit Functionality', () => {
       expect(createdIds.length).toBeLessThanOrEqual(bulkAssignments.length);
       
       // Wait for audit logs
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Check audit entries for first assignment
       if (createdIds.length > 0) {

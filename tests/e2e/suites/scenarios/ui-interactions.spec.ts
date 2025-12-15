@@ -143,12 +143,12 @@ test.describe('Scenario UI Interactions', () => {
           const archivedCard = authenticatedPage.locator(`.scenario-card:has-text("${archivedScenario.name}")`);
           // Show archived
           await archivedToggle.check();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Verify archived scenario appears
           await expect(archivedCard).toBeVisible();
           // Hide archived
           await archivedToggle.uncheck();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Verify archived scenario hidden
           await expect(archivedCard).not.toBeVisible();
         }
@@ -179,7 +179,7 @@ test.describe('Scenario UI Interactions', () => {
                              await section.evaluate((el: HTMLDetailsElement) => el.open);
             // Toggle section
             await toggle.click();
-            await authenticatedPage.waitForTimeout(300);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
             // Verify state changed
             const newExpanded = await section.getAttribute('data-state') === 'open' ||
                                await toggle.getAttribute('aria-expanded') === 'true' ||
@@ -197,7 +197,7 @@ test.describe('Scenario UI Interactions', () => {
     }) => {
       // Ensure card view is active
       await authenticatedPage.getByRole('button', { name: 'Cards' }).click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify card elements for first test scenario
       const firstScenario = testScenarios[0];
       const card = await testDataHelpers.findByTestData(
@@ -216,7 +216,7 @@ test.describe('Scenario UI Interactions', () => {
     }) => {
       // Switch to list view
       await authenticatedPage.getByRole('button', { name: 'List' }).click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify table structure
       const table = authenticatedPage.locator('table');
       await expect(table).toBeVisible();
@@ -240,7 +240,7 @@ test.describe('Scenario UI Interactions', () => {
     }) => {
       // Switch to graphical view
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Verify graph container
       const graphContainer = authenticatedPage.locator('.scenario-graph, .graph-container, svg, canvas');
       await expect(graphContainer).toBeVisible();
@@ -272,10 +272,10 @@ test.describe('Scenario UI Interactions', () => {
       if (await elementWithTooltip.count() > 0) {
         // Clear any existing tooltips
         await authenticatedPage.mouse.move(0, 0);
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Hover to show tooltip
         await elementWithTooltip.hover();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Verify tooltip appears
         const tooltip = authenticatedPage.locator('.tooltip, [role="tooltip"], .tippy-content');
         await expect(tooltip).toBeVisible();
@@ -289,7 +289,7 @@ test.describe('Scenario UI Interactions', () => {
       const planningButton = authenticatedPage.locator('button:has-text("Planning"), a:has-text("Planning")');
       if (await planningButton.count() > 0) {
         await planningButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Find draggable scenario elements
         const draggableScenarios = authenticatedPage.locator('[draggable="true"]');
         const dropZones = authenticatedPage.locator('.drop-zone, [data-droppable="true"]');
@@ -300,7 +300,7 @@ test.describe('Scenario UI Interactions', () => {
           const initialParent = await firstDraggable.locator('..').getAttribute('class');
           // Perform drag and drop
           await firstDraggable.dragTo(targetDropZone);
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Verify element moved
           const newParent = await firstDraggable.locator('..').getAttribute('class');
           expect(newParent).not.toBe(initialParent);

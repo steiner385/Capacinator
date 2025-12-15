@@ -16,7 +16,7 @@ test.describe('Person Details Page', () => {
     const firstPersonName = await personNameElement.textContent();
     await firstPerson.click();
     // Wait for navigation to person details
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Check if we navigated to person details
     const urlPattern = /\/people\/.+/;
     if (authenticatedPage.url().match(urlPattern)) {
@@ -38,14 +38,14 @@ test.describe('Person Details Page', () => {
       return;
     }
     await firstRow.click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Check if we're on a person details page
     if (!authenticatedPage.url().match(/\/people\/.+/)) {
       // Try alternative navigation
       const viewButton = firstRow.locator('button:has-text("View"), a:has-text("View")');
       if (await viewButton.count() > 0) {
         await viewButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       } else {
         console.log('⚠️ Cannot navigate to person details page');
         return;
@@ -82,7 +82,7 @@ test.describe('Person Details Page', () => {
       return;
     }
     await firstRow.click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // If not on details page, skip test
     if (!authenticatedPage.url().match(/\/people\/.+/)) {
       console.log('⚠️ Person details page not accessible');
@@ -108,7 +108,7 @@ test.describe('Person Details Page', () => {
       return;
     }
     await firstRow.click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // If on details page, try to navigate back
     if (authenticatedPage.url().match(/\/people\/.+/)) {
       // Look for back button or breadcrumb
@@ -131,7 +131,7 @@ test.describe('Person Details Page', () => {
   test('handles non-existent person gracefully', async ({ authenticatedPage, testHelpers }) => {
     // Try to navigate to a non-existent person
     await authenticatedPage.goto('/people/non-existent-id-12345');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Should either show error or redirect
     const hasError = await authenticatedPage.locator('text=/not found|error|404/i').count() > 0;
     const redirectedToList = authenticatedPage.url().match(/\/people\/?$/);

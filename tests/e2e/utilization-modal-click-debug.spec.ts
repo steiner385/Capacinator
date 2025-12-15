@@ -9,7 +9,7 @@ test.describe('Modal Click Debug', () => {
     await testHelpers.navigateTo('/reports');
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Find the first Add button
     console.log('Looking for Add buttons...');
@@ -36,7 +36,7 @@ test.describe('Modal Click Debug', () => {
     console.log('Strategy 1: Regular click');
     try {
       await firstButton.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Check if modal appeared
       const modalVisible = await authenticatedPage.locator('text="Add Projects:"').isVisible();
@@ -45,7 +45,7 @@ test.describe('Modal Click Debug', () => {
       if (!modalVisible) {
         console.log('Strategy 2: Force click');
         await firstButton.click({ force: true });
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         const modalVisible2 = await authenticatedPage.locator('text="Add Projects:"').isVisible();
         console.log(`Modal visible after force click: ${modalVisible2}`);

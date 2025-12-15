@@ -17,7 +17,7 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     // Search for a common term like "Customer"
     await searchInput.fill('Customer');
     // Wait a bit for search to process
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const filteredCount = await authenticatedPage.locator('.project-row').count();
     // Verify that search results are shown (could be 0 if no matches)
     expect(filteredCount).toBeGreaterThanOrEqual(0);
@@ -38,7 +38,7 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     // Type rapidly to test debouncing
     await searchInput.type('Customer Portal', { delay: 100 }); // Fast typing
     // Wait for debounce period
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     console.log('Total search requests made:', searchRequests.length);
     console.log('Requests:', searchRequests);
     // Should have made fewer requests than characters typed due to debouncing
@@ -56,10 +56,10 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     const searchInput = authenticatedPage.locator('input[placeholder="Search projects..."]');
     // Search for something specific
     await searchInput.fill('NonExistentProject');
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Clear the search
     await searchInput.clear();
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Should show all projects again
     const finalCount = await authenticatedPage.locator('.project-row').count();
     expect(finalCount).toEqual(initialCount);
@@ -70,12 +70,12 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     const searchInput = authenticatedPage.locator('input[placeholder="Search projects..."]');
     // Test with lowercase
     await searchInput.fill('mobile');
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const lowercaseCount = await authenticatedPage.locator('.project-row').count();
     // Clear and test with uppercase
     await searchInput.clear();
     await searchInput.fill('MOBILE');
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const uppercaseCount = await authenticatedPage.locator('.project-row').count();
     // Should return the same results
     expect(lowercaseCount).toEqual(uppercaseCount);
@@ -89,7 +89,7 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     for (const term of specialTerms) {
       await searchInput.clear();
       await searchInput.fill(term);
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Should not crash
       const projectCount = await authenticatedPage.locator('.project-row').count();
       expect(projectCount).toBeGreaterThanOrEqual(0);
@@ -100,12 +100,12 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     await authenticatedPage.waitForSelector('.project-row', { timeout: 10000 });
     const searchInput = authenticatedPage.locator('input[placeholder="Search projects..."]');
     await searchInput.fill('Customer');
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Try to click the "Today" button if it exists
     const todayBtn = authenticatedPage.locator('button').filter({ hasText: 'Today' }).first();
     if (await todayBtn.isVisible()) {
       await todayBtn.click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     }
     // Search should still be active
     await expect(searchInput).toHaveValue('Customer');
@@ -117,7 +117,7 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
     const statusSelect = authenticatedPage.locator('select').first();
     // Apply search filter
     await searchInput.fill('Platform');
-    await authenticatedPage.waitForTimeout(1500);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     const searchOnlyCount = await authenticatedPage.locator('.project-row').count();
     // Add status filter if available
     if (await statusSelect.isVisible()) {
@@ -125,7 +125,7 @@ test.describe('Project Roadmap Search Functionality - Using Existing Data', () =
       if (options.length > 1) {
         // Select a status other than "All Statuses"
         await statusSelect.selectOption({ index: 1 });
-        await authenticatedPage.waitForTimeout(1500);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const combinedFilterCount = await authenticatedPage.locator('.project-row').count();
         // Combined filter should show same or fewer results
         expect(combinedFilterCount).toBeLessThanOrEqual(searchOnlyCount);

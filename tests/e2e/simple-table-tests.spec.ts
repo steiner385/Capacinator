@@ -180,7 +180,7 @@ test.describe('Simple Table Tests', () => {
       const firstRow = rows.first();
       await firstRow.click();
       // Check if any action happened (modal opened, navigation, etc.)
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check if we navigated to a detail page
       const urlChanged = !authenticatedPage.url().endsWith('/projects');
       // Check if a modal opened

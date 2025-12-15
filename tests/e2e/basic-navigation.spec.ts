@@ -23,7 +23,7 @@ async function checkPageLoad(page: any, url: string, expectedTitle: string) {
       return !spinner || spinner.style.display === 'none' || !spinner.offsetParent;
     }, { timeout: 30000 });
     // Give a moment for content to render after loading
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   }
   // Check if we got an error
   const errorMessage = authenticatedPage.locator('.text-destructive');

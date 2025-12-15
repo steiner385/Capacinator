@@ -8,7 +8,7 @@ test.describe('Test Utilization Data Verification', () => {
     await testHelpers.setupPage();
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Look for any E2E test users (both old and new naming conventions)
     const e2eUsers = [

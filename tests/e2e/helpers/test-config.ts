@@ -64,8 +64,8 @@ export async function waitForPageReady(page: any) {
     // No loading indicators or already hidden
   }
   
-  // Give React time to render
-  await page.waitForTimeout(testConfig.testData.animationDelay);
+  // Wait for React to render by checking for any content
+  await page.waitForLoadState('domcontentloaded', { timeout: testConfig.testData.animationDelay * 10 }).catch(() => {});
 }
 
 /**

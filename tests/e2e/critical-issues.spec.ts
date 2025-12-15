@@ -12,7 +12,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
       const viewButton = tableRows.first().getByRole('button', { name: /view details|view|eye/i });
       if (await viewButton.isVisible()) {
         await viewButton.click();
-        await authenticatedPage.waitForTimeout(testConfig.testData.animationDelay);
+        await authenticatedPage.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
         // Should navigate to project detail page
         const url = authenticatedPage.url();
         if (url.match(/\/projects\/[^\/]+$/)) {
@@ -40,7 +40,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     if (await addProjectButton.isVisible()) {
       const currentUrl = authenticatedPage.url();
       await addProjectButton.click();
-      await authenticatedPage.waitForTimeout(testConfig.testData.animationDelay);
+      await authenticatedPage.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
       const newUrl = authenticatedPage.url();
       // Check if navigation happened or modal opened
       const urlChanged = newUrl !== currentUrl;
@@ -59,7 +59,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
       const editButton = peopleRows.first().locator('button:has-text("Edit")');
       if (await editButton.isVisible()) {
         await editButton.click();
-        await authenticatedPage.waitForTimeout(testConfig.testData.animationDelay);
+        await authenticatedPage.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
         // Check for navigation, modal, or error
         const hasModal = await authenticatedPage.locator(testConfig.selectors.modalDialog).isVisible();
         const urlChanged = authenticatedPage.url().includes('/edit');
@@ -85,7 +85,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
       if (await deleteButton.isVisible()) {
         const initialRowCount = await tableRows.count();
         await deleteButton.click();
-        await authenticatedPage.waitForTimeout(testConfig.testData.animationDelay);
+        await authenticatedPage.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
         // Check if delete confirmation modal appears
         const hasModal = await authenticatedPage.locator(testConfig.selectors.modalDialog).isVisible();
         if (hasModal) {
@@ -123,7 +123,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
       const deleteButton = peopleRows.first().locator('button[title*="Delete"], button:has([data-testid="trash"])');
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await authenticatedPage.waitForTimeout(testConfig.testData.animationDelay);
+        await authenticatedPage.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
         // Should log TODO message or show modal
         const hasModal = await authenticatedPage.locator(testConfig.selectors.modalDialog).isVisible();
         const hasTodoMessage = consoleMessages.some(msg => 
@@ -176,7 +176,7 @@ test.describe('Critical Issues and Missing Functionality', () => {
     for (const pagePath of pages) {
       await authenticatedPage.goto(pagePath);
       await waitForPageReady(page);
-      await authenticatedPage.waitForTimeout(1000); // Wait for API calls
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for API calls
     }
     // Check if any API errors occurred
     if (networkErrors.length > 0) {

@@ -17,7 +17,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
     await testHelpers.setupPage();
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   });
 
   test.describe('Add Projects Modal Functionality', () => {
@@ -61,7 +61,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       const closeButton = modal.locator('button:has(svg), button:has-text("×")');
       await expect(closeButton).toBeVisible();
       // Wait for project recommendations to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Verify recommendations section exists
       const recommendationsSection = modal.locator('div:has-text("recommended projects"), div:has-text("No suitable projects")');
       await expect(recommendationsSection).toBeVisible();
@@ -123,7 +123,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       // Wait for modal and projects to load
       const modal = authenticatedPage.locator('div:has(h2:has-text("➕ Add Projects:"))');
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Find assignable projects
       const projectCards = modal.locator('div:has(h4)').filter({ hasText: 'Assign' });
       const projectCount = await projectCards.count();
@@ -168,7 +168,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       // Verify modal closes
       await expect(modal).not.toBeVisible({ timeout: 10000 });
       // Wait for data refresh
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Verify utilization has increased (find the same person)
       const updatedRows = authenticatedPage.locator('table:has(th:has-text("Team Member")) tbody tr');
       const updatedRowCount = await updatedRows.count();
@@ -200,7 +200,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       await addButton.click();
       const modal = authenticatedPage.locator('div:has(h2:has-text("➕ Add Projects:"))');
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Test error handling with API failure simulation
       await authenticatedPage.route('**/api/assignments', route => {
         if (route.request().method() === 'POST') {
@@ -228,7 +228,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
         // Try to assign - should fail gracefully
         await projectCards.first().locator('button:has-text("Assign")').click();
         // Wait for error handling
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Modal should still be visible after error
         await expect(modal).toBeVisible();
       }
@@ -241,7 +241,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       await addButton.click();
       const modal = authenticatedPage.locator('div:has(h2:has-text("➕ Add Projects:"))');
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const projectCards = modal.locator('div:has(h4)').filter({ hasText: 'h/week' });
       const projectCount = await projectCards.count();
       if (projectCount > 0) {
@@ -303,7 +303,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       // Check modal structure
       await expect(modal.locator('h2')).toContainText(`🔻 Reduce Load: ${personName}`);
       // Wait for assignments to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Verify assignments section
       const assignmentCards = modal.locator('div:has(h4)').filter({ hasText: 'Remove' });
       const assignmentCount = await assignmentCards.count();
@@ -363,7 +363,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       // Wait for modal and assignments to load
       const modal = authenticatedPage.locator('div:has(h2:has-text("🔻 Reduce Load:"))');
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Find removable assignments
       const assignmentCards = modal.locator('div:has(h4)').filter({ hasText: 'Remove' });
       const assignmentCount = await assignmentCards.count();
@@ -405,7 +405,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       // Verify modal closes
       await expect(modal).not.toBeVisible({ timeout: 10000 });
       // Wait for data refresh
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Verify utilization has decreased (find the same person)
       const updatedRows = authenticatedPage.locator('table:has(th:has-text("Team Member")) tbody tr');
       const updatedRowCount = await updatedRows.count();
@@ -432,7 +432,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       await reduceButton.click();
       const modal = authenticatedPage.locator('div:has(h2:has-text("🔻 Reduce Load:"))');
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const assignmentCards = modal.locator('div:has(h4)').filter({ hasText: 'h/week' });
       const assignmentCount = await assignmentCards.count();
       if (assignmentCount > 0) {
@@ -494,7 +494,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       authenticatedPage.on('console', msg => {
         if (msg.type() === 'error') errors.push(msg.text());
       });
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       expect(errors.length).toBe(0);
       console.log('✅ No errors during rapid modal interactions');
     });
@@ -520,7 +520,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
       await testHelpers.handleProfileSelection();
       await authenticatedPage.click('button:has-text("Utilization Report")');
       await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")');
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Verify data persistence
       const refreshedRows = authenticatedPage.locator('table:has(th:has-text("Team Member")) tbody tr');
       const refreshedCount = await refreshedRows.count();
@@ -546,7 +546,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
         await addButton.click();
         const modal = authenticatedPage.locator('div:has(h2:has-text("➕ Add Projects:"))');
         await expect(modal).toBeVisible();
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const projectCards = modal.locator('div:has(h4)').filter({ hasText: 'Assign' });
         if (await projectCards.count() > 0) {
           // Handle potential error dialogs
@@ -556,7 +556,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
           });
           await projectCards.first().locator('button:has-text("Assign")').click();
           // Wait for error handling
-          await authenticatedPage.waitForTimeout(2000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Modal should still be visible after network error
           await expect(modal).toBeVisible();
         }

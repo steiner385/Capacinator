@@ -56,7 +56,7 @@ test.describe('Simple UI Test', () => {
     if (await addButton.isVisible()) {
       await addButton.click();
       // Should open a form or dialog
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const formOrDialog = authenticatedPage.locator('form, [role="dialog"]');
       expect(await formOrDialog.count()).toBeGreaterThan(0);
       // Close the form/dialog
@@ -79,7 +79,7 @@ test.describe('Simple UI Test', () => {
       console.log('✅ Mobile menu toggle found');
       // Try to open mobile menu
       await mobileMenuToggle.first().click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Navigation should be visible somehow
       const navVisible = await authenticatedPage.locator('.sidebar, nav, [role="navigation"]').isVisible();
       expect(navVisible).toBe(true);

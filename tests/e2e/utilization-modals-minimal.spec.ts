@@ -19,7 +19,7 @@ test.describe('Utilization Modal - Minimal Tests', () => {
     });
     
     // Wait for table data to load
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     
     // Verify we have utilization data
     const utilizationRows = await authenticatedPage.locator('tbody tr').count();

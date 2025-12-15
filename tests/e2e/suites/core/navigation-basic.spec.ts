@@ -30,7 +30,7 @@ test.describe('Navigation and Basic UI', () => {
     testHelpers 
   }) => {
     // Wait a moment for initial page load
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Navigate to Projects
     await testHelpers.navigateViaSidebar('Projects');
     await expect(authenticatedPage).toHaveURL(/.*\/projects/);

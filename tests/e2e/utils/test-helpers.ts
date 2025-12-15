@@ -93,7 +93,8 @@ export class TestHelpers {
         return;
       } catch (error) {
         if (i === retries - 1) throw error;
-        await this.page.waitForTimeout(1000);
+        // Wait for DOM to settle before retry
+        await this.page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
       }
     }
   }
@@ -160,11 +161,11 @@ export class TestHelpers {
    */
   async handleProfileSelection() {
     console.log('🔍 Checking for profile selection modal...');
-    
+
     try {
-      // Wait a moment for any navigation to settle
-      await this.page.waitForTimeout(1000);
-      
+      // Wait for page to settle by checking for any content
+      await this.page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
+
       // Check if profile modal exists
       const profileModalExists = await this.page.locator('text=Select Your Profile').count() > 0;
       
@@ -178,9 +179,9 @@ export class TestHelpers {
       // Wait for the shadcn Select trigger to be ready
       await this.page.waitForSelector('#person-select', { timeout: 10000, state: 'visible' });
       console.log('📝 Profile select component found');
-      
-      // Wait a moment for data to populate
-      await this.page.waitForTimeout(1000);
+
+      // Wait for data to populate by checking network idle
+      await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
       
       // Use multiple approaches to select an option
       console.log('🎯 Attempting to select profile...');
@@ -193,10 +194,9 @@ export class TestHelpers {
         const selectTrigger = this.page.locator('#person-select');
         await selectTrigger.click();
         console.log('📂 Opened shadcn Select dropdown');
-        
+
         // Wait for dropdown options to appear
-        await this.page.waitForTimeout(500); // Give dropdown time to render
-        await this.page.waitForSelector('[role="option"], [data-radix-collection-item]', { timeout: 5000 });
+        await this.page.waitForSelector('[role="option"], [data-radix-collection-item]', { state: 'visible', timeout: 5000 });
         
         // Click the first valid option
         const options = this.page.locator('[role="option"], [data-radix-collection-item]');
@@ -216,9 +216,9 @@ export class TestHelpers {
       if (!selectionSucceeded) {
         throw new Error('Failed to select profile from dropdown');
       }
-      
-      // Give React time to process the selection
-      await this.page.waitForTimeout(1000);
+
+      // Wait for React to process the selection (dropdown should close)
+      await this.page.waitForSelector('[role="listbox"]', { state: 'hidden', timeout: 3000 }).catch(() => {});
       
       // Wait for Continue button to be enabled
       console.log('⏳ Waiting for Continue button to become enabled...');
@@ -239,24 +239,20 @@ export class TestHelpers {
         throw error;
       }
       
-      // Wait for it to become enabled
+      // Wait for it to become enabled by waiting for the disabled attribute to be removed
       let continueEnabled = false;
-      for (let i = 0; i < 10; i++) {
-        const isDisabled = await this.page.locator(continueButtonSelector).getAttribute('disabled');
-        if (isDisabled === null) {
-          continueEnabled = true;
-          break;
-        }
-        console.log(`⏳ Continue button still disabled, waiting... (attempt ${i + 1}/10)`);
-        await this.page.waitForTimeout(1000);
+      try {
+        await expect(this.page.locator(continueButtonSelector)).toBeEnabled({ timeout: 10000 });
+        continueEnabled = true;
+        console.log('✅ Continue button is now enabled');
+      } catch {
+        console.log('⚠️ Continue button never became enabled within timeout');
       }
       
       if (!continueEnabled) {
         console.log('⚠️ Continue button never became enabled, trying to click anyway...');
-      } else {
-        console.log('✅ Continue button is now enabled');
       }
-      
+
       // Click the Continue button
       console.log('👆 Clicking Continue button...');
       
@@ -302,15 +298,13 @@ export class TestHelpers {
       
       // Wait for any navigation or state changes to complete
       console.log('⏳ Waiting for navigation to stabilize...');
-      await this.page.waitForTimeout(2000);
-      
       try {
         await this.page.waitForLoadState('networkidle', { timeout: 10000 });
         console.log('✅ Network activity settled');
       } catch (networkError) {
         console.log('⚠️ Network idle timeout, but continuing...');
       }
-      
+
       console.log('🎉 Profile selection process completed');
       
     } catch (error) {
@@ -380,9 +374,9 @@ export class TestHelpers {
     } catch {
       // No data elements found
     }
-    
-    // Small delay for render completion
-    await this.page.waitForTimeout(500);
+
+    // Wait for DOM to settle
+    await this.page.waitForLoadState('domcontentloaded', { timeout: 2000 }).catch(() => {});
   }
 
   /**
@@ -439,9 +433,9 @@ export class TestHelpers {
     const expectedUrl = urlMap[menuItem] || `/${menuItem.toLowerCase()}`;
     
     try {
-      // Add a small delay to ensure navigation is ready
-      await this.page.waitForTimeout(500);
-      
+      // Wait for navigation links to be ready
+      await this.page.waitForSelector('nav a, .sidebar a, a[href*="/"]', { state: 'visible', timeout: 5000 }).catch(() => {});
+
       // Check if we're in mobile viewport
       const viewport = this.page.viewportSize();
       const isMobile = viewport && viewport.width < 768;
@@ -462,7 +456,6 @@ export class TestHelpers {
             if (isMobile) {
               // On mobile, sidebar might be partially off-screen
               await element.scrollIntoViewIfNeeded();
-              await this.page.waitForTimeout(200);
             }
             await this.clickAndNavigate(selector, expectedUrl);
             clicked = true;
@@ -523,8 +516,8 @@ export class TestHelpers {
     }
     
     if (!found) {
-      // If no table found, just wait for any content
-      await this.page.waitForTimeout(1000);
+      // If no table found, wait for network to settle
+      await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     }
     
     // Wait for loading state to finish (optional)
@@ -609,7 +602,8 @@ export class TestHelpers {
   async searchInTable(searchTerm: string) {
     const searchInput = this.page.locator('input[placeholder*="Search"]');
     await searchInput.fill(searchTerm);
-    await this.page.waitForTimeout(500); // Wait for debounce
+    // Wait for network idle (debounced search should trigger API call)
+    await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await this.waitForDataTable();
   }
 
@@ -695,11 +689,11 @@ export class TestHelpers {
       console.log('React hydration check failed, continuing anyway');
     }
     
-    // Small delay for any final rendering
+    // Ensure DOM is ready for interaction
     try {
-      await this.page.waitForTimeout(100);
+      await this.page.waitForLoadState('domcontentloaded', { timeout: 1000 });
     } catch {
-      // Even this timeout can fail if page is closing, so catch it
+      // DOM might already be ready, continue
     }
   }
 
@@ -1010,9 +1004,9 @@ export class TestHelpers {
     const closeButton = modal.locator('button:has(svg), button:has-text("×")');
     await expect(closeButton).toBeVisible();
     
-    // Wait for content to load
-    await this.page.waitForTimeout(2000);
-    
+    // Wait for content to load (network idle means data has been fetched)
+    await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
     console.log(`✅ ${modalType === 'add' ? 'Add Projects' : 'Reduce Load'} modal validated for ${personName}`);
     return modal;
   }
@@ -1179,12 +1173,12 @@ export class TestHelpers {
    * Validates utilization change after modal operations
    */
   async validateUtilizationChange(
-    personName: string, 
-    initialUtilization: number, 
+    personName: string,
+    initialUtilization: number,
     expectedChange: 'increase' | 'decrease'
   ) {
-    // Wait for data refresh
-    await this.page.waitForTimeout(3000);
+    // Wait for data refresh (network idle means data has been refetched)
+    await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
     
     // Find the person in the updated table
     const tableRows = this.page.locator('table:has(th:has-text("Team Member")) tbody tr');

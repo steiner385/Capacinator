@@ -61,7 +61,7 @@ test.describe('Scenario Edge Cases and Error Handling', () => {
     // Select the scenario
     await page.click('.scenario-selector');
     await page.click('text="To Be Deleted"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Delete the scenario via API or UI
     await page.goto(`/scenarios/${scenarioId}`);
@@ -150,7 +150,7 @@ test.describe('Scenario Edge Cases and Error Handling', () => {
     // Select the long-named scenario
     await page.click('.scenario-selector');
     await page.click(`text="${longName.substring(0, 50)}"`); // Click partial text
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check that UI doesn't break
     await page.goto('/reports?tab=demand');

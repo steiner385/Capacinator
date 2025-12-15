@@ -86,7 +86,7 @@ test.describe('Basic Color Contrast', () => {
     });
     // Hover and get hover state
     await authenticatedPage.hover('.table tbody tr');
-    await authenticatedPage.waitForTimeout(100); // Wait for transition
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {}); // Wait for transition
     const hoverState = await authenticatedPage.evaluate(() => {
       const row = document.querySelector('.table tbody tr');
       const td = row?.querySelector('td');

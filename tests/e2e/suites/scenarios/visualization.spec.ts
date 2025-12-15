@@ -64,7 +64,7 @@ test.describe('Scenario Visualization', () => {
     test(`${tags.visual} should display scenario dependency graph`, async ({ authenticatedPage }) => {
       // Switch to graphical view
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Verify graph container
       const graphContainer = authenticatedPage.locator('.graph-container, #scenario-graph, [data-testid="scenario-graph"]');
       await expect(graphContainer).toBeVisible();
@@ -104,7 +104,7 @@ test.describe('Scenario Visualization', () => {
       testDataHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Look for edges/connections
       const edges = authenticatedPage.locator('.graph-edge, .edge, line[class*="edge"], path[class*="edge"]');
       // Should have edges for parent-child relationships
@@ -129,7 +129,7 @@ test.describe('Scenario Visualization', () => {
       testHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Test zoom controls
       const zoomIn = authenticatedPage.locator('button[aria-label="Zoom in"], button[title*="Zoom in"]');
       const zoomOut = authenticatedPage.locator('button[aria-label="Zoom out"], button[title*="Zoom out"]');
@@ -139,7 +139,7 @@ test.describe('Scenario Visualization', () => {
         const initialTransform = await graphElement.getAttribute('transform');
         // Zoom in
         await zoomIn.click();
-        await authenticatedPage.waitForTimeout(300);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
         // Verify transform changed
         const newTransform = await graphElement.getAttribute('transform');
         expect(newTransform).not.toBe(initialTransform);
@@ -162,7 +162,7 @@ test.describe('Scenario Visualization', () => {
       testDataHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Use first test scenario
       const scenario = testScenarios[0];
       const node = await testDataHelpers.findByTestData(
@@ -177,7 +177,7 @@ test.describe('Scenario Visualization', () => {
       }));
       // Hover over node
       await node.hover();
-      await authenticatedPage.waitForTimeout(300);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       // Check for highlight effect
       const hoverStyles = await node.evaluate(el => ({
         opacity: window.getComputedStyle(el).opacity,
@@ -200,7 +200,7 @@ test.describe('Scenario Visualization', () => {
       testDataHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Click a test scenario node
       const scenario = testScenarios[0];
       const node = await testDataHelpers.findByTestData(
@@ -222,7 +222,7 @@ test.describe('Scenario Visualization', () => {
       testHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Look for layout selector
       const layoutSelector = authenticatedPage.locator('select[name="layout"], select[aria-label*="Layout"], button[aria-label*="Layout"]');
       if (await layoutSelector.count() > 0) {
@@ -232,7 +232,7 @@ test.describe('Scenario Visualization', () => {
           const optionExists = await authenticatedPage.locator(`option[value="${layout}"]`).count() > 0;
           if (optionExists) {
             await layoutSelector.selectOption(layout);
-            await authenticatedPage.waitForTimeout(500);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
             // Verify layout changed - might be in container attribute or class
             const graphContainer = authenticatedPage.locator('.graph-container, [data-testid="scenario-graph"]');
             const containerClass = await graphContainer.getAttribute('class');
@@ -250,14 +250,14 @@ test.describe('Scenario Visualization', () => {
       testHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Click fit to screen button
       const fitButton = authenticatedPage.locator('button[aria-label="Fit to screen"], button[title*="Fit"], button:has-text("Fit")');
       if (await fitButton.count() > 0) {
         // Get graph element before fit
         const graphContent = authenticatedPage.locator('.graph-content, svg g, [data-testid="graph-content"]').first();
         await fitButton.click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Verify transform updated
         const transform = await graphContent.getAttribute('transform');
         expect(transform).toBeTruthy();
@@ -271,7 +271,7 @@ test.describe('Scenario Visualization', () => {
       testDataHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Take screenshot for visual regression
       const graphContainer = authenticatedPage.locator('.graph-container, [data-testid="scenario-graph"]');
       const box = await graphContainer.boundingBox();
@@ -307,7 +307,7 @@ test.describe('Scenario Visualization', () => {
       testHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Trigger animation (e.g., layout change or node highlight)
       const animationTrigger = authenticatedPage.locator('button[aria-label="Animate"], button[title*="Animation"]');
       if (await animationTrigger.count() > 0) {
@@ -325,7 +325,8 @@ test.describe('Scenario Visualization', () => {
           animationId = requestAnimationFrame(countFrames);
         });
         await animationTrigger.click();
-        await authenticatedPage.waitForTimeout(1100);
+        // Wait for animation to play (~1 second) using network idle as proxy
+        await authenticatedPage.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
         // Check frame rate (should be smooth, >30fps)
         const frameCount = await authenticatedPage.evaluate(() => window.frameCount);
         expect(frameCount).toBeGreaterThan(30);
@@ -338,7 +339,7 @@ test.describe('Scenario Visualization', () => {
       testHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Look for export button
       const exportButton = authenticatedPage.locator('button[aria-label*="Export"], button[title*="Export"], button:has-text("Export")');
       if (await exportButton.count() > 0) {
@@ -365,7 +366,7 @@ test.describe('Scenario Visualization', () => {
       testHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const shareButton = authenticatedPage.locator('button[aria-label*="Share"], button[title*="Share"], button:has-text("Share")');
       if (await shareButton.count() > 0) {
         await shareButton.click();
@@ -414,7 +415,7 @@ test.describe('Scenario Visualization', () => {
       testDataHelpers 
     }) => {
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Add mutation observer to track DOM changes
       const initialChangeCount = await authenticatedPage.evaluate(() => {
         window.domChangeCount = 0;
@@ -436,7 +437,7 @@ test.describe('Scenario Visualization', () => {
         scenario.name
       );
       await node.hover();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Check DOM changes were minimal
       const finalChanges = await authenticatedPage.evaluate(() => window.domChangeCount);
       const changeCount = finalChanges - initialChangeCount;

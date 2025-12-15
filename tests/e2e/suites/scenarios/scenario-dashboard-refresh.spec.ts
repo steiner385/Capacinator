@@ -37,7 +37,7 @@ test.describe('Dashboard Scenario Refresh', () => {
       
       // Wait for data to refresh
       await authenticatedPage.waitForLoadState('networkidle');
-      await authenticatedPage.waitForTimeout(2000); // Give React Query time to update
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Give React Query time to update
       
       // Get updated project count
       const updatedCount = await authenticatedPage.locator('text=Current Projects')
@@ -80,7 +80,7 @@ test.describe('Dashboard Scenario Refresh', () => {
       // Wait for dropdown to close and data to refresh
       await authenticatedPage.waitForSelector('.scenario-dropdown', { state: 'hidden' });
       await authenticatedPage.waitForLoadState('networkidle');
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Verify scenario changed
       const updatedScenario = await authenticatedPage.locator('.scenario-button .scenario-name').textContent();

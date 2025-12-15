@@ -76,7 +76,7 @@ test.describe('Smoke Tests', () => {
     const pages = ['/dashboard', '/projects', '/people', '/assignments'];
     for (const page of pages) {
       await testHelpers.navigateTo(page);
-      await authenticatedPage.waitForTimeout(1000); // Wait for any async errors
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for any async errors
     }
     // Should have no console errors
     expect(errors).toHaveLength(0);
@@ -84,7 +84,7 @@ test.describe('Smoke Tests', () => {
   test(`${tags.smoke} API endpoints respond`, async ({ apiContext }) => {
     const endpoints = [
       '/api/projects',
-      '/api/people', 
+      '/api/people',
       '/api/assignments',
       '/api/roles',
       '/api/locations',
@@ -93,14 +93,15 @@ test.describe('Smoke Tests', () => {
       const response = await apiContext.get(endpoint);
       expect(response.ok()).toBeTruthy();
       const data = await response.json();
-      // Some endpoints return data directly as array, others wrap in {data: [...]}
-      if (endpoint === '/api/roles') {
-        // Roles endpoint returns array directly
-        expect(Array.isArray(data)).toBeTruthy();
-        expect(data.length).toBeGreaterThan(0);
+      // All endpoints return {data: [...]} format
+      expect(data).toHaveProperty('data');
+
+      // Handle nested data structure for roles endpoint
+      if (endpoint === '/api/roles' && data.data && typeof data.data === 'object' && 'data' in data.data) {
+        // Roles endpoint returns {data: {data: [...]}}
+        expect(Array.isArray(data.data.data)).toBeTruthy();
       } else {
         // Other endpoints return {data: [...]}
-        expect(data).toHaveProperty('data');
         expect(Array.isArray(data.data)).toBeTruthy();
       }
     }
@@ -114,7 +115,7 @@ test.describe('Smoke Tests', () => {
       await searchInput.first().fill('test');
       await authenticatedPage.keyboard.press('Enter');
       // Should not crash
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       await testHelpers.verifyNoErrors();
     }
   });

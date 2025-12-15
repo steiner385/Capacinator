@@ -43,7 +43,7 @@ test.describe('Simple Utilization Report Test', () => {
       if (options > 1) {
         // Select the second option (first non-"All" option)
         await locationFilter.selectOption({ index: 1 });
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         const filteredRows = await table.locator('tbody tr').count();
         console.log(`After filtering: ${filteredRows} rows (was ${initialRows})`);

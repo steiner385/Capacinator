@@ -43,7 +43,8 @@ export class MobileTestHelpers {
       const hamburger = await this.page.$('[data-testid="mobile-menu-toggle"], .menu-toggle, .hamburger');
       if (hamburger && await hamburger.isVisible()) {
         await hamburger.click();
-        await this.page.waitForTimeout(300); // Wait for menu animation
+        // Wait for menu animation by checking for menu visibility
+        await this.page.waitForSelector('nav, .sidebar, [role="navigation"]', { state: 'visible', timeout: 3000 }).catch(() => {});
       }
     }
     
@@ -88,7 +89,6 @@ export class MobileTestHelpers {
     if (await this.isMobile()) {
       // Scroll element into view on mobile
       await input.scrollIntoViewIfNeeded();
-      await this.page.waitForTimeout(200); // Wait for scroll
     }
     
     await input.click();
@@ -97,7 +97,6 @@ export class MobileTestHelpers {
     if (await this.isMobile()) {
       // Dismiss keyboard by clicking outside
       await this.page.click('body', { position: { x: 10, y: 10 } });
-      await this.page.waitForTimeout(200);
     }
   }
 
@@ -119,7 +118,6 @@ export class MobileTestHelpers {
         if (button && await button.isVisible()) {
           if (await this.isMobile()) {
             await button.scrollIntoViewIfNeeded();
-            await this.page.waitForTimeout(200);
           }
           await button.click();
           clicked = true;
@@ -145,8 +143,7 @@ export class MobileTestHelpers {
     if (await this.isMobile()) {
       // Scroll row into view
       await row.scrollIntoViewIfNeeded();
-      await this.page.waitForTimeout(200);
-      
+
       // Mobile tables might have horizontal scroll
       const table = await this.page.locator('table, [role="table"]').first();
       await table.evaluate(el => {
@@ -175,7 +172,7 @@ export class MobileTestHelpers {
     
     // Extra wait on mobile for layout shifts
     if (await this.isMobile()) {
-      await this.page.waitForTimeout(500);
+      await this.page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
     }
   }
 }

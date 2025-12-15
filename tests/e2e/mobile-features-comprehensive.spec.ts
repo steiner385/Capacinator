@@ -46,7 +46,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       }
       // Transition to tablet viewport (768px)
       await authenticatedPage.setViewportSize({ width: 768, height: 1024 });
-      await authenticatedPage.waitForTimeout(500); // Allow layout to adapt
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Allow layout to adapt
       // Check if layout adapts for tablet
       if (await sidebar.count() > 0) {
         const newSidebarBox = await sidebar.boundingBox();
@@ -67,7 +67,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       const newProjectButton = authenticatedPage.locator('button:has-text("Add Project"), button:has-text("New Project")');
       if (await newProjectButton.count() > 0) {
         await newProjectButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Check if modal goes full-screen on mobile
         const modal = authenticatedPage.locator('.modal, .dialog, [role="dialog"]');
         if (await modal.count() > 0) {
@@ -151,7 +151,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
         }
         // Test touch interaction
         await firstButton.click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         console.log('✅ Basic touch interaction successful');
       }
     });
@@ -169,7 +169,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
           const navLinks = authenticatedPage.locator('.sidebar a, .nav-link');
           if (await navLinks.count() > 0) {
             await navLinks.first().click();
-            await authenticatedPage.waitForTimeout(1000);
+            await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
             console.log('✅ Mobile navigation links functional');
           }
         }
@@ -178,7 +178,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       const menuToggle = authenticatedPage.locator('button[aria-label*="menu"], .hamburger, .menu-toggle');
       if (await menuToggle.count() > 0) {
         await menuToggle.click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         console.log('✅ Mobile menu toggle functionality available');
       } else {
         console.log('ℹ️ No mobile hamburger menu found - using fixed sidebar');
@@ -216,14 +216,14 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       await testHelpers.setupPage();
       // Test tab navigation on mobile devices with keyboards
       await authenticatedPage.keyboard.press('Tab');
-      await authenticatedPage.waitForTimeout(200);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       const focusedElement = authenticatedPage.locator(':focus');
       if (await focusedElement.count() > 0) {
         console.log('✅ Keyboard navigation works on mobile viewport');
         // Continue tabbing through elements
         for (let i = 0; i < 5; i++) {
           await authenticatedPage.keyboard.press('Tab');
-          await authenticatedPage.waitForTimeout(100);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
         }
         console.log('✅ Tab navigation sequence completed');
       }
@@ -238,7 +238,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       const newProjectButton = authenticatedPage.locator('button:has-text("Add Project"), button:has-text("New Project")');
       if (await newProjectButton.count() > 0) {
         await newProjectButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Fill project form on mobile
         const nameField = authenticatedPage.locator('input[name="name"], input[placeholder*="name"]');
         if (await nameField.count() > 0) {
@@ -260,7 +260,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
         const saveButton = authenticatedPage.locator('button[type="submit"], button:has-text("Save"), button:has-text("Create")');
         if (await saveButton.count() > 0) {
           await saveButton.click();
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           console.log('✅ Mobile project creation workflow completed');
         }
       }
@@ -273,7 +273,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       const newAssignmentButton = authenticatedPage.locator('button:has-text("Add Assignment"), button:has-text("New Assignment")');
       if (await newAssignmentButton.count() > 0) {
         await newAssignmentButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Test mobile form interactions
         const projectSelect = authenticatedPage.locator('select[name="project_id"]');
         const personSelect = authenticatedPage.locator('select[name="person_id"]');
@@ -329,14 +329,14 @@ test.describe('Mobile Features Comprehensive Tests', () => {
         const dateFilter = authenticatedPage.locator('input[type="date"]');
         if (await dateFilter.count() > 0) {
           await dateFilter.first().fill('2024-01-01');
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           console.log('✅ Date filter works on mobile');
         }
         // Test dropdown filter on mobile
         const selectFilter = authenticatedPage.locator('select');
         if (await selectFilter.count() > 0 && await selectFilter.first().locator('option').count() > 1) {
           await selectFilter.first().selectOption({ index: 1 });
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           console.log('✅ Dropdown filter works on mobile');
         }
         // Check if results update
@@ -427,7 +427,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       }
       // Test offline simulation
       await authenticatedPage.context().setOffline(true);
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for offline handling
       const offlineMessage = authenticatedPage.locator('text=/offline|no connection|network error/i');
       if (await offlineMessage.count() > 0) {
@@ -448,7 +448,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       // Go offline
       await authenticatedPage.context().setOffline(true);
       await authenticatedPage.reload();
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Check if data is still available (cached)
       const offlineDataCount = await authenticatedPage.locator('tbody tr, .project-item').count();
       if (offlineDataCount > 0) {
@@ -552,7 +552,7 @@ test.describe('Mobile Features Comprehensive Tests', () => {
       await testHelpers.setupPage();
       // Switch to landscape mode
       await authenticatedPage.setViewportSize({ width: 667, height: 375 });
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check if layout adapts to landscape
       const mainContent = authenticatedPage.locator('.main-content');
       if (await mainContent.count() > 0) {

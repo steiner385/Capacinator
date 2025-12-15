@@ -121,7 +121,7 @@ test.describe('Project Management', () => {
       const addButton = authenticatedPage.locator('button:has-text("Add Project"), button:has-text("New Project")');
       await addButton.click();
       // Should navigate or show modal
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const url = authenticatedPage.url();
       const hasModal = await authenticatedPage.locator('[role="dialog"]').isVisible();
       const hasForm = await authenticatedPage.locator('form').isVisible();
@@ -158,7 +158,7 @@ test.describe('Project Management', () => {
         const submitButton = authenticatedPage.locator('button[type="submit"], button:has-text("Save"), button:has-text("Create")');
         await submitButton.click();
         // Wait for navigation or modal close
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Verify no errors
         await testHelpers.verifyNoErrors();
       }
@@ -212,7 +212,7 @@ test.describe('Project Management', () => {
         const editButton = authenticatedPage.locator('button:has-text("Edit"), button:has-text("Edit Project")');
         if (await editButton.isVisible()) {
           await editButton.click();
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Should show edit form
           const nameInput = authenticatedPage.locator('input[name="name"], input[name="projectName"]');
           await expect(nameInput).toBeVisible();
@@ -223,7 +223,7 @@ test.describe('Project Management', () => {
           const saveButton = authenticatedPage.locator('button[type="submit"], button:has-text("Save")');
           await saveButton.click();
           // Wait for save
-          await authenticatedPage.waitForTimeout(2000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Verify no errors
           await testHelpers.verifyNoErrors();
           // Should see updated name
@@ -323,7 +323,7 @@ test.describe('Project Management', () => {
           const firstOption = authenticatedPage.locator('[role="menuitem"]').nth(0);
           await firstOption.click();
         }
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await testHelpers.waitForDataTable();
         // Verify no errors
         await testHelpers.verifyNoErrors();
@@ -349,7 +349,7 @@ test.describe('Project Management', () => {
         if (await applyButton.isVisible()) {
           await applyButton.click();
         }
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await testHelpers.waitForDataTable();
         // Verify no errors
         await testHelpers.verifyNoErrors();
@@ -407,7 +407,7 @@ test.describe('Project Management', () => {
         const addPhaseButton = authenticatedPage.locator('button:has-text("Add Phase"), button:has-text("New Phase")');
         if (await addPhaseButton.isVisible()) {
           await addPhaseButton.click();
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Fill phase form
           const phaseNameInput = authenticatedPage.locator('input[name="phaseName"], input[placeholder*="Phase"]');
           if (await phaseNameInput.isVisible()) {
@@ -417,7 +417,7 @@ test.describe('Project Management', () => {
             // Submit
             const submitButton = authenticatedPage.locator('button[type="submit"], button:has-text("Add"), button:has-text("Save")');
             await submitButton.click();
-            await authenticatedPage.waitForTimeout(1000);
+            await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
             // Verify no errors
             await testHelpers.verifyNoErrors();
           }

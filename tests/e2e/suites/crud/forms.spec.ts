@@ -273,7 +273,7 @@ test.describe('Form Validation and CRUD Operations', () => {
           const submitButton = authenticatedPage.locator('button[type="submit"], button:has-text("Save")');
           await submitButton.click();
           // Wait for update to complete
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Close dialog if still open
           if (hasDialog) {
             await authenticatedPage.waitForSelector(SHADCN_SELECTORS.dialog, { state: 'hidden' });
@@ -318,7 +318,7 @@ test.describe('Form Validation and CRUD Operations', () => {
         const confirmButton = authenticatedPage.locator('button:has-text("Confirm"), button:has-text("Delete")').last();
         await confirmButton.click();
         // Wait for deletion
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await testHelpers.waitForDataTable();
         // Verify deletion
         const newRowCount = await testHelpers.getTableRowCount();

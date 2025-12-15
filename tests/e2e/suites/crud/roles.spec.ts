@@ -129,7 +129,7 @@ test.describe('Roles Management', () => {
       const searchInput = authenticatedPage.locator('input[type="search"], input[placeholder*="Search"]');
       if (await searchInput.isVisible()) {
         await searchInput.fill('Project Manager');
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       }
 
       // Find Project Manager row

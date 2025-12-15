@@ -21,7 +21,7 @@ test.describe('Profile Selection Modal', () => {
     console.log('🎯 Clicking select trigger...');
     await selectTrigger.click();
     // Wait for dropdown animation
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Look for options using multiple strategies
     let optionsFound = false;
     const selectors = [
@@ -55,7 +55,7 @@ test.describe('Profile Selection Modal', () => {
       await options.first().click();
       console.log(`✅ Selected: ${optionTexts[0]}`);
       // Verify selection was made
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       const selectedText = await selectTrigger.textContent();
       console.log(`📝 Selected value: "${selectedText}"`);
       expect(selectedText).not.toContain('Select your name');
@@ -83,9 +83,9 @@ test.describe('Profile Selection Modal', () => {
       console.log('⚠️ No dropdown options visible, testing keyboard navigation...');
       await selectTrigger.focus();
       await authenticatedPage.keyboard.press('Space');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       await authenticatedPage.keyboard.press('ArrowDown');
-      await authenticatedPage.waitForTimeout(100);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       await authenticatedPage.keyboard.press('Enter');
       // Verify some selection was made
       const selectedText = await selectTrigger.textContent();
@@ -109,7 +109,7 @@ test.describe('Profile Selection Modal', () => {
       // Select first available profile
       const selectTrigger = authenticatedPage.locator('#person-select');
       await selectTrigger.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const options = authenticatedPage.locator('[role="option"]').first();
       if (await options.isVisible({ timeout: 3000 })) {
         await options.click();

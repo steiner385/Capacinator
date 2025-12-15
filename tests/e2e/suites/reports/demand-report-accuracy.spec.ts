@@ -23,7 +23,7 @@ test.describe('Demand Report Accuracy', () => {
     const demandTab = authenticatedPage.locator('button:has-text("Demand Report"), button:has-text("Demand")').first();
     if (await demandTab.isVisible()) {
       await demandTab.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
   test.afterEach(async ({ testDataHelpers }) => {
@@ -80,7 +80,7 @@ test.describe('Demand Report Accuracy', () => {
         expect(barCount).toBeGreaterThanOrEqual(testData.projects.length);
         // Test hover interaction
         await bars.first().hover();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Check for tooltip
         const tooltip = authenticatedPage.locator('.recharts-tooltip');
         if (await tooltip.isVisible()) {
@@ -222,7 +222,7 @@ test.describe('Demand Report Accuracy', () => {
       if (await applyButton.isVisible()) {
         await applyButton.click();
         await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Verify no errors
         await testHelpers.verifyNoErrors();
         // Get updated demand

@@ -35,7 +35,7 @@ test.describe('Export Functionality Regression Tests', () => {
 
     // Click export dropdown
     await exportButton.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Verify all export options are present
     const exportOptions = [
@@ -65,7 +65,7 @@ test.describe('Export Functionality Regression Tests', () => {
     const gapsButton = authenticatedPage.locator('button:has-text("Gaps"), button:has-text("Gap")');
     if (await gapsButton.isVisible()) {
       await gapsButton.click();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
 
     // Set up download handler before clicking export
@@ -74,7 +74,7 @@ test.describe('Export Functionality Regression Tests', () => {
     // Click export dropdown
     const exportButton = authenticatedPage.locator('button:has-text("Export")');
     await exportButton.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Click CSV export option
     const csvOption = authenticatedPage.locator('button:has-text("CSV"), [role="menuitem"]:has-text("CSV")');
@@ -111,7 +111,7 @@ test.describe('Export Functionality Regression Tests', () => {
     // Click export dropdown
     const exportButton = authenticatedPage.locator('button:has-text("Export")');
     await exportButton.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Click JSON export option
     const jsonOption = authenticatedPage.locator('button:has-text("JSON"), [role="menuitem"]:has-text("JSON")');
@@ -158,14 +158,14 @@ test.describe('Export Functionality Regression Tests', () => {
     // Click export dropdown
     const exportButton = authenticatedPage.locator('button:has-text("Export")');
     await exportButton.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Try to export CSV
     const csvOption = authenticatedPage.locator('button:has-text("CSV"), [role="menuitem"]:has-text("CSV")');
     await csvOption.click();
 
     // Should show error message or handle gracefully (not crash)
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Check for error message
     const errorMessage = authenticatedPage.locator('text=/error|failed|unable/i, .error, .alert-danger');
@@ -194,14 +194,14 @@ test.describe('Export Functionality Regression Tests', () => {
       try {
         const exportButton = authenticatedPage.locator('button:has-text("Export")');
         await exportButton.click();
-        await authenticatedPage.waitForTimeout(200);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
 
         const csvOption = authenticatedPage.locator('button:has-text("CSV"), [role="menuitem"]:has-text("CSV")');
         if (await csvOption.isVisible()) {
           await csvOption.click();
         }
         
-        await authenticatedPage.waitForTimeout(300);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       } catch (error) {
         console.log(`Rapid request ${i + 1} handled:`, error.message);
       }
@@ -235,13 +235,13 @@ test.describe('Export Functionality Regression Tests', () => {
         const reportButton = authenticatedPage.locator(reportType.button);
         if (await reportButton.isVisible()) {
           await reportButton.click();
-          await authenticatedPage.waitForTimeout(1500);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
           // Try export
           const exportButton = authenticatedPage.locator('button:has-text("Export")');
           if (await exportButton.isVisible()) {
             await exportButton.click();
-            await authenticatedPage.waitForTimeout(500);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
             // Verify export options are present
             const csvOption = authenticatedPage.locator('button:has-text("CSV"), [role="menuitem"]:has-text("CSV")');
@@ -251,7 +251,7 @@ test.describe('Export Functionality Regression Tests', () => {
             
             // Close dropdown by clicking elsewhere
             await authenticatedPage.click('body');
-            await authenticatedPage.waitForTimeout(300);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
           }
         }
       } catch (error) {

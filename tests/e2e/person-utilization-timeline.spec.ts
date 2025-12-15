@@ -25,7 +25,7 @@ test.describe('Person Utilization Timeline', () => {
     await allocationSection.waitFor({ timeout: 10000 });
     await allocationSection.click();
     // Wait for the section to expand
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify the utilization timeline chart is displayed
     const timelineHeading = authenticatedPage.locator('text=Utilization Timeline');
     await expect(timelineHeading).toBeVisible({ timeout: 10000 });
@@ -67,7 +67,7 @@ test.describe('Person Utilization Timeline', () => {
     const timelineHeading = authenticatedPage.locator('text=Utilization Timeline');
     await expect(timelineHeading).toBeVisible();
     // Wait for chart to render with data
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify chart elements are present
     const chartContainer = authenticatedPage.locator('.recharts-wrapper').first();
     if (await chartContainer.isVisible()) {
@@ -89,7 +89,7 @@ test.describe('Person Utilization Timeline', () => {
     const allocationSection = authenticatedPage.locator('text=Allocation vs Availability');
     await allocationSection.click();
     // Wait for both charts to load
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify both charts are present
     const allocationChart = authenticatedPage.locator('[data-testid="person-allocation-chart"], .recharts-wrapper').first();
     const timelineChart = authenticatedPage.locator('text=Utilization Timeline');
@@ -222,7 +222,7 @@ test.describe('Person Utilization Timeline', () => {
     const timelineHeading = authenticatedPage.locator('text=Utilization Timeline');
     await expect(timelineHeading).toBeVisible();
     // Wait for chart to render
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify chart is rendered with proper structure
     const chartExists = await authenticatedPage.locator('.recharts-wrapper, [data-testid="line-chart"]').first().isVisible();
     const noDataMessage = await authenticatedPage.locator('text=No utilization data available').isVisible();
