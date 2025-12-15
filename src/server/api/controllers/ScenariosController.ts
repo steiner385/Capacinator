@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
-import { auditModelChanges } from '../../middleware/auditMiddleware.js';
+import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
 
 export class ScenariosController extends BaseController {
   constructor(container?: ServiceContainer) {

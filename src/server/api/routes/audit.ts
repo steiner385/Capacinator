@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuditController } from '../controllers/AuditController.js';
 import { AuditService } from '../../services/audit/AuditService.js';
-import { auditableController } from '../../middleware/auditMiddleware.js';
+import { auditableController } from '../../middleware/enhancedAuditMiddleware.js';
 
 export function createAuditRoutes(auditService: AuditService): Router {
   const router = Router();

@@ -8,7 +8,7 @@ jest.mock('crypto', () => ({
 }));
 
 // Mock the audit middleware
-jest.mock('../../../middleware/auditMiddleware', () => ({
+jest.mock('../../../middleware/enhancedAuditMiddleware', () => ({
   auditModelChanges: jest.fn()
 }));
 
