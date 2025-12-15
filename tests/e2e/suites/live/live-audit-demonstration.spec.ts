@@ -24,7 +24,7 @@ test.describe('Live Audit Demonstration', () => {
     console.log('✅ Application loaded successfully');
 
     // Add some wait time to see the interface
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Test 1: Create a new person and verify audit
     console.log('\n📝 Test 1: Creating a new person...');
@@ -32,13 +32,13 @@ test.describe('Live Audit Demonstration', () => {
     try {
       // Try to navigate to people page
       await page.click('a[href*="/people"], [data-testid="people-nav"], text="People"', { timeout: 5000 });
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     } catch (error) {
       console.log('Could not find people navigation, trying alternative...');
       await page.goto('http://local.capacinator.com/people');
     }
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Click add person button
     try {
@@ -49,7 +49,7 @@ test.describe('Live Audit Demonstration', () => {
       // If no add button, look for form fields directly
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Fill person form
     const testPersonName = `Test Person ${Date.now()}`;
@@ -79,7 +79,7 @@ test.describe('Live Audit Demonstration', () => {
       console.log('✅ Submitted person form');
 
       // Wait for success message or navigation
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Verify audit entry was created
       console.log('🔍 Checking audit log for person creation...');
@@ -108,7 +108,7 @@ test.describe('Live Audit Demonstration', () => {
       console.log(`⚠️  Person creation test failed: ${error.message}`);
     }
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
     // Test 2: Update an existing record and verify audit
     console.log('\n📝 Test 2: Updating a person record...');
@@ -119,7 +119,7 @@ test.describe('Live Audit Demonstration', () => {
       await editButton.click();
       console.log('✅ Clicked edit button');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Update the name
       const updatedName = `Updated Person ${Date.now()}`;
@@ -132,7 +132,7 @@ test.describe('Live Audit Demonstration', () => {
       await page.click('button[type="submit"], [data-testid="save"], [data-testid="submit"], button:has-text("Save"), .btn-primary');
       console.log('✅ Submitted update form');
 
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Verify audit entry for update
       console.log('🔍 Checking audit log for person update...');
@@ -158,7 +158,7 @@ test.describe('Live Audit Demonstration', () => {
       console.log(`⚠️  Person update test failed: ${error.message}`);
     }
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
     // Test 3: Create and delete an availability override
     console.log('\n📝 Test 3: Testing availability override deletion (original issue)...');
@@ -166,14 +166,14 @@ test.describe('Live Audit Demonstration', () => {
     try {
       // Navigate to a person's availability page
       await page.goto('http://local.capacinator.com/people');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Click on first person to view details
       const personLink = await page.locator('a[href*="/people/"], tr td:first-child a, .person-name, [data-testid*="person-link"]').first();
       await personLink.click();
       console.log('✅ Navigated to person details');
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Look for availability section or tab
       try {
@@ -187,14 +187,14 @@ test.describe('Live Audit Demonstration', () => {
         await page.goto(`${currentUrl}/availability`);
       }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Add new availability override
       try {
         await page.click('[data-testid="add-override"], button:has-text("Add"), .add-button');
         console.log('✅ Clicked add availability override');
 
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
         // Fill availability form
         await page.fill('input[type="date"], [data-testid="start-date"]', '2024-12-25');
@@ -212,7 +212,7 @@ test.describe('Live Audit Demonstration', () => {
         await page.click('button[type="submit"], [data-testid="save"], button:has-text("Save")');
         console.log('✅ Created availability override');
 
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
         // Now delete the override
         await page.click('[data-testid*="delete"], button:has-text("Delete"), .delete-button, .btn-danger');
@@ -226,7 +226,7 @@ test.describe('Live Audit Demonstration', () => {
           console.log('⚠️  No confirmation modal found');
         }
 
-        await page.waitForTimeout(3000);
+        await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
         // Verify audit entry for availability deletion (the original issue!)
         console.log('🔍 Checking audit log for availability deletion (ORIGINAL ISSUE)...');
@@ -288,9 +288,9 @@ test.describe('Live Audit Demonstration', () => {
       console.log(`⚠️  Failed to fetch audit activity: ${error.message}`);
     }
 
-    // Wait a bit more for final observation
-    console.log('⏳ Keeping browser open for 10 seconds for observation...');
-    await page.waitForTimeout(10000);
+    // Wait for any pending operations to complete
+    console.log('⏳ Waiting for network to settle...');
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 
     console.log('🎯 Live audit demonstration completed!');
   });

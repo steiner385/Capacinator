@@ -315,7 +315,7 @@ test.describe('Scenario Basic Operations', () => {
         response.request().method() === 'DELETE'
       );
       // Confirm deletion - wait for confirmation dialog
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       const confirmButton = authenticatedPage.locator('button').filter({ hasText: /^Delete$|^Confirm$/ }).last();
       await confirmButton.click();
       const deleteResponse = await deletePromise;
@@ -389,7 +389,7 @@ test.describe('Scenario Basic Operations', () => {
         .filter({ has: authenticatedPage.locator('xpath=../span[contains(text(), "branch")]') });
       await branchFilterCheckbox.check();
       // Wait for filter to apply
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Click outside to close filter dropdown
       await authenticatedPage.click('h1');
       
@@ -418,7 +418,7 @@ test.describe('Scenario Basic Operations', () => {
       const searchInput = authenticatedPage.locator('input[placeholder*="Search"]');
       await searchInput.fill(testContext.prefix);
       // Wait for search to apply
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify filtered results
       const visibleRows = authenticatedPage.locator('.hierarchy-row').filter({ hasText: testContext.prefix });
       const rowCount = await visibleRows.count();
@@ -547,7 +547,7 @@ test.describe('Scenario Basic Operations', () => {
           await confirmButton.click();
           
           // Wait for deletions to complete
-          await authenticatedPage.waitForTimeout(2000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           
           // Verify removed
           for (const scenario of bulkDeleteScenarios) {

@@ -22,7 +22,7 @@ test.describe('User Permissions Functionality', () => {
   test.describe('User Roles Display', () => {
     test('should load and display user roles', async ({ authenticatedPage, testHelpers }) => {
       // Wait for roles to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check roles grid
       await expect(authenticatedPage.locator('.roles-grid')).toBeVisible();
       // Check if roles are loaded
@@ -38,7 +38,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should display role priorities', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const roleCards = authenticatedPage.locator('.role-card');
       const roleCount = await roleCards.count();
       if (roleCount > 0) {
@@ -52,7 +52,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should identify system admin roles', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const roleCards = authenticatedPage.locator('.role-card');
       const roleCount = await roleCards.count();
       if (roleCount > 0) {
@@ -69,7 +69,7 @@ test.describe('User Permissions Functionality', () => {
   test.describe('System Permissions Display', () => {
     test('should load and display system permissions', async ({ authenticatedPage, testHelpers }) => {
       // Wait for permissions to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check permissions grid
       await expect(authenticatedPage.locator('.permissions-grid')).toBeVisible();
       // Check if permissions are loaded and categorized
@@ -83,7 +83,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should display permissions by category', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const permissionCategories = authenticatedPage.locator('.permission-category');
       const categoryCount = await permissionCategories.count();
       if (categoryCount > 0) {
@@ -100,7 +100,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should display individual permissions', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const permissionItems = authenticatedPage.locator('.permission-item');
       const permissionCount = await permissionItems.count();
       if (permissionCount > 0) {
@@ -117,7 +117,7 @@ test.describe('User Permissions Functionality', () => {
   test.describe('User Management Table', () => {
     test('should display users list table', async ({ authenticatedPage, testHelpers }) => {
       // Wait for users to load
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Check for users table
       const usersTable = authenticatedPage.locator('table');
       const tableExists = await usersTable.count();
@@ -132,7 +132,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should display user information', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       const usersTable = authenticatedPage.locator('table');
       const tableExists = await usersTable.count();
       if (tableExists > 0) {
@@ -155,7 +155,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should display role assignments', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       const usersTable = authenticatedPage.locator('table');
       const tableExists = await usersTable.count();
       if (tableExists > 0) {
@@ -172,7 +172,7 @@ test.describe('User Permissions Functionality', () => {
       }
     });
     test('should show permission override counts', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       const usersTable = authenticatedPage.locator('table');
       const tableExists = await usersTable.count();
       if (tableExists > 0) {
@@ -200,7 +200,7 @@ test.describe('User Permissions Functionality', () => {
     });
     test('should handle empty data gracefully', async ({ authenticatedPage, testHelpers }) => {
       // Wait for data loading
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Even if no data is loaded, UI should still be functional
       await expect(authenticatedPage.locator('.roles-grid')).toBeVisible();
       await expect(authenticatedPage.locator('.permissions-grid')).toBeVisible();
@@ -208,7 +208,7 @@ test.describe('User Permissions Functionality', () => {
       await expect(authenticatedPage.locator('.info-message')).toBeVisible();
     });
     test('should maintain layout with various data states', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       // Page should maintain its layout regardless of data state
       await expect(authenticatedPage.locator('.settings-section')).toBeVisible();
       await expect(authenticatedPage.locator('h2:has-text("User Permissions")')).toBeVisible();
@@ -248,7 +248,7 @@ test.describe('User Permissions Functionality', () => {
       await expect(authenticatedPage.locator('.info-message')).toContainText('System administrator privileges');
     });
     test('should show permission categories relevant to security', async ({ authenticatedPage, testHelpers }) => {
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const permissionCategories = authenticatedPage.locator('.permission-category h4');
       const categoryCount = await permissionCategories.count();
       if (categoryCount > 0) {

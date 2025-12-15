@@ -60,7 +60,7 @@ test.describe('Scenario Data Refresh', () => {
     
     // Wait for data to refresh
     await authenticatedPage.waitForLoadState('networkidle');
-    await authenticatedPage.waitForTimeout(500); // Allow time for React Query to update
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Allow time for React Query to update
 
     // Get updated project count
     const updatedProjectCount = await authenticatedPage.locator('text=Current Projects').locator('..').locator('p.text-2xl').textContent();
@@ -86,7 +86,7 @@ test.describe('Scenario Data Refresh', () => {
     
     // Wait for data to refresh - look for loading indicators or network activity
     await authenticatedPage.waitForLoadState('networkidle');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Data should have refreshed (even if row count is the same, the query should have re-run)
     // We can verify this by checking if the loading state appeared
@@ -116,7 +116,7 @@ test.describe('Scenario Data Refresh', () => {
     
     // Wait for reports to refresh
     await authenticatedPage.waitForLoadState('networkidle');
-    await authenticatedPage.waitForTimeout(1000); // Allow time for charts to re-render
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Allow time for charts to re-render
 
     // Check that data has been refreshed
     const updatedDemandData = await authenticatedPage.locator('.demand-summary, [data-testid="total-demands"]').textContent().catch(() => '0');
@@ -148,7 +148,7 @@ test.describe('Scenario Data Refresh', () => {
     
     // Wait for data to refresh
     await authenticatedPage.waitForLoadState('networkidle');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Get updated project list
     const updatedProjectNames = await authenticatedPage.locator('tbody tr td:first-child, [data-testid="project-name"]').allTextContents();
@@ -167,7 +167,7 @@ test.describe('Scenario Data Refresh', () => {
     await authenticatedPage.click('.scenario-selector-trigger');
     await authenticatedPage.waitForSelector('.scenario-selector-dropdown');
     await authenticatedPage.click('.scenario-option:has-text("Test Branch - Data Refresh")');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Navigate to different pages
     await authenticatedPage.click('a[href="/projects"], nav a:has-text("Projects")');

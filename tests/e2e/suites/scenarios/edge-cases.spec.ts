@@ -246,7 +246,7 @@ test.describe('Scenario Edge Cases', () => {
           // Should not contain unescaped HTML
           expect(displayedName).not.toContain('<script>');
         }
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       }
     });
     test('should validate date boundaries', async ({ 
@@ -365,7 +365,7 @@ test.describe('Scenario Edge Cases', () => {
       // Reload and switch to graphical view
       await authenticatedPage.reload();
       await authenticatedPage.getByRole('button', { name: 'Graphical' }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Measure interaction performance
       const startTime = Date.now();
       // Try zooming if available
@@ -457,7 +457,7 @@ test.describe('Scenario Edge Cases', () => {
         await typeFilter.selectOption('what-if');
         // Switch to list view
         await authenticatedPage.getByRole('button', { name: 'List' }).click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Refresh page
         await authenticatedPage.reload();
         // Check if state persists (may depend on implementation)
@@ -610,7 +610,7 @@ test.describe('Scenario Edge Cases', () => {
           await bulkDeleteButton.click();
           await authenticatedPage.locator('button:has-text("Delete"), button:has-text("Confirm")').last().click();
           // Wait for operation to complete
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Should show some kind of result message
           const notification = authenticatedPage.locator('.toast, .notification, .alert');
           if (await notification.count() > 0) {

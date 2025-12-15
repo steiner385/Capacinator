@@ -50,7 +50,7 @@ test.describe('Write Operations - CRUD', () => {
       await authenticatedPage.waitForSelector('[role="dialog"], form', { timeout: 10000 });
       const updatedName = `${testContext.prefix}-Updated-Project`;
       // Update name - wait for input to be visible and use label association
-      await authenticatedPage.waitForTimeout(500); // Give dialog time to fully render
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Give dialog time to fully render
       const nameInput = authenticatedPage.locator('text="Project Name *"').locator('..').locator('input');
       await nameInput.waitFor({ state: 'visible' });
       await nameInput.click(); // Focus the input
@@ -64,7 +64,7 @@ test.describe('Write Operations - CRUD', () => {
       await authenticatedPage.waitForSelector('[role="dialog"]', { state: 'detached', timeout: 10000 });
       
       // Wait for table to refresh
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Verify update - check if project exists with old name (update might have failed)
       const oldProjectExists = await authenticatedPage.locator(`tbody tr:has-text("${project.name}")`).count() > 0;
@@ -86,7 +86,7 @@ test.describe('Write Operations - CRUD', () => {
       const deleteButton = projectRow.locator('button[title*="Delete"], button').last(); // Usually the last button is delete
       await deleteButton.click();
       // Confirm deletion - wait for confirm dialog
-      await authenticatedPage.waitForTimeout(500); // Give dialog time to appear
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Give dialog time to appear
       
       // Look for delete confirmation button in any dialog
       const confirmButton = authenticatedPage.locator('button:has-text("Delete"), button:has-text("Confirm")').last();
@@ -94,7 +94,7 @@ test.describe('Write Operations - CRUD', () => {
       await confirmButton.click();
       
       // Wait for dialog to close
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Verify deletion
       const newCount = await testHelpers.getTableRowCount();
       expect(newCount).toBeLessThan(initialCount);
@@ -119,14 +119,14 @@ test.describe('Write Operations - CRUD', () => {
       await testHelpers.waitForDataTable();
       
       // Wait a bit for the table to render
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Search for the created person to handle pagination
       const searchInput = authenticatedPage.locator('input[placeholder*="Search"]');
       if (await searchInput.count() > 0) {
         await searchInput.clear();
         await searchInput.fill(personName);
-        await authenticatedPage.waitForTimeout(1000); // Wait for search to filter
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for search to filter
       }
       
       // Now verify the person exists after search
@@ -143,14 +143,14 @@ test.describe('Write Operations - CRUD', () => {
       // Navigate to people page
       await testHelpers.navigateTo('/people');
       await testHelpers.waitForDataTable();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Search for the person to edit
       const searchInput = authenticatedPage.locator('input[placeholder*="Search"]');
       if (await searchInput.count() > 0) {
         await searchInput.clear();
         await searchInput.fill(person.name);
-        await authenticatedPage.waitForTimeout(1000); // Wait for search to filter
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for search to filter
       }
       
       // Find and click edit button for this person
@@ -160,7 +160,7 @@ test.describe('Write Operations - CRUD', () => {
       
       // Wait for edit dialog
       await authenticatedPage.waitForSelector('[role="dialog"]', { timeout: 10000 });
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Update availability if field exists
       const availabilityInput = authenticatedPage.locator('input[name="default_availability_percentage"], input[name="target_utilization"], input[name="availability"]').first();
@@ -174,7 +174,7 @@ test.describe('Write Operations - CRUD', () => {
       await submitButton.click();
       
       // Wait for dialog to close
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Just verify we're back on the people page
       await expect(authenticatedPage.locator('text="People"').first()).toBeVisible();
@@ -199,14 +199,14 @@ test.describe('Write Operations - CRUD', () => {
       // Navigate to person detail to verify assignment
       await testHelpers.navigateTo('/people');
       await testHelpers.waitForDataTable();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Search for the person
       const searchInput = authenticatedPage.locator('input[placeholder*="Search"]');
       if (await searchInput.count() > 0) {
         await searchInput.clear();
         await searchInput.fill(testData.people[0].name);
-        await authenticatedPage.waitForTimeout(1000); // Wait for search to filter
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for search to filter
       }
       
       // Navigate to person detail - use first view button on the row
@@ -216,7 +216,7 @@ test.describe('Write Operations - CRUD', () => {
       
       // Wait for person detail page
       await authenticatedPage.waitForURL(/\/people\/[a-f0-9-]+/);
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Verify we're on the person detail page
       await expect(authenticatedPage.locator('h1, h2').filter({ hasText: testData.people[0].name })).toBeVisible();
@@ -237,14 +237,14 @@ test.describe('Write Operations - CRUD', () => {
       // Navigate to person detail
       await testHelpers.navigateTo('/people');
       await testHelpers.waitForDataTable();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Search for the person
       const searchInput = authenticatedPage.locator('input[placeholder*="Search"]');
       if (await searchInput.count() > 0) {
         await searchInput.clear();
         await searchInput.fill(testData.people[0].name);
-        await authenticatedPage.waitForTimeout(1000); // Wait for search to filter
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for search to filter
       }
       
       // Navigate to person with assignment - use first view button on the row
@@ -254,7 +254,7 @@ test.describe('Write Operations - CRUD', () => {
       
       // Wait for person detail page
       await authenticatedPage.waitForURL(/\/people\/[a-f0-9-]+/);
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Verify we're on the person detail page
       await expect(authenticatedPage.locator('h1, h2').filter({ hasText: testData.people[0].name })).toBeVisible();

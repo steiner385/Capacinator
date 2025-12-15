@@ -13,7 +13,7 @@ test('Debug utilization report page structure', async ({ authenticatedPage, test
   if (buttonCount > 0) {
     await utilizationButton.click();
     console.log('Clicked Utilization Report button');
-    await authenticatedPage.waitForTimeout(5000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     // Debug page content
     console.log('=== PAGE CONTENT DEBUG ===');
     // Check for headings

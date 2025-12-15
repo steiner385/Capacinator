@@ -48,7 +48,7 @@ test.describe('Reports Functionality', () => {
       for (const tab of tabs) {
         const tabButton = authenticatedPage.locator(`button:has-text("${tab.name}")`);
         await tabButton.click();
-        await authenticatedPage.waitForTimeout(500); // Allow for animation
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Allow for animation
         // Verify tab content loaded
         await expect(authenticatedPage.locator(`text=${tab.content}`)).toBeVisible({ timeout: 10000 });
       }
@@ -77,7 +77,7 @@ test.describe('Reports Functionality', () => {
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         await dateFilter.fill(today.toISOString().split('T')[0]);
         // Wait for data to update
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       }
     });
   });
@@ -89,7 +89,7 @@ test.describe('Reports Functionality', () => {
     }) => {
       // Switch to capacity tab
       await authenticatedPage.getByRole('button', { name: /capacity/i }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for people capacity table
       await expect(authenticatedPage.locator('text=People Capacity')).toBeVisible();
       // Check for table
@@ -122,7 +122,7 @@ test.describe('Reports Functionality', () => {
   test.describe('Utilization Report', () => {
     test(`${tags.reports} should display utilization metrics`, async ({ authenticatedPage }) => {
       await authenticatedPage.getByRole('button', { name: /utilization/i }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for utilization percentage
       await expect(authenticatedPage.locator('text=Utilization %')).toBeVisible();
       // Check for metrics cards
@@ -166,7 +166,7 @@ test.describe('Reports Functionality', () => {
       // Click gaps tab
       const gapsTab = authenticatedPage.locator('button:has-text("Gaps"), button:has-text("Gap")');
       await gapsTab.first().click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for gaps content
       await expect(authenticatedPage.locator('text=/Capacity Gap|Gap Analysis/i')).toBeVisible();
       // Check for gaps table
@@ -207,7 +207,7 @@ test.describe('Reports Functionality', () => {
     }) => {
       // Navigate to capacity report
       await authenticatedPage.getByRole('button', { name: /capacity/i }).click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Count rows in people capacity table
       const table = authenticatedPage.locator('table').first();
       const rows = table.locator('tbody tr');
@@ -230,7 +230,7 @@ test.describe('Reports Functionality', () => {
       const tabs = ['Demand', 'Capacity', 'Utilization', 'Gaps'];
       for (const tab of tabs) {
         await authenticatedPage.getByRole('button', { name: new RegExp(tab, 'i') }).click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       }
       const endTime = Date.now();
       const totalTime = endTime - startTime;
@@ -269,7 +269,7 @@ test.describe('Reports Functionality', () => {
       const refreshButton = authenticatedPage.locator('button[aria-label="Refresh"]');
       if (await refreshButton.count() > 0) {
         await refreshButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Verify count increased if element exists
         if (await projectCountElement.count() > 0) {
           const newCount = await projectCountElement.textContent();
@@ -297,7 +297,7 @@ test.describe('Reports Functionality', () => {
           const updateButton = authenticatedPage.locator('button:has-text("Update Forecast")');
           if (await updateButton.count() > 0) {
             await updateButton.click();
-            await authenticatedPage.waitForTimeout(500);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           }
         }
       }
@@ -496,7 +496,7 @@ test.describe('Reports Functionality', () => {
           const chartBar = chart.locator('.chart-bar, rect').first();
           if (await chartBar.count() > 0) {
             await chartBar.click();
-            await authenticatedPage.waitForTimeout(500);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
             // Verify filter still applied
             await expect(locationFilter).toHaveValue(locationValue);
           }
@@ -523,7 +523,7 @@ test.describe('Reports Functionality', () => {
             const tabs = ['Demand', 'Capacity'];
             for (const tab of tabs) {
               await authenticatedPage.click(`button:has-text("${tab}")`);
-              await authenticatedPage.waitForTimeout(500);
+              await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
               const activeFilters = authenticatedPage.locator('[data-testid="active-filters"], .active-filters');
               if (await activeFilters.count() > 0) {
                 await expect(activeFilters).toBeVisible();
@@ -586,7 +586,7 @@ test.describe('Reports Functionality', () => {
         if (await table.count() > 0) {
           // Check responsive behavior
           await authenticatedPage.setViewportSize({ width: 768, height: 1024 });
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Table should still be visible on smaller screens
           await expect(table).toBeVisible();
         }
@@ -668,7 +668,7 @@ test.describe('Reports Functionality', () => {
           const cell = longTextCells.first();
           // Hover should show tooltip with full text
           await cell.hover();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           const tooltip = authenticatedPage.locator('.tooltip, [role="tooltip"]');
           if (await tooltip.count() > 0) {
             await expect(tooltip).toBeVisible();
@@ -691,7 +691,7 @@ test.describe('Reports Functionality', () => {
         if (await utilizationHeader.count() > 0) {
           // Click to sort
           await utilizationHeader.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Look for sort indicator
           const sortIcon = utilizationHeader.locator('.sort-icon, svg');
           if (await sortIcon.count() > 0) {
@@ -699,7 +699,7 @@ test.describe('Reports Functionality', () => {
           }
           // Click again for descending
           await utilizationHeader.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         }
       }
     });

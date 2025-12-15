@@ -6,7 +6,7 @@ test.describe('Modal Background Fix', () => {
     // Wait for the modal to appear
     await expect(authenticatedPage.getByRole('dialog')).toBeVisible();
     // Wait a moment for styles to be fully applied
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     // Get the modal content element
     const modalContent = authenticatedPage.locator('[role="dialog"]').first();
     // Check computed styles

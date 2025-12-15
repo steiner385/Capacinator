@@ -21,7 +21,7 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
         // For Reports page, just verify we navigated to the correct URL
         await expect(authenticatedPage).toHaveURL(/\/reports/);
         // Wait a bit for any initial loading
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       } else {
         // For other pages, check for specific content
         await expect(authenticatedPage.locator(pageInfo.selector).first()).toBeVisible({ timeout: 10000 });
@@ -86,7 +86,7 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
       await expect(addButtons.first()).toBeVisible();
       // Click to open form
       await addButtons.first().click();
-      await authenticatedPage.waitForTimeout(1000); // Wait for animation
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for animation
       
       // Should show form (modal or page)
       const formElements = await authenticatedPage.locator('form, [role="dialog"], .modal, input[type="text"]').count();
@@ -155,7 +155,7 @@ test.describe('Quick Smoke Test - Dev Environment', () => {
       if (await mobileMenuToggle.isVisible()) {
         // Open mobile menu
         await mobileMenuToggle.click();
-        await authenticatedPage.waitForTimeout(300);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
         // Navigation should be visible
         const nav = authenticatedPage.locator('.sidebar, nav');
         await expect(nav).toBeVisible();

@@ -32,7 +32,7 @@ test.describe('Project Phase Manager Table', () => {
     const phaseSection = authenticatedPage.locator('text=Project Phases, text=Phases & Timeline, text=Timeline');
     if (await phaseSection.isVisible()) {
       await phaseSection.click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     }
   });
   test.describe('Phase Table Display', () => {
@@ -160,7 +160,7 @@ test.describe('Project Phase Manager Table', () => {
             await expect(modal).not.toBeVisible({ timeout: 5000 });
           }
           // Verify row count increased
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           const newRowCount = await phaseRows.count();
           expect(newRowCount).toBeGreaterThan(rowCount);
           await testHelpers.verifyNoErrors();
@@ -214,7 +214,7 @@ test.describe('Project Phase Manager Table', () => {
             await expect(confirmDialog).not.toBeVisible({ timeout: 5000 });
           }
           // Verify row count decreased
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           const newRowCount = await phaseRows.count();
           expect(newRowCount).toBeLessThan(initialRowCount);
           await testHelpers.verifyNoErrors();
@@ -243,7 +243,7 @@ test.describe('Project Phase Manager Table', () => {
             await authenticatedPage.mouse.move(secondRowBox.x + 10, secondRowBox.y + secondRowBox.height + 10);
             await authenticatedPage.mouse.up();
           }
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           await testHelpers.verifyNoErrors();
         }
       }
@@ -294,7 +294,7 @@ test.describe('Project Phase Manager Table', () => {
         expect(className).toMatch(/warning|overlap|conflict/i);
         // Check for overlap tooltip
         await firstOverlap.hover();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         const tooltip = authenticatedPage.locator('[role="tooltip"]');
         if (await tooltip.isVisible()) {
           const tooltipText = await tooltip.textContent();

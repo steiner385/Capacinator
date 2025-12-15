@@ -24,7 +24,7 @@ test.describe('Gaps Analysis Report Accuracy', () => {
     const gapsTab = authenticatedPage.locator('button:has-text("Gaps Report"), button:has-text("Gaps Analysis"), button:has-text("Gaps")').first();
     if (await gapsTab.isVisible()) {
       await gapsTab.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
   test.afterEach(async ({ testDataHelpers }) => {
@@ -243,7 +243,7 @@ test.describe('Gaps Analysis Report Accuracy', () => {
         // It's a button
         await severityFilter.first().click();
       }
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check filtered results
       const filteredRowCount = await table.locator('tbody tr').count();
       expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);

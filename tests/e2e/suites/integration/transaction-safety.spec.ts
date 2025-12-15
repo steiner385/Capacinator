@@ -30,7 +30,7 @@ test.describe('Database Transaction Safety and Concurrent Operations', () => {
     const newButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")');
     if (await newButton.count() > 0) {
       await newButton.first().click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Select person and project if provided
       if (data.personId) {
         const personSelect = page.locator('select[name*="person"]');
@@ -68,7 +68,7 @@ test.describe('Database Transaction Safety and Concurrent Operations', () => {
       const submitButton = page.locator('button:has-text("Create"), button:has-text("Save")');
       if (await submitButton.count() > 0) {
         await submitButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       }
       // Return success if modal closed
       const modalClosed = await page.locator('.modal, [role="dialog"]').count() === 0;

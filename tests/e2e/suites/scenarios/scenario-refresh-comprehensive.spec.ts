@@ -102,7 +102,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       // Switch to branch scenario
       await scenarioUtils.switchToScenario('Test Branch - Comprehensive');
       await authenticatedPage.waitForLoadState('networkidle');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       const branchMetrics = await getMetrics();
       console.log('Branch metrics:', branchMetrics);
@@ -150,7 +150,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       // Switch to branch scenario
       await scenarioUtils.switchToScenario('Test Branch - Comprehensive');
       await authenticatedPage.waitForLoadState('networkidle');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Should now see branch project
       const branchProjects = await authenticatedPage.locator('tbody tr').count();
@@ -161,7 +161,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       // Switch to sandbox
       await scenarioUtils.switchToScenario('Test Sandbox - Comprehensive');
       await authenticatedPage.waitForLoadState('networkidle');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Should see sandbox project
       const sandboxProjectVisible = await authenticatedPage.locator('text=Sandbox Experiment').count();
@@ -198,7 +198,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       // Switch scenario
       await scenarioUtils.switchToScenario('Test Branch - Comprehensive');
       await authenticatedPage.waitForLoadState('networkidle');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Check if data changed
       const updatedRows = await authenticatedPage.locator('tbody tr').count();
@@ -223,7 +223,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
         // Switch scenario
         await scenarioUtils.switchToScenario('Test Sandbox - Comprehensive');
         await authenticatedPage.waitForLoadState('networkidle');
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
         const updatedOptions = await projectFilter.locator('option').count();
         // Options might change based on scenario
@@ -247,7 +247,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
         
         if (await tab.isVisible()) {
           await tab.click();
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
           // Get initial data indicator
           const hasInitialData = await authenticatedPage.locator('.chart-container, .report-content, svg.recharts-surface').first().isVisible().catch(() => false);
@@ -255,7 +255,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
           // Switch scenario
           await scenarioUtils.switchToScenario('Test Branch - Comprehensive');
           await authenticatedPage.waitForLoadState('networkidle');
-          await authenticatedPage.waitForTimeout(1500);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
           // Verify data refreshed
           const hasUpdatedData = await authenticatedPage.locator('.chart-container, .report-content, svg.recharts-surface').first().isVisible().catch(() => false);
@@ -274,7 +274,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       const demandTab = authenticatedPage.locator('button:has-text("Demand"), .tab:has-text("Demand")').first();
       if (await demandTab.isVisible()) {
         await demandTab.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
         // Check for summary values
         const getSummaryValue = async () => {
@@ -287,7 +287,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
         // Switch scenario
         await scenarioUtils.switchToScenario('Test Sandbox - Comprehensive');
         await authenticatedPage.waitForLoadState('networkidle');
-        await authenticatedPage.waitForTimeout(1500);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
         const updatedSummary = await getSummaryValue();
         
@@ -302,7 +302,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       // Set scenario on dashboard
       await testHelpers.navigateTo('/dashboard');
       await scenarioUtils.switchToScenario('Test Branch - Comprehensive');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
       // Verify on each page
       const pages = ['/projects', '/assignments', '/reports', '/scenarios'];
@@ -321,7 +321,7 @@ test.describe('Comprehensive Scenario Data Refresh', () => {
       
       // Switch to specific scenario
       await scenarioUtils.switchToScenario('Test Sandbox - Comprehensive');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
       // Reload page
       await authenticatedPage.reload();

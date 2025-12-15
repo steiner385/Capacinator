@@ -61,7 +61,7 @@ test.describe('Database Corruption Prevention Tests', () => {
     
     if (await mergeButton.isVisible()) {
       await mergeButton.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Handle any merge confirmation dialog
       const confirmButton = authenticatedPage.locator('button').filter({ hasText: /^Confirm$|^Merge$/ }).last();
@@ -85,7 +85,7 @@ test.describe('Database Corruption Prevention Tests', () => {
     const integrityScenarioName = `${testContext.prefix}_Integrity_Check`;
     await authenticatedPage.fill('input[id="scenario-name"], input[name="name"]', integrityScenarioName);
     await authenticatedPage.click('button:has-text("Create Scenario"), button:has-text("Create")');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify we can still create scenarios (database is not corrupted)
     await expect(authenticatedPage.locator(`.scenario-card:has-text("${integrityScenarioName}")`)).toBeVisible({ timeout: 10000 });
     console.log('✅ Database integrity verified - can still create scenarios');
@@ -108,7 +108,7 @@ test.describe('Database Corruption Prevention Tests', () => {
       // Note: TestHelpers is not imported, need to handle authentication differently
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       // Simple wait for page load
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       await page.goto('/scenarios', { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('.scenarios-hierarchy', { timeout: 15000 });
     }
@@ -127,7 +127,7 @@ test.describe('Database Corruption Prevention Tests', () => {
           await typeSelect.selectOption('branch');
         }
         await modal.locator('button:has-text("Create"), button:has-text("Save")').click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         // Verify scenario was created in hierarchy
         const scenarioExists = await page.locator('.hierarchy-row').filter({ hasText: scenarioName }).count() > 0;
@@ -203,7 +203,7 @@ test.describe('Database Corruption Prevention Tests', () => {
       expect(isDisabled).toBe(true);
     } else {
       await submitButton.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check for validation message
       const validationMessage = authenticatedPage.locator('text=/required|please enter|cannot be empty/i');
       if (await validationMessage.count() > 0) {
@@ -218,7 +218,7 @@ test.describe('Database Corruption Prevention Tests', () => {
     const recoveryScenarioName = `${testContext.prefix}_Error_Recovery_Test`;
     await authenticatedPage.fill('input[id="scenario-name"], input[name="name"]', recoveryScenarioName);
     await authenticatedPage.click('button:has-text("Create Scenario"), button:has-text("Create")');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify scenario was created despite previous error
     await expect(authenticatedPage.locator(`.scenario-card:has-text("${recoveryScenarioName}")`).first()).toBeVisible();
     console.log('✅ UI recovered from error and scenario created successfully');

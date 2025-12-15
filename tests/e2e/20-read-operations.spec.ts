@@ -64,7 +64,7 @@ test.describe('Read Operations - All Pages', () => {
       const searchInput = authenticatedPage.locator('input[placeholder*="Search"]');
       if (await searchInput.isVisible()) {
         await searchInput.fill('test');
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       }
       // Test select filters if available
       const locationFilter = authenticatedPage.locator('select[name="location_id"], button[role="combobox"]').filter({ hasText: /location/i }).first();
@@ -193,7 +193,7 @@ test.describe('Read Operations - All Pages', () => {
       const capacityTab = authenticatedPage.locator('button[role="tab"]').filter({ hasText: /capacity/i });
       if (await capacityTab.isVisible()) {
         await capacityTab.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Verify content changed - look for capacity-specific content
         const capacityContent = authenticatedPage.locator('text=/capacity|available|allocated/i');
         const hasCapacityContent = await capacityContent.count() > 0;

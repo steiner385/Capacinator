@@ -152,7 +152,7 @@ test.describe('Capacity Report Data Structure', () => {
     // Switch to capacity report tab
     const capacityTab = authenticatedPage.locator('button:has-text("Capacity")').first();
     await capacityTab.click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Check that the table exists
     const peopleTable = authenticatedPage.locator('table').filter({ hasText: 'Daily Hours' });

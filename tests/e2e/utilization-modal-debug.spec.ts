@@ -9,14 +9,14 @@ test.describe('Utilization Modal Debug', () => {
     await testHelpers.navigateTo('/reports');
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Find and click an Add button
     const addButton = authenticatedPage.locator('button').filter({ hasText: /Add|➕/ }).first();
     await addButton.click();
     
     // Wait a moment for any animations
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Look for ANY element that might be the modal
     const possibleModalSelectors = [

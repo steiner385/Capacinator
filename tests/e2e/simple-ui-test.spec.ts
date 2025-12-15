@@ -13,7 +13,7 @@ test.describe('Simple UI Test', () => {
     // Go directly to scenarios page
     await authenticatedPage.goto('/scenarios', { waitUntil: 'networkidle' });
     // Wait longer for the page to fully load
-    await authenticatedPage.waitForTimeout(5000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     console.log('📸 Taking initial screenshot');
     await authenticatedPage.screenshot({ 
       path: 'test-results/ui-initial-load.png', 
@@ -54,7 +54,7 @@ test.describe('Simple UI Test', () => {
         console.log('🎉 SUCCESS: Scenarios UI is loading correctly!');
       } else if (hasLoadingText) {
         console.log('⏳ Page is still loading, waiting more...');
-        await authenticatedPage.waitForTimeout(3000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
         await authenticatedPage.screenshot({ 
           path: 'test-results/ui-after-loading.png', 
           fullPage: true 
@@ -79,11 +79,11 @@ test.describe('Simple UI Test', () => {
   test('should check API connectivity from browser', async ({ authenticatedPage, testHelpers }) => {
     console.log('🌐 Testing API connectivity');
     await testHelpers.navigateTo('/scenarios');
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Test API from browser context
     const apiTest = await authenticatedPage.evaluate(async () => {
       try {
-        const response = await fetch('http://localhost:3111/api/scenarios');
+        const response = await fetch('http://localhost:3110/api/scenarios');
         const data = await response.json();
         return {
           success: true,

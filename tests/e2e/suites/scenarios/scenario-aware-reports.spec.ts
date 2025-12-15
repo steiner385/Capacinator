@@ -24,7 +24,7 @@ test.describe('Scenario-Aware Reports', () => {
     // Switch to new scenario
     await page.click('.scenario-selector');
     await page.click('text="Demand Report Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Add a test assignment
     await page.goto('/assignments');
@@ -86,7 +86,7 @@ test.describe('Scenario-Aware Reports', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Timeline Test Scenario"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Add assignment for next month
     await page.goto('/assignments');
@@ -137,7 +137,7 @@ test.describe('Scenario-Aware Reports', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Aggregation Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check role demands in new scenario
     await page.goto('/reports?tab=demand');
@@ -168,7 +168,7 @@ test.describe('Scenario-Aware Reports', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Utilization Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check utilization in new scenario
     await page.goto('/reports?tab=utilization');
@@ -236,7 +236,7 @@ test.describe('Scenario-Aware Reports', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Empty Scenario Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check demand report
     await page.goto('/reports?tab=demand');
@@ -263,7 +263,7 @@ test.describe('Scenario-Aware Reports', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Described Scenario"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Check demand report shows description
     await page.goto('/reports?tab=demand');

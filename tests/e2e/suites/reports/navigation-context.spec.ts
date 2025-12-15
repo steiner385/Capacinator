@@ -32,7 +32,7 @@ test.describe('Report Navigation Context', () => {
       await authenticatedPage.click('button:has-text("Capacity Report")');
       // Wait for report to load
       await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Find one of our test people who might be underutilized
       let underutilizedPerson = null;
       let underutilizedRow = null;
@@ -363,7 +363,7 @@ test.describe('Report Navigation Context', () => {
         const applyButton = authenticatedPage.locator('button:has-text("Apply")').first();
         if (await applyButton.count() > 0) {
           await applyButton.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         }
         // Switch between report tabs
         const reports = ['Capacity Report', 'Demand Report', 'Utilization Report'];
@@ -371,7 +371,7 @@ test.describe('Report Navigation Context', () => {
           const reportButton = authenticatedPage.locator(`button:has-text("${report}")`).first();
           if (await reportButton.count() > 0) {
             await reportButton.click();
-            await authenticatedPage.waitForTimeout(500);
+            await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
             // Verify date range is preserved
             const dateDisplay = authenticatedPage.locator('[data-testid="date-range-display"], .date-range').first();
             if (await dateDisplay.count() > 0) {

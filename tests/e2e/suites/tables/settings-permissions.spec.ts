@@ -9,7 +9,7 @@ test.describe('Settings User Permissions Table', () => {
     await testHelpers.navigateTo('/settings');
     // Click on User Permissions tab
     await authenticatedPage.locator('button:has-text("User Permissions")').click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Verify we're on the permissions tab
     await expect(authenticatedPage.locator('.settings-section h2, h2:has-text("User Permissions")')).toBeVisible();
   });
@@ -126,7 +126,7 @@ test.describe('Settings User Permissions Table', () => {
         const editButton = firstRow.locator('button:has-text("Edit"), button[aria-label*="edit"]');
         if (await editButton.isVisible()) {
           await editButton.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Check for edit modal or inline edit
           const modal = authenticatedPage.locator('[role="dialog"]');
           const roleSelect = authenticatedPage.locator('select[name*="role"]');
@@ -157,7 +157,7 @@ test.describe('Settings User Permissions Table', () => {
       const addButton = authenticatedPage.locator('button:has-text("Add User"), button:has-text("New User")');
       if (await addButton.isVisible()) {
         await addButton.click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Check for add user modal
         const modal = authenticatedPage.locator('[role="dialog"]');
         await expect(modal).toBeVisible();
@@ -220,13 +220,13 @@ test.describe('Settings User Permissions Table', () => {
           const initialState = await firstToggle.isChecked();
           // Toggle permission
           await firstToggle.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Verify state changed
           const newState = await firstToggle.isChecked();
           expect(newState).toBe(!initialState);
           // Toggle back
           await firstToggle.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           await testHelpers.verifyNoErrors();
         }
       }
@@ -239,7 +239,7 @@ test.describe('Settings User Permissions Table', () => {
       if (await permissionItems.count() > 0) {
         // Hover over a permission to see dependencies
         await permissionItems.first().hover();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Check for tooltip or info
         const tooltip = authenticatedPage.locator('[role="tooltip"], .tooltip');
         const infoIcon = authenticatedPage.locator('svg[class*="info"], .info-icon');
@@ -272,7 +272,7 @@ test.describe('Settings User Permissions Table', () => {
           const roleOption = authenticatedPage.locator('[role="menuitem"]').first();
           await roleOption.click();
         }
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const filteredRowCount = await table.locator('tbody tr').count();
         expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);
         await testHelpers.verifyNoErrors();
@@ -288,12 +288,12 @@ test.describe('Settings User Permissions Table', () => {
         const initialRowCount = await table.locator('tbody tr').count();
         // Search for a term
         await searchInput.fill('admin');
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         const searchedRowCount = await table.locator('tbody tr').count();
         expect(searchedRowCount).toBeLessThanOrEqual(initialRowCount);
         // Clear search
         await searchInput.clear();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         await testHelpers.verifyNoErrors();
       }
     });
@@ -366,7 +366,7 @@ test.describe('Settings User Permissions Table', () => {
         if (await statusToggle.isVisible()) {
           // Toggle status
           await statusToggle.click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           await testHelpers.verifyNoErrors();
           // Toggle back
           await statusToggle.click();
@@ -419,7 +419,7 @@ test.describe('Settings User Permissions Table', () => {
         if (await toggle.isVisible()) {
           await toggle.click();
           // Check if live region updated
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           const announcement = await liveRegion.textContent();
           if (announcement) {
             expect(announcement).toMatch(/updated|changed|saved/i);

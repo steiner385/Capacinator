@@ -40,7 +40,7 @@ test.describe('Project Type Allocation Table - Zero Values', () => {
     console.log('✅ Allocation table found');
     
     // Wait for data to populate
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Get all table cells in the allocation table
     const allocationCells = await page.locator('.resource-templates-table td').all();
@@ -168,7 +168,7 @@ test.describe('Project Type Allocation Table - Zero Values', () => {
     
     // Wait for allocation table
     await page.waitForSelector('.resource-templates-table', { timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Check that input fields with values don't have empty values or "0" when they should be empty
     const inputFields = await page.locator('.resource-templates-table input[type="number"]').all();

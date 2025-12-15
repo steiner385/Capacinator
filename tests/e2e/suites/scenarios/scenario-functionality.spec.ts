@@ -66,7 +66,7 @@ test.describe('Scenario Functionality', () => {
     await page.waitForLoadState('networkidle');
     
     // Wait a bit for React to render
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Check if we can see any content on the page
     const hasPageContent = await page.locator('.assignments-page, .page-header, h1:has-text("Assignments")').first().isVisible().catch(() => false);

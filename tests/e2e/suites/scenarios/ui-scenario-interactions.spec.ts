@@ -103,7 +103,7 @@ test.describe('Scenario UI Interactions', () => {
     // Switch to new scenario
     await page.click('.scenario-selector');
     await page.click('text="Report Context Test"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Go back to demand report
     await page.goto('/reports?tab=demand');
@@ -133,7 +133,7 @@ test.describe('Scenario UI Interactions', () => {
     // Switch to branch scenario
     await page.click('.scenario-selector');
     await page.click('text="Style Test Branch"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Go back to demand report
     await page.goto('/reports?tab=demand');
@@ -159,7 +159,7 @@ test.describe('Scenario UI Interactions', () => {
     
     await page.click('.scenario-selector');
     await page.click('text="Persistence Test Scenario"');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Reload the page
     await page.reload();

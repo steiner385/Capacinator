@@ -8,7 +8,7 @@ test.describe('Basic Scenario Functionality', () => {
 
   test('should have baseline scenario in localStorage after app loads', async ({ page }) => {
     // Wait for app to fully load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Check localStorage for scenario context
     const scenarioContext = await page.evaluate(() => {

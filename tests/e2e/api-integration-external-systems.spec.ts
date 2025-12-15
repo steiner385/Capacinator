@@ -6,7 +6,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       await testHelpers.setupPage();
       // Navigate to Email Notifications tab
       await authenticatedPage.click('button:has-text("Email Notifications")');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check email configuration status
       const configStatus = authenticatedPage.locator('.config-status');
       await expect(configStatus).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       await testHelpers.setupPage();
       // Navigate to Email Notifications tab
       await authenticatedPage.click('button:has-text("Email Notifications")');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Test email send functionality
       const testEmailInput = authenticatedPage.locator('input[type="email"]');
       const sendButton = authenticatedPage.locator('button:has-text("Send Test Email")');
@@ -33,7 +33,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
         await testEmailInput.fill('test@example.com');
         await sendButton.click();
         // Wait for response
-        await authenticatedPage.waitForTimeout(3000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
         // Check for success or error message
         const messages = authenticatedPage.locator('.save-message, .text-destructive, .success-message');
         if (await messages.count() > 0) {
@@ -73,7 +73,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
         });
         if (await uploadButton.count() > 0) {
           await uploadButton.click();
-          await authenticatedPage.waitForTimeout(2000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Verify file processing response
           const messages = authenticatedPage.locator('.import-message, .text-destructive, .success-message');
           if (await messages.count() > 0) {
@@ -163,7 +163,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       await testHelpers.setupPage();
       // Check for notification scheduling features
       await authenticatedPage.click('button:has-text("Email Notifications")');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Look for scheduled notification templates
       const templates = authenticatedPage.locator('.templates-list, .template-item');
       if (await templates.count() > 0) {
@@ -186,7 +186,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       const settingsButton = authenticatedPage.locator('button:has-text("Settings"), a:has-text("Settings")');
       if (await settingsButton.count() > 0) {
         await settingsButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Check import settings that affect data sync
         const clearDataCheckbox = authenticatedPage.locator('input[type="checkbox"]');
         const validateDuplicatesCheckbox = authenticatedPage.locator('input[type="checkbox"]');
@@ -198,7 +198,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       const historyButton = authenticatedPage.locator('button:has-text("History"), a:has-text("History")');
       if (await historyButton.count() > 0) {
         await historyButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Verify import history tracking
         const historyList = authenticatedPage.locator('.import-history, .history-item');
         if (await historyList.count() > 0) {
@@ -213,7 +213,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       const newScenarioButton = authenticatedPage.locator('button:has-text("New Scenario"), button:has-text("Create Scenario")');
       if (await newScenarioButton.count() > 0) {
         await newScenarioButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Fill scenario details
         const nameInput = authenticatedPage.locator('input[name="name"], input[placeholder*="name"]');
         if (await nameInput.count() > 0) {
@@ -222,7 +222,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
           const submitButton = authenticatedPage.locator('button[type="submit"], button:has-text("Create")');
           if (await submitButton.count() > 0) {
             await submitButton.click();
-            await authenticatedPage.waitForTimeout(2000);
+            await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
             // Verify scenario appears in list
             const scenarioList = authenticatedPage.locator('.scenario-item, .scenario-card');
             if (await scenarioList.count() > 0) {
@@ -241,7 +241,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       const newAssignmentButton = authenticatedPage.locator('button:has-text("New Assignment"), button:has-text("Add Assignment")');
       if (await newAssignmentButton.count() > 0) {
         await newAssignmentButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Fill assignment form
         const projectSelect = authenticatedPage.locator('select[name="project_id"]');
         const personSelect = authenticatedPage.locator('select[name="person_id"]');
@@ -256,7 +256,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
           const submitButton = authenticatedPage.locator('button[type="submit"], button:has-text("Create")');
           if (await submitButton.count() > 0) {
             await submitButton.click();
-            await authenticatedPage.waitForTimeout(2000);
+            await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
             // Navigate to projects page to verify sync
             await testHelpers.navigateTo('/projects');
             await testHelpers.setupPage();
@@ -279,7 +279,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       if (await userSelect.count() > 0) {
         if (await userSelect.locator('option').count() > 1) {
           await userSelect.selectOption({ index: 1 });
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Verify user context is set
           const userContext = authenticatedPage.locator('.user-context, .current-user');
           if (await userContext.count() > 0) {
@@ -307,7 +307,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       await testHelpers.setupPage();
       // Navigate to User Permissions tab
       await authenticatedPage.click('button:has-text("User Permissions")');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check if user permissions are loaded
       const userTable = authenticatedPage.locator('.table tbody tr, .user-item');
       if (await userTable.count() > 0) {
@@ -392,7 +392,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
         const uploadButton = authenticatedPage.locator('button:has-text("Upload"), button:has-text("Import")');
         if (await uploadButton.count() > 0) {
           await uploadButton.click();
-          await authenticatedPage.waitForTimeout(2000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Check for error message
           const errorMessage = authenticatedPage.locator('.text-destructive, .import-error');
           if (await errorMessage.count() > 0) {
@@ -406,14 +406,14 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       await testHelpers.setupPage();
       // Navigate to Email Notifications tab
       await authenticatedPage.click('button:has-text("Email Notifications")');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Test email send with invalid address
       const testEmailInput = authenticatedPage.locator('input[type="email"]');
       const sendButton = authenticatedPage.locator('button:has-text("Send Test Email")');
       if (await testEmailInput.count() > 0 && await sendButton.count() > 0) {
         await testEmailInput.fill('invalid-email');
         await sendButton.click();
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Check for error handling
         const errorMessage = authenticatedPage.locator('.text-destructive, .save-message');
         if (await errorMessage.count() > 0) {
@@ -475,7 +475,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       await testHelpers.setupPage();
       // Navigate to Email Notifications tab
       await authenticatedPage.click('button:has-text("Email Notifications")');
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Check notification service status
       const configStatus = authenticatedPage.locator('.config-status .status-badge');
       if (await configStatus.count() > 0) {
@@ -553,7 +553,7 @@ test.describe('API Integration and External Systems E2E Tests', () => {
       const applyButton = authenticatedPage.locator('button:has-text("Apply"), button:has-text("Filter")');
       if (await applyButton.count() > 0) {
         await applyButton.click();
-        await authenticatedPage.waitForTimeout(5000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       }
       const endTime = Date.now();
       const responseTime = endTime - startTime;

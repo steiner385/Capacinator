@@ -72,7 +72,7 @@ test.describe('Demand Report - Assignment Based', () => {
     const demandTab = authenticatedPage.locator('button:has-text("Demand")').first();
     if (await demandTab.isVisible()) {
       await demandTab.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
     
     // Check that demand data is displayed (not empty)

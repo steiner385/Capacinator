@@ -55,7 +55,7 @@ test.describe('ProjectDemandChart API Call Regression Tests', () => {
       await authenticatedPage.waitForSelector('[data-testid="project-detail"], .project-detail, h1', { timeout: 10000 });
       
       // Give some time for any API calls to complete
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       
       // Verify no API calls were made with undefined IDs
       expect(errorCalls).toHaveLength(0);
@@ -92,19 +92,19 @@ test.describe('ProjectDemandChart API Call Regression Tests', () => {
 
     // Navigate rapidly between pages to test for race conditions
     await testHelpers.navigateTo('/projects');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     await testHelpers.navigateTo('/reports');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     await testHelpers.navigateTo('/projects');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Try to navigate to a project detail page if possible
     const projectLink = authenticatedPage.locator('a[href*="/projects/"]:not([href="/projects"])').first();
     if (await projectLink.isVisible()) {
       await projectLink.click();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
     
     // Verify no undefined calls were made during rapid navigation
@@ -136,7 +136,7 @@ test.describe('ProjectDemandChart API Call Regression Tests', () => {
     await testHelpers.navigateTo('/projects/987fcdeb-51a2-4b3c-d4e5-f6a7b8c9d0e1');
     
     // Wait for page to load or redirect
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     
     // Verify no undefined calls were made
     expect(errorCalls).toHaveLength(0);

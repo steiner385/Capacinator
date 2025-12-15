@@ -14,7 +14,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     // Wait for utilization overview to appear
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
     await authenticatedPage.waitForLoadState('networkidle', { timeout: 30000 });
-    await authenticatedPage.waitForTimeout(3000); // Allow data to fully load
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {}); // Allow data to fully load
   });
 
   test('should open and validate Add Projects modal functionality', async ({ authenticatedPage, testHelpers }) => {
@@ -43,7 +43,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     }
     // Click the button to open modal
     await addButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Look for modal with multiple possible selectors
     const modalSelectors = [
       'div:has(h2:has-text("Add Projects"))',
@@ -76,7 +76,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     }
     expect(closeButton).toBeTruthy();
     // Wait for content to load and check for either projects or no-projects message
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     const hasProjects = await modal.locator('button:has-text("Assign")').count() > 0;
     const hasNoProjectsMessage = await modal.locator('text*="No suitable projects"').count() > 0;
     expect(hasProjects || hasNoProjectsMessage).toBeTruthy();
@@ -123,7 +123,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     }
     // Click the button to open modal
     await reduceButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Look for modal
     const modalSelectors = [
       'div:has(h2:has-text("Reduce Load"))',
@@ -156,7 +156,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     }
     expect(closeButton).toBeTruthy();
     // Wait for content to load and check for either assignments or no-assignments message
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     const hasAssignments = await modal.locator('button:has-text("Remove")').count() > 0;
     const hasNoAssignmentsMessage = await modal.locator('text*="No current assignments"').count() > 0;
     expect(hasAssignments || hasNoAssignmentsMessage).toBeTruthy();
@@ -185,11 +185,11 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
       return;
     }
     await addButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Find modal
     const modal = authenticatedPage.locator('[role="dialog"], .modal, div[style*="position: fixed"]').first();
     await expect(modal).toBeVisible();
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     // Check if there are assignable projects
     const assignButtons = modal.locator('button:has-text("Assign")');
     const assignButtonCount = await assignButtons.count();
@@ -253,11 +253,11 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
       return;
     }
     await reduceButton.click();
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     // Find modal
     const modal = authenticatedPage.locator('[role="dialog"], .modal, div[style*="position: fixed"]').first();
     await expect(modal).toBeVisible();
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     // Check if there are removable assignments
     const removeButtons = modal.locator('button:has-text("Remove")');
     const removeButtonCount = await removeButtons.count();
@@ -324,7 +324,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     // Test Add Projects modal if available
     if (addCount > 0) {
       await addButtons.first().click();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const addModal = authenticatedPage.locator('[role="dialog"], .modal, div[style*="position: fixed"]').first();
       if (await addModal.isVisible()) {
         console.log('✅ Add Projects modal opened without errors');
@@ -335,7 +335,7 @@ test.describe('Utilization Modal Add/Remove Projects - Focused Tests', () => {
     // Test Reduce Load modal if available
     if (reduceCount > 0) {
       await reduceButtons.first().click();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const reduceModal = authenticatedPage.locator('[role="dialog"], .modal, div[style*="position: fixed"]').first();
       if (await reduceModal.isVisible()) {
         console.log('✅ Reduce Load modal opened without errors');

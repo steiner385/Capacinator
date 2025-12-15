@@ -48,7 +48,7 @@ test.describe('API Security and Input Validation', () => {
       const newButton = authenticatedPage.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")');
       if (await newButton.count() > 0) {
         await newButton.first().click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Test SQL injection in various form fields
         for (const payload of sqlInjectionPayloads) {
           console.log(`Testing payload: ${payload.substring(0, 20)}...`);
@@ -57,7 +57,7 @@ test.describe('API Security and Input Validation', () => {
           for (const field of textFields) {
             try {
               await field.fill(payload);
-              await authenticatedPage.waitForTimeout(100);
+              await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
               // Verify the input was sanitized or handled safely
               const fieldValue = await field.inputValue();
               expect(fieldValue).toBeDefined(); // Should not crash
@@ -95,7 +95,7 @@ test.describe('API Security and Input Validation', () => {
       const actionButtons = authenticatedPage.locator('button:has-text("New"), button:has-text("Edit"), button:has-text("Add")');
       if (await actionButtons.count() > 0) {
         await actionButtons.first().click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Set up alert handler to catch any XSS attempts
         let xssTriggered = false;
         authenticatedPage.on('dialog', async dialog => {
@@ -109,7 +109,7 @@ test.describe('API Security and Input Validation', () => {
           for (const field of inputFields) {
             try {
               await field.fill(payload);
-              await authenticatedPage.waitForTimeout(100);
+              await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
             } catch (error) {
               // Some fields might be protected, which is good
               console.log('Field protected from input');
@@ -146,7 +146,7 @@ test.describe('API Security and Input Validation', () => {
       const newButton = authenticatedPage.locator('button:has-text("New"), button:has-text("Add")');
       if (await newButton.count() > 0) {
         await newButton.first().click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Find numeric input fields (allocation percentage, etc.)
         const numericFields = await authenticatedPage.locator('input[type="number"], input[placeholder*="percent"], input[placeholder*="%"]').all();
         for (const field of numericFields) {
@@ -154,7 +154,7 @@ test.describe('API Security and Input Validation', () => {
             console.log(`Testing: ${invalidInput.description}`);
             try {
               await field.fill(String(invalidInput.value));
-              await authenticatedPage.waitForTimeout(100);
+              await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
               // Check if validation prevents invalid input
               const fieldValue = await field.inputValue();
               // Field should either reject invalid input or sanitize it
@@ -194,14 +194,14 @@ test.describe('API Security and Input Validation', () => {
       const newButton = authenticatedPage.locator('button:has-text("New"), button:has-text("Add")');
       if (await newButton.count() > 0) {
         await newButton.first().click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const dateFields = await authenticatedPage.locator('input[type="date"], input[placeholder*="date"]').all();
         for (const field of dateFields) {
           for (const invalidDate of invalidDates) {
             console.log(`Testing date: ${invalidDate.description}`);
             try {
               await field.fill(invalidDate.value);
-              await authenticatedPage.waitForTimeout(100);
+              await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
               // Verify date validation works
               const fieldValue = await field.inputValue();
               // Field should either be empty or contain valid date

@@ -48,7 +48,7 @@ test.describe('Assignment Inline Editing', () => {
       // Press Enter to save
       await input.press('Enter');
       // Wait for any API call to complete
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify the value was saved
       await expect(input).toHaveValue('75');
       // Reload the page to verify persistence
@@ -69,7 +69,7 @@ test.describe('Assignment Inline Editing', () => {
       await input.fill('150');
       await input.press('Enter');
       // Wait for validation
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Check if there's an error message or if value is clamped
       const currentValue = await input.inputValue();
       const numValue = parseInt(currentValue);
@@ -86,7 +86,7 @@ test.describe('Assignment Inline Editing', () => {
       await input.click();
       await input.fill('33.33');
       await input.press('Enter');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       const actualValue = await input.inputValue();
       console.log(`Fractional allocation accepted: ${actualValue}`);
       // Verify value was accepted (may be rounded)
@@ -109,7 +109,7 @@ test.describe('Assignment Inline Editing', () => {
       // Press Enter to save
       await notesInput.press('Enter');
       // Wait for any API call to complete
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify the value was saved
       await expect(notesInput).toHaveValue('Updated test notes');
       // Reload the page to verify persistence
@@ -129,7 +129,7 @@ test.describe('Assignment Inline Editing', () => {
       await notesInput.click();
       await notesInput.fill(specialChars);
       await notesInput.press('Enter');
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify input was accepted
       const actualValue = await notesInput.inputValue();
       expect(actualValue).toBe(specialChars);
@@ -150,7 +150,7 @@ test.describe('Assignment Inline Editing', () => {
       // Press Escape to cancel
       await input.press('Escape');
       // Wait a moment for any potential save
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Verify the value reverted to original
       await expect(input).toHaveValue(originalValue);
     });
@@ -190,7 +190,7 @@ test.describe('Assignment Inline Editing', () => {
       }
       
       // Wait a bit for DOM update
-      await authenticatedPage.waitForTimeout(200);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       
       // Verify the value was saved
       await expect(input).toHaveValue('80');
@@ -269,7 +269,7 @@ test.describe('Assignment Inline Editing', () => {
       await secondInput.press('Enter');
       
       // Wait a bit for save
-      await authenticatedPage.waitForTimeout(200);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 2000 }).catch(() => {});
       
       // Verify second input saved
       await expect(secondInput).toHaveValue('40');
@@ -288,7 +288,7 @@ test.describe('Assignment Inline Editing', () => {
         await input.fill('90');
         await input.press('Enter');
         // Wait for save
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Get the order after edit
         const projectNamesAfter = await authenticatedPage.locator('tbody tr td:nth-child(2)').allTextContents();
         // The order should remain the same

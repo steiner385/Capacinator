@@ -35,7 +35,7 @@ test.describe('Administrative Features', () => {
       if (hasUserManagement) {
         // Click on users/permissions section if available
         await userSections.first().click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Should show user list or permissions table
         const userContent = authenticatedPage.locator('table, .user-list, .permissions-grid');
         await expect(userContent.first()).toBeVisible();
@@ -102,7 +102,7 @@ test.describe('Administrative Features', () => {
         if (await exportButton.isVisible()) {
           await exportButton.click();
           // Wait for export dialog or process
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Check for progress or completion
           const statusIndicators = [
             'text=/exporting|downloading|preparing/i',
@@ -137,7 +137,7 @@ test.describe('Administrative Features', () => {
           foundConfig = true;
           // Click on configuration section
           await sectionElement.first().click();
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Should show configuration options
           const configOptions = authenticatedPage.locator('input[type="checkbox"], input[type="radio"], select, .toggle-switch');
           const hasOptions = await configOptions.count() > 0;
@@ -157,7 +157,7 @@ test.describe('Administrative Features', () => {
       const permissionsSection = authenticatedPage.locator('text=/permissions|roles|access control/i');
       if (await permissionsSection.count() > 0) {
         await permissionsSection.first().click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Should show permissions interface
         const permissionsUI = [
           'table',
@@ -191,7 +191,7 @@ test.describe('Administrative Features', () => {
       const auditSection = authenticatedPage.locator('text=/audit|activity|history|logs/i');
       if (await auditSection.count() > 0) {
         await auditSection.first().click();
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Should show activity log or audit trail
         const activityUI = [
           'table',

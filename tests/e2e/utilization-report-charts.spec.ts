@@ -44,7 +44,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Wait for charts to update
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Get initial utilization value
     const initialUtilization = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
@@ -54,7 +54,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Wait for charts to update
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Verify utilization changed
     const updatedUtilization = await authenticatedPage.textContent('[data-testid="overall-utilization-percentage"]');
@@ -174,7 +174,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Wait for update
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Verify only people from New York are shown
     const tableRows = await authenticatedPage.locator('[data-testid="utilization-table"] tbody tr').count();
@@ -185,7 +185,7 @@ test.describe('Utilization Report Charts E2E Tests', () => {
     await authenticatedPage.click('[data-testid="apply-filters-button"]');
     
     // Verify filtered results
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     const filteredRows = await authenticatedPage.locator('[data-testid="utilization-table"] tbody tr').count();
     expect(filteredRows).toBeLessThanOrEqual(tableRows);
   });

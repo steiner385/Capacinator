@@ -56,7 +56,7 @@ test.describe('Business Rule Validation', () => {
     const newButton = page.locator('button:has-text("New"), button:has-text("Add"), button:has-text("Create")');
     if (await newButton.count() > 0) {
       await newButton.first().click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       // Select person if provided
       if (assignmentData.personId) {
         const personSelect = page.locator('select[name="person_id"], select[name="person"]');
@@ -95,7 +95,7 @@ test.describe('Business Rule Validation', () => {
       const submitButton = page.locator('button:has-text("Create"), button:has-text("Save"), button[type="submit"]');
       if (await submitButton.count() > 0) {
         await submitButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       }
       // Return whether modal is still open (indicates failure)
       const modalStillOpen = await page.locator('.modal, .dialog, [role="dialog"]').count() > 0;
@@ -298,7 +298,7 @@ test.describe('Business Rule Validation', () => {
       const newButton = authenticatedPage.locator('button:has-text("New"), button:has-text("Add")');
       if (await newButton.count() > 0) {
         await newButton.first().click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Try to submit without filling required fields
         const submitButton = authenticatedPage.locator('button:has-text("Create"), button:has-text("Save")');
         // Button might be disabled
@@ -309,7 +309,7 @@ test.describe('Business Rule Validation', () => {
         } else {
           // Try clicking and check for validation
           await submitButton.click();
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Should show validation errors
           const validationErrors = await authenticatedPage.locator('.error, .validation-error, .required').count();
           expect(validationErrors).toBeGreaterThan(0);

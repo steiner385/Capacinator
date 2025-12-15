@@ -51,7 +51,7 @@ test.describe('Role Details Page', () => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
 
       // Wait for page to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Should show role name in header
       const heading = authenticatedPage.locator('h1').first();
@@ -63,7 +63,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Find and click back button
       const backButton = authenticatedPage.locator('button:has-text("Back to Roles")');
@@ -80,7 +80,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo('/roles/invalid-id-12345');
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Should show error message
       const errorHeading = authenticatedPage.locator('h1:has-text("Role Not Found")');
@@ -104,7 +104,7 @@ test.describe('Role Details Page', () => {
 
       // Navigate to role details
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Verify role name is displayed
       const heading = authenticatedPage.locator('h1').first();
@@ -128,7 +128,7 @@ test.describe('Role Details Page', () => {
       console.log(`Role has ${role.people?.length || 0} people assigned`);
 
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // If role has people, they should be displayed
       if (role.people && role.people.length > 0) {
@@ -141,7 +141,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Check for resource templates section
       const templatesSection = authenticatedPage.locator('.resource-templates-section, section:has-text("Resource Templates")');
@@ -180,7 +180,7 @@ test.describe('Role Details Page', () => {
       await navigationPromise;
 
       // Eventually content should load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       const heading = authenticatedPage.locator('h1').first();
       await expect(heading).toBeVisible();
     });
@@ -193,7 +193,7 @@ test.describe('Role Details Page', () => {
       apiContext
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Find description field (should have edit icon)
       const descriptionField = authenticatedPage.locator('.inline-editable').filter({
@@ -214,7 +214,7 @@ test.describe('Role Details Page', () => {
           await input.press('Enter');
 
           // Wait for save
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
           console.log('✅ Description updated successfully');
         }
@@ -226,7 +226,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
       // Look for edit icons
       const editIcons = authenticatedPage.locator('.edit-icon, svg').filter({
@@ -244,7 +244,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Look for allocation percentage inputs
       const allocationInputs = authenticatedPage.locator('input[type="number"]');
@@ -273,7 +273,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Find first allocation input
       const firstInput = authenticatedPage.locator('input[type="number"]').first();
@@ -312,7 +312,7 @@ test.describe('Role Details Page', () => {
       console.log(`Expected ${projectTypes.length} project types and ${phases.length} phases`);
 
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Verify table structure
       const table = authenticatedPage.locator('.resource-templates-table, table');
@@ -334,7 +334,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Take full page screenshot
       await authenticatedPage.screenshot({
@@ -357,7 +357,7 @@ test.describe('Role Details Page', () => {
       testHelpers
     }) => {
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       // Verify we're on Project Manager page
       const heading = authenticatedPage.locator('h1').first();
@@ -398,7 +398,7 @@ test.describe('Role Details Page', () => {
 
       // Navigate to page and verify it loads the same data
       await testHelpers.navigateTo(`/roles/${roleId}`);
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
       const heading = authenticatedPage.locator('h1').first();
       const headingText = await heading.textContent();

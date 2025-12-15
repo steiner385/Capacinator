@@ -11,7 +11,7 @@ test.describe('Utilization Report - Basic Test', () => {
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
     
     // Wait for data to load
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     
     // Take a screenshot to see what's on the page
     await authenticatedPage.screenshot({ path: 'test-results/utilization-report.png', fullPage: true });
@@ -53,7 +53,7 @@ test.describe('Utilization Report - Basic Test', () => {
       await firstAddButton.click();
       
       // Wait and take another screenshot
-      await authenticatedPage.waitForTimeout(3000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
       await authenticatedPage.screenshot({ path: 'test-results/after-add-click.png', fullPage: true });
       
       // Check what changed on the page

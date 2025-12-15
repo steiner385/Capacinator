@@ -30,7 +30,8 @@ export class StandardTestHelpers {
       } catch (error) {
         lastError = error as Error;
         if (i < retries - 1) {
-          await this.page.waitForTimeout(1000); // Brief pause before retry
+          // Wait for DOM to settle before retry using networkidle
+          await this.page.waitForLoadState('domcontentloaded', { timeout: 2000 }).catch(() => {});
         }
       }
     }
@@ -243,7 +244,8 @@ export class StandardTestHelpers {
       } catch (error) {
         lastError = error as Error;
         if (i < retries - 1) {
-          await this.page.waitForTimeout(delay);
+          // Wait for state to settle before retry
+          await this.page.waitForLoadState('domcontentloaded', { timeout: delay }).catch(() => {});
         }
       }
     }

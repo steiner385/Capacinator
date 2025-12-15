@@ -219,7 +219,7 @@ test.describe('People Management', () => {
         // Confirm deletion
         await authenticatedPage.locator('button:has-text("Confirm"), button:has-text("Delete")').last().click();
         // Wait for deletion
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await testHelpers.waitForDataTable();
         // Verify deletion succeeded
         const newRowCount = await testHelpers.getTableRowCount();
@@ -263,7 +263,7 @@ test.describe('People Management', () => {
         if (options.length > 1) {
           // Select specific role
           await roleFilter.selectOption({ index: 1 });
-          await authenticatedPage.waitForTimeout(1000);
+          await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
           // Table should update
           await testHelpers.waitForDataTable();
           // Verify no errors
@@ -288,7 +288,7 @@ test.describe('People Management', () => {
         const firstButton = quickActionButtons.nth(0);
         const buttonText = await firstButton.textContent();
         await firstButton.click();
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         const currentUrl = authenticatedPage.url();
         // Verify navigation based on action type
         if (buttonText?.includes('Assign')) {

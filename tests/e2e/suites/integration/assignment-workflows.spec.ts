@@ -48,7 +48,7 @@ test.describe('Assignment Integration Workflows', () => {
         if (optionText?.includes(projectName || '')) {
           await projectSelect.selectOption(await option.getAttribute('value')!);
           // Wait for role dropdown
-          await authenticatedPage.waitForTimeout(500);
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Select role if available
           const roleSelect = authenticatedPage.locator('#role-select, select[name="role_id"]').first();
           if (await roleSelect.isEnabled()) {
@@ -113,14 +113,14 @@ test.describe('Assignment Integration Workflows', () => {
       const projectOption = await projectSelect.locator('option[value]:not([value=""])').first();
       if (await projectOption.count() > 0) {
         await projectSelect.selectOption(await projectOption.getAttribute('value')!);
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         // Set 50% allocation
         await authenticatedPage.fill('#allocation-slider, input[name="allocation_percentage"]', '50');
         // Submit
         await authenticatedPage.keyboard.press('Enter');
         // Wait for modal to close and page to update
         await authenticatedPage.waitForSelector('text=Smart Assignment', { state: 'detached', timeout: 10000 });
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Check updated utilization
         const newUtilizationElement = authenticatedPage.locator('text=/Current Utilization|Utilization:/').locator('..').locator('text=/%/');
         if (await newUtilizationElement.count() > 0) {
@@ -288,7 +288,7 @@ test.describe('Assignment Integration Workflows', () => {
         await authenticatedPage.keyboard.press('Enter');
         // Wait for assignment to be created
         await authenticatedPage.waitForSelector('text=Smart Assignment', { state: 'detached', timeout: 10000 });
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Verify new assignment appears
         const newAssignments = await authenticatedPage.locator('table').filter({
           has: authenticatedPage.locator('th:has-text("Project")')

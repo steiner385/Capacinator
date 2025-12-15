@@ -11,7 +11,7 @@ test('Debug API calls in browser', async ({ authenticatedPage, testHelpers }) =>
   // Navigate to debug page
   await authenticatedPage.goto('https://localhost:3121/debug-api-test.html');
   // Wait for the API tests to complete
-  await authenticatedPage.waitForTimeout(5000);
+  await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
   // Get the results
   const results = await authenticatedPage.textContent('#results');
   console.log('API Test Results:', results);

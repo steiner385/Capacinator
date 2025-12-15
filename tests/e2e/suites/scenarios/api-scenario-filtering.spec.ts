@@ -60,7 +60,7 @@ test.describe('Scenario API Filtering', () => {
     await authenticatedPage.waitForLoadState('networkidle');
 
     // Wait for API calls to complete
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Check that scenario header was included
     expect(requestHeaders['x-scenario-id']).toBeDefined();

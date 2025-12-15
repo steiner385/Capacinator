@@ -92,7 +92,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Click to collapse
     await projectInfoSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Content should be hidden
     const descriptionField = authenticatedPage.locator('textarea, input[value*="Enhanced UI Test Project"]');
@@ -100,7 +100,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Click to expand again
     await projectInfoSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Content should be visible again
     await expect(authenticatedPage.locator('text=Project for testing complete UI interactions')).toBeVisible();
@@ -114,7 +114,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Click to expand
     await historySection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // History content should now be visible
     await expect(authenticatedPage.locator('text=Project created')).toBeVisible();
@@ -136,7 +136,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Click to edit
     await descriptionText.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Should show textarea for editing
     const textareaField = authenticatedPage.locator('textarea');
@@ -147,7 +147,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Press Enter to save (or blur)
     await textareaField.blur();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Should show updated text
     await expect(authenticatedPage.locator('text=Updated project description for UI testing')).toBeVisible();
@@ -165,7 +165,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Expand assignments section if needed
     const assignmentsSection = authenticatedPage.locator('text=Team Assignments');
     await assignmentsSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Find and click on assignment row
     const assignmentRow = authenticatedPage.locator('text=Alice Johnson').locator('..').locator('..');
@@ -181,7 +181,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Click Edit button
     await authenticatedPage.locator('text=Edit').click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Should show editing form
     await expect(authenticatedPage.locator('text=Edit Assignment')).toBeVisible();
@@ -192,7 +192,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Save changes
     await authenticatedPage.locator('text=Save Changes').click();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Modal should close and changes should be reflected
     await expect(authenticatedPage.locator('text=Assignment Details')).not.toBeVisible();
@@ -211,7 +211,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Expand timeline section
     const timelineSection = authenticatedPage.locator('text=Project Timeline');
     await timelineSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Timeline component should be visible
     const timelineComponent = authenticatedPage.locator('[data-testid="unified-timeline"], .unified-project-timeline, .timeline, .project-timeline').first();
@@ -219,7 +219,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     
     // Should show project phases or timeline content
     // Note: This depends on the actual timeline implementation
-    await authenticatedPage.waitForTimeout(2000); // Allow timeline to load
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Allow timeline to load
   });
 
   test(`${tags.ui} should handle demand chart integration`, async ({
@@ -234,14 +234,14 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Expand demand section
     const demandSection = authenticatedPage.locator('text=Resource Demand');
     await demandSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Demand chart should be visible
     const demandChart = authenticatedPage.locator('[data-testid="demand-chart"], .demand-chart, .chart-container').first();
     await expect(demandChart).toBeVisible();
     
     // Allow chart to load
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   });
 
   test(`${tags.ui} should handle navigation interactions`, async ({
@@ -268,7 +268,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Test person link navigation
     const assignmentsSection = authenticatedPage.locator('text=Team Assignments');
     await assignmentsSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     const personLink = authenticatedPage.locator('a', { hasText: 'Alice Johnson' });
     if (await personLink.isVisible()) {
@@ -287,7 +287,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     await authenticatedPage.waitForSelector('h1', { timeout: 10000 });
     
     // Wait for all content to load
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Take full page screenshot
     await expect(authenticatedPage).toHaveScreenshot('project-detail-full-page.png', {
@@ -307,7 +307,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Assignments section
     const assignmentsSection = authenticatedPage.locator('text=Team Assignments');
     await assignmentsSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     const assignmentsContainer = authenticatedPage.locator('.detail-section').nth(3); // Assuming 4th section
     await expect(assignmentsContainer).toHaveScreenshot('project-detail-assignments-section.png', {
@@ -317,7 +317,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Timeline section
     const timelineSection = authenticatedPage.locator('text=Project Timeline');
     await timelineSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     const timelineContainer = authenticatedPage.locator('.detail-section').nth(1); // Assuming 2nd section
     await expect(timelineContainer).toHaveScreenshot('project-detail-timeline-section.png', {
@@ -337,14 +337,14 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     // Open assignment modal
     const assignmentsSection = authenticatedPage.locator('text=Team Assignments');
     await assignmentsSection.click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     const assignmentRow = authenticatedPage.locator('text=Alice Johnson').locator('..').locator('..');
     await assignmentRow.click();
     
     // Wait for modal to open
     await expect(authenticatedPage.locator('text=Assignment Details')).toBeVisible();
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
     // Screenshot modal in view mode
     const modal = authenticatedPage.locator('.modal-content');
@@ -354,7 +354,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
 
     // Switch to edit mode
     await authenticatedPage.locator('text=Edit').click();
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
 
     // Screenshot modal in edit mode
     await expect(modal).toHaveScreenshot('assignment-modal-edit.png', {
@@ -389,7 +389,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
       }
     });
     
-    await authenticatedPage.waitForTimeout(2000); // Allow any async operations to complete
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Allow any async operations to complete
     
     // Should not have any console errors
     expect(logs.filter(log => !log.includes('404'))).toHaveLength(0); // Ignore 404s
@@ -411,7 +411,7 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     const projectInfoHeader = authenticatedPage.locator('text=Project Information');
     await projectInfoHeader.focus();
     await authenticatedPage.keyboard.press('Enter');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Test Tab navigation to editable fields
     await authenticatedPage.keyboard.press('Tab');
@@ -421,17 +421,17 @@ test.describe('ProjectDetail Enhanced UI Tests', () => {
     const assignmentsHeader = authenticatedPage.locator('text=Team Assignments');
     await assignmentsHeader.focus();
     await authenticatedPage.keyboard.press('Enter');
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
     
     // Test Escape key to close modal (if one opens)
     const assignmentRow = authenticatedPage.locator('text=Alice Johnson').locator('..').locator('..');
     if (await assignmentRow.isVisible()) {
       await assignmentRow.click();
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       if (await authenticatedPage.locator('text=Assignment Details').isVisible()) {
         await authenticatedPage.keyboard.press('Escape');
-        await authenticatedPage.waitForTimeout(500);
+        await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
         
         // Modal should close
         await expect(authenticatedPage.locator('text=Assignment Details')).not.toBeVisible();

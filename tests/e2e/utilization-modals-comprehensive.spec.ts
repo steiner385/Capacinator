@@ -15,7 +15,7 @@ test.describe('Utilization Report Modals', () => {
     await authenticatedPage.click('button:has-text("Utilization")');
     // Wait for utilization report to load
     await authenticatedPage.waitForSelector('text="Team Utilization Details"', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Scroll down to ensure table is visible
     await authenticatedPage.evaluate(() => {
@@ -24,7 +24,7 @@ test.describe('Utilization Report Modals', () => {
         tableElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
-    await authenticatedPage.waitForTimeout(500);
+    await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
   });
 
   // Helper function to find the utilization table
@@ -182,7 +182,7 @@ test.describe('Utilization Report Modals', () => {
         console.log(`Clicking button with text: "${buttonText}"`);
         
         await firstButton.click();
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         // Look for any modal that opens
         const modals = await authenticatedPage.locator('[role="dialog"], .modal, div[style*="position: fixed"]').count();
@@ -241,7 +241,7 @@ test.describe('Utilization Report Modals', () => {
       // Wait for modal and assignments to load
       const modal = authenticatedPage.locator('div:has-text("Reduce Load:")').first();
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Get initial assignment count - look for project cards or assignment items
       const assignments = modal.locator('div:has-text("Project:"), .project-card, [class*="assignment"], [class*="project"]');
@@ -270,7 +270,7 @@ test.describe('Utilization Report Modals', () => {
       await expect(modal).not.toBeVisible({ timeout: 10000 });
       
       // Verify table data was refreshed
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Check that utilization has decreased (or assignment count reduced)
       const updatedRow = authenticatedPage.locator('.team-utilization-overview tbody tr').first();
@@ -395,7 +395,7 @@ test.describe('Utilization Report Modals', () => {
       await expect(modal.locator('h2, h3, h4')).toContainText(selectedPersonName);
       
       // Wait for projects to load
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Verify project recommendations are displayed or "no suitable projects" message
       const projects = modal.locator('[class*="project"], .project-item');
@@ -447,7 +447,7 @@ test.describe('Utilization Report Modals', () => {
       
       const modal = authenticatedPage.locator('div:has-text("Add Projects:")').first();
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Check if there are projects available
       const projects = modal.locator('[class*="project"], .project-item');
@@ -484,7 +484,7 @@ test.describe('Utilization Report Modals', () => {
       await expect(modal).not.toBeVisible({ timeout: 10000 });
       
       // Verify table data was refreshed
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Check that utilization has increased
       const updatedRow = authenticatedPage.locator('.team-utilization-overview tbody tr').first();
@@ -511,7 +511,7 @@ test.describe('Utilization Report Modals', () => {
       
       const modal = authenticatedPage.locator('div:has-text("Add Projects:")').first();
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       const projects = modal.locator('[class*="project"], .project-item');
       const projectCount = await projects.count();
@@ -548,7 +548,7 @@ test.describe('Utilization Report Modals', () => {
       
       const modal = authenticatedPage.locator('div:has-text("Add Projects:")').first();
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       const projects = modal.locator('[class*="project"], .project-item');
       const projectCount = await projects.count();
@@ -666,7 +666,7 @@ test.describe('Utilization Report Modals', () => {
         if (msg.type() === 'error') errors.push(msg.text());
       });
       
-      await authenticatedPage.waitForTimeout(1000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       expect(errors.length).toBe(0);
     });
 
@@ -701,7 +701,7 @@ test.describe('Utilization Report Modals', () => {
       await testRow.locator('button:has-text("Add Projects")').click();
       const modal = authenticatedPage.locator('div:has-text("Add Projects:")').first();
       await expect(modal).toBeVisible();
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       const projects = modal.locator('[class*="project"], .project-item');
       const projectCount = await projects.count();
@@ -716,7 +716,7 @@ test.describe('Utilization Report Modals', () => {
         // Refresh the entire page to verify database persistence
         await authenticatedPage.reload();
         await authenticatedPage.waitForSelector('.team-utilization-overview', { timeout: 10000 });
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         // Find the same person and verify change persisted
         const updatedRows = await authenticatedPage.locator('.team-utilization-overview tbody tr').all();
@@ -764,7 +764,7 @@ test.describe('Utilization Report Modals', () => {
         
         const modal = authenticatedPage.locator('div:has-text("Add Projects:")').first();
         await expect(modal).toBeVisible();
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         
         const projects = modal.locator('[class*="project"], .project-item');
         if (await projects.count() > 0) {
@@ -792,7 +792,7 @@ test.describe('Utilization Report Modals', () => {
         await expect(modal).toBeVisible();
         
         // Should show loading or handle gracefully
-        await authenticatedPage.waitForTimeout(2000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await modal.locator('button[aria-label="Close"], button:has-text("×")').click();
       }
     });

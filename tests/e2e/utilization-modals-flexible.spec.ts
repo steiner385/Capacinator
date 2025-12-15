@@ -7,7 +7,7 @@ test.describe('Utilization Report Modals - Flexible', () => {
     await testHelpers.setupPage();
     await authenticatedPage.click('button:has-text("Utilization Report")');
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")');
-    await authenticatedPage.waitForTimeout(1000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   });
 
   test('should open Reduce Load modal for over-utilized person', async ({ authenticatedPage }) => {
@@ -109,7 +109,7 @@ test.describe('Utilization Report Modals - Flexible', () => {
     const options = await locationFilter.locator('option').allTextContents();
     if (options.length > 1) {
       await locationFilter.selectOption({ index: 1 });
-      await authenticatedPage.waitForTimeout(500);
+      await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       const filteredRows = await authenticatedPage.locator('table tbody tr').count();
       console.log(`Filtered from ${initialRows} to ${filteredRows} rows`);

@@ -6,7 +6,7 @@ test('Capture roles table screenshot showing counts', async ({ authenticatedPage
   await testHelpers.waitForDataTable();
 
   // Wait for table to fully load
-  await authenticatedPage.waitForTimeout(2000);
+  await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 
   // Take full page screenshot
   await authenticatedPage.screenshot({

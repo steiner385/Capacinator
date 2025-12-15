@@ -18,7 +18,7 @@ test.describe('Utilization Modal Add/Remove Projects - Working Tests', () => {
     
     // Wait for utilization overview to appear
     await authenticatedPage.waitForSelector('h2:has-text("Team Utilization Overview")', { timeout: 10000 });
-    await authenticatedPage.waitForTimeout(2000); // Allow data to fully load
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Allow data to fully load
   });
 
   test('should open and interact with Add Projects modal', async ({ authenticatedPage }) => {
@@ -56,7 +56,7 @@ test.describe('Utilization Modal Add/Remove Projects - Working Tests', () => {
     await assignButton.click();
     
     // The modal might close or update - wait a moment
-    await authenticatedPage.waitForTimeout(2000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Check if modal is still open or closed
     const modalStillVisible = await modal.isVisible().catch(() => false);
@@ -104,7 +104,7 @@ test.describe('Utilization Modal Add/Remove Projects - Working Tests', () => {
       await removeButton.click();
       
       // Wait for action to complete
-      await authenticatedPage.waitForTimeout(2000);
+      await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       
       // Verify modal closed
       await expect(modal).not.toBeVisible();
@@ -168,7 +168,7 @@ test.describe('Utilization Modal Add/Remove Projects - Working Tests', () => {
     await assignButton.click();
     
     // Wait for update
-    await authenticatedPage.waitForTimeout(3000);
+    await authenticatedPage.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     
     // Check if modal auto-closed
     if (await modal.isVisible()) {

@@ -22,9 +22,9 @@ export async function setupTestUser(page: Page) {
       
       await selectTrigger.click();
       console.log('📂 Clicked select trigger');
-      
-      // Wait a bit for the dropdown portal to render
-      await page.waitForTimeout(1000);
+
+      // Wait for the dropdown portal to render
+      await page.waitForSelector('[role="option"], [data-radix-collection-item]', { state: 'visible', timeout: 5000 }).catch(() => {});
       
       // Try multiple strategies to find dropdown options
       console.log('🔍 Looking for dropdown options...');
@@ -69,9 +69,9 @@ export async function setupTestUser(page: Page) {
         // Fallback: Try keyboard navigation
         console.log('⚠️ No options visible, trying keyboard navigation...');
         await selectTrigger.press('Enter');
-        await page.waitForTimeout(500);
+        // Wait for dropdown to appear
+        await page.waitForSelector('[role="listbox"], [role="option"]', { state: 'visible', timeout: 2000 }).catch(() => {});
         await page.keyboard.press('ArrowDown');
-        await page.waitForTimeout(100);
         await page.keyboard.press('Enter');
         console.log('✅ Attempted selection via keyboard');
       }

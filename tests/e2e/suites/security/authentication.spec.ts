@@ -89,7 +89,7 @@ test.describe('Authentication and Authorization Security', () => {
         // Try to select empty value
         try {
           await loginSelect.selectOption('');
-          await page.waitForTimeout(500);
+          await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
           // Should not be able to proceed
           const isDisabled = await loginButton.isDisabled();
           expect(isDisabled).toBe(true);

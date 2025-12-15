@@ -190,8 +190,8 @@ export class ImprovedAuthHelper {
       await firstOption.click();
       console.log('✅ Profile selected using shadcn Select');
 
-      // Wait for selection to register
-      await this.page.waitForTimeout(500);
+      // Wait for selection to register (dropdown closes)
+      await this.page.waitForSelector('[role="listbox"]', { state: 'hidden', timeout: 3000 }).catch(() => {});
       return true;
 
     } catch (error) {

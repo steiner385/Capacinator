@@ -127,7 +127,7 @@ test.describe('Scenario-based Assignments @feature', () => {
     await allocationInput.blur();
     
     // Wait a moment for the update
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // The value should either be updated or show an error
     // (depending on whether the update was successful)

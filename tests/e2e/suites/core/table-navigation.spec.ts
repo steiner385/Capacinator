@@ -86,7 +86,7 @@ test.describe('Table Navigation and Display', () => {
         const nameHeader = authenticatedPage.locator('th:has-text("Project Name"), th:has-text("Name")').first();
         if (await nameHeader.isVisible()) {
           await nameHeader.click();
-          await authenticatedPage.waitForTimeout(500); // Wait for sort
+          await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {}); // Wait for sort
           // Verify no errors occurred
           await testHelpers.verifyNoErrors();
         }
@@ -99,7 +99,7 @@ test.describe('Table Navigation and Display', () => {
       if (await searchInput.count() > 0) {
         await testHelpers.searchInTable('test');
         // Wait for filtered results
-        await authenticatedPage.waitForTimeout(1000);
+        await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Clear search
         await testHelpers.searchInTable('');
       }

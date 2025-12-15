@@ -10,7 +10,7 @@ test.describe('Scenario UI Comprehensive Tests', () => {
     if (profileModal) {
       // Select is already filled from global setup, just click Continue
       await page.click('button:has-text("Continue")');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     }
   });
 
@@ -18,7 +18,7 @@ test.describe('Scenario UI Comprehensive Tests', () => {
     // Click on Scenarios in the navigation
     await page.click('a[href="/scenarios"]');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000); // Wait for React to render
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {}); // Wait for React to render
     
     // Check we're on the scenarios page
     await expect(page.locator('h1:has-text("Scenario Planning")')).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('Scenario UI Comprehensive Tests', () => {
     await page.click('button:has-text("Create Scenario")');
     
     // Wait for modal to close and list to update
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Verify the new scenario appears in the list
     await expect(page.locator('.hierarchy-row:has-text("Test Branch Scenario")')).toBeVisible();
@@ -74,7 +74,7 @@ test.describe('Scenario UI Comprehensive Tests', () => {
       await page.locator('.scenario-option').nth(1).click();
       
       // Wait for dropdown to close
-      await page.waitForTimeout(500);
+      await page.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       
       // Verify scenario changed in localStorage
       const newScenario = await page.evaluate(() => {
@@ -187,7 +187,7 @@ test.describe('Scenario UI Comprehensive Tests', () => {
     await page.click('button:has-text("Create Scenario")');
     
     // Wait for creation
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     
     // Verify new branch appears
     await expect(page.locator('.hierarchy-row:has-text("Test Sub-Branch")')).toBeVisible();
