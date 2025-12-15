@@ -1,9 +1,10 @@
-import { chromium, FullConfig, Browser, BrowserContext, Page } from '@playwright/test';
+import { chromium, FullConfig, Browser, BrowserContext, Page, request } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 import { E2EProcessManager } from './process-manager';
 import { waitForHealthy, checkPortsAvailable } from './health-check';
 import { initializeE2EDatabase, cleanupE2EDatabase } from '../../../src/server/database/init-e2e';
+import { preTestCleanup } from './test-data-cleanup';
 
 // Use consistent ports for E2E tests
 const E2E_PORTS = {
@@ -66,7 +67,20 @@ async function globalSetup(config: FullConfig) {
       maxRetries: 30,
       retryDelay: 1000
     });
-    
+
+    // Step 6.5: Clean up orphaned test data from previous runs
+    console.log('🧹 Cleaning up orphaned test data...');
+    try {
+      const cleanupApiContext = await request.newContext({
+        baseURL: `http://localhost:${E2E_PORTS.server}`,
+      });
+      await preTestCleanup(cleanupApiContext, `http://localhost:${E2E_PORTS.server}`);
+      await cleanupApiContext.dispose();
+    } catch (cleanupError) {
+      console.warn('⚠️ Pre-test cleanup warning:', cleanupError);
+      // Don't fail setup if cleanup fails
+    }
+
     // Step 7: Start client
     console.log('🚀 Starting E2E client...');
     await processManager.startProcess('e2e-client', ['npx', 'vite', '--config', 'client-vite.config.ts', '--host', '0.0.0.0'], {

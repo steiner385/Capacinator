@@ -16,6 +16,7 @@ import importRoutes from './import.js';
 import demandRoutes from './demands.js';
 import exportRoutes from './export.js';
 import testDataRoutes from './test-data.js';
+import testContextRoutes from './test-context.js';
 import projectTypeHierarchyRoutes from './project-type-hierarchy.js';
 import projectAllocationRoutes from './project-allocations.js';
 import scenariosRoutes from './scenarios.js';
@@ -60,6 +61,9 @@ router.use('/recommendations', recommendationsRoutes);
 
 // Test data cleanup routes (for e2e tests)
 router.use('/test-data', testDataRoutes);
+
+// Test context routes (for per-test data isolation)
+router.use('/test-context', testContextRoutes);
 
 // Client logging endpoint for remote logging
 router.post('/client-logs', (req: RequestWithLogging, res) => {
