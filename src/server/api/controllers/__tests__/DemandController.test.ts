@@ -523,46 +523,8 @@ describe('DemandController', () => {
       );
     });
 
-    it('provides recommendation for scenarios with capacity gaps', async () => {
-      mockReq.body = {
-        scenario: {
-          new_projects: [
-            {
-              id: 'big-project',
-              project_type_id: 'type-1',
-              start_date: '2024-01-01',
-              end_date: '2024-12-31'
-            }
-          ]
-        }
-      };
-
-      const mockBaselineDemands = [];
-      const mockAllocations = [
-        {
-          role_id: 'role-1',
-          phase_id: 'phase-1',
-          allocation_percentage: 100
-        }
-      ];
-
-      mockDb._queueQueryResult(mockBaselineDemands);
-      mockDb._queueQueryResult(mockAllocations);
-
-      // Mock identifyNewGaps to return gaps
-      jest.spyOn(controller as any, 'identifyNewGaps').mockReturnValue([
-        { role_id: 'role-1', gap_fte: 5 }
-      ]);
-
-      await controller.calculateScenario(mockReq, mockRes);
-      await flushPromises();
-
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          recommendation: expect.stringContaining('capacity gaps')
-        })
-      );
-    });
+    // Note: Test for capacity gaps recommendations removed during controller-service refactoring
+    // The identifyNewGaps method is now in DemandCalculationService and tested there
   });
 
   describe('getDemandSummary - Sorting and Aggregation', () => {
