@@ -3,10 +3,13 @@
  * Provides consistent test setup across all e2e tests
  *
  * Key fixtures:
+ * - testDataFactory: RECOMMENDED - Unified test data factory with cleanup tracking
  * - testContextManager: Per-test data isolation with automatic cleanup
  * - testHelpers: Common UI interaction helpers
  * - authenticatedPage: Pre-authenticated browser page
- * - testDataHelpers: Legacy test data creation helpers
+ * - testDataHelpers: Legacy test data creation helpers (deprecated)
+ * - e2eTestDataBuilder: Legacy builder (deprecated - use testDataFactory)
+ * - testData: Legacy generator (deprecated - use testDataFactory)
  */
 
 import { test as base, Page, APIRequestContext } from '@playwright/test';
@@ -14,6 +17,10 @@ import { TestHelpers } from '../utils/test-helpers';
 import { TestDataGenerator } from '../helpers/test-data-generator';
 import { TestDataHelpers } from '../utils/test-data-helpers';
 import { E2ETestDataBuilder } from '../helpers/e2e-test-data-builder';
+import {
+  UnifiedTestDataFactory,
+  createUnifiedTestDataFactory,
+} from '../helpers/unified-test-data-factory';
 import {
   TestContextManager,
   TestContext,
@@ -27,13 +34,18 @@ type TestFixtures = {
   testHelpers: TestHelpers;
   authenticatedPage: Page;
   apiContext: APIRequestContext;
+  /** RECOMMENDED: Unified test data factory with automatic cleanup and retry logic */
+  testDataFactory: UnifiedTestDataFactory;
+  /** @deprecated Use testDataFactory instead */
   testData: TestDataGenerator;
+  /** @deprecated Use testDataFactory instead */
   testDataHelpers: TestDataHelpers;
+  /** @deprecated Use testDataFactory instead */
   e2eTestDataBuilder: E2ETestDataBuilder;
   seededDatabase: void;
-  /** New: Per-test data isolation manager */
+  /** Per-test data isolation manager */
   testContextManager: TestContextManager;
-  /** New: Isolated test context (auto-created and cleaned up) */
+  /** Isolated test context (auto-created and cleaned up) */
   isolatedContext: TestContext;
 };
 
@@ -110,12 +122,24 @@ export const test = base.extend<TestFixtures>({
         'Content-Type': 'application/json',
       },
     });
-    
+
     await use(apiContext);
     await apiContext.dispose();
   },
 
-  // Test data generator
+  // RECOMMENDED: Unified test data factory with automatic cleanup and retry logic
+  testDataFactory: async ({ apiContext }, use) => {
+    const factory = createUnifiedTestDataFactory(apiContext);
+
+    // Use the factory
+    await use(factory);
+
+    // Automatic cleanup after test
+    await factory.cleanup();
+  },
+
+  // @deprecated - Use testDataFactory instead
+  // Test data generator (legacy)
   testData: async ({ apiContext }, use) => {
     const generator = new TestDataGenerator(apiContext);
     await use(generator);
@@ -175,6 +199,17 @@ export { expect } from '@playwright/test';
 export { TestHelpers } from '../utils/test-helpers';
 export { testConfig } from '../helpers/test-config';
 export { TestContextManager, TestContext } from '../helpers/test-context-manager';
+// Export unified test data factory (recommended)
+export {
+  UnifiedTestDataFactory,
+  createUnifiedTestDataFactory,
+  type Person,
+  type Project,
+  type Assignment,
+  type Role,
+  type Location,
+  type Scenario,
+} from '../helpers/unified-test-data-factory';
 
 // Test tags for categorization
 export const tags = {
