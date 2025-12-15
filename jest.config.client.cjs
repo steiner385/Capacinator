@@ -40,5 +40,45 @@ module.exports = {
   
   // Setup files
   setupFiles: ['<rootDir>/tests/setup.client.js'],
-  setupFilesAfterEnv: ['@testing-library/jest-dom']
+  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+
+  // Coverage configuration (client-specific)
+  collectCoverageFrom: [
+    'client/src/**/*.{ts,tsx}',
+    // Exclude type definition files
+    '!**/*.d.ts',
+    // Exclude node_modules
+    '!**/node_modules/**',
+    // Exclude test files
+    '!**/__tests__/**',
+    // Exclude build output
+    '!**/dist/**',
+    '!**/build/**',
+    // Exclude config files
+    '!**/*.config.{ts,js,cjs}',
+    // Exclude index/barrel files (often just re-exports)
+    '!**/index.ts'
+  ],
+
+  // Coverage thresholds - baselines to prevent regression
+  // These can be increased incrementally as coverage improves
+  coverageThreshold: {
+    global: {
+      branches: 45,
+      functions: 40,
+      lines: 45,
+      statements: 45
+    }
+  },
+
+  // Coverage output directory
+  coverageDirectory: '<rootDir>/coverage/client',
+
+  // Coverage report formats
+  coverageReporters: [
+    'text',
+    'text-summary',
+    'lcov',
+    'json'
+  ]
 };
