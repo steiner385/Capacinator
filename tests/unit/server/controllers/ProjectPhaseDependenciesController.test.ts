@@ -373,5 +373,186 @@ describe('ProjectPhaseDependenciesController', () => {
         message: 'Cascade changes applied successfully'
       });
     });
+
+    it('should handle errors in applyCascade', async () => {
+      // Mock the cascade service to throw an error
+      const { ProjectPhaseCascadeService } = await import('../../../../src/server/services/ProjectPhaseCascadeService');
+      const mockApplyCascade = jest.fn().mockRejectedValue(new Error('Cascade apply failed'));
+      (ProjectPhaseCascadeService as jest.Mock).mockImplementationOnce(() => ({
+        applyCascade: mockApplyCascade
+      }));
+
+      mockReq.body = {
+        project_id: 'proj-1',
+        cascade_data: {}
+      };
+
+      await controller.applyCascade(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to apply cascade changes' });
+    });
+  });
+
+  describe('calculateCascade error handling', () => {
+    it('should handle errors in calculateCascade', async () => {
+      // Mock the cascade service to throw an error
+      const { ProjectPhaseCascadeService } = await import('../../../../src/server/services/ProjectPhaseCascadeService');
+      const mockCalculate = jest.fn().mockRejectedValue(new Error('Cascade calculation failed'));
+      (ProjectPhaseCascadeService as jest.Mock).mockImplementationOnce(() => ({
+        calculateCascade: mockCalculate
+      }));
+
+      mockReq.body = {
+        project_id: 'proj-1',
+        phase_timeline_id: 'timeline-1',
+        new_start_date: '2024-01-01',
+        new_end_date: '2024-01-31'
+      };
+
+      await controller.calculateCascade(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to calculate cascade effects' });
+    });
+  });
+
+  describe('getAll with project_id filter', () => {
+    it('should filter by project_id when provided', async () => {
+      const mockDependencies = [
+        {
+          id: 'dep-1',
+          project_id: 'proj-1',
+          predecessor_phase_name: 'Phase 1',
+          successor_phase_name: 'Phase 2'
+        }
+      ];
+
+      mockReq.query = { project_id: 'proj-1', page: '1', limit: '10' };
+
+      // Mock for the data query that chains correctly
+      mockQuery.offset.mockResolvedValue(mockDependencies);
+
+      // Mock for the count query - returns a thenable with count
+      const countMockQuery = {
+        where: jest.fn().mockReturnThis(),
+        count: jest.fn().mockResolvedValue([{ total: '1' }])
+      };
+
+      (db as jest.Mock)
+        .mockReturnValueOnce(mockQuery)  // First call for data query
+        .mockReturnValueOnce(countMockQuery);  // Second call for count
+
+      await controller.getAll(mockReq as Request, mockRes as Response);
+
+      // Verify project_id filter was applied
+      expect(mockQuery.where).toHaveBeenCalledWith('pd.project_id', 'proj-1');
+    });
+  });
+
+  describe('getAll pagination edge cases', () => {
+    it('should use default page and limit when not provided', async () => {
+      mockReq.query = {};
+
+      // Setup mocks for the query chain
+      mockQuery.offset.mockResolvedValue([]);
+
+      const countMockQuery = {
+        where: jest.fn().mockReturnThis(),
+        count: jest.fn().mockResolvedValue([{ total: '0' }])
+      };
+
+      (db as jest.Mock)
+        .mockReturnValueOnce(mockQuery)
+        .mockReturnValueOnce(countMockQuery);
+
+      await controller.getAll(mockReq as Request, mockRes as Response);
+
+      expect(mockQuery.limit).toHaveBeenCalledWith(10); // default limit
+      expect(mockQuery.offset).toHaveBeenCalledWith(0); // page 1, offset 0
+    });
+
+    it('should calculate correct totalPages for partial last page', async () => {
+      mockReq.query = { page: '1', limit: '3' };
+
+      mockQuery.offset.mockResolvedValue([{}, {}, {}]);
+
+      const countMockQuery = {
+        where: jest.fn().mockReturnThis(),
+        count: jest.fn().mockResolvedValue([{ total: '7' }])  // 7 items with limit 3 = 3 pages
+      };
+
+      (db as jest.Mock)
+        .mockReturnValueOnce(mockQuery)
+        .mockReturnValueOnce(countMockQuery);
+
+      await controller.getAll(mockReq as Request, mockRes as Response);
+
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        pagination: expect.objectContaining({
+          total: 7,
+          totalPages: 3  // Math.ceil(7/3) = 3
+        })
+      }));
+    });
+  });
+
+  describe('create with custom id', () => {
+    it('should use provided id if specified in body', async () => {
+      const newDependency = {
+        id: 'custom-dep-id',
+        project_id: 'proj-1',
+        predecessor_phase_timeline_id: 'phase-1',
+        successor_phase_timeline_id: 'phase-2',
+        dependency_type: 'FS'
+      };
+
+      const createdDependency = { ...newDependency };
+      const dependencyWithPhaseNames = {
+        ...createdDependency,
+        predecessor_phase_name: 'Phase 1',
+        successor_phase_name: 'Phase 2'
+      };
+
+      mockReq.body = newDependency;
+
+      mockQuery.returning.mockResolvedValueOnce([createdDependency]);
+
+      const secondMockQuery = {
+        join: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue(dependencyWithPhaseNames)
+      };
+
+      (db as jest.Mock).mockReturnValueOnce(mockQuery).mockReturnValueOnce(secondMockQuery);
+
+      await controller.create(mockReq as Request, mockRes as Response);
+
+      expect(mockQuery.insert).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'custom-dep-id'
+      }));
+    });
+  });
+
+  describe('update with empty body', () => {
+    it('should still update with just updated_at timestamp', async () => {
+      const updatedDependency = {
+        id: 'dep-1',
+        project_id: 'proj-1'
+      };
+
+      mockReq.params = { id: 'dep-1' };
+      mockReq.body = {}; // Empty body
+
+      mockQuery.returning.mockResolvedValue([updatedDependency]);
+
+      await controller.update(mockReq as Request, mockRes as Response);
+
+      expect(mockQuery.update).toHaveBeenCalledWith(expect.objectContaining({
+        updated_at: expect.any(Date)
+      }));
+      expect(mockRes.json).toHaveBeenCalledWith(updatedDependency);
+    });
   });
 });
