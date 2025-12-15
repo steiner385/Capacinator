@@ -157,7 +157,7 @@ test.describe('Roles Management', () => {
           // Extract number from text (handles formats like "1", "1 people", etc.)
           const match = countText?.match(/\d+/);
           if (match) {
-            const count = parseInt(match[0]);
+            const count = parseInt(match[0], 10);
             expect(count).toBeGreaterThanOrEqual(1);
           }
         }
@@ -295,7 +295,7 @@ test.describe('Roles Management', () => {
             const uiCountMatch = uiCountText?.match(/\d+/);
 
             if (uiCountMatch) {
-              const uiCount = parseInt(uiCountMatch[0]);
+              const uiCount = parseInt(uiCountMatch[0], 10);
               console.log('UI Project Manager people_count:', uiCount);
 
               // Counts should match

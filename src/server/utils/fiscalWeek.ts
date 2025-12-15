@@ -11,8 +11,8 @@ export function fiscalWeekToDate(fiscalWeek: string): Date | null {
   const match = fiscalWeek.match(/^(\d{2})FW(\d{2})$/);
   if (!match) return null;
   
-  const year = parseInt('20' + match[1]);
-  const week = parseInt(match[2]);
+  const year = parseInt('20' + match[1], 10);
+  const week = parseInt(match[2], 10);
   
   // Calculate the date for the first day of the fiscal week
   // Assuming fiscal week starts on Monday

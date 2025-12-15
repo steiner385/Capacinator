@@ -9,8 +9,8 @@ export class ProjectTypesController extends BaseController {
   }
 
   async getAll(req: Request, res: Response) {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 50;
     const include_inactive = req.query.include_inactive === 'true';
 
     const result = await this.executeQuery(async () => {
@@ -30,7 +30,7 @@ export class ProjectTypesController extends BaseController {
         .groupBy('project_type_id');
 
       const countMap = subTypeCounts.reduce((acc: any, item: any) => {
-        acc[item.project_type_id] = parseInt(item.sub_type_count);
+        acc[item.project_type_id] = parseInt(item.sub_type_count, 10);
         return acc;
       }, {});
 

@@ -64,8 +64,8 @@ class MockProjectsController {
   }
 
   async getAll(req: Request, res: Response) {
-    const page = parseInt(req.query?.page as string) || 1;
-    const limit = parseInt(req.query?.limit as string) || 50;
+    const page = parseInt(req.query?.page as string, 10) || 1;
+    const limit = parseInt(req.query?.limit as string, 10) || 50;
 
     const mockProjects = [
       {

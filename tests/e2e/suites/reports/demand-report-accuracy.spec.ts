@@ -56,7 +56,7 @@ test.describe('Demand Report Accuracy', () => {
         const value = await element.locator('..').locator('.metric, .value').textContent();
         expect(value).toMatch(metric.pattern);
         if (metric.minValue) {
-          const numValue = parseInt(value?.match(/\d+/)?.[0] || '0');
+          const numValue = parseInt(value?.match(/\d+/, 10)?.[0] || '0');
           expect(numValue).toBeGreaterThanOrEqual(metric.minValue);
         }
       }
@@ -204,7 +204,7 @@ test.describe('Demand Report Accuracy', () => {
     // Get initial demand value
     const demandCard = authenticatedPage.locator('.summary-card:has-text("Total Demand")');
     const initialDemand = await demandCard.locator('.metric').textContent();
-    const initialValue = parseInt(initialDemand?.match(/\d+/)?.[0] || '0');
+    const initialValue = parseInt(initialDemand?.match(/\d+/, 10)?.[0] || '0');
     // Look for date filters
     const dateFilters = authenticatedPage.locator('input[type="date"]');
     if (await dateFilters.count() >= 2) {
@@ -227,7 +227,7 @@ test.describe('Demand Report Accuracy', () => {
         await testHelpers.verifyNoErrors();
         // Get updated demand
         const updatedDemand = await demandCard.locator('.metric').textContent();
-        const updatedValue = parseInt(updatedDemand?.match(/\d+/)?.[0] || '0');
+        const updatedValue = parseInt(updatedDemand?.match(/\d+/, 10)?.[0] || '0');
         // Value should be >= 0 and reasonable for our test data
         expect(updatedValue).toBeGreaterThanOrEqual(0);
         // If we have assignments, demand should be > 0

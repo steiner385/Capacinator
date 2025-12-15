@@ -85,7 +85,7 @@ test.describe('Utilization Modal Debug', () => {
       return elements
         .filter(el => {
           const style = window.getComputedStyle(el);
-          const zIndex = parseInt(style.zIndex);
+          const zIndex = parseInt(style.zIndex, 10);
           return !isNaN(zIndex) && zIndex > 100;
         })
         .map(el => ({

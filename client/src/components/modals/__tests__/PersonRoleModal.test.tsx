@@ -413,8 +413,8 @@ describe('PersonRoleModal', () => {
     it('converts proficiency_level to integer', async () => {
       // This tests the business logic in handleSubmit
       // The conversion happens in the submit handler
-      expect(parseInt('3')).toBe(3);
-      expect(parseInt('5')).toBe(5);
+      expect(parseInt('3', 10)).toBe(3);
+      expect(parseInt('5', 10)).toBe(5);
     });
 
     it('converts empty dates to null', () => {

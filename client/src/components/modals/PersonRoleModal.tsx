@@ -100,7 +100,7 @@ export default function PersonRoleModal({
     try {
       const submitData = {
         role_id: formData.role_id,
-        proficiency_level: parseInt(formData.proficiency_level),
+        proficiency_level: parseInt(formData.proficiency_level, 10),
         is_primary: formData.is_primary,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null

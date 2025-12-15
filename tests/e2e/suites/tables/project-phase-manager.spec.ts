@@ -257,7 +257,7 @@ test.describe('Project Phase Manager Table', () => {
         const orders = [];
         for (let i = 0; i < await orderBadges.count(); i++) {
           const orderText = await orderBadges.nth(i).textContent();
-          const orderNum = parseInt(orderText?.match(/\d+/)?.[0] || '0');
+          const orderNum = parseInt(orderText?.match(/\d+/, 10)?.[0] || '0');
           orders.push(orderNum);
         }
         // Verify orders are sequential

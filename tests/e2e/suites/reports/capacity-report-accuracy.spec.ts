@@ -77,7 +77,7 @@ test.describe('Capacity Report Accuracy', () => {
       expect(metricText?.trim()).toBeTruthy();
       expect(metricText).toMatch(card.expectedPattern);
       if (card.minValue !== undefined) {
-        const numericValue = parseInt(metricText?.match(/\d+/)?.[0] || '0');
+        const numericValue = parseInt(metricText?.match(/\d+/, 10)?.[0] || '0');
         expect(numericValue).toBeGreaterThanOrEqual(card.minValue);
       }
     }
@@ -190,10 +190,10 @@ test.describe('Capacity Report Accuracy', () => {
     // Get capacity metrics
     const totalCapacityCard = authenticatedPage.locator('.summary-card:has-text("Total Capacity")');
     const totalCapacityText = await totalCapacityCard.locator('.metric').textContent();
-    const totalCapacity = parseInt(totalCapacityText?.match(/\d+/)?.[0] || '0');
+    const totalCapacity = parseInt(totalCapacityText?.match(/\d+/, 10)?.[0] || '0');
     const peopleCard = authenticatedPage.locator('.summary-card:has-text("People with Capacity"), .summary-card:has-text("People")');
     const peopleCountText = await peopleCard.locator('.metric').textContent();
-    const peopleCount = parseInt(peopleCountText?.match(/\d+/)?.[0] || '0');
+    const peopleCount = parseInt(peopleCountText?.match(/\d+/, 10)?.[0] || '0');
     if (totalCapacity > 0 && peopleCount > 0) {
       // Calculate average capacity per person
       const avgCapacityPerPerson = totalCapacity / peopleCount;
@@ -263,7 +263,7 @@ test.describe('Capacity Report Accuracy', () => {
     // Get initial capacity
     const capacityCard = authenticatedPage.locator('.summary-card:has-text("Total Capacity")');
     const initialCapacity = await capacityCard.locator('.metric').textContent();
-    const initialValue = parseInt(initialCapacity?.match(/\d+/)?.[0] || '0');
+    const initialValue = parseInt(initialCapacity?.match(/\d+/, 10)?.[0] || '0');
     // Apply date filter
     const startDateInput = authenticatedPage.locator('input[name="startDate"], input[type="date"]').first();
     const endDateInput = authenticatedPage.locator('input[name="endDate"], input[type="date"]').last();
@@ -284,7 +284,7 @@ test.describe('Capacity Report Accuracy', () => {
         await authenticatedPage.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         // Get updated capacity
         const updatedCapacity = await capacityCard.locator('.metric').textContent();
-        const updatedValue = parseInt(updatedCapacity?.match(/\d+/)?.[0] || '0');
+        const updatedValue = parseInt(updatedCapacity?.match(/\d+/, 10)?.[0] || '0');
         // Verify it's a reasonable positive value
         expect(updatedValue).toBeGreaterThan(0);
         // Verify no errors occurred

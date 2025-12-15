@@ -796,7 +796,7 @@ export class ExcelImporterV2 {
           name: projectName,
           project_type_id: projectTypeRecord.id,
           location_id: locationId,
-          priority: parseInt(priority || '3') || 3,
+          priority: parseInt(priority || '3', 10) || 3,
           include_in_demand: includeInDemand === 'Y' ? 1 : 0,
           created_at: new Date(),
           updated_at: new Date()
@@ -1302,10 +1302,10 @@ export class ExcelImporterV2 {
       result.warnings.push(...plannersResult.errors);
 
       // Count imported locations
-      result.imported.locations = await this.db('locations').count('* as count').first().then(r => parseInt(String(r?.count || '0')));
-      
+      result.imported.locations = await this.db('locations').count('* as count').first().then(r => parseInt(String(r?.count || '0'), 10));
+
       // Count availability overrides
-      result.imported.availabilityOverrides = await this.db('person_availability_overrides').count('* as count').first().then(r => parseInt(String(r?.count || '0')));
+      result.imported.availabilityOverrides = await this.db('person_availability_overrides').count('* as count').first().then(r => parseInt(String(r?.count || '0'), 10));
 
       // Collect all structured errors and warnings
       const errorSummary = errorCollector.toJSON();

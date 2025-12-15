@@ -23,7 +23,7 @@ test.describe('Project Roadmap Today Line', () => {
       };
     });
     expect(todayLineStyles.position).toBe('absolute');
-    expect(parseInt(todayLineStyles.zIndex)).toBeGreaterThan(10);
+    expect(parseInt(todayLineStyles.zIndex, 10)).toBeGreaterThan(10);
     console.log('✅ Today line is visible with proper styling');
   });
   test('should show today indicator with correct label', async ({ page }) => {

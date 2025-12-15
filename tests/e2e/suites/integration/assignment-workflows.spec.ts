@@ -127,8 +127,8 @@ test.describe('Assignment Integration Workflows', () => {
           const newUtilization = await newUtilizationElement.textContent();
           console.log(`Updated utilization: ${newUtilization}`);
           // Verify utilization increased
-          const oldValue = parseInt(detailUtilization);
-          const newValue = parseInt(newUtilization || '0');
+          const oldValue = parseInt(detailUtilization, 10);
+          const newValue = parseInt(newUtilization || '0', 10);
           expect(newValue).toBeGreaterThan(oldValue);
         }
       }
@@ -325,7 +325,7 @@ test.describe('Assignment Integration Workflows', () => {
       }).locator('tbody tr').count();
       console.log(`Detail page shows ${detailAssignments} assignments`);
       // Counts should match
-      expect(detailAssignments).toBe(parseInt(listAssignmentCount || '0'));
+      expect(detailAssignments).toBe(parseInt(listAssignmentCount || '0', 10));
       // Navigate to projects page to verify from project perspective
       await testHelpers.navigateTo('/projects');
       await testHelpers.waitForDataTable();

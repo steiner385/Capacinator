@@ -119,9 +119,9 @@ export class ReportHelpers {
     // Get summary stats
     const summary = {
       averageUtilization: await this.getStatValue('Average Utilization'),
-      overutilized: parseInt(await this.getStatValue('Overutilized')),
-      optimal: parseInt(await this.getStatValue('Optimal')),
-      underutilized: parseInt(await this.getStatValue('Underutilized'))
+      overutilized: parseInt(await this.getStatValue('Overutilized', 10)),
+      optimal: parseInt(await this.getStatValue('Optimal', 10)),
+      underutilized: parseInt(await this.getStatValue('Underutilized', 10))
     };
 
     // Get detail rows

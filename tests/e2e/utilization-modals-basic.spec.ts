@@ -181,7 +181,7 @@ test.describe('Utilization Report Modal Tests', () => {
       console.log(`${name}: ${utilizationText}`);
       
       // Check that utilization is a valid percentage
-      const utilization = parseInt((utilizationText || '').replace('%', '') || '0');
+      const utilization = parseInt((utilizationText || '', 10).replace('%', '') || '0');
       expect(utilization).toBeGreaterThanOrEqual(0);
       
       // Check button presence based on utilization

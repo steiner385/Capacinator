@@ -253,7 +253,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
           // Verify hours estimation is reasonable
           const hoursMatch = projectText.match(/~(\d+)h\/week/);
           if (hoursMatch) {
-            const hours = parseInt(hoursMatch[1]);
+            const hours = parseInt(hoursMatch[1], 10);
             expect(hours).toBeGreaterThanOrEqual(1);
             expect(hours).toBeLessThanOrEqual(40);
           }
@@ -444,7 +444,7 @@ test.describe('Utilization Report Modals - Enhanced Coverage', () => {
           // Verify hours calculation is reasonable
           const hoursMatch = assignmentText.match(/(\d+)h\/week/);
           if (hoursMatch) {
-            const hours = parseInt(hoursMatch[1]);
+            const hours = parseInt(hoursMatch[1], 10);
             expect(hours).toBeGreaterThanOrEqual(1);
             expect(hours).toBeLessThanOrEqual(40);
           }

@@ -72,7 +72,7 @@ test.describe('Assignment Inline Editing', () => {
       await authenticatedPage.waitForLoadState("domcontentloaded", { timeout: 3000 }).catch(() => {});
       // Check if there's an error message or if value is clamped
       const currentValue = await input.inputValue();
-      const numValue = parseInt(currentValue);
+      const numValue = parseInt(currentValue, 10);
       // Value should be clamped to 100 or show validation error
       expect(numValue).toBeLessThanOrEqual(100);
       expect(numValue).toBeGreaterThanOrEqual(0);

@@ -97,7 +97,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
         // Parse utilization percentage
         const utilizationMatch = utilizationText?.match(/(\d+)%/);
         if (utilizationMatch) {
-          const utilization = parseInt(utilizationMatch[1]);
+          const utilization = parseInt(utilizationMatch[1], 10);
           if (utilization < 100) { // Not fully utilized
             targetPersonRow = personRow;
             targetPersonName = person.name;
@@ -117,7 +117,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
         const utilizationText = await utilizationCell.textContent();
         const utilizationMatch = utilizationText?.match(/(\d+)%/);
         if (utilizationMatch) {
-          const utilization = parseInt(utilizationMatch[1]);
+          const utilization = parseInt(utilizationMatch[1], 10);
           if (utilization < 70) {
             targetPersonRow = row;
             targetPersonName = personName || 'Unknown';
@@ -252,7 +252,7 @@ test.describe('Utilization Report Assignment Workflow', () => {
         // If we added an assignment, utilization should have increased
         const newUtilizationMatch = newUtilizationText?.match(/(\d+)%/);
         if (newUtilizationMatch) {
-          const newUtilization = parseInt(newUtilizationMatch[1]);
+          const newUtilization = parseInt(newUtilizationMatch[1], 10);
           console.log(`✅ Utilization changed as expected`);
         }
       }
@@ -350,14 +350,14 @@ test.describe('Utilization Report Assignment Workflow', () => {
         const allocationText = await assignmentsList.nth(i).locator('td:has-text("%"), .allocation').textContent();
         const allocationMatch = allocationText?.match(/(\d+)%/);
         if (allocationMatch) {
-          totalAllocation += parseInt(allocationMatch[1]);
+          totalAllocation += parseInt(allocationMatch[1], 10);
         }
       }
       console.log(`Total allocation from assignments: ${totalAllocation}%`);
       // Parse the displayed utilization
       const displayedMatch = initialUtilization?.match(/(\d+)%/);
       if (displayedMatch) {
-        const displayedUtilization = parseInt(displayedMatch[1]);
+        const displayedUtilization = parseInt(displayedMatch[1], 10);
         // They should roughly match (within 5% tolerance for rounding)
         expect(Math.abs(displayedUtilization - totalAllocation)).toBeLessThanOrEqual(5);
       }

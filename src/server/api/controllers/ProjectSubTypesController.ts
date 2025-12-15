@@ -302,7 +302,7 @@ export class ProjectSubTypesController {
         .count('* as count')
         .first();
 
-      if (projectCount && parseInt(projectCount.count as string) > 0) {
+      if (projectCount && parseInt(projectCount.count as string, 10) > 0) {
         return res.status(409).json({
           success: false,
           error: 'Cannot delete project sub-type that is being used by projects'

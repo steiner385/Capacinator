@@ -20,7 +20,7 @@ test.describe('Dashboard Availability Accuracy', () => {
     const availableText = quickStatsSection.locator('text=/Available:\\s*\\d+/i');
     await expect(availableText).toBeVisible();
     const availableMatch = (await availableText.textContent())?.match(/Available:\s*(\d+)/i);
-    const dashboardAvailableCount = availableMatch ? parseInt(availableMatch[1]) : 0;
+    const dashboardAvailableCount = availableMatch ? parseInt(availableMatch[1], 10) : 0;
     
     console.log(`Dashboard shows ${dashboardAvailableCount} available people`);
     
@@ -62,7 +62,7 @@ test.describe('Dashboard Availability Accuracy', () => {
     const quickStatsSection = authenticatedPage.locator('.card').filter({ hasText: 'Quick Stats' });
     const availableText = quickStatsSection.locator('text=/Available:\\s*\\d+/i');
     const initialMatch = (await availableText.textContent())?.match(/Available:\s*(\d+)/i);
-    const initialAvailableCount = initialMatch ? parseInt(initialMatch[1]) : 0;
+    const initialAvailableCount = initialMatch ? parseInt(initialMatch[1], 10) : 0;
     
     console.log(`Initial available count: ${initialAvailableCount}`);
     
@@ -101,7 +101,7 @@ test.describe('Dashboard Availability Accuracy', () => {
         
         // Check updated count
         const updatedMatch = (await availableText.textContent())?.match(/Available:\s*(\d+)/i);
-        const updatedAvailableCount = updatedMatch ? parseInt(updatedMatch[1]) : 0;
+        const updatedAvailableCount = updatedMatch ? parseInt(updatedMatch[1], 10) : 0;
         
         console.log(`Updated available count: ${updatedAvailableCount}`);
         

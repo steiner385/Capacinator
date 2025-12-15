@@ -392,8 +392,8 @@ describe.skip('Import/Export Workflow Integration', () => {
       const peopleCount = await db('people').count('* as count').first();
       
       // Counts should remain the same (only test data)
-      expect(parseInt(projectCount.count)).toBe(1);
-      expect(parseInt(peopleCount.count)).toBe(1);
+      expect(parseInt(projectCount.count, 10)).toBe(1);
+      expect(parseInt(peopleCount.count, 10)).toBe(1);
 
       // Cleanup
       await fs.unlink(analysisFilePath);

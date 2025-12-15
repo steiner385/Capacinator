@@ -375,7 +375,7 @@ test.describe('Database Transaction Safety and Concurrent Operations', () => {
         const utilizationCell = personRow.locator('td').nth(4); // Utilization column
         const utilizationText = await utilizationCell.textContent();
         if (utilizationText?.includes('%')) {
-          const utilization = parseInt(utilizationText.match(/(\d+)%/)?.[1] || '0');
+          const utilization = parseInt(utilizationText.match(/(\d+, 10)%/)?.[1] || '0');
           expect(utilization).toBeLessThanOrEqual(100);
           console.log(`✅ Person utilization (${utilization}%) within valid range`);
         }

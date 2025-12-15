@@ -406,7 +406,7 @@ export default function PersonDetails() {
 
     const handleSave = () => {
       if (editValue !== value) {
-        handleFieldUpdate(field, type === 'number' ? parseInt(editValue) : editValue);
+        handleFieldUpdate(field, type === 'number' ? parseInt(editValue, 10) : editValue);
       }
       setIsEditing(false);
     };
@@ -1016,7 +1016,7 @@ export default function PersonDetails() {
                         <input
                           type="number"
                           value={newTimeOffData?.availability_percentage || ''}
-                          onChange={(e) => setNewTimeOffData({ ...newTimeOffData, availability_percentage: parseInt(e.target.value) })}
+                          onChange={(e) => setNewTimeOffData({ ...newTimeOffData, availability_percentage: parseInt(e.target.value, 10) })}
                           className="form-input"
                           min="0"
                           max="100"

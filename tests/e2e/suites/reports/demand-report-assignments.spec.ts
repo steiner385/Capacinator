@@ -91,7 +91,7 @@ test.describe('Demand Report - Assignment Based', () => {
     // Extract the hours value
     const demandText = await totalDemandElement.textContent();
     const hoursMatch = demandText?.match(/(\\d+)\\s*hours/i);
-    const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+    const hours = hoursMatch ? parseInt(hoursMatch[1], 10) : 0;
     
     // With 100% allocation for 90 days, we should have significant hours
     expect(hours).toBeGreaterThan(0);

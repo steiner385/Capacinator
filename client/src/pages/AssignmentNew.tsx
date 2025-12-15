@@ -55,7 +55,7 @@ export function AssignmentNew() {
       status,
       startDate,
       endDate,
-      allocation: allocation ? parseInt(allocation) : null,
+      allocation: allocation ? parseInt(allocation, 10) : null,
       hasContext: !!(person || role || project || action)
     };
   }, [searchParams]);
@@ -491,7 +491,7 @@ export function AssignmentNew() {
                   <input
                     type="number"
                     value={formData.allocation_percentage}
-                    onChange={(e) => handleChange('allocation_percentage', parseInt(e.target.value))}
+                    onChange={(e) => handleChange('allocation_percentage', parseInt(e.target.value, 10))}
                     className={`form-input ${errors.allocation_percentage ? 'error' : ''}`}
                     min="1"
                     max="100"

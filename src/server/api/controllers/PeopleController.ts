@@ -7,8 +7,8 @@ export class PeopleController extends BaseController {
     super({ enableAudit: true }, { container });
   }
   async getAll(req: Request, res: Response) {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 50;
     const filters = {
       primary_role_id: req.query.primary_role_id, // Still allow filtering by role_id for API compatibility
       supervisor_id: req.query.supervisor_id,

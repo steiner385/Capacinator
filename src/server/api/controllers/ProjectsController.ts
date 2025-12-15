@@ -166,8 +166,8 @@ export class ProjectsController extends BaseController {
   }
 
   getAll = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 50;
     const filters = {
       location_id: req.query.location_id,
       project_type_id: req.query.project_type_id,

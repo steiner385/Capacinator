@@ -182,7 +182,7 @@ export default function Settings() {
               <input
                 type="number"
                 value={systemSettings.defaultWorkHoursPerWeek}
-                onChange={(e) => setSystemSettings({...systemSettings, defaultWorkHoursPerWeek: parseInt(e.target.value) || 40})}
+                onChange={(e) => setSystemSettings({...systemSettings, defaultWorkHoursPerWeek: parseInt(e.target.value, 10) || 40})}
                 className="form-input"
                 min="1"
                 max="80"
@@ -194,7 +194,7 @@ export default function Settings() {
               <input
                 type="number"
                 value={systemSettings.defaultVacationDaysPerYear}
-                onChange={(e) => setSystemSettings({...systemSettings, defaultVacationDaysPerYear: parseInt(e.target.value) || 0})}
+                onChange={(e) => setSystemSettings({...systemSettings, defaultVacationDaysPerYear: parseInt(e.target.value, 10) || 0})}
                 className="form-input"
                 min="0"
                 max="365"
@@ -206,7 +206,7 @@ export default function Settings() {
             <label>Fiscal Year Start Month</label>
             <select
               value={systemSettings.fiscalYearStartMonth}
-              onChange={(e) => setSystemSettings({...systemSettings, fiscalYearStartMonth: parseInt(e.target.value)})}
+              onChange={(e) => setSystemSettings({...systemSettings, fiscalYearStartMonth: parseInt(e.target.value, 10)})}
               className="form-select"
             >
               {['January', 'February', 'March', 'April', 'May', 'June', 
@@ -236,7 +236,7 @@ export default function Settings() {
               <input
                 type="number"
                 value={systemSettings.maxAllocationPercentage}
-                onChange={(e) => setSystemSettings({...systemSettings, maxAllocationPercentage: parseInt(e.target.value) || 100})}
+                onChange={(e) => setSystemSettings({...systemSettings, maxAllocationPercentage: parseInt(e.target.value, 10) || 100})}
                 className="form-input"
                 min="100"
                 max="200"
@@ -360,7 +360,7 @@ export default function Settings() {
               <label>Default Project Priority</label>
               <select
                 value={importSettings.defaultProjectPriority}
-                onChange={(e) => setImportSettings({...importSettings, defaultProjectPriority: parseInt(e.target.value)})}
+                onChange={(e) => setImportSettings({...importSettings, defaultProjectPriority: parseInt(e.target.value, 10)})}
                 className="form-select"
               >
                 <option value={1}>🔴 High</option>

@@ -194,7 +194,7 @@ export function ProjectDetail() {
     updateAssignmentMutation.mutate({
       assignmentId: selectedAssignment.id,
       updates: {
-        allocation_percentage: parseInt(assignmentForm.allocation_percentage.toString()),
+        allocation_percentage: parseInt(assignmentForm.allocation_percentage.toString(), 10),
         start_date: new Date(assignmentForm.start_date).getTime(),
         end_date: new Date(assignmentForm.end_date).getTime()
       }
@@ -216,7 +216,7 @@ export function ProjectDetail() {
     if (field === 'include_in_demand') {
       handleFieldUpdate(field, value ? 1 : 0);
     } else if (typeof value === 'string' && ['priority'].includes(field)) {
-      handleFieldUpdate(field, parseInt(value));
+      handleFieldUpdate(field, parseInt(value, 10));
     } else {
       handleFieldUpdate(field, value);
     }
@@ -566,7 +566,7 @@ export function ProjectDetail() {
                         value={assignmentForm.allocation_percentage}
                         onChange={(e) => setAssignmentForm(prev => ({
                           ...prev,
-                          allocation_percentage: parseInt(e.target.value) || 0
+                          allocation_percentage: parseInt(e.target.value, 10) || 0
                         }))}
                         className="form-input"
                         required

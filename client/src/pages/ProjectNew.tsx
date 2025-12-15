@@ -259,7 +259,7 @@ export function ProjectNew() {
                   <label>Priority</label>
                   <select
                     value={formData.priority}
-                    onChange={(e) => handleChange('priority', parseInt(e.target.value))}
+                    onChange={(e) => handleChange('priority', parseInt(e.target.value, 10))}
                     className="form-select"
                   >
                     <option value={1}>Critical</option>

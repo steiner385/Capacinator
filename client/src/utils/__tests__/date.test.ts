@@ -271,7 +271,7 @@ describe('date.ts - Report Date Range', () => {
 
     it('returns date range ending ~12 months from now', () => {
       const range = getDefaultReportDateRange();
-      const endYear = parseInt(range.endDate.split('-')[0]);
+      const endYear = parseInt(range.endDate.split('-')[0], 10);
       const currentYear = new Date().getFullYear();
       expect(endYear).toBeGreaterThanOrEqual(currentYear);
       expect(endYear).toBeLessThanOrEqual(currentYear + 2);

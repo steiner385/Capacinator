@@ -328,7 +328,7 @@ describe('Audit Configuration', () => {
 
       const config = getAuditConfig();
 
-      // parseInt(null) returns NaN, parseInt(undefined) returns NaN
+      // parseInt(null, 10) returns NaN, parseInt(undefined, 10) returns NaN
       expect(config.maxHistoryEntries).toBeNaN();
       expect(config.retentionDays).toBeNaN();
     });

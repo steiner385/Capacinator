@@ -26,7 +26,7 @@ export function parseDate(dateInput: string | number): Date {
       return new Date(dateInput + 'T00:00:00');
     } else if (dateInput.match(/^\d+$/)) {
       // String that looks like a timestamp
-      return new Date(parseInt(dateInput));
+      return new Date(parseInt(dateInput, 10));
     } else {
       // Other string formats
       return new Date(dateInput);

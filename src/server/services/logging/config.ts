@@ -39,8 +39,8 @@ export function getLoggerConfig(): LoggerConfig {
     enableConsole: !isTest || process.env.ENABLE_TEST_LOGS === 'true',
     enableFile: isProduction,
     logDirectory: process.env.LOG_DIRECTORY || '/tmp/capacinator-logs',
-    maxFileSize: parseInt(process.env.LOG_MAX_FILE_SIZE || '10485760'), // 10MB
-    maxFiles: parseInt(process.env.LOG_MAX_FILES || '10'),
+    maxFileSize: parseInt(process.env.LOG_MAX_FILE_SIZE || '10485760', 10), // 10MB
+    maxFiles: parseInt(process.env.LOG_MAX_FILES || '10', 10),
     enableStructuredLogs: process.env.LOG_FORMAT === 'json' || isProduction,
     redactedFields: [
       'password',
