@@ -19,6 +19,37 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Textarea } from '../ui/textarea';
 import { Checkbox } from '../ui/checkbox';
 import { Spinner } from '../ui/spinner';
+import type { Project, Person, Role, ProjectPhase, AssignmentDateMode } from '../../types';
+
+// Project phase link (from project.phases array)
+interface ProjectPhaseLink {
+  phase_id: string;
+  start_date: string;
+  end_date: string;
+}
+
+// Available phase for selection
+interface AvailablePhase {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+// Assignment type for editing
+interface EditableAssignment {
+  id: string;
+  project_id?: string;
+  person_id?: string;
+  role_id?: string;
+  phase_id?: string;
+  assignment_date_mode?: AssignmentDateMode;
+  start_date?: string;
+  end_date?: string;
+  allocation_percentage?: number;
+  billable?: boolean;
+  notes?: string;
+}
 
 interface AssignmentFormData {
   project_id: string;
@@ -36,8 +67,8 @@ interface AssignmentFormData {
 interface AssignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (assignment: any) => void;
-  editingAssignment?: any;
+  onSuccess?: (assignment: EditableAssignment) => void;
+  editingAssignment?: EditableAssignment;
 }
 
 const initialValues: AssignmentFormData = {
@@ -161,8 +192,8 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
   const availablePhases = useMemo(() => {
     if (!projectPhases || !phases || !Array.isArray(projectPhases)) return [];
 
-    return projectPhases.map((pp: any) => {
-      const phaseDetail = phases.find((p: any) => p.id === pp.phase_id);
+    return projectPhases.map((pp: ProjectPhaseLink) => {
+      const phaseDetail = (phases as ProjectPhase[]).find((p) => p.id === pp.phase_id);
       return {
         id: pp.phase_id,
         name: phaseDetail?.name || 'Unknown Phase',
@@ -209,7 +240,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects?.data?.map((project: any) => (
+                  {(projects?.data as Project[])?.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
@@ -232,7 +263,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select person" />
                 </SelectTrigger>
                 <SelectContent>
-                  {people?.data?.map((person: any) => (
+                  {(people?.data as Person[])?.map((person) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name}
                     </SelectItem>
@@ -255,7 +286,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.isArray(roles) && roles.map((role: any) => (
+                  {Array.isArray(roles) && (roles as Role[]).map((role) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
                     </SelectItem>
@@ -272,7 +303,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select phase (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availablePhases?.map((phase: any) => (
+                  {availablePhases?.map((phase: AvailablePhase) => (
                     <SelectItem key={phase.id} value={phase.id}>
                       {phase.name}
                     </SelectItem>
@@ -330,7 +361,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="assignment_date_mode">Date Mode</Label>
-              <Select value={formData.assignment_date_mode} onValueChange={(value: any) => handleChange('assignment_date_mode', value)}>
+              <Select value={formData.assignment_date_mode} onValueChange={(value: AssignmentDateMode) => handleChange('assignment_date_mode', value)}>
                 <SelectTrigger id="assignment_date_mode">
                   <SelectValue />
                 </SelectTrigger>
