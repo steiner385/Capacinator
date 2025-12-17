@@ -400,7 +400,7 @@ export class ProjectsController extends BaseController {
 
       // Log audit event for project creation
       if (project) {
-        await (req as any).logAuditEvent('projects', project.id, 'CREATE', undefined, project);
+        await (req as RequestWithContext & { logAuditEvent: Function }).logAuditEvent('projects', project.id, 'CREATE', undefined, project);
         this.logBusinessOperation(req, 'CREATE', 'project', project.id, {
           projectName: project.name,
           projectType: projectData.project_type_id
@@ -477,14 +477,14 @@ export class ProjectsController extends BaseController {
         } catch (error) {
           req.logger.error('Failed to send project timeline notification', error, {
             projectId: id,
-            userId: (req as any).user?.id
+            userId: (req as unknown as { user?: { id: string } }).user?.id
           });
         }
       }
 
       // Log audit event for project update
       if (project) {
-        await (req as any).logAuditEvent('projects', id, 'UPDATE', currentProject, project);
+        await (req as RequestWithContext & { logAuditEvent: Function }).logAuditEvent('projects', id, 'UPDATE', currentProject, project);
         this.logBusinessOperation(req, 'UPDATE', 'project', id, {
           projectName: project.name,
           fieldsUpdated: Object.keys(updateData)
@@ -516,7 +516,7 @@ export class ProjectsController extends BaseController {
         .del();
 
       // Log audit event for project deletion
-      await (req as any).logAuditEvent('projects', id, 'DELETE', project, undefined);
+      await (req as RequestWithContext & { logAuditEvent: Function }).logAuditEvent('projects', id, 'DELETE', project, undefined);
       this.logBusinessOperation(req, 'DELETE', 'project', id, {
         projectName: project.name
       });
@@ -654,7 +654,7 @@ export class ProjectsController extends BaseController {
 
       return {
         projectId,
-        phases: timeline.map((phase: any) => ({
+        phases: timeline.map((phase: { id?: string; phase_id: string; phase_name: string; phase_description?: string; start_date: string; end_date: string }) => ({
           id: phase.id,
           phase_id: phase.phase_id,
           name: phase.phase_name,
