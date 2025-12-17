@@ -24,7 +24,8 @@ export default tseslint.config(
 
       // Other recommended rules
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // Prevent new 'any' types - part of type safety initiative (issue #42)
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-console': 'off', // Allow console for server-side logging
     },
   },

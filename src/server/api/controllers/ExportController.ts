@@ -175,22 +175,22 @@ export class ExportController extends BaseController {
 
   async exportReportAsExcel(req: Request, res: Response) {
     try {
-      const { reportType, filters = {} } = req.body;
-      
+      const { reportType, filters = {} } = req.body as { reportType?: string; filters?: ReportFilters };
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
+
       const workbook = new ExcelJS.Workbook();
-      
+
       // Set workbook properties
       workbook.creator = 'Capacinator';
       workbook.lastModifiedBy = 'Capacinator';
       workbook.created = new Date();
       workbook.modified = new Date();
-      
+
       let filename = '';
-      
+
       switch (reportType) {
         case 'capacity':
           await this.generateCapacityExcel(workbook, filters);
@@ -211,33 +211,33 @@ export class ExportController extends BaseController {
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
-      
+
       // Generate Excel buffer
       const buffer = await workbook.xlsx.writeBuffer();
-      
+
       // Set response headers
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
+
       // Send the file
       res.send(buffer);
-      
+
     } catch (error) {
       this.handleError(error, res, 'Export failed');
     }
   }
-  
+
   async exportReportAsCSV(req: Request, res: Response) {
     try {
-      const { reportType, filters = {} } = req.body;
-      
+      const { reportType, filters = {} } = req.body as { reportType?: string; filters?: ReportFilters };
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
+
       let csvContent = '';
       let filename = '';
-      
+
       switch (reportType) {
         case 'capacity':
           const capacityData = await this.getCapacityData(filters);
@@ -262,33 +262,33 @@ export class ExportController extends BaseController {
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
-      
+
       // Set response headers
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
+
       // Send the CSV content
       res.send(csvContent);
-      
+
     } catch (error) {
       this.handleError(error, res, 'CSV export failed');
     }
   }
-  
+
   async exportReportAsPDF(req: Request, res: Response) {
     try {
-      const { reportType, filters = {} } = req.body;
-      
+      const { reportType, filters = {} } = req.body as { reportType?: string; filters?: ReportFilters };
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
+
       const puppeteer = await import('puppeteer-core');
-      
+
       // Generate HTML content for the report
       let htmlContent = '';
       let filename = '';
-      
+
       switch (reportType) {
         case 'capacity':
           const capacityData = await this.getCapacityData(filters);
@@ -313,17 +313,17 @@ export class ExportController extends BaseController {
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
-      
+
       // Launch browser and generate PDF
-      const browser = await puppeteer.launch({ 
+      const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
-      
+
       try {
         const page = await browser.newPage();
         await page.setContent(htmlContent);
-        
+
         const pdfBuffer = await page.pdf({
           format: 'A4',
           printBackground: true,
@@ -334,23 +334,23 @@ export class ExportController extends BaseController {
             left: '20px'
           }
         });
-        
+
         // Set response headers
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-        
+
         // Send the PDF
         res.send(pdfBuffer);
-        
+
       } finally {
         await browser.close();
       }
-      
+
     } catch (error) {
       this.handleError(error, res, 'PDF export failed');
     }
   }
-  
+
   private async generateCapacityExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getCapacityData(filters);
     const sheet = workbook.addWorksheet('Capacity Report');
@@ -383,7 +383,7 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
+
   private async generateUtilizationExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getUtilizationData(filters);
     const sheet = workbook.addWorksheet('Utilization Report');
@@ -415,7 +415,7 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
+
   private async generateDemandExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getDemandData(filters);
     const sheet = workbook.addWorksheet('Demand Report');
@@ -442,7 +442,7 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
+
   private async generateGapsExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getGapsData(filters);
     const sheet = workbook.addWorksheet('Capacity Gaps');
@@ -475,7 +475,7 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
+
   private generateCapacityCSV(data: CapacityReportData): string {
     const headers = ['Role', 'Total Capacity (Hours)', 'Utilized (Hours)', 'Available (Hours)', 'Utilization %'];
     const rows = data.byRole?.map((role: RoleCapacityData) => [
@@ -532,7 +532,7 @@ export class ExportController extends BaseController {
       ).join(',')
     ).join('\n');
   }
-  
+
   private generateCapacityHTML(data: CapacityReportData): string {
     return `
       <!DOCTYPE html>
@@ -591,7 +591,7 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
+
   private generateUtilizationHTML(data: UtilizationReportData): string {
     return `
       <!DOCTYPE html>
@@ -641,7 +641,7 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
+
   private generateDemandHTML(data: DemandReportData): string {
     return `
       <!DOCTYPE html>
@@ -678,7 +678,7 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
+
   private generateGapsHTML(data: GapsReportData): string {
     return `
       <!DOCTYPE html>
@@ -726,7 +726,7 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
+
   private async getCapacityData(filters: ReportFilters): Promise<CapacityReportData> {
     // Use the same logic as ReportingController.getCapacityReport
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -759,7 +759,7 @@ export class ExportController extends BaseController {
       personUtilization
     };
   }
-  
+
   private async getUtilizationData(filters: ReportFilters): Promise<UtilizationReportData> {
     // Use the same logic as ReportingController.getCapacityReport
     const capacityReport = await this.getCapacityData(filters);
@@ -780,7 +780,7 @@ export class ExportController extends BaseController {
       )
     };
   }
-  
+
   private async getDemandData(filters: ReportFilters): Promise<DemandReportData> {
     // Use the same logic as DemandController.getDemandSummary
     const { startDate, endDate, projectTypeId, locationId } = filters;
@@ -844,7 +844,7 @@ export class ExportController extends BaseController {
       byProjectType
     };
   }
-  
+
   private async getGapsData(filters: ReportFilters): Promise<GapsReportData> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _filters = filters; // Preserved for future filter implementation
@@ -905,7 +905,7 @@ export class ExportController extends BaseController {
       gapsByRole
     };
   }
-  
+
   private calculateFte(hours: number, startDate: string, endDate: string): number {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -913,7 +913,7 @@ export class ExportController extends BaseController {
     const workingDaysInPeriod = Math.ceil(daysInPeriod * (5/7)); // Approximate working days
     const hoursPerDay = 8;
     const totalWorkingHours = workingDaysInPeriod * hoursPerDay;
-    
+
     return totalWorkingHours > 0 ? hours / totalWorkingHours : 0;
   }
 }

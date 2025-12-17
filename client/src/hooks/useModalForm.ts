@@ -7,9 +7,17 @@ import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-
 export type ValidateFn<T> = (values: T) => Partial<Record<keyof T, string>>;
 
 /**
+ * Base type for editable items
+ */
+export interface EditableItem {
+  id: string;
+  [key: string]: unknown;
+}
+
+/**
  * Configuration for the useModalForm hook
  */
-export interface UseModalFormConfig<T extends Record<string, any>, TResponse = any> {
+export interface UseModalFormConfig<T extends Record<string, unknown>, TResponse = unknown, TEditItem extends EditableItem = EditableItem> {
   /** Initial values for the form */
   initialValues: T;
   /** Validation function that returns field-level errors */
@@ -21,7 +29,7 @@ export interface UseModalFormConfig<T extends Record<string, any>, TResponse = a
   /** Query keys to invalidate on success */
   queryKeysToInvalidate: string[][];
   /** Additional query keys to invalidate on update (e.g., for the specific entity) */
-  additionalUpdateQueryKeys?: (editingItem: any) => string[][];
+  additionalUpdateQueryKeys?: (editingItem: TEditItem) => string[][];
   /** Callback called on successful create/update */
   onSuccess?: (data: TResponse, isEditing: boolean) => void;
   /** Callback called on error */
@@ -29,15 +37,15 @@ export interface UseModalFormConfig<T extends Record<string, any>, TResponse = a
   /** Callback to close the modal */
   onClose: () => void;
   /** The item being edited (if editing mode) */
-  editingItem?: any;
+  editingItem?: TEditItem;
   /** Custom function to extract form values from editing item */
-  getValuesFromItem?: (item: any) => T;
+  getValuesFromItem?: (item: TEditItem) => T;
 }
 
 /**
  * Return type for useModalForm hook
  */
-export interface UseModalFormReturn<T extends Record<string, any>> {
+export interface UseModalFormReturn<T extends Record<string, unknown>, TResponse = unknown> {
   /** Current form values */
   values: T;
   /** Current field-level errors */
@@ -61,9 +69,9 @@ export interface UseModalFormReturn<T extends Record<string, any>> {
   /** Handle close with animation delay */
   handleClose: () => void;
   /** Create mutation object for advanced usage */
-  createMutation: UseMutationResult<any, unknown, T, unknown>;
+  createMutation: UseMutationResult<TResponse, unknown, T, unknown>;
   /** Update mutation object for advanced usage */
-  updateMutation: UseMutationResult<any, unknown, T, unknown>;
+  updateMutation: UseMutationResult<TResponse, unknown, T, unknown>;
 }
 
 /**
@@ -94,9 +102,9 @@ export interface UseModalFormReturn<T extends Record<string, any>> {
  * });
  * ```
  */
-export function useModalForm<T extends Record<string, any>, TResponse = any>(
-  config: UseModalFormConfig<T, TResponse>
-): UseModalFormReturn<T> {
+export function useModalForm<T extends Record<string, unknown>, TResponse = unknown, TEditItem extends EditableItem = EditableItem>(
+  config: UseModalFormConfig<T, TResponse, TEditItem>
+): UseModalFormReturn<T, TResponse> {
   const {
     initialValues,
     validate,

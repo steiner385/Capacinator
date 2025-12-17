@@ -1,7 +1,8 @@
+import type { Knex } from 'knex';
 import { getAuditedDb } from '../../database/index.js';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
-let ExcelJS: any;
+let ExcelJS: unknown;
 
 async function initializeExcelJS() {
   if (!ExcelJS) {
@@ -93,7 +94,7 @@ export interface ImportResult {
 }
 
 export class ExcelImporter {
-  private db: any;
+  private db: ReturnType<typeof getAuditedDb>;
 
   constructor() {
     this.db = getAuditedDb();
@@ -213,7 +214,7 @@ export class ExcelImporter {
           
           for (let rowNumber = 2; rowNumber <= worksheet.rowCount && rowErrors.length < 10; rowNumber++) {
             const row = worksheet.getRow(rowNumber);
-            const values = row.values as any[];
+            const values = (row.values as unknown[]) || [];
             
             if (values.length <= 1 || !values[1]) continue; // Skip empty rows
             
@@ -437,7 +438,7 @@ export class ExcelImporter {
     }
   }
 
-  private async clearExistingDataInTransaction(trx: any) {
+  private async clearExistingDataInTransaction(trx: Knex.Transaction) {
     // Clear in reverse dependency order
     const tables = [
       'project_assignments',
@@ -564,7 +565,7 @@ export class ExcelImporter {
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
-        const values = row.values as any[];
+        const values = (row.values as unknown[]) || [];
 
         if (!values[expectedColumns.name]) continue; // Skip empty rows
 
@@ -659,11 +660,11 @@ export class ExcelImporter {
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
-        const values = row.values as any[];
+        const values = (row.values as unknown[]) || [];
 
         if (!values[expectedColumns.name]) continue;
 
-        const personName = values[expectedColumns.name]?.toString();
+        const personName = String(values[expectedColumns.name]).trim() || undefined;
         const personEmail = values[expectedColumns.email]?.toString();
         const primaryRoleName = values[expectedColumns.primaryRole]?.toString();
         const availability = values[expectedColumns.availability];
@@ -787,11 +788,11 @@ export class ExcelImporter {
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
-        const values = row.values as any[];
+        const values = (row.values as unknown[]) || [];
 
         if (!values[expectedColumns.projectType]) continue;
 
-        const projectTypeName = values[expectedColumns.projectType]?.toString();
+        const projectTypeName = String(values[expectedColumns.projectType]).trim() || undefined;
         const phaseName = values[expectedColumns.phase]?.toString();
         const roleName = values[expectedColumns.role]?.toString();
         const allocationPercentage = parseFloat(values[expectedColumns.allocation]?.toString());
@@ -865,7 +866,7 @@ export class ExcelImporter {
     return result;
   }
 
-  private parseDate(value: any): string | null {
+  private parseDate(value: unknown): string | null {
     if (!value) return null;
     
     try {
@@ -928,7 +929,7 @@ export class ExcelImporter {
         }
         progressTracker.completeOperation('Duplicate validation completed');
       } catch (error) {
-        result.errors.push(`Duplicate validation failed: ${error.message}`);
+        result.errors.push(`Duplicate validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return result;
       }
     }
@@ -1032,7 +1033,7 @@ export class ExcelImporter {
     return result;
   }
 
-  async analyzeImport(filePath: string, options: ImportOptions = {}): Promise<any> {
+  async analyzeImport(filePath: string, options: ImportOptions = {}): Promise<unknown> {
     console.log('Starting dry-run import analysis...');
     
     const analysis = {
@@ -1122,7 +1123,7 @@ export class ExcelImporter {
     }
   }
 
-  private async analyzeProjectsWorksheet(workbook: any, options: ImportOptions, analysis: any, errorCollector: ImportErrorCollector) {
+  private async analyzeProjectsWorksheet(workbook: unknown, options: ImportOptions, analysis: Record<string, unknown>, errorCollector: ImportErrorCollector) {
     const projectsSheet = workbook.getWorksheet('Projects');
     if (!projectsSheet) {
       errorCollector.addError(ImportErrorUtils.missingWorksheet('Projects'));
@@ -1182,7 +1183,7 @@ export class ExcelImporter {
     }
   }
 
-  private async analyzePeopleWorksheet(workbook: any, options: ImportOptions, analysis: any, errorCollector: ImportErrorCollector) {
+  private async analyzePeopleWorksheet(workbook: unknown, options: ImportOptions, analysis: Record<string, unknown>, errorCollector: ImportErrorCollector) {
     const peopleSheet = workbook.getWorksheet('Rosters') || workbook.getWorksheet('People');
     if (!peopleSheet) {
       errorCollector.addError(ImportErrorUtils.missingWorksheet('Rosters/People'));
@@ -1239,7 +1240,7 @@ export class ExcelImporter {
     });
   }
 
-  private async analyzeStandardAllocationsWorksheet(workbook: any, options: ImportOptions, analysis: any, errorCollector: ImportErrorCollector) {
+  private async analyzeStandardAllocationsWorksheet(workbook: unknown, options: ImportOptions, analysis: Record<string, unknown>, errorCollector: ImportErrorCollector) {
     const allocationsSheet = workbook.getWorksheet('Standard Allocations');
     if (!allocationsSheet) {
       return; // Optional worksheet
@@ -1272,13 +1273,13 @@ export class ExcelImporter {
     analysis.summary.wouldCreate.standardAllocations = newAllocations;
   }
 
-  private assessImportRisk(analysis: any) {
+  private assessImportRisk(analysis: Record<string, unknown>) {
     const riskFactors = [];
     let riskLevel = 'low';
 
     // Check for high-impact operations
-    const totalDeletions = Object.values(analysis.summary.wouldDelete).reduce((sum: number, count: any) => sum + count, 0);
-    const totalCreations = Object.values(analysis.summary.wouldCreate).reduce((sum: number, count: any) => sum + count, 0);
+    const totalDeletions = Object.values(analysis.summary as Record<string, unknown>).reduce((sum: number, count: unknown) => sum + (typeof count === 'number' ? count : 0), 0);
+    const totalCreations = Object.values(analysis.summary as Record<string, unknown>).reduce((sum: number, count: unknown) => sum + (typeof count === 'number' ? count : 0), 0);
     
     if (totalDeletions > 0) {
       riskLevel = 'high';

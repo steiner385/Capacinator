@@ -12,7 +12,7 @@ export interface ClientLogEntry {
   component?: string;
   userId?: string;
   sessionId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   error?: {
     message: string;
     stack?: string;
@@ -76,7 +76,7 @@ export class ClientLogger {
   private formatLogEntry(
     level: LogLevel,
     message: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): ClientLogEntry {
     const entry: ClientLogEntry = {
       timestamp: new Date().toISOString(),
@@ -93,7 +93,8 @@ export class ClientLogger {
   private getCurrentUserId(): string | undefined {
     // Try to get user ID from various common locations
     try {
-      const user = (window as any).currentUser || 
+      const windowWithUser = window as Window & { currentUser?: { id?: string } };
+      const user = windowWithUser.currentUser ||
                   JSON.parse(localStorage.getItem('user') || '{}') ||
                   JSON.parse(sessionStorage.getItem('user') || '{}');
       return user?.id;
@@ -162,44 +163,44 @@ export class ClientLogger {
     }
   }
 
-  error(message: string, metadata: Record<string, any> = {}): void {
+  error(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
-    
+
     const entry = this.formatLogEntry(LogLevel.ERROR, message, metadata);
-    
+
     // Extract error information if present
     if (metadata.error) {
-      const error = metadata.error;
+      const error = metadata.error as Error & { componentStack?: string };
       entry.error = {
         message: error.message || String(error),
         stack: error.stack,
         componentStack: error.componentStack
       };
     }
-    
+
     this.writeLog(entry);
   }
 
-  warn(message: string, metadata: Record<string, any> = {}): void {
+  warn(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.WARN)) return;
     const entry = this.formatLogEntry(LogLevel.WARN, message, metadata);
     this.writeLog(entry);
   }
 
-  info(message: string, metadata: Record<string, any> = {}): void {
+  info(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
     const entry = this.formatLogEntry(LogLevel.INFO, message, metadata);
     this.writeLog(entry);
   }
 
-  debug(message: string, metadata: Record<string, any> = {}): void {
+  debug(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
     const entry = this.formatLogEntry(LogLevel.DEBUG, message, metadata);
     this.writeLog(entry);
   }
 
   // Convenience methods
-  logUserAction(action: string, component: string, metadata: Record<string, any> = {}): void {
+  logUserAction(action: string, component: string, metadata: Record<string, unknown> = {}): void {
     this.info('User Action', {
       action,
       component,
@@ -220,7 +221,7 @@ export class ClientLogger {
     this.writeLog(entry);
   }
 
-  logPerformance(operation: string, duration: number, metadata: Record<string, any> = {}): void {
+  logPerformance(operation: string, duration: number, metadata: Record<string, unknown> = {}): void {
     const level = duration > 1000 ? LogLevel.WARN : LogLevel.DEBUG;
     if (!this.shouldLog(level)) return;
 
@@ -233,7 +234,7 @@ export class ClientLogger {
   }
 
   // Create a child logger with additional context
-  child(metadata: Record<string, any>): ChildClientLogger {
+  child(metadata: Record<string, unknown>): ChildClientLogger {
     return new ChildClientLogger(this, metadata);
   }
 
@@ -246,42 +247,45 @@ export class ClientLogger {
 export class ChildClientLogger {
   constructor(
     private parent: ClientLogger,
-    private defaultMetadata: Record<string, any>
+    private defaultMetadata: Record<string, unknown>
   ) {}
 
-  private mergeMetadata(metadata: Record<string, any> = {}): Record<string, any> {
+  private mergeMetadata(metadata: Record<string, unknown> = {}): Record<string, unknown> {
     return { ...this.defaultMetadata, ...metadata };
   }
 
-  error(message: string, metadata: Record<string, any> = {}): void {
+  error(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.error(message, this.mergeMetadata(metadata));
   }
 
-  warn(message: string, metadata: Record<string, any> = {}): void {
+  warn(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.warn(message, this.mergeMetadata(metadata));
   }
 
-  info(message: string, metadata: Record<string, any> = {}): void {
+  info(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.info(message, this.mergeMetadata(metadata));
   }
 
-  debug(message: string, metadata: Record<string, any> = {}): void {
+  debug(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.debug(message, this.mergeMetadata(metadata));
   }
 
-  logUserAction(action: string, metadata: Record<string, any> = {}): void {
-    this.parent.logUserAction(action, this.defaultMetadata.component || 'Unknown', this.mergeMetadata(metadata));
+  logUserAction(action: string, metadata: Record<string, unknown> = {}): void {
+    const component = typeof this.defaultMetadata.component === 'string'
+      ? this.defaultMetadata.component
+      : 'Unknown';
+    this.parent.logUserAction(action, component, this.mergeMetadata(metadata));
   }
 
   logApiCall(method: string, url: string, duration: number, statusCode: number): void {
     this.parent.logApiCall(method, url, duration, statusCode);
   }
 
-  logPerformance(operation: string, duration: number, metadata: Record<string, any> = {}): void {
+  logPerformance(operation: string, duration: number, metadata: Record<string, unknown> = {}): void {
     this.parent.logPerformance(operation, duration, this.mergeMetadata(metadata));
   }
 
-  child(metadata: Record<string, any>): ChildClientLogger {
+  child(metadata: Record<string, unknown>): ChildClientLogger {
     return new ChildClientLogger(this.parent, this.mergeMetadata(metadata));
   }
 }

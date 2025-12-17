@@ -1,8 +1,79 @@
 import type { Request, Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
 import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
+
+/**
+ * Database record types for scenarios
+ */
+interface ScenarioRecord {
+  id: string;
+  name: string;
+  scenario_type: string;
+  parent_scenario_id: string | null;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface AssignmentRecord {
+  id?: string;
+  project_id: string;
+  person_id: string;
+  role_id: string;
+  phase_id?: string | null;
+  allocation_percentage: number;
+  assignment_date_mode?: string;
+  start_date?: string | Date;
+  end_date?: string | Date;
+  notes?: string;
+  change_type?: string;
+  base_assignment_id?: string;
+  project_name?: string;
+  person_name?: string;
+  role_name?: string;
+  [key: string]: unknown;
+}
+
+interface PhaseRecord {
+  id?: string;
+  project_id: string;
+  phase_id: string;
+  start_date?: string | Date;
+  end_date?: string | Date;
+  notes?: string;
+  change_type?: string;
+  base_phase_timeline_id?: string;
+  [key: string]: unknown;
+}
+
+interface ProjectRecord {
+  id?: string;
+  project_id: string;
+  name?: string;
+  priority?: number;
+  aspiration_start?: string | Date;
+  aspiration_finish?: string | Date;
+  notes?: string;
+  change_type?: string;
+  [key: string]: unknown;
+}
+
+interface AssignmentDifference {
+  difference?: string;
+  details: string;
+  original?: AssignmentRecord;
+  modified?: AssignmentRecord;
+  changes?: {
+    allocation: { from: number; to: number };
+    dates: {
+      start: { from: unknown; to: unknown };
+      end: { from: unknown; to: unknown };
+    };
+  };
+  [key: string]: unknown;
+}
 
 export class ScenariosController extends BaseController {
   constructor(container?: ServiceContainer) {
@@ -144,8 +215,8 @@ export class ScenariosController extends BaseController {
         return res.status(404).json({ error: 'Scenario not found' });
       }
 
-      const updateData: any = { updated_at: new Date() };
-      
+      const updateData: Record<string, unknown> = { updated_at: new Date() };
+
       if (name !== undefined) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (status !== undefined) updateData.status = status;
@@ -416,8 +487,8 @@ export class ScenariosController extends BaseController {
       }
 
       // Helper function to get effective assignments for a scenario
-      const getEffectiveAssignments = async (scenarioId: string, scenario: any) => {
-        const effectiveMap = new Map();
+      const getEffectiveAssignments = async (scenarioId: string, scenario: ScenarioRecord) => {
+        const effectiveMap = new Map<string, AssignmentRecord>();
         
         // For baseline scenarios, always start with base project_assignments
         const needsBaseAssignments = scenario.scenario_type === 'baseline';
@@ -436,7 +507,7 @@ export class ScenariosController extends BaseController {
             );
 
           // Add base assignments to the map
-          baseAssignments.forEach(a => {
+          (baseAssignments as AssignmentRecord[]).forEach((a: AssignmentRecord) => {
             const key = `${a.project_id}:${a.person_id}:${a.role_id}:${a.phase_id || 'null'}`;
             effectiveMap.set(key, a);
           });
@@ -456,9 +527,9 @@ export class ScenariosController extends BaseController {
           );
 
         // Apply scenario-specific changes
-        scenarioAssignments.forEach(assignment => {
+        (scenarioAssignments as AssignmentRecord[]).forEach((assignment: AssignmentRecord) => {
           const key = `${assignment.project_id}:${assignment.person_id}:${assignment.role_id}:${assignment.phase_id || 'null'}`;
-          
+
           if (assignment.change_type === 'removed' || assignment.allocation_percentage === 0) {
             // Remove assignment
             effectiveMap.delete(key);
@@ -494,9 +565,9 @@ export class ScenariosController extends BaseController {
 
       // Find differences
       const assignmentDifferences = {
-        added: [] as any[],
-        modified: [] as any[],
-        removed: [] as any[]
+        added: [] as AssignmentDifference[],
+        modified: [] as AssignmentDifference[],
+        removed: [] as AssignmentDifference[]
       };
 
       // Find added and modified assignments in scenario2
@@ -940,7 +1011,7 @@ export class ScenariosController extends BaseController {
     });
   }
 
-  private async mergeAssignment(trx: any, targetScenarioId: string, assignmentData: any) {
+  private async mergeAssignment(trx: Knex.Transaction, targetScenarioId: string, assignmentData: AssignmentRecord) {
     const existingAssignment = await trx('scenario_project_assignments')
       .where('scenario_id', targetScenarioId)
       .where('project_id', assignmentData.project_id)
@@ -982,7 +1053,7 @@ export class ScenariosController extends BaseController {
     }
   }
 
-  private async mergePhaseTimeline(trx: any, targetScenarioId: string, phaseData: any) {
+  private async mergePhaseTimeline(trx: Knex.Transaction, targetScenarioId: string, phaseData: PhaseRecord) {
     const existingPhase = await trx('scenario_project_phases')
       .where('scenario_id', targetScenarioId)
       .where('project_id', phaseData.project_id)
@@ -1018,7 +1089,7 @@ export class ScenariosController extends BaseController {
     }
   }
 
-  private async mergeProjectDetails(trx: any, targetScenarioId: string, projectData: any) {
+  private async mergeProjectDetails(trx: Knex.Transaction, targetScenarioId: string, projectData: ProjectRecord) {
     const existingProject = await trx('scenario_projects')
       .where('scenario_id', targetScenarioId)
       .where('project_id', projectData.project_id)
@@ -1055,7 +1126,7 @@ export class ScenariosController extends BaseController {
     }
   }
 
-  private async mergeNonConflictingChanges(trx: any, sourceScenarioId: string, targetScenarioId: string) {
+  private async mergeNonConflictingChanges(trx: Knex.Transaction, sourceScenarioId: string, targetScenarioId: string) {
     // Get all source assignments that don't have conflicts
     const sourceAssignments = await trx('scenario_project_assignments')
       .where('scenario_id', sourceScenarioId);

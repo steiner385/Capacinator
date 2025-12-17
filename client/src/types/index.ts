@@ -87,3 +87,102 @@ export type {
   ScenarioComparison,
   ScenarioAssignmentsView,
 } from '../../../shared/types/scenarios';
+
+// API request types
+export type {
+  // Project requests
+  ProjectListParams,
+  ProjectCreateRequest,
+  ProjectUpdateRequest,
+  PhaseValidationRequest,
+  CustomPhaseRequest,
+  ProjectPhaseUpdateRequest,
+  // People requests
+  PersonListParams,
+  PersonCreateRequest,
+  PersonUpdateRequest,
+  PersonRoleRequest,
+  // Role requests
+  RoleListParams,
+  RoleCreateRequest,
+  RoleUpdateRequest,
+  RolePlannerRequest,
+  // Assignment requests
+  AssignmentListParams,
+  AssignmentCreateRequest,
+  AssignmentUpdateRequest,
+  BulkAssignmentRequest,
+  AssignmentConflictParams,
+  AssignmentSuggestionParams,
+  AssignmentTimelineParams,
+  // Resource template requests
+  ResourceTemplateListParams,
+  ResourceTemplateCreateRequest,
+  BulkResourceTemplateRequest,
+  ResourceTemplateCopyRequest,
+  // Availability requests
+  AvailabilityListParams,
+  AvailabilityCreateRequest,
+  AvailabilityUpdateRequest,
+  BulkAvailabilityRequest,
+  AvailabilityApproveRequest,
+  AvailabilityCalendarParams,
+  AvailabilityForecastParams,
+  // Demand requests
+  DemandSummaryParams,
+  DemandOverrideRequest,
+  DemandForecastParams,
+  ScenarioCalculateRequest,
+  // Reporting requests
+  ReportParams,
+  ExportReportFilters,
+  // Location requests
+  LocationCreateRequest,
+  LocationUpdateRequest,
+  // Project type requests
+  ProjectTypeCreateRequest,
+  ProjectTypeUpdateRequest,
+  ProjectSubTypeCreateRequest,
+  ProjectTypeHierarchyUpdateRequest,
+  // Phase requests
+  PhaseCreateRequest,
+  PhaseUpdateRequest,
+  // Project phase requests
+  ProjectPhaseListParams,
+  ProjectPhaseCreateRequest,
+  BulkProjectPhaseRequest,
+  DuplicatePhaseRequest,
+  CustomProjectPhaseRequest,
+  BulkPhaseCorrectionsRequest,
+  // Phase dependency requests
+  PhaseDependencyListParams,
+  PhaseDependencyCreateRequest,
+  PhaseDependencyUpdateRequest,
+  CascadeCalculateRequest,
+  CascadeApplyRequest,
+  // Project allocation requests
+  AllocationOverrideRequest,
+  // Scenario requests
+  ScenarioCreateRequest,
+  ScenarioUpdateRequest,
+  ScenarioAssignmentRequest,
+  ScenarioMergeRequest,
+  // Audit requests
+  AuditSearchParams,
+  UndoRequest,
+  // Settings requests
+  SystemSettingsRequest,
+  ImportSettingsRequest,
+  // User permission requests
+  UpdateRolePermissionsRequest,
+  UpdateUserRoleRequest,
+  UpdateUserPermissionRequest,
+  // Notification requests
+  SendNotificationRequest,
+  NotificationPreferencesRequest,
+  NotificationHistoryParams,
+  NotificationStatsParams,
+  // Recommendation requests
+  RecommendationListParams,
+  ExecuteRecommendationRequest,
+} from '../../../shared/types/api-requests';

@@ -16,6 +16,106 @@ interface DemandCalculation {
   is_override: boolean;
 }
 
+/**
+ * Database row from demands view
+ */
+interface DemandViewRow {
+  project_id: string;
+  phase_id: string;
+  phase_name?: string;
+  phase_order?: number;
+  role_id: string;
+  role_name?: string;
+  start_date: string;
+  end_date: string;
+  demand_hours: number;
+  is_override?: boolean;
+  demand_fte?: number;
+}
+
+/**
+ * Demand assignment row from query
+ */
+interface DemandAssignmentRow {
+  id: string;
+  project_id: string;
+  role_id: string;
+  allocation_percentage: number;
+  start_date: string;
+  end_date: string;
+  project_name: string;
+  project_priority?: number;
+  project_type_id?: string;
+  project_type_name?: string;
+  role_name: string;
+}
+
+/**
+ * Monthly demand data for timeline calculations
+ */
+interface MonthlyDemandData {
+  month: string;
+  total_hours: number;
+  total_fte: number;
+  role_breakdown: Record<string, unknown>;
+}
+
+/**
+ * Project row from database
+ */
+interface ProjectRow {
+  id: string;
+  project_type_id: string;
+  start_date: string;
+  end_date: string;
+  name?: string;
+}
+
+/**
+ * Standard allocation row
+ */
+interface StandardAllocationRow {
+  role_id: string;
+  phase_id: string;
+  allocation_percentage: number;
+}
+
+/**
+ * Demand summary
+ */
+interface DemandSummary {
+  total_hours: number;
+  total_fte: number;
+  by_role: Record<string, { hours: number; fte: number }>;
+}
+
+/**
+ * Role demand comparison result
+ */
+interface RoleDemandComparison {
+  role_id: string;
+  baseline_hours: number;
+  scenario_hours: number;
+  difference: number;
+}
+
+/**
+ * Capacity gap
+ */
+interface CapacityGap {
+  role_id: string;
+  period: string;
+  gap_hours: number;
+}
+
+/**
+ * Scenario impact data
+ */
+interface ScenarioImpact {
+  total_fte_change: number;
+  new_gaps: CapacityGap[];
+}
+
 export class DemandController extends BaseController {
   constructor(container?: ServiceContainer) {
     super({}, { container });
@@ -62,14 +162,14 @@ export class DemandController extends BaseController {
         .orderBy('project_demands_view.start_date', 'project_phases.order_index', 'roles.name');
 
       // Calculate FTE for each demand
-      const demandsWithFte = demands.map((demand: any) => ({
+      const demandsWithFte = demands.map((demand: DemandViewRow) => ({
         ...demand,
         demand_fte: this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date)
       }));
 
       // Group by phase
       const phaseMap = new Map();
-      demandsWithFte.forEach((demand: any) => {
+      demandsWithFte.forEach((demand: DemandViewRow) => {
         if (!phaseMap.has(demand.phase_id)) {
           phaseMap.set(demand.phase_id, {
             phase_id: demand.phase_id,
@@ -95,10 +195,10 @@ export class DemandController extends BaseController {
       const summary = {
         total_phases: phases.length,
         total_demands: demandsWithFte.length,
-        total_hours: demandsWithFte.reduce((sum: number, d: any) => sum + d.demand_hours, 0),
-        total_fte: demandsWithFte.reduce((sum: number, d: any) => sum + d.demand_fte, 0),
-        override_count: demandsWithFte.filter((d: any) => d.is_override).length,
-        roles_needed: new Set(demandsWithFte.map((d: any) => d.role_id)).size
+        total_hours: demandsWithFte.reduce((sum: number, d: DemandViewRow) => sum + d.demand_hours, 0),
+        total_fte: demandsWithFte.reduce((sum: number, d: DemandViewRow) => sum + (d.demand_fte || 0), 0),
+        override_count: demandsWithFte.filter((d: DemandViewRow) => d.is_override).length,
+        roles_needed: new Set(demandsWithFte.map((d: DemandViewRow) => d.role_id)).size
       };
 
       return {
@@ -509,8 +609,8 @@ export class DemandController extends BaseController {
     return hours / totalAvailableHours;
   }
 
-  private calculateTimelineFromDemands(demands: any[], filterStartDate?: string, filterEndDate?: string): any[] {
-    const monthlyMap = new Map();
+  private calculateTimelineFromDemands(demands: DemandAssignmentRow[], filterStartDate?: string, filterEndDate?: string): MonthlyDemandData[] {
+    const monthlyMap = new Map<string, MonthlyDemandData>();
 
     // Define the filter range bounds
     const filterStart = filterStartDate ? new Date(filterStartDate) : null;
@@ -559,7 +659,7 @@ export class DemandController extends BaseController {
           });
         }
 
-        const monthData = monthlyMap.get(monthKey);
+        const monthData = monthlyMap.get(monthKey)!;
         monthData.total_hours += hoursPerMonth;
         monthData.total_fte += hoursPerMonth / 160; // Assume 160 hours per month (8 hours * 20 days)
 
@@ -570,25 +670,25 @@ export class DemandController extends BaseController {
     return Array.from(monthlyMap.values()).sort((a, b) => a.month.localeCompare(b.month));
   }
 
-  private calculateMonthlyDemand(demands: any[]): any[] {
+  private calculateMonthlyDemand(demands: DemandViewRow[]): MonthlyDemandData[] {
     console.log('🗓️ calculateMonthlyDemand called with', demands.length, 'demands');
-    const monthlyMap = new Map();
+    const monthlyMap = new Map<string, MonthlyDemandData>();
 
     demands.forEach(demand => {
       const startDate = new Date(demand.start_date);
       const endDate = new Date(demand.end_date);
       const demandHours = demand.demand_hours || 0;
-      
+
       // Calculate the duration in months
       const durationMonths = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
       const hoursPerMonth = demandHours / durationMonths;
-      
+
       let currentDate = new Date(startDate);
       currentDate.setDate(1); // Set to first day of month
-      
+
       while (currentDate <= endDate) {
         const monthKey = currentDate.toISOString().slice(0, 7);
-        
+
         if (!monthlyMap.has(monthKey)) {
           monthlyMap.set(monthKey, {
             month: monthKey,
@@ -598,7 +698,7 @@ export class DemandController extends BaseController {
           });
         }
 
-        const monthData = monthlyMap.get(monthKey);
+        const monthData = monthlyMap.get(monthKey)!;
         monthData.total_hours += hoursPerMonth;
         monthData.total_fte += hoursPerMonth / 160; // Assume 160 hours per month (8 hours * 20 days)
 
@@ -609,20 +709,20 @@ export class DemandController extends BaseController {
     return Array.from(monthlyMap.values()).sort((a, b) => a.month.localeCompare(b.month));
   }
 
-  private async getBaselineDemands(): Promise<any[]> {
+  private async getBaselineDemands(): Promise<DemandViewRow[]> {
     return await this.db('project_demands_view')
       .join('projects', 'project_demands_view.project_id', 'projects.id')
       .where('projects.include_in_demand', true)
       .select('project_demands_view.*');
   }
 
-  private async calculateProjectDemands(project: any): Promise<any[]> {
+  private async calculateProjectDemands(project: ProjectRow): Promise<DemandViewRow[]> {
     const allocations = await this.db('standard_allocations')
       .where('project_type_id', project.project_type_id)
-      .select('*');
+      .select('*') as StandardAllocationRow[];
 
     // Simplified - would need to calculate based on project timeline
-    return allocations.map(allocation => ({
+    return allocations.map((allocation: StandardAllocationRow) => ({
       project_id: project.id,
       role_id: allocation.role_id,
       phase_id: allocation.phase_id,
@@ -632,11 +732,11 @@ export class DemandController extends BaseController {
     }));
   }
 
-  private summarizeDemands(demands: any[]): any {
-    const summary = {
+  private summarizeDemands(demands: DemandViewRow[]): DemandSummary {
+    const summary: DemandSummary = {
       total_hours: 0,
       total_fte: 0,
-      by_role: {} as Record<string, any>
+      by_role: {}
     };
 
     demands.forEach(demand => {
@@ -647,17 +747,17 @@ export class DemandController extends BaseController {
     return summary;
   }
 
-  private compareRoleDemands(baseline: any, scenario: any): any[] {
+  private compareRoleDemands(_baseline: DemandSummary, _scenario: DemandSummary): RoleDemandComparison[] {
     // Implementation would compare role demands
     return [];
   }
 
-  private identifyNewGaps(scenarioSummary: any): any[] {
+  private identifyNewGaps(_scenarioSummary: DemandSummary): CapacityGap[] {
     // Implementation would identify capacity gaps
     return [];
   }
 
-  private generateScenarioRecommendation(impact: any): string {
+  private generateScenarioRecommendation(impact: ScenarioImpact): string {
     if (impact.total_fte_change > 10) {
       return 'This scenario would require significant additional resources';
     } else if (impact.new_gaps.length > 0) {

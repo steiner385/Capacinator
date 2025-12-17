@@ -1,7 +1,84 @@
 import { faker } from '@faker-js/faker';
 import path from 'path';
-import { getAuditedDb } from '../src/server/database/index.js';
+import { getAuditedDb, db } from '../src/server/database/index.js';
 import { withSeedAudit } from '../src/server/database/MigrationAuditWrapper.js';
+
+// Type definitions for seed data
+interface LocationData {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface ProjectTypeData {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface PhaseData {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  order_index: number;
+}
+
+interface RoleData {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  is_assignable: boolean;
+  default_allocation_percentage: number;
+  is_plan_owner: boolean;
+  has_cw_access: boolean;
+  has_data_access: boolean;
+}
+
+interface PersonData {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  employee_id: string;
+  location_id: string;
+  is_active: boolean;
+}
+
+interface PersonRoleData {
+  id: string;
+  person_id: string;
+  role_id: string;
+  is_primary: boolean;
+}
+
+interface ProjectData {
+  id: string;
+  name: string;
+  code: string;
+  project_type_id: string;
+  location_id: string;
+  owner_id: string;
+  client_name: string;
+  status: string;
+  priority: string;
+  start_date: Date;
+  target_end_date: Date;
+  actual_end_date: Date | null;
+  description: string;
+  notes: string;
+}
+
+interface PhaseTimelineData {
+  id: string;
+  project_id: string;
+  phase_id: string;
+  start_date: Date;
+  end_date: Date;
+  actual_start_date: Date | null;
+  actual_end_date: Date | null;
+}
 
 // Use the audited database connection
 const auditedDb = getAuditedDb();
@@ -194,7 +271,7 @@ async function seedRoles() {
   return roleData;
 }
 
-async function seedPeople(locationData: any[], roleData: any[]) {
+async function seedPeople(locationData: LocationData[], roleData: RoleData[]) {
   console.log('👤 Creating people...');
   
   const peopleData = [];
@@ -262,7 +339,7 @@ async function seedPeople(locationData: any[], roleData: any[]) {
   return { peopleData, personRolesData };
 }
 
-async function seedProjects(locationData: any[], projectTypeData: any[], phaseData: any[], peopleData: any[]) {
+async function seedProjects(locationData: LocationData[], projectTypeData: ProjectTypeData[], phaseData: PhaseData[], peopleData: PersonData[]) {
   console.log('🚀 Creating projects...');
   
   const projectData = [];
@@ -334,7 +411,7 @@ async function seedProjects(locationData: any[], projectTypeData: any[], phaseDa
   return { projectData, phaseTimelineData };
 }
 
-async function seedStandardAllocations(projectTypeData: any[], phaseData: any[], roleData: any[]) {
+async function seedStandardAllocations(projectTypeData: ProjectTypeData[], phaseData: PhaseData[], roleData: RoleData[]) {
   console.log('📊 Creating resource templates...');
   
   const resourceTemplateData = [];
@@ -387,37 +464,37 @@ async function seedStandardAllocations(projectTypeData: any[], phaseData: any[],
   return resourceTemplateData;
 }
 
-async function seedAssignments(projectData: any[], peopleData: any[], personRolesData: any[], phaseTimelineData: any[]) {
+async function seedAssignments(projectData: ProjectData[], peopleData: PersonData[], personRolesData: PersonRoleData[], phaseTimelineData: PhaseTimelineData[]) {
   console.log('📅 Creating assignments...');
-  
+
   const assignmentData = [];
-  const activeProjects = projectData.filter((p: any) => ['active'].includes(p.status));
-  
+  const activeProjects = projectData.filter((p: ProjectData) => ['active'].includes(p.status));
+
   for (const project of activeProjects) {
     // Get project phases
-    const projectPhases = phaseTimelineData.filter((pt: any) => pt.project_id === project.id);
-    
+    const projectPhases = phaseTimelineData.filter((pt: PhaseTimelineData) => pt.project_id === project.id);
+
     // Assign 3-10 people per project
     const teamSize = faker.number.int({ min: 3, max: 10 });
-    const availablePeople = peopleData.filter((p: any) => p.is_active);
+    const availablePeople = peopleData.filter((p: PersonData) => p.is_active);
     const team = faker.helpers.arrayElements(availablePeople, teamSize);
-    
+
     for (const person of team) {
       // Get person's role
-      const personRole = personRolesData.find((pr: any) => pr.person_id === person.id && pr.is_primary);
+      const personRole = personRolesData.find((pr: PersonRoleData) => pr.person_id === person.id && pr.is_primary);
       if (!personRole) continue;
-      
+
       // Determine assignment period (might not cover entire project)
       const assignmentStart = faker.date.between({
         from: project.start_date,
         to: addWeeks(new Date(project.start_date), 4)
       });
-      
+
       const assignmentEnd = faker.date.between({
         from: addWeeks(assignmentStart, 4),
-        to: project.end_date
+        to: project.target_end_date
       });
-      
+
       assignmentData.push({
         id: faker.string.uuid(),
         project_id: project.id,
@@ -428,26 +505,26 @@ async function seedAssignments(projectData: any[], peopleData: any[], personRole
         allocation_percentage: faker.helpers.arrayElement([25, 50, 75, 100]),
         is_billable: faker.datatype.boolean({ probability: 0.8 }),
         notes: faker.lorem.sentence(),
-        created_by: faker.helpers.arrayElement(peopleData.filter((p: any) => p.is_active)).id,
+        created_by: faker.helpers.arrayElement(peopleData.filter((p: PersonData) => p.is_active)).id,
         created_at: faker.date.recent({ days: 30 })
       });
     }
   }
-  
+
   await auditedDb('project_assignments').insert(assignmentData);
   console.log(`✅ Created ${assignmentData.length} assignments`);
   return assignmentData;
 }
 
-async function seedAvailabilityOverrides(peopleData: any[]) {
+async function seedAvailabilityOverrides(peopleData: PersonData[]) {
   console.log('🏖️ Creating availability overrides...');
-  
+
   const availabilityData = [];
   const currentDate = new Date();
-  
+
   // Create PTO/leave for 20-30% of people
   const peopleWithOverrides = faker.helpers.arrayElements(
-    peopleData.filter((p: any) => p.is_active),
+    peopleData.filter((p: PersonData) => p.is_active),
     Math.floor(peopleData.length * 0.25)
   );
   

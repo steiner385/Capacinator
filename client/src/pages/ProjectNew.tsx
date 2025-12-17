@@ -18,6 +18,38 @@ interface ProjectFormData {
   owner_id: string;
 }
 
+interface ProjectType {
+  id: string;
+  name: string;
+  available_locations?: string[];
+}
+
+interface Location {
+  id: string;
+  name: string;
+}
+
+interface PersonRole {
+  role_name?: string;
+  suitable_project_types?: string[];
+}
+
+interface Person {
+  id: string;
+  name: string;
+  location_id?: string;
+  can_own_projects?: boolean;
+  roles?: PersonRole[];
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      errors?: Record<string, string>;
+    };
+  };
+}
+
 export function ProjectNew() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -81,7 +113,7 @@ export function ProjectNew() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       navigate(`/projects/${data.id}`);
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
       }
@@ -110,7 +142,7 @@ export function ProjectNew() {
     navigate('/projects');
   };
 
-  const handleChange = (field: keyof ProjectFormData, value: any) => {
+  const handleChange = (field: keyof ProjectFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -124,9 +156,9 @@ export function ProjectNew() {
     
     // Filter project types based on selected location
     if (formData.location_id) {
-      return projectTypes.filter((type: any) => {
+      return projectTypes.filter((type: ProjectType) => {
         // Check if this project type is available at the selected location
-        return type.available_locations?.includes(formData.location_id) || 
+        return type.available_locations?.includes(formData.location_id) ||
                !type.available_locations; // Include types with no location restrictions
       });
     }
@@ -136,37 +168,37 @@ export function ProjectNew() {
 
   const filteredOwners = useMemo(() => {
     if (!people) return [];
-    
-    let filtered = people;
-    
+
+    let filtered: Person[] = people;
+
     // Filter owners based on selected location (prefer same location)
     if (formData.location_id) {
-      const sameLocationOwners = people.filter((person: any) => 
+      const sameLocationOwners = people.filter((person: Person) =>
         person.location_id === formData.location_id
       );
-      
+
       // If we have people in the same location, prefer them
       if (sameLocationOwners.length > 0) {
         filtered = sameLocationOwners;
       }
     }
-    
+
     // Further filter by project type expertise if project type is selected
     if (formData.project_type_id) {
-      filtered = filtered.filter((person: any) => {
+      filtered = filtered.filter((person: Person) => {
         // Check if person has roles suitable for this project type
-        return person.roles?.some((role: any) => 
+        return person.roles?.some((role: PersonRole) =>
           role.suitable_project_types?.includes(formData.project_type_id) ||
           role.role_name?.toLowerCase().includes('manager') ||
           role.role_name?.toLowerCase().includes('lead')
         ) || !person.roles; // Include people with no specific role restrictions
       });
     }
-    
+
     // Only show people who can be project owners (managers, leads, seniors)
-    return filtered.filter((person: any) => 
+    return filtered.filter((person: Person) =>
       person.can_own_projects === true ||
-      person.roles?.some((role: any) => 
+      person.roles?.some((role: PersonRole) =>
         role.role_name?.toLowerCase().includes('manager') ||
         role.role_name?.toLowerCase().includes('lead') ||
         role.role_name?.toLowerCase().includes('senior')
@@ -230,7 +262,7 @@ export function ProjectNew() {
                     className={`form-select ${errors.project_type_id ? 'error' : ''}`}
                   >
                     <option value="">Select project type</option>
-                    {filteredProjectTypes?.map((type: any) => (
+                    {filteredProjectTypes?.map((type: ProjectType) => (
                       <option key={type.id} value={type.id}>{type.name}</option>
                     ))}
                   </select>
@@ -249,7 +281,7 @@ export function ProjectNew() {
                     className={`form-select ${errors.location_id ? 'error' : ''}`}
                   >
                     <option value="">Select location</option>
-                    {locations?.map((loc: any) => (
+                    {locations?.map((loc: Location) => (
                       <option key={loc.id} value={loc.id}>{loc.name}</option>
                     ))}
                   </select>
@@ -279,7 +311,7 @@ export function ProjectNew() {
                     className="form-select"
                   >
                     <option value="">No owner</option>
-                    {filteredOwners?.map((person: any) => (
+                    {filteredOwners?.map((person: Person) => (
                       <option key={person.id} value={person.id}>
                         {person.name} {person.location_id === formData.location_id ? '(Same Location)' : ''}
                       </option>
@@ -340,10 +372,10 @@ export function ProjectNew() {
                   <h4>Project Preview</h4>
                   <p>
                     <strong>{formData.name}</strong> will be created as a{' '}
-                    <strong>{projectTypes?.find((t: any) => t.id === formData.project_type_id)?.name}</strong> project
-                    at <strong>{locations?.find((l: any) => l.id === formData.location_id)?.name}</strong>
+                    <strong>{projectTypes?.find((t: ProjectType) => t.id === formData.project_type_id)?.name}</strong> project
+                    at <strong>{locations?.find((l: Location) => l.id === formData.location_id)?.name}</strong>
                     {formData.owner_id && (
-                      <span> with <strong>{people?.find((p: any) => p.id === formData.owner_id)?.name}</strong> as owner</span>
+                      <span> with <strong>{people?.find((p: Person) => p.id === formData.owner_id)?.name}</strong> as owner</span>
                     )}
                   </p>
                 </div>
@@ -355,13 +387,13 @@ export function ProjectNew() {
                   <h4>Active Filters</h4>
                   <ul>
                     {formData.location_id && (
-                      <li>Project types filtered by location: <strong>{locations?.find((l: any) => l.id === formData.location_id)?.name}</strong></li>
+                      <li>Project types filtered by location: <strong>{locations?.find((l: Location) => l.id === formData.location_id)?.name}</strong></li>
                     )}
                     {formData.location_id && (
-                      <li>Owners prioritized from location: <strong>{locations?.find((l: any) => l.id === formData.location_id)?.name}</strong></li>
+                      <li>Owners prioritized from location: <strong>{locations?.find((l: Location) => l.id === formData.location_id)?.name}</strong></li>
                     )}
                     {formData.project_type_id && (
-                      <li>Owners filtered by expertise in: <strong>{projectTypes?.find((t: any) => t.id === formData.project_type_id)?.name}</strong></li>
+                      <li>Owners filtered by expertise in: <strong>{projectTypes?.find((t: ProjectType) => t.id === formData.project_type_id)?.name}</strong></li>
                     )}
                   </ul>
                 </div>

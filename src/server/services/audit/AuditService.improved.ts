@@ -13,8 +13,8 @@ export interface AuditLogEntry {
   record_id: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   changed_by: string | null;
-  old_values: Record<string, any> | null;
-  new_values: Record<string, any> | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
   changed_fields: string[] | null;
   request_id: string | null;
   ip_address: string | null;
@@ -60,8 +60,8 @@ export class ImprovedAuditService {
     recordId: string;
     action: 'CREATE' | 'UPDATE' | 'DELETE';
     changedBy?: string;
-    oldValues?: Record<string, any>;
-    newValues?: Record<string, any>;
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
     requestId?: string;
     ipAddress?: string;
     userAgent?: string;
@@ -299,7 +299,7 @@ export class ImprovedAuditService {
       .offset(filters.offset || 0);
 
     return {
-      total: (total as any)?.count || 0,
+      total: (total as { count?: number })?.count || 0,
       entries: entries.map(this.parseAuditEntry)
     };
   }
@@ -324,7 +324,7 @@ export class ImprovedAuditService {
     return results.map(this.parseAuditEntry);
   }
 
-  private filterSensitiveFields(values?: Record<string, any>): Record<string, any> | null {
+  private filterSensitiveFields(values?: Record<string, unknown>): Record<string, unknown> | null {
     if (!values) return null;
     
     const filtered = { ...values };
@@ -338,8 +338,8 @@ export class ImprovedAuditService {
   }
 
   private getChangedFields(
-    oldValues?: Record<string, any>, 
-    newValues?: Record<string, any>
+    oldValues?: Record<string, unknown>, 
+    newValues?: Record<string, unknown>
   ): string[] | null {
     if (!oldValues || !newValues) return null;
     
@@ -362,7 +362,7 @@ export class ImprovedAuditService {
       .count('* as count')
       .first();
 
-    const count = (entryCount as any)?.count || 0;
+    const count = (entryCount as { count?: number })?.count || 0;
     
     if (count > this.config.maxHistoryEntries) {
       const excessCount = count - this.config.maxHistoryEntries;
@@ -418,21 +418,21 @@ export class ImprovedAuditService {
       .first();
 
     const entriesByAction: Record<string, number> = {};
-    byAction.forEach((row: any) => {
+    byAction.forEach((row: { action: string; count: number | string }) => {
       entriesByAction[row.action] = Number(row.count);
     });
 
     const entriesByTable: Record<string, number> = {};
-    byTable.forEach((row: any) => {
+    byTable.forEach((row: { table_name: string; count: number | string }) => {
       entriesByTable[row.table_name] = Number(row.count);
     });
 
     return {
-      totalEntries: (total as any)?.count || 0,
+      totalEntries: (total as { count?: number })?.count || 0,
       entriesByAction,
       entriesByTable,
-      oldestEntry: (oldest as any)?.min_date || null,
-      newestEntry: (newest as any)?.max_date || null
+      oldestEntry: (oldest as { min_date?: Date })?.min_date || null,
+      newestEntry: (newest as { max_date?: Date })?.max_date || null
     };
   }
 

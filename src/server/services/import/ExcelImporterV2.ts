@@ -1,7 +1,8 @@
+import type { Knex } from 'knex';
 import { getAuditedDb } from '../../database/index.js';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
-let ExcelJS: any;
+let ExcelJS: unknown;
 
 async function initializeExcelJS() {
   if (!ExcelJS) {
@@ -46,13 +47,13 @@ export interface ImportResultV2 {
 }
 
 export class ExcelImporterV2 {
-  private db: any;
+  private db: ReturnType<typeof getAuditedDb>;
   private planOwnerMap: Map<string, string> = new Map(); // name -> person_id
   private roleMap: Map<string, string> = new Map(); // name -> role_id
   private projectMap: Map<string, string> = new Map(); // name -> project_id
   private phaseMap: Map<string, string> = new Map(); // abbreviation -> phase_id
 
-  constructor(db?: any) {
+  constructor(db?: ReturnType<typeof getAuditedDb>) {
     this.db = db || getAuditedDb();
   }
 
@@ -80,7 +81,7 @@ export class ExcelImporterV2 {
     }
   }
 
-  private async clearExistingDataInTransaction(trx: any) {
+  private async clearExistingDataInTransaction(trx: Knex.Transaction) {
     const tables = [
       'project_assignments',
       'demand_overrides',
@@ -251,7 +252,7 @@ export class ExcelImporterV2 {
           
           for (let rowNumber = 2; rowNumber <= maxRowsToCheck && rowErrors.length < 10; rowNumber++) {
             const row = worksheet.getRow(rowNumber);
-            const values = row.values as any[];
+            const values = (row.values as unknown[]) || [];
 
             // Skip completely empty rows (no data in any column)
             const hasAnyData = values.slice(1).some(v => v !== null && v !== undefined && v !== '');
@@ -640,7 +641,7 @@ export class ExcelImporterV2 {
     }
 
     const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as any[];
+    const headers = (headerRow.values as unknown[]) || [];
     const fiscalWeeks = extractFiscalWeekColumns(headers);
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
@@ -831,7 +832,7 @@ export class ExcelImporterV2 {
     }
 
     const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as any[];
+    const headers = (headerRow.values as unknown[]) || [];
     const fiscalWeeks = extractFiscalWeekColumns(headers);
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
@@ -927,7 +928,7 @@ export class ExcelImporterV2 {
     }
 
     const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as any[];
+    const headers = (headerRow.values as unknown[]) || [];
     const fiscalWeeks = extractFiscalWeekColumns(headers);
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
@@ -994,7 +995,7 @@ export class ExcelImporterV2 {
     }
 
     const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as any[];
+    const headers = (headerRow.values as unknown[]) || [];
     const fiscalWeeks = extractFiscalWeekColumns(headers);
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {

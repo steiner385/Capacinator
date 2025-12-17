@@ -1,14 +1,36 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+// Row types for database query results
+interface ActionCountRow {
+  action: string;
+  count: number | string;
+}
+
+interface TableCountRow {
+  table_name: string;
+  count: number | string;
+}
+
+interface TimelinePeriodRow {
+  period: string;
+  action_count: number | string;
+}
+
+interface UserActivityRow {
+  changed_by: string;
+  total_actions: number | string;
+  last_activity: string | Date | null;
+}
+
 export interface AuditLogEntry {
   id: string;
   table_name: string;
   record_id: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   changed_by: string | null;
-  old_values: Record<string, any> | null;
-  new_values: Record<string, any> | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
   changed_fields: string[] | null;
   request_id: string | null;
   ip_address: string | null;
@@ -54,8 +76,8 @@ export class AuditService {
     recordId: string;
     action: 'CREATE' | 'UPDATE' | 'DELETE';
     changedBy?: string;
-    oldValues?: Record<string, any>;
-    newValues?: Record<string, any>;
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
     requestId?: string;
     ipAddress?: string;
     userAgent?: string;
@@ -375,27 +397,27 @@ export class AuditService {
       .offset(filters.offset || 0);
 
     return {
-      total: (total as any)?.count || 0,
+      total: (total as { count: number })?.count || 0,
       entries: entries.map(this.parseAuditEntry)
     };
   }
 
-  private filterSensitiveFields(values?: Record<string, any>): Record<string, any> | null {
+  private filterSensitiveFields(values?: Record<string, unknown>): Record<string, unknown> | null {
     if (!values) return null;
-    
+
     const filtered = { ...values };
     this.config.sensitiveFields.forEach(field => {
       if (field in filtered) {
         filtered[field] = '[REDACTED]';
       }
     });
-    
+
     return filtered;
   }
 
   private getChangedFields(
-    oldValues?: Record<string, any>, 
-    newValues?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>
   ): string[] | null {
     if (!oldValues || !newValues) return null;
     
@@ -418,7 +440,7 @@ export class AuditService {
       .count('* as count')
       .first();
 
-    const count = (entryCount as any)?.count || 0;
+    const count = (entryCount as { count: number })?.count || 0;
     
     if (count > this.config.maxHistoryEntries) {
       const excessCount = count - this.config.maxHistoryEntries;
@@ -474,21 +496,21 @@ export class AuditService {
       .first();
 
     const entriesByAction: Record<string, number> = {};
-    byAction.forEach((row: any) => {
+    (byAction as ActionCountRow[]).forEach((row: ActionCountRow) => {
       entriesByAction[row.action] = Number(row.count);
     });
 
     const entriesByTable: Record<string, number> = {};
-    byTable.forEach((row: any) => {
+    (byTable as TableCountRow[]).forEach((row: TableCountRow) => {
       entriesByTable[row.table_name] = Number(row.count);
     });
 
     return {
-      totalEntries: (total as any)?.count || 0,
+      totalEntries: (total as { count: number })?.count || 0,
       entriesByAction,
       entriesByTable,
-      oldestEntry: (oldest as any)?.min_date || null,
-      newestEntry: (newest as any)?.max_date || null
+      oldestEntry: (oldest as { min_date: Date | null })?.min_date || null,
+      newestEntry: (newest as { max_date: Date | null })?.max_date || null
     };
   }
 
@@ -552,7 +574,7 @@ export class AuditService {
     });
 
     // Fill in actual counts
-    results.forEach((row: any) => {
+    (results as (TableCountRow & { action: string })[]).forEach((row) => {
       if (!summary[row.table_name]) {
         summary[row.table_name] = {
           CREATE: 0,
@@ -593,7 +615,7 @@ export class AuditService {
       .groupBy('period')
       .orderBy('period', 'asc');
 
-    return results.map((row: any) => ({
+    return (results as TimelinePeriodRow[]).map((row: TimelinePeriodRow) => ({
       timestamp: row.period,
       action_count: Number(row.action_count)
     }));
@@ -609,7 +631,7 @@ export class AuditService {
 
     const activity: Record<string, { total_actions: number; last_activity: Date | null }> = {};
 
-    results.forEach((row: any) => {
+    (results as UserActivityRow[]).forEach((row: UserActivityRow) => {
       activity[row.changed_by] = {
         total_actions: Number(row.total_actions),
         last_activity: row.last_activity ? new Date(row.last_activity) : null

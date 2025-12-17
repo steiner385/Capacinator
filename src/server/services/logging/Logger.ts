@@ -15,7 +15,7 @@ export interface LogEntry {
   service?: string;
   requestId?: string;
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   error?: {
     message: string;
     stack?: string;
@@ -57,12 +57,12 @@ export class Logger {
     return level <= this.config.level;
   }
 
-  private redactSensitiveData(data: any): any {
+  private redactSensitiveData(data: unknown): unknown {
     if (!data || typeof data !== 'object') {
       return data;
     }
 
-    const redacted = { ...data };
+    const redacted: Record<string, unknown> = { ...(data as Record<string, unknown>) };
     for (const field of this.config.redactedFields) {
       if (redacted[field]) {
         redacted[field] = '[REDACTED]';
@@ -82,7 +82,7 @@ export class Logger {
   private formatLogEntry(
     level: LogLevel,
     message: string,
-    metadata: Record<string, any> = {},
+    metadata: Record<string, unknown> = {},
     error?: Error
   ): LogEntry {
     const entry: LogEntry = {
@@ -94,16 +94,17 @@ export class Logger {
     };
 
     if (error) {
+      const errorWithCode = error as Error & { code?: string };
       entry.error = {
         message: error?.message || 'Unknown error',
         stack: this.config.level >= LogLevel.DEBUG ? error?.stack : undefined,
-        code: (error as any)?.code
+        code: errorWithCode?.code
       };
     }
 
     // Redact sensitive data
     if (entry.metadata) {
-      entry.metadata = this.redactSensitiveData(entry.metadata);
+      entry.metadata = this.redactSensitiveData(entry.metadata) as Record<string, unknown>;
     }
 
     return entry;
@@ -135,31 +136,31 @@ export class Logger {
     }
   }
 
-  error(message: string, error?: Error, metadata: Record<string, any> = {}): void {
+  error(message: string, error?: Error, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
     const entry = this.formatLogEntry(LogLevel.ERROR, message, metadata, error);
     this.writeLog(entry);
   }
 
-  warn(message: string, metadata: Record<string, any> = {}): void {
+  warn(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.WARN)) return;
     const entry = this.formatLogEntry(LogLevel.WARN, message, metadata);
     this.writeLog(entry);
   }
 
-  info(message: string, metadata: Record<string, any> = {}): void {
+  info(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
     const entry = this.formatLogEntry(LogLevel.INFO, message, metadata);
     this.writeLog(entry);
   }
 
-  http(message: string, metadata: Record<string, any> = {}): void {
+  http(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.HTTP)) return;
     const entry = this.formatLogEntry(LogLevel.HTTP, message, metadata);
     this.writeLog(entry);
   }
 
-  debug(message: string, metadata: Record<string, any> = {}): void {
+  debug(message: string, metadata: Record<string, unknown> = {}): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
     const entry = this.formatLogEntry(LogLevel.DEBUG, message, metadata);
     this.writeLog(entry);
@@ -167,6 +168,7 @@ export class Logger {
 
   // Convenience method for HTTP requests
   logRequest(req: Request, statusCode: number, duration: number): void {
+    const reqWithContext = req as Request & { requestId?: string; user?: { id: string } };
     this.http('HTTP Request', {
       method: req.method,
       url: req.url,
@@ -174,8 +176,8 @@ export class Logger {
       duration: `${duration}ms`,
       userAgent: req.get('User-Agent'),
       ip: req.ip,
-      requestId: (req as any).requestId,
-      userId: (req as any).user?.id
+      requestId: reqWithContext.requestId,
+      userId: reqWithContext.user?.id
     });
   }
 
@@ -185,7 +187,7 @@ export class Logger {
     entityType: string,
     entityId: string,
     userId?: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): void {
     this.info('Business Operation', {
       operation,
@@ -200,7 +202,7 @@ export class Logger {
   logPerformance(
     operation: string,
     duration: number,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): void {
     const level = duration > 1000 ? LogLevel.WARN : LogLevel.DEBUG;
     if (!this.shouldLog(level)) return;
@@ -214,7 +216,7 @@ export class Logger {
   }
 
   // Create a child logger with additional context
-  child(metadata: Record<string, any>): ChildLogger {
+  child(metadata: Record<string, unknown>): ChildLogger {
     return new ChildLogger(this, metadata);
   }
 }
@@ -222,30 +224,30 @@ export class Logger {
 export class ChildLogger {
   constructor(
     private parent: Logger,
-    private defaultMetadata: Record<string, any>
+    private defaultMetadata: Record<string, unknown>
   ) {}
 
-  private mergeMetadata(metadata: Record<string, any> = {}): Record<string, any> {
+  private mergeMetadata(metadata: Record<string, unknown> = {}): Record<string, unknown> {
     return { ...this.defaultMetadata, ...metadata };
   }
 
-  error(message: string, error?: Error, metadata: Record<string, any> = {}): void {
+  error(message: string, error?: Error, metadata: Record<string, unknown> = {}): void {
     this.parent.error(message, error, this.mergeMetadata(metadata));
   }
 
-  warn(message: string, metadata: Record<string, any> = {}): void {
+  warn(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.warn(message, this.mergeMetadata(metadata));
   }
 
-  info(message: string, metadata: Record<string, any> = {}): void {
+  info(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.info(message, this.mergeMetadata(metadata));
   }
 
-  http(message: string, metadata: Record<string, any> = {}): void {
+  http(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.http(message, this.mergeMetadata(metadata));
   }
 
-  debug(message: string, metadata: Record<string, any> = {}): void {
+  debug(message: string, metadata: Record<string, unknown> = {}): void {
     this.parent.debug(message, this.mergeMetadata(metadata));
   }
 
@@ -258,7 +260,7 @@ export class ChildLogger {
     entityType: string,
     entityId: string,
     userId?: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): void {
     this.parent.logBusinessOperation(operation, entityType, entityId, userId, this.mergeMetadata(metadata));
   }
@@ -266,12 +268,12 @@ export class ChildLogger {
   logPerformance(
     operation: string,
     duration: number,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): void {
     this.parent.logPerformance(operation, duration, this.mergeMetadata(metadata));
   }
 
-  child(metadata: Record<string, any>): ChildLogger {
+  child(metadata: Record<string, unknown>): ChildLogger {
     return new ChildLogger(this.parent, this.mergeMetadata(metadata));
   }
 }
