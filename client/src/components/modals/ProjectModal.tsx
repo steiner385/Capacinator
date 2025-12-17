@@ -20,6 +20,31 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../ui/dialog';
+import type { Location, ProjectType, ProjectPhase } from '../../types';
+
+// Local interface for person with roles (from people API)
+interface PersonWithRoles {
+  id: string;
+  name: string;
+  title?: string;
+  location_id?: string;
+  roles?: Array<{ role_name?: string }>;
+}
+
+// Project type for editing
+interface EditableProject {
+  id: string;
+  name?: string;
+  project_type_id?: string;
+  location_id?: string;
+  priority?: number;
+  description?: string;
+  data_restrictions?: string;
+  include_in_demand?: boolean;
+  external_id?: string;
+  owner_id?: string;
+  current_phase_id?: string;
+}
 
 interface ProjectFormData {
   name: string;
@@ -37,8 +62,8 @@ interface ProjectFormData {
 interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (project: any) => void;
-  editingProject?: any;
+  onSuccess?: (project: EditableProject) => void;
+  editingProject?: EditableProject;
 }
 
 const initialValues: ProjectFormData = {
@@ -149,21 +174,21 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   // Filter project types to only show project sub-types (not main project types)
   const filteredProjectTypes = useMemo(() => {
     if (!projectTypes || !Array.isArray(projectTypes)) return [];
-    return projectTypes.filter((type: any) => type.parent_id !== null);
+    return projectTypes.filter((type: ProjectType) => type.parent_id !== null);
   }, [projectTypes]);
 
   // Filter potential owners based on location
   const filteredOwners = useMemo(() => {
     if (!people || !Array.isArray(people)) return [];
 
-    return people.filter((person: any) => {
+    return people.filter((person: PersonWithRoles) => {
       if (formData.location_id) {
         return person.location_id === formData.location_id ||
-               person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('manager')) ||
-               person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('owner'));
+               person.roles?.some((role) => role.role_name?.toLowerCase().includes('manager')) ||
+               person.roles?.some((role) => role.role_name?.toLowerCase().includes('owner'));
       }
 
-      return person.roles?.some((role: any) =>
+      return person.roles?.some((role) =>
         role.role_name?.toLowerCase().includes('manager') ||
         role.role_name?.toLowerCase().includes('owner') ||
         role.role_name?.toLowerCase().includes('lead')
@@ -229,7 +254,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <SelectValue placeholder="Select project type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredProjectTypes?.map((type: any) => (
+                  {filteredProjectTypes?.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
                     </SelectItem>
@@ -252,7 +277,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locations?.map((location: any) => (
+                  {(locations as Location[])?.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
                     </SelectItem>
@@ -275,7 +300,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <SelectValue placeholder="Select project owner" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredOwners?.map((person: any) => (
+                  {filteredOwners?.map((person) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name} ({person.title || 'No Title'})
                     </SelectItem>
@@ -319,7 +344,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {phases?.data?.map((phase: any) => (
+                  {(phases?.data as ProjectPhase[])?.map((phase) => (
                     <SelectItem key={phase.id} value={phase.id}>
                       {phase.name}
                     </SelectItem>

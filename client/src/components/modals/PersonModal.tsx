@@ -18,6 +18,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Alert, AlertDescription } from '../ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Spinner } from '../ui/spinner';
+import type { Location, Role } from '../../types';
+
+// Person with roles for supervisor filtering
+interface PersonWithRoles {
+  id: string;
+  name: string;
+  title?: string;
+  location_id?: string;
+  is_supervisor?: boolean;
+  roles?: Array<{ role_name?: string }>;
+}
+
+// Person type for editing
+interface EditablePerson {
+  id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  title?: string;
+  department?: string;
+  location_id?: string;
+  primary_person_role_id?: string;
+  supervisor_id?: string;
+  worker_type?: string;
+  default_availability_percentage?: number;
+  default_hours_per_day?: number;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+}
 
 interface PersonFormData {
   name: string;
@@ -39,8 +69,8 @@ interface PersonFormData {
 interface PersonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (person: any) => void;
-  editingPerson?: any;
+  onSuccess?: (person: EditablePerson) => void;
+  editingPerson?: EditablePerson;
 }
 
 const initialValues: PersonFormData = {
@@ -151,7 +181,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
   const filteredSupervisors = useMemo(() => {
     if (!people || !Array.isArray(people)) return [];
 
-    return people.filter((person: any) => {
+    return people.filter((person: PersonWithRoles) => {
       if (person.id === formData.supervisor_id) return false;
 
       if (formData.location_id) {
@@ -160,7 +190,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
       }
 
       return person.is_supervisor === true ||
-             person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('manager'));
+             person.roles?.some((role) => role.role_name?.toLowerCase().includes('manager'));
     });
   }, [people, formData.location_id, formData.supervisor_id]);
 
@@ -168,7 +198,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     if (!roles) return [];
 
     if (formData.location_id) {
-      return roles.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      return (roles as Role[]).sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return roles;
@@ -268,7 +298,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {locations?.map((location: any) => (
+                  {(locations as Location[])?.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
                     </SelectItem>
@@ -293,7 +323,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                   <SelectValue placeholder="Select primary role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.isArray(filteredRoles) ? filteredRoles.map((role: any) => (
+                  {Array.isArray(filteredRoles) ? filteredRoles.map((role) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
                     </SelectItem>
@@ -311,7 +341,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {filteredSupervisors?.map((person: any) => (
+                  {filteredSupervisors?.map((person) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name} ({person.title || 'No Title'})
                     </SelectItem>
