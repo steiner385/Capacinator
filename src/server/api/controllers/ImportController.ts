@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import type ExcelJSTypes from 'exceljs';
+import { logger } from '../../services/logging/config.js';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: typeof ExcelJSTypes | null = null;
@@ -248,8 +249,7 @@ export class ImportController extends BaseController {
         dateFormat: req.body.dateFormat || savedSettings.dateFormat
       };
       
-      console.log(`Starting Excel import from: ${req.file.path}`);
-      console.log(`Import options:`, importOptions);
+      logger.info(`Starting Excel import`, { path: req.file.path, options: importOptions });
       
       // Create import history record
       const startTime = Date.now();
@@ -311,7 +311,7 @@ export class ImportController extends BaseController {
       try {
         await fs.unlink(req.file.path);
       } catch (cleanupError) {
-        console.warn('Failed to clean up uploaded file:', cleanupError);
+        logger.warn('Failed to clean up uploaded file', { error: cleanupError });
       }
 
       if (result.success) {
@@ -337,7 +337,7 @@ export class ImportController extends BaseController {
         try {
           await fs.unlink(req.file.path);
         } catch (cleanupError) {
-          console.warn('Failed to clean up uploaded file:', cleanupError);
+          logger.warn('Failed to clean up uploaded file', { error: cleanupError });
         }
       }
 
@@ -479,9 +479,9 @@ export class ImportController extends BaseController {
         try {
           await fs.unlink(req.file.path);
         } catch (cleanupError) {
-          console.warn('Failed to clean up uploaded file:', cleanupError);
+          logger.warn('Failed to clean up uploaded file', { error: cleanupError });
         }
-        
+
         return res.status(400).json({
           valid: false,
           canImport: false,
@@ -497,7 +497,7 @@ export class ImportController extends BaseController {
       // Parse import options to determine which importer to use
       const useV2 = req.body.useV2 === 'true' || req.body.useV2 === true;
       
-      console.log(`Validating Excel file: ${req.file.originalname} using ${useV2 ? 'V2' : 'V1'} format`);
+      logger.info(`Validating Excel file`, { filename: req.file.originalname, format: useV2 ? 'V2' : 'V1' });
 
       // Perform comprehensive validation
       let validationResult;
@@ -514,7 +514,7 @@ export class ImportController extends BaseController {
         try {
           await fs.unlink(req.file.path);
         } catch (cleanupError) {
-          console.warn('Failed to clean up uploaded file:', cleanupError);
+          logger.warn('Failed to clean up uploaded file', { error: cleanupError });
         }
         
         return res.status(400).json({
@@ -533,7 +533,7 @@ export class ImportController extends BaseController {
       try {
         await fs.unlink(req.file.path);
       } catch (cleanupError) {
-        console.warn('Failed to clean up uploaded file:', cleanupError);
+        logger.warn('Failed to clean up uploaded file', { error: cleanupError });
       }
 
       // Return comprehensive validation results
@@ -554,7 +554,7 @@ export class ImportController extends BaseController {
         try {
           await fs.unlink(req.file.path);
         } catch (cleanupError) {
-          console.warn('Failed to clean up uploaded file:', cleanupError);
+          logger.warn('Failed to clean up uploaded file', { error: cleanupError });
         }
       }
 
@@ -564,7 +564,7 @@ export class ImportController extends BaseController {
 
   async exportScenarioData(req: Request, res: Response) {
     try {
-      console.log('Export scenario data request received:', {
+      logger.info('Export scenario data request received', {
         scenarioId: req.query.scenarioId,
         includeAssignments: req.query.includeAssignments,
         includePhases: req.query.includePhases,
@@ -603,7 +603,7 @@ export class ImportController extends BaseController {
         });
       }
 
-      console.log(`Exporting scenario data for: ${scenario.name} (${scenario.scenario_type})`);
+      logger.info(`Exporting scenario data`, { name: scenario.name, type: scenario.scenario_type });
 
       // Initialize ExcelJS
       const ExcelJSClass = await initializeExcelJS();
@@ -646,22 +646,21 @@ export class ImportController extends BaseController {
       });
 
       // Generate Excel buffer
-      console.log('Generating Excel buffer...');
+      logger.debug('Generating Excel buffer...');
       const buffer = await workbook.xlsx.writeBuffer() as ArrayBuffer;
-      console.log(`Excel buffer generated successfully, size: ${buffer.byteLength} bytes`);
+      logger.debug(`Excel buffer generated successfully`, { size: buffer.byteLength });
       
       // Set response headers
       const filename = `${scenario.name.replace(/[^a-zA-Z0-9]/g, '_')}_export_${new Date().toISOString().split('T')[0]}.xlsx`;
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       
-      console.log(`Sending export file: ${filename}`);
+      logger.info(`Sending export file`, { filename });
       // Send the file
       res.send(buffer);
 
     } catch (error) {
-      console.error('Export scenario data failed:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
+      logger.error('Export scenario data failed', error as Error);
       this.handleError(error, res, 'Failed to export scenario data');
     }
   }
@@ -690,8 +689,7 @@ export class ImportController extends BaseController {
         dryRun: true // Force dry-run mode for analysis
       };
       
-      console.log(`Starting dry-run import analysis from: ${req.file.path}`);
-      console.log(`Analysis options:`, importOptions);
+      logger.info(`Starting dry-run import analysis`, { path: req.file.path, options: importOptions });
       
       // Perform dry-run analysis
       let analysisResult;
@@ -717,7 +715,7 @@ export class ImportController extends BaseController {
       try {
         await fs.unlink(req.file.path);
       } catch (cleanupError) {
-        console.warn('Failed to clean up uploaded file:', cleanupError);
+        logger.warn('Failed to clean up uploaded file', { error: cleanupError });
       }
 
       // Return comprehensive analysis results
@@ -740,7 +738,7 @@ export class ImportController extends BaseController {
         try {
           await fs.unlink(req.file.path);
         } catch (cleanupError) {
-          console.warn('Failed to clean up uploaded file:', cleanupError);
+          logger.warn('Failed to clean up uploaded file', { error: cleanupError });
         }
       }
 
@@ -1298,7 +1296,7 @@ export class ImportController extends BaseController {
     } catch (error: unknown) {
       // Handle missing standard_allocations table gracefully
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.log('Standard allocations table not found, skipping allocation data export:', errorMessage);
+      logger.debug('Standard allocations table not found, skipping allocation data export', { error: errorMessage });
       
       // Add a note in the sheet that standard allocations are not available
       allocationsSheet.addRow({

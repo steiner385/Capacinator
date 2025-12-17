@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { db as globalDb } from '../../database/index.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 export class ProjectPhaseDependenciesController {
   private db: any;
@@ -52,7 +53,7 @@ export class ProjectPhaseDependenciesController {
         }
       });
     } catch (error) {
-      console.error('Error fetching project phase dependencies:', error);
+      logger.error('Error fetching project phase dependencies', error as Error);
       res.status(500).json({ error: 'Failed to fetch dependencies' });
     }
   }
@@ -79,7 +80,7 @@ export class ProjectPhaseDependenciesController {
 
       res.json(dependency);
     } catch (error) {
-      console.error('Error fetching dependency:', error);
+      logger.error('Error fetching dependency', error as Error);
       res.status(500).json({ error: 'Failed to fetch dependency' });
     }
   }
@@ -121,7 +122,7 @@ export class ProjectPhaseDependenciesController {
 
       res.status(201).json({ data: dependency });
     } catch (error) {
-      console.error('Error creating dependency:', error);
+      logger.error('Error creating dependency', error as Error);
       res.status(500).json({ error: 'Failed to create dependency' });
     }
   }
@@ -140,7 +141,7 @@ export class ProjectPhaseDependenciesController {
 
       res.json(dependency);
     } catch (error) {
-      console.error('Error updating dependency:', error);
+      logger.error('Error updating dependency', error as Error);
       res.status(500).json({ error: 'Failed to update dependency' });
     }
   }
@@ -158,7 +159,7 @@ export class ProjectPhaseDependenciesController {
 
       res.status(204).send();
     } catch (error) {
-      console.error('Error deleting dependency:', error);
+      logger.error('Error deleting dependency', error as Error);
       res.status(500).json({ error: 'Failed to delete dependency' });
     }
   }
@@ -181,7 +182,7 @@ export class ProjectPhaseDependenciesController {
 
       res.json(result);
     } catch (error) {
-      console.error('Error calculating cascade:', error);
+      logger.error('Error calculating cascade', error as Error);
       res.status(500).json({ error: 'Failed to calculate cascade effects' });
     }
   }
@@ -199,7 +200,7 @@ export class ProjectPhaseDependenciesController {
 
       res.json({ message: 'Cascade changes applied successfully' });
     } catch (error) {
-      console.error('Error applying cascade:', error);
+      logger.error('Error applying cascade', error as Error);
       res.status(500).json({ error: 'Failed to apply cascade changes' });
     }
   }

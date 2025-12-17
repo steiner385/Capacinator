@@ -1,6 +1,7 @@
 import * as cron from 'node-cron';
 import { getAuditedDb } from '../database/index.js';
 import { emailService } from './EmailService.js';
+import { logger } from './logging/config.js';
 
 export class NotificationScheduler {
   private weeklyEmailTask: cron.ScheduledTask | null = null;
@@ -19,26 +20,26 @@ export class NotificationScheduler {
       timezone: 'America/New_York'
     });
 
-    console.log('📧 Notification scheduler initialized');
+    logger.info('Notification scheduler initialized');
   }
 
   public start(): void {
     if (this.weeklyEmailTask) {
       this.weeklyEmailTask.start();
-      console.log('📧 Weekly summary email scheduler started');
+      logger.info('Weekly summary email scheduler started');
     }
   }
 
   public stop(): void {
     if (this.weeklyEmailTask) {
       this.weeklyEmailTask.stop();
-      console.log('📧 Weekly summary email scheduler stopped');
+      logger.info('Weekly summary email scheduler stopped');
     }
   }
 
   private async sendWeeklySummaryEmails(): Promise<void> {
     try {
-      console.log('📧 Sending weekly summary emails...');
+      logger.info('Sending weekly summary emails...');
 
       // Get all users who have weekly summary notifications enabled
       const users = await this.db('people')
@@ -50,7 +51,7 @@ export class NotificationScheduler {
         .where('people.email', '!=', '')
         .whereNotNull('people.email');
 
-      console.log(`📧 Found ${users.length} users for weekly summary emails`);
+      logger.info(`Found users for weekly summary emails`, { count: users.length });
 
       const startOfWeek = new Date();
       startOfWeek.setDate(startOfWeek.getDate() - 7);
@@ -69,15 +70,15 @@ export class NotificationScheduler {
           };
 
           await emailService.sendNotificationEmail(user.id, 'weekly_summary', variables);
-          console.log(`📧 Weekly summary sent to ${user.email}`);
+          logger.info(`Weekly summary sent`, { email: user.email });
         } catch (error) {
-          console.error(`📧 Failed to send weekly summary to ${user.email}:`, error);
+          logger.error(`Failed to send weekly summary`, error as Error, { email: user.email });
         }
       }
 
-      console.log('📧 Weekly summary emails completed');
+      logger.info('Weekly summary emails completed');
     } catch (error) {
-      console.error('📧 Error in weekly summary email job:', error);
+      logger.error('Error in weekly summary email job', error as Error);
     }
   }
 
@@ -135,7 +136,7 @@ export class NotificationScheduler {
           : 'None'
       };
     } catch (error) {
-      console.error('Error generating weekly summary data:', error);
+      logger.error('Error generating weekly summary data', error as Error, { userId });
       return {
         assignments: [],
         totalAllocation: 0,
@@ -154,7 +155,7 @@ export class NotificationScheduler {
     try {
       const user = await this.db('people').where('id', userId).first();
       if (!user) {
-        console.warn(`User ${userId} not found for assignment notification`);
+        logger.warn(`User not found for assignment notification`, { userId });
         return;
       }
 
@@ -162,7 +163,7 @@ export class NotificationScheduler {
       const role = await this.db('roles').where('id', assignmentData.role_id).first();
 
       if (!project || !role) {
-        console.warn(`Project or role not found for assignment notification`);
+        logger.warn(`Project or role not found for assignment notification`, { projectId: assignmentData.project_id, roleId: assignmentData.role_id });
         return;
       }
 
@@ -178,9 +179,9 @@ export class NotificationScheduler {
       };
 
       await emailService.sendNotificationEmail(userId, templateName, variables);
-      console.log(`📧 Assignment ${action} notification sent to ${user.email}`);
+      logger.info(`Assignment notification sent`, { action, email: user.email });
     } catch (error) {
-      console.error('Error sending assignment notification:', error);
+      logger.error('Error sending assignment notification', error as Error, { userId, action });
     }
   }
 
@@ -194,7 +195,7 @@ export class NotificationScheduler {
       const requestor = await this.db('people').where('id', requestData.requestor_id).first();
 
       if (!approver || !requestor) {
-        console.warn(`Approver or requestor not found for approval notification`);
+        logger.warn(`Approver or requestor not found for approval notification`, { approverUserId, requestorId: requestData.requestor_id });
         return;
       }
 
@@ -206,9 +207,9 @@ export class NotificationScheduler {
       };
 
       await emailService.sendNotificationEmail(approverUserId, 'approval_request', variables);
-      console.log(`📧 Approval notification sent to ${approver.email}`);
+      logger.info(`Approval notification sent`, { email: approver.email });
     } catch (error) {
-      console.error('Error sending approval notification:', error);
+      logger.error('Error sending approval notification', error as Error, { approverUserId });
     }
   }
 
@@ -223,7 +224,7 @@ export class NotificationScheduler {
     try {
       const project = await this.db('projects').where('id', projectId).first();
       if (!project) {
-        console.warn(`Project ${projectId} not found for timeline notification`);
+        logger.warn(`Project not found for timeline notification`, { projectId });
         return;
       }
 
@@ -237,7 +238,7 @@ export class NotificationScheduler {
         .groupBy('people.id');
 
       if (assignedUsers.length === 0) {
-        console.log(`No users assigned to project ${project.name} for timeline notification`);
+        logger.debug(`No users assigned to project for timeline notification`, { projectName: project.name });
         return;
       }
 
@@ -251,10 +252,10 @@ export class NotificationScheduler {
 
       for (const user of assignedUsers) {
         await emailService.sendNotificationEmail(user.id, 'project_timeline_changed', variables);
-        console.log(`📧 Project timeline notification sent to ${user.email}`);
+        logger.info(`Project timeline notification sent`, { email: user.email });
       }
     } catch (error) {
-      console.error('Error sending project timeline notification:', error);
+      logger.error('Error sending project timeline notification', error as Error, { projectId });
     }
   }
 
@@ -278,7 +279,7 @@ export class NotificationScheduler {
         .whereNotNull('people.email');
 
       if (users.length === 0) {
-        console.log('No users to notify for system maintenance');
+        logger.debug('No users to notify for system maintenance');
         return;
       }
 
@@ -292,10 +293,10 @@ export class NotificationScheduler {
 
       for (const user of users) {
         await emailService.sendNotificationEmail(user.id, 'system_maintenance', variables);
-        console.log(`📧 System maintenance notification sent to ${user.email}`);
+        logger.info(`System maintenance notification sent`, { email: user.email });
       }
     } catch (error) {
-      console.error('Error sending system maintenance notification:', error);
+      logger.error('Error sending system maintenance notification', error as Error);
     }
   }
 }

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 interface DemandCalculation {
   project_id: string;
@@ -116,7 +117,7 @@ export class DemandController extends BaseController {
 
   async getDemandSummary(req: Request, res: Response) {
     const { start_date, end_date, location_id, project_type_id } = req.query;
-    console.log('🔍 getDemandSummary called with filters:', { start_date, end_date, location_id, project_type_id });
+    logger.debug('getDemandSummary called with filters', { start_date, end_date, location_id, project_type_id });
 
     const result = await this.executeQuery(async () => {
       // Use direct query approach to calculate demand from project assignments
@@ -156,10 +157,7 @@ export class DemandController extends BaseController {
           'r.name as role_name'
         );
 
-      console.log('🔍 Demand query results:', demands.length, 'assignments found');
-      if (demands.length > 0) {
-        console.log('📋 Sample demand:', demands[0]);
-      }
+      logger.debug('Demand query results', { count: demands.length, sample: demands[0] || null });
 
       // Calculate summary by role
       const roleMap = new Map();
@@ -571,7 +569,7 @@ export class DemandController extends BaseController {
   }
 
   private calculateMonthlyDemand(demands: any[]): any[] {
-    console.log('🗓️ calculateMonthlyDemand called with', demands.length, 'demands');
+    logger.debug('calculateMonthlyDemand called', { demandCount: demands.length });
     const monthlyMap = new Map();
 
     demands.forEach(demand => {

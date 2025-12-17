@@ -14,6 +14,19 @@ jest.mock('../../../../src/server/services/EmailService', () => ({
   emailService: mockEmailService
 }));
 
+// Mock logger service
+const mockLogger = {
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  http: jest.fn()
+};
+
+jest.mock('../../../../src/server/services/logging/config', () => ({
+  logger: mockLogger
+}));
+
 // Mock database
 const createMockQuery = () => {
   const query: any = {
@@ -490,7 +503,7 @@ describe('NotificationsController', () => {
       });
 
       it('should handle errors gracefully', async () => {
-        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+        mockLogger.error.mockClear();
 
         mockEmailService.sendNotificationEmail.mockRejectedValue(new Error('Email send failed'));
 
@@ -499,12 +512,11 @@ describe('NotificationsController', () => {
           role_name: 'Dev'
         });
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Error triggering assignment notification:',
-          expect.any(Error)
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Error triggering assignment notification',
+          expect.any(Error),
+          expect.objectContaining({ userId: 'user-1', action: 'created' })
         );
-
-        consoleErrorSpy.mockRestore();
       });
     });
 
@@ -534,7 +546,7 @@ describe('NotificationsController', () => {
       });
 
       it('should handle errors gracefully', async () => {
-        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+        mockLogger.error.mockClear();
 
         mockEmailService.sendNotificationEmail.mockRejectedValue(new Error('Email send failed'));
 
@@ -543,12 +555,11 @@ describe('NotificationsController', () => {
           requestor_name: 'Test'
         });
 
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          'Error triggering approval notification:',
-          expect.any(Error)
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          'Error triggering approval notification',
+          expect.any(Error),
+          expect.objectContaining({ approverUserId: 'approver-1' })
         );
-
-        consoleErrorSpy.mockRestore();
       });
     });
 
