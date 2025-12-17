@@ -6,13 +6,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { queryKeys } from '../../lib/queryKeys';
-import { formatDate } from '../../utils/date';
 import { calculatePhaseDurationWeeks } from '../../utils/phaseDurations';
-import {
-  calculateRoleBasedScore,
-  calculatePriorityBasedScore,
-  calculateSuggestedAllocation
-} from '../../utils/recommendationScoring';
+import { useAssignmentRecommendations, ProjectRecommendation } from '../../hooks/useAssignmentRecommendations';
 import {
   Dialog,
   DialogContent,
@@ -39,15 +34,6 @@ interface SmartAssignmentModalProps {
   actionType?: string;
 }
 
-interface ProjectRecommendation {
-  project: any;
-  suggestedRole: any;
-  score: number;
-  matchedSkills: string[];
-  fitLevel: 'excellent' | 'good' | 'partial';
-  suggestedAllocation: number;
-  reason: string;
-}
 
 export function SmartAssignmentModal({ 
   isOpen, 
@@ -171,167 +157,15 @@ export function SmartAssignmentModal({
   });
 
 
-  // Calculate current utilization and availability
-  const utilizationData = useMemo(() => {
-    if (!person) return { currentUtilization: 0, availability: 100, remainingCapacity: 100 };
-    
-    
-    const activeAssignments = person.assignments?.filter((a: any) => {
-      const today = new Date().toISOString().split('T')[0];
-      const startDate = a.computed_start_date || a.start_date;
-      const endDate = a.computed_end_date || a.end_date;
-      
-      // If no dates are set, don't count it as active
-      if (!startDate || !endDate) return false;
-      
-      return startDate <= today && endDate >= today;
-    }) || [];
-
-    const totalAllocation = activeAssignments.reduce((sum: number, a: any) => 
-      sum + (a.allocation_percentage || 0), 0
-    );
-
-    const availability = person.default_availability_percentage || 100;
-    const remainingCapacity = availability - totalAllocation;
-
-    return {
-      currentUtilization: totalAllocation,
-      availability,
-      remainingCapacity,
-      activeAssignments
-    };
-  }, [person]);
-
-  // Filter projects that have demand - moved before projectRecommendations
-  const projectsWithDemand = useMemo(() => {
-    if (!projects?.data || !allProjectAllocations || isLoadingAllocations) {
-      // If allocations are still loading, show all projects
-      return projects?.data || [];
-    }
-    
-    return projects.data.filter((project: any) => {
-      const projectAllocation = allProjectAllocations.find(
-        (pa: any) => pa.projectId === project.id
-      );
-      
-      // Check if project has any allocation > 0
-      const hasAllocations = projectAllocation?.allocations?.some(
-        (allocation: any) => allocation.allocation_percentage > 0
-      );
-      
-      if (hasAllocations) {
-        // Extract required roles from allocations
-        const requiredRoles = [...new Set(
-          projectAllocation.allocations
-            .filter((a: any) => a.allocation_percentage > 0)
-            .map((a: any) => a.role_id)
-        )];
-        
-        // Add required_roles to the project object
-        project.required_roles = requiredRoles;
-      }
-      
-      return hasAllocations;
-    });
-  }, [projects, allProjectAllocations, isLoadingAllocations]);
-
-  // Generate project recommendations
-  const projectRecommendations = useMemo(() => {
-    if (!projectsWithDemand || !person) return [];
-    
-    // Get person's actual role IDs from their role assignments
-    const personRoleIds = new Set(
-      person.roles?.map((r: any) => r.role_id).filter(Boolean) || []
-    );
-    
-    // console.log('Person roles:', person.roles?.map((r: any) => ({ role_id: r.role_id, is_primary: r.is_primary })));
-    // console.log('Person role IDs:', Array.from(personRoleIds));
-    // console.log('Available roles in DB:', roles?.slice(0, 3).map((r: any) => ({ id: r.id, name: r.name })));
-
-    const recommendations: ProjectRecommendation[] = [];
-    
-    // Only consider projects that have demand
-    projectsWithDemand.forEach((project: any) => {
-      // Skip if project is already assigned to this person
-      if (person.assignments?.some((a: any) => a.project_id === project.id)) {
-        return;
-      }
-
-      // Find the best matching role for this person on this project
-      const projectRoleNeeds = new Set(project.required_roles || []);
-      const personRoles = person.roles?.map((r: any) => r.role_id).filter(Boolean) || [];
-      
-      // Find roles that match both the person's skills and project needs
-      const matchingRoles = personRoles.filter(roleId => projectRoleNeeds.has(roleId));
-      
-      // If project has no role requirements, any person can be assigned
-      // Otherwise, only show if there are matching roles or it's an assign_project action
-      const hasNoRoleRequirements = !project.required_roles || project.required_roles.length === 0;
-      
-      if (hasNoRoleRequirements || matchingRoles.length > 0 || actionType === 'assign_project') {
-        // Select the best role (prefer primary role if it matches)
-        const rolesData = roles || [];
-        
-        // Find a valid role ID that exists in the database
-        let suggestedRoleId = null;
-        const primaryRole = person.roles?.find((r: any) => r.is_primary);
-        
-        if (hasNoRoleRequirements && primaryRole) {
-          // If project has no requirements, use person's primary role
-          suggestedRoleId = primaryRole.role_id;
-        } else if (primaryRole && matchingRoles.includes(primaryRole.role_id) && 
-            rolesData.some((r: any) => r.id === primaryRole.role_id)) {
-          suggestedRoleId = primaryRole.role_id;
-        } else if (matchingRoles.length > 0) {
-          // Find first matching role that exists in database
-          suggestedRoleId = matchingRoles.find(roleId => 
-            rolesData.some((r: any) => r.id === roleId)
-          );
-        }
-        
-        // Fallback to person's primary role or first available role
-        if (!suggestedRoleId) {
-          suggestedRoleId = primaryRole?.role_id || (rolesData.length > 0 ? rolesData[0].id : null);
-        }
-          
-        const suggestedRole = rolesData.find((r: any) => r.id === suggestedRoleId);
-        
-        // Calculate score using extracted utility functions
-        const scoring = hasNoRoleRequirements
-          ? calculatePriorityBasedScore(project.priority, suggestedRole?.name)
-          : calculateRoleBasedScore(matchingRoles.length, projectRoleNeeds.size, suggestedRole?.name);
-
-        const score = scoring.score;
-        const fitLevel = scoring.fitLevel;
-        const reason = scoring.reason;
-
-        // Suggest allocation based on remaining capacity and project priority
-        const suggestedAllocation = calculateSuggestedAllocation(
-          utilizationData.remainingCapacity,
-          project.priority
-        );
-
-        // Only add recommendation if we have a valid role
-        if (suggestedRole) {
-          recommendations.push({
-            project,
-            suggestedRole,
-            score,
-            matchedSkills: matchingRoles,
-            fitLevel,
-            suggestedAllocation,
-            reason
-          });
-        }
-      }
-    });
-
-    // Sort by score and priority
-    return recommendations.sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      return a.project.priority - b.project.priority;
-    }).slice(0, 5); // Top 5 recommendations
-  }, [projectsWithDemand, person, actionType, utilizationData.remainingCapacity, roles]);
+  // Use the extracted hook for recommendations, utilization, and projects with demand
+  const { recommendations: projectRecommendations, utilizationData, projectsWithDemand } = useAssignmentRecommendations({
+    person,
+    projects: projects?.data,
+    roles,
+    allProjectAllocations,
+    isLoadingAllocations,
+    actionType,
+  });
 
   // Set default role based on person's primary role
   useEffect(() => {
