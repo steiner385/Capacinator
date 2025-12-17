@@ -3,33 +3,34 @@ import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import ExcelJS from 'exceljs';
 
-// Report filter interface
+// ============================================================================
+// Export Data Types
+// ============================================================================
+
+/**
+ * Filter parameters for report generation
+ */
 interface ReportFilters {
   startDate?: string;
   endDate?: string;
   projectTypeId?: string;
   locationId?: string;
+  roleId?: string;
 }
 
-// Role capacity data
+/**
+ * Role capacity data for reports
+ */
 interface RoleCapacityData {
   role: string;
   capacity: number;
   utilized: number;
-  gap_fte: number;
+  gap_fte?: number;
 }
 
-// Capacity report data
-interface CapacityReportData {
-  totalCapacity: number;
-  utilizedCapacity: number;
-  availableCapacity: number;
-  byRole: RoleCapacityData[];
-  capacityGaps: CapacityGapRecord[];
-  personUtilization: PersonUtilizationRecord[];
-}
-
-// Person utilization data
+/**
+ * Person utilization data for reports
+ */
 interface PersonUtilizationData {
   id: string;
   name: string;
@@ -37,25 +38,17 @@ interface PersonUtilizationData {
   utilization: number;
 }
 
-// Utilization report data
-interface UtilizationReportData {
-  peopleUtilization: PersonUtilizationData[];
-  averageUtilization: number;
-}
-
-// Project type demand data
+/**
+ * Project type demand data for reports
+ */
 interface ProjectTypeDemandData {
   type: string;
   demand: number;
 }
 
-// Demand report data
-interface DemandReportData {
-  totalDemand: number;
-  byProjectType: ProjectTypeDemandData[];
-}
-
-// Role gap data
+/**
+ * Role gap data for reports
+ */
 interface RoleGapData {
   roleId: string;
   roleName: string;
@@ -64,41 +57,116 @@ interface RoleGapData {
   gap: number;
 }
 
-// Gaps report data
+/**
+ * Capacity report data structure
+ */
+interface CapacityReportData {
+  totalCapacity: number;
+  utilizedCapacity: number;
+  availableCapacity: number;
+  byRole: RoleCapacityData[];
+  capacityGaps: CapacityGapRow[];
+  personUtilization: PersonUtilizationRow[];
+}
+
+/**
+ * Utilization report data structure
+ */
+interface UtilizationReportData {
+  peopleUtilization: PersonUtilizationData[];
+  averageUtilization: number;
+}
+
+/**
+ * Demand report data structure
+ */
+interface DemandReportData {
+  totalDemand: number;
+  byProjectType: ProjectTypeDemandData[];
+}
+
+/**
+ * Gaps report data structure
+ */
 interface GapsReportData {
   totalGap: number;
   gapsByRole: RoleGapData[];
 }
 
-// Database record types
-interface CapacityGapRecord {
+/**
+ * Database row type for capacity gaps view
+ */
+interface CapacityGapRow {
   role_id: string;
   role_name: string;
   total_capacity_fte: number;
   total_demand_fte: number;
-  gap_fte: number;
+  gap_fte?: number;
 }
 
-interface PersonUtilizationRecord {
+/**
+ * Database row type for person utilization view
+ */
+interface PersonUtilizationRow {
   person_id: string;
   person_name: string;
-  primary_role: string;
-  total_allocation: number;
+  primary_role?: string;
+  total_allocation?: number;
 }
 
-interface DemandRecord {
-  role_id: string;
-  role_name: string;
+/**
+ * CSV cell value type
+ */
+type CsvCellValue = string | number | boolean | null | undefined;
+
+/**
+ * Database row type for demand view
+ */
+interface DemandRow {
   project_id: string;
-  project_name: string;
-  project_priority: number;
+  role_id: string;
   demand_hours: number;
   start_date: string;
   end_date: string;
+  project_name?: string;
+  project_priority?: number;
+  role_name?: string;
 }
 
-// CSV cell type
-type CSVCell = string | number | boolean | null | undefined;
+/**
+ * Role demand aggregation helper
+ */
+interface RoleDemandAggregation {
+  role_id: string;
+  role_name: string;
+  total_hours: number;
+  total_fte: number;
+  project_count: Set<string>;
+  demands: DemandRow[];
+}
+
+/**
+ * Gap row with extended data
+ */
+interface ExtendedGapRow extends CapacityGapRow {
+  current_demands?: CurrentDemandRow[];
+  gap_details?: {
+    capacity_fte: number;
+    demand_fte: number;
+    shortage_fte: number;
+    shortage_percentage: number;
+  };
+}
+
+/**
+ * Current demand row
+ */
+interface CurrentDemandRow {
+  project_id: string;
+  project_name: string;
+  priority: number;
+  demand_hours: number;
+}
 
 export class ExportController extends BaseController {
   constructor(container?: ServiceContainer) {
@@ -283,7 +351,7 @@ export class ExportController extends BaseController {
     }
   }
 
-  private async generateCapacityExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
+  private async generateCapacityExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getCapacityData(filters);
     const sheet = workbook.addWorksheet('Capacity Report');
 
@@ -305,7 +373,7 @@ export class ExportController extends BaseController {
     };
 
     // Add data rows
-    data.byRole?.forEach((role) => {
+    data.byRole?.forEach((role: RoleCapacityData) => {
       sheet.addRow({
         role: role.role,
         capacity: role.capacity,
@@ -316,7 +384,7 @@ export class ExportController extends BaseController {
     });
   }
 
-  private async generateUtilizationExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
+  private async generateUtilizationExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getUtilizationData(filters);
     const sheet = workbook.addWorksheet('Utilization Report');
 
@@ -337,7 +405,7 @@ export class ExportController extends BaseController {
     };
 
     // Add data rows
-    data.peopleUtilization?.forEach((person) => {
+    data.peopleUtilization?.forEach((person: PersonUtilizationData) => {
       sheet.addRow({
         name: person.name,
         role: person.role,
@@ -348,7 +416,7 @@ export class ExportController extends BaseController {
     });
   }
 
-  private async generateDemandExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
+  private async generateDemandExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getDemandData(filters);
     const sheet = workbook.addWorksheet('Demand Report');
 
@@ -367,7 +435,7 @@ export class ExportController extends BaseController {
     };
 
     // Add data rows
-    data.byProjectType?.forEach((type) => {
+    data.byProjectType?.forEach((type: ProjectTypeDemandData) => {
       sheet.addRow({
         type: type.type,
         demand: type.demand
@@ -375,7 +443,7 @@ export class ExportController extends BaseController {
     });
   }
 
-  private async generateGapsExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
+  private async generateGapsExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
     const data = await this.getGapsData(filters);
     const sheet = workbook.addWorksheet('Capacity Gaps');
 
@@ -397,7 +465,7 @@ export class ExportController extends BaseController {
     };
 
     // Add data rows
-    data.gapsByRole?.forEach((gap) => {
+    data.gapsByRole?.forEach((gap: RoleGapData) => {
       sheet.addRow({
         role: gap.roleName,
         demand: gap.demand,
@@ -409,8 +477,8 @@ export class ExportController extends BaseController {
   }
 
   private generateCapacityCSV(data: CapacityReportData): string {
-    const headers: CSVCell[] = ['Role', 'Total Capacity (Hours)', 'Utilized (Hours)', 'Available (Hours)', 'Utilization %'];
-    const rows: CSVCell[][] = data.byRole?.map((role) => [
+    const headers = ['Role', 'Total Capacity (Hours)', 'Utilized (Hours)', 'Available (Hours)', 'Utilization %'];
+    const rows = data.byRole?.map((role: RoleCapacityData) => [
       role.role,
       role.capacity,
       role.utilized,
@@ -422,8 +490,8 @@ export class ExportController extends BaseController {
   }
 
   private generateUtilizationCSV(data: UtilizationReportData): string {
-    const headers: CSVCell[] = ['Name', 'Role', 'Utilization %', 'Status'];
-    const rows: CSVCell[][] = data.peopleUtilization?.map((person) => [
+    const headers = ['Name', 'Role', 'Utilization %', 'Status'];
+    const rows = data.peopleUtilization?.map((person: PersonUtilizationData) => [
       person.name,
       person.role,
       person.utilization,
@@ -435,8 +503,8 @@ export class ExportController extends BaseController {
   }
 
   private generateDemandCSV(data: DemandReportData): string {
-    const headers: CSVCell[] = ['Project Type', 'Demand (Hours)'];
-    const rows: CSVCell[][] = data.byProjectType?.map((type) => [
+    const headers = ['Project Type', 'Demand (Hours)'];
+    const rows = data.byProjectType?.map((type: ProjectTypeDemandData) => [
       type.type,
       type.demand
     ]) || [];
@@ -445,8 +513,8 @@ export class ExportController extends BaseController {
   }
 
   private generateGapsCSV(data: GapsReportData): string {
-    const headers: CSVCell[] = ['Role', 'Demand (Hours)', 'Capacity (Hours)', 'Gap (Hours)', 'Status'];
-    const rows: CSVCell[][] = data.gapsByRole?.map((gap) => [
+    const headers = ['Role', 'Demand (Hours)', 'Capacity (Hours)', 'Gap (Hours)', 'Status'];
+    const rows = data.gapsByRole?.map((gap: RoleGapData) => [
       gap.roleName,
       gap.demand,
       gap.capacity,
@@ -457,7 +525,7 @@ export class ExportController extends BaseController {
     return this.arrayToCSV([headers, ...rows]);
   }
 
-  private arrayToCSV(data: CSVCell[][]): string {
+  private arrayToCSV(data: CsvCellValue[][]): string {
     return data.map(row =>
       row.map(cell =>
         typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
@@ -508,7 +576,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.byRole?.map((role) => `
+            ${data.byRole?.map((role: RoleCapacityData) => `
               <tr>
                 <td>${role.role}</td>
                 <td>${role.capacity} hours</td>
@@ -553,7 +621,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.peopleUtilization?.map((person) => {
+            ${data.peopleUtilization?.map((person: PersonUtilizationData) => {
               const status = person.utilization > 100 ? 'Over-allocated' :
                            person.utilization < 70 ? 'Under-utilized' : 'Optimal';
               const rowClass = person.utilization > 100 ? 'over-allocated' :
@@ -598,7 +666,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.byProjectType?.map((type) => `
+            ${data.byProjectType?.map((type: ProjectTypeDemandData) => `
               <tr>
                 <td>${type.type}</td>
                 <td>${type.demand} hours</td>
@@ -640,7 +708,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.gapsByRole?.map((gap) => {
+            ${data.gapsByRole?.map((gap: RoleGapData) => {
               const rowClass = gap.gap < 0 ? 'gap' : 'sufficient';
               return `
                 <tr class="${rowClass}">
@@ -661,16 +729,17 @@ export class ExportController extends BaseController {
 
   private async getCapacityData(filters: ReportFilters): Promise<CapacityReportData> {
     // Use the same logic as ReportingController.getCapacityReport
-    const { startDate: _startDate, endDate: _endDate } = filters;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { startDate, endDate } = filters;
 
     // Get capacity gaps
-    const capacityGaps = await this.db('capacity_gaps_view').select('*') as CapacityGapRecord[];
+    const capacityGaps = await this.db('capacity_gaps_view').select('*') as CapacityGapRow[];
 
     // Get person utilization
-    const personUtilization = await this.db('person_utilization_view').select('*') as PersonUtilizationRecord[];
+    const personUtilization = await this.db('person_utilization_view').select('*') as PersonUtilizationRow[];
 
     // Transform capacity gaps to role-based data
-    const byRole: RoleCapacityData[] = capacityGaps.map(gap => ({
+    const byRole: RoleCapacityData[] = capacityGaps.map((gap: CapacityGapRow) => ({
       role: gap.role_name,
       capacity: Math.round(gap.total_capacity_fte * 160), // Convert FTE to hours
       utilized: Math.round((gap.total_capacity_fte - Math.abs(gap.gap_fte || 0)) * 160),
@@ -696,10 +765,10 @@ export class ExportController extends BaseController {
     const capacityReport = await this.getCapacityData(filters);
 
     // Transform person utilization data
-    const peopleUtilization: PersonUtilizationData[] = capacityReport.personUtilization.map(person => ({
+    const peopleUtilization: PersonUtilizationData[] = capacityReport.personUtilization.map((person: PersonUtilizationRow) => ({
       id: person.person_id,
       name: person.person_name,
-      role: person.primary_role,
+      role: person.primary_role || '',
       utilization: Math.round(person.total_allocation || 0)
     }));
 
@@ -742,26 +811,18 @@ export class ExportController extends BaseController {
       'projects.name as project_name',
       'projects.priority as project_priority',
       'roles.name as role_name'
-    ) as DemandRecord[];
+    ) as DemandRow[];
 
     // Calculate summary by role (used as project type in export)
-    const roleMap = new Map<string, {
-      role_id: string;
-      role_name: string;
-      total_hours: number;
-      total_fte: number;
-      project_count: Set<string>;
-      demands: DemandRecord[];
-    }>();
-
-    demands.forEach(demand => {
+    const roleMap = new Map<string, RoleDemandAggregation>();
+    demands.forEach((demand: DemandRow) => {
       if (!roleMap.has(demand.role_id)) {
         roleMap.set(demand.role_id, {
           role_id: demand.role_id,
-          role_name: demand.role_name,
+          role_name: demand.role_name || '',
           total_hours: 0,
           total_fte: 0,
-          project_count: new Set(),
+          project_count: new Set<string>(),
           demands: []
         });
       }
@@ -773,32 +834,35 @@ export class ExportController extends BaseController {
       role.demands.push(demand);
     });
 
-    const byProjectType: ProjectTypeDemandData[] = Array.from(roleMap.values()).map(role => ({
+    const byProjectType: ProjectTypeDemandData[] = Array.from(roleMap.values()).map((role: RoleDemandAggregation) => ({
       type: role.role_name,
       demand: role.total_hours
     }));
 
     return {
-      totalDemand: demands.reduce((sum, d) => sum + d.demand_hours, 0),
+      totalDemand: demands.reduce((sum: number, d: DemandRow) => sum + d.demand_hours, 0),
       byProjectType
     };
   }
 
-  private async getGapsData(_filters: ReportFilters): Promise<GapsReportData> {
+  private async getGapsData(filters: ReportFilters): Promise<GapsReportData> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _filters = filters; // Preserved for future filter implementation
+
     // Use the same logic as DemandController.getDemandGaps - calculate gaps based on demand vs capacity
-    const gapsData = await this.db('capacity_gaps_view').select('*') as CapacityGapRecord[];
+    const gapsData = await this.db('capacity_gaps_view').select('*') as CapacityGapRow[];
 
     // Filter for actual gaps where demand exceeds capacity
-    const gaps = gapsData.map(role => {
+    const gaps: CapacityGapRow[] = gapsData.map((role: CapacityGapRow) => {
       const gapFte = role.total_demand_fte - role.total_capacity_fte;
       return {
         ...role,
         gap_fte: gapFte
       };
-    }).filter(role => role.gap_fte > 0); // Only include roles with actual gaps
+    }).filter((role: CapacityGapRow) => (role.gap_fte || 0) > 0); // Only include roles with actual gaps
 
     // Get detailed demand vs capacity for each gap
-    const detailedGaps = await Promise.all(gaps.map(async (gap) => {
+    const detailedGaps: ExtendedGapRow[] = await Promise.all(gaps.map(async (gap: CapacityGapRow): Promise<ExtendedGapRow> => {
       // Get current demand
       const currentDemand = await this.db('project_demands_view')
         .join('projects', 'project_demands_view.project_id', 'projects.id')
@@ -811,7 +875,7 @@ export class ExportController extends BaseController {
           'projects.name as project_name',
           'projects.priority',
           'project_demands_view.demand_hours'
-        );
+        ) as CurrentDemandRow[];
 
       return {
         ...gap,
@@ -819,25 +883,25 @@ export class ExportController extends BaseController {
         gap_details: {
           capacity_fte: gap.total_capacity_fte,
           demand_fte: gap.total_demand_fte,
-          shortage_fte: gap.gap_fte,
-          shortage_percentage: Math.abs((gap.gap_fte / gap.total_capacity_fte) * 100)
+          shortage_fte: gap.gap_fte || 0,
+          shortage_percentage: Math.abs(((gap.gap_fte || 0) / gap.total_capacity_fte) * 100)
         }
       };
     }));
 
     // Sort by shortage
-    detailedGaps.sort((a, b) => a.gap_fte - b.gap_fte);
+    detailedGaps.sort((a: ExtendedGapRow, b: ExtendedGapRow) => (a.gap_fte || 0) - (b.gap_fte || 0));
 
-    const gapsByRole: RoleGapData[] = detailedGaps.map(gap => ({
+    const gapsByRole: RoleGapData[] = detailedGaps.map((gap: ExtendedGapRow) => ({
       roleId: gap.role_id,
       roleName: gap.role_name,
       demand: Math.round(gap.total_demand_fte * 160), // Convert FTE to hours
       capacity: Math.round(gap.total_capacity_fte * 160),
-      gap: Math.round(gap.gap_fte * 160)
+      gap: Math.round((gap.gap_fte || 0) * 160)
     }));
 
     return {
-      totalGap: detailedGaps.reduce((sum, g) => sum + Math.abs(g.gap_fte), 0) * 160,
+      totalGap: detailedGaps.reduce((sum: number, g: ExtendedGapRow) => sum + Math.abs(g.gap_fte || 0), 0) * 160,
       gapsByRole
     };
   }

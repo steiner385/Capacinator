@@ -2,6 +2,64 @@ import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
+// ============================================================================
+// Availability Types
+// ============================================================================
+
+/**
+ * Person row from database
+ */
+interface AvailabilityPersonRow {
+  id: string;
+  name: string;
+  email?: string;
+  primary_role_id?: string;
+  default_availability_percentage: number;
+  default_hours_per_day: number;
+}
+
+/**
+ * Availability override row from database
+ */
+interface AvailabilityOverrideRow {
+  id: string;
+  person_id: string;
+  start_date: string;
+  end_date: string;
+  availability_percentage: number;
+  hours_per_day?: number;
+  reason?: string;
+  override_type?: 'VACATION' | 'SICK' | 'TRAINING' | 'CONFERENCE' | 'PERSONAL';
+  is_approved?: boolean;
+  approved_by?: string;
+}
+
+/**
+ * Person calendar entry with overrides
+ */
+interface PersonCalendarEntry {
+  person_id: string;
+  person_name: string;
+  default_availability: number;
+  overrides: Array<{
+    id: string;
+    start_date: string;
+    end_date: string;
+    availability_percentage: number;
+    override_type?: string;
+    reason?: string;
+  }>;
+}
+
+/**
+ * Simplified person row for calendar queries
+ */
+interface CalendarPersonRow {
+  id: string;
+  name: string;
+  default_availability_percentage: number;
+}
+
 export class AvailabilityController extends BaseController {
   constructor(container?: ServiceContainer) {
     super({ enableAudit: true }, { container });
@@ -374,11 +432,11 @@ export class AvailabilityController extends BaseController {
         // TODO: Add team filtering when team table exists
       }
       
-      const people = await peopleQuery.select('id', 'name', 'default_availability_percentage');
+      const people: CalendarPersonRow[] = await peopleQuery.select('id', 'name', 'default_availability_percentage');
 
       // Get availability overrides for date range
       let overridesQuery = this.db('person_availability_overrides')
-        .whereIn('person_id', people.map((p: any) => p.id))
+        .whereIn('person_id', people.map((p) => p.id))
         .where('is_approved', true);
 
       if (start_date) {
@@ -388,17 +446,17 @@ export class AvailabilityController extends BaseController {
         overridesQuery = overridesQuery.where('start_date', '<=', end_date);
       }
 
-      const overrides = await overridesQuery.select('*');
+      const overrides: AvailabilityOverrideRow[] = await overridesQuery.select('*');
 
       // Build calendar data
-      const calendar = people.map((person: any) => {
-        const personOverrides = overrides.filter((o: any) => o.person_id === person.id);
-        
+      const calendar: PersonCalendarEntry[] = people.map((person) => {
+        const personOverrides = overrides.filter((o) => o.person_id === person.id);
+
         return {
           person_id: person.id,
           person_name: person.name,
           default_availability: person.default_availability_percentage,
-          overrides: personOverrides.map((o: any) => ({
+          overrides: personOverrides.map((o) => ({
             id: o.id,
             start_date: o.start_date,
             end_date: o.end_date,
@@ -439,11 +497,11 @@ export class AvailabilityController extends BaseController {
       endDate.setDate(endDate.getDate() + (Number(weeks) * 7));
 
       // Get all people (assuming all are active if no is_active column)
-      const people = await this.db('people')
+      const people: CalendarPersonRow[] = await this.db('people')
         .select('id', 'name', 'default_availability_percentage');
 
       // Get future overrides
-      const overrides = await this.db('person_availability_overrides')
+      const overrides: AvailabilityOverrideRow[] = await this.db('person_availability_overrides')
         .where('start_date', '>=', startDate)
         .where('start_date', '<=', endDate)
         .where('is_approved', true)
@@ -471,17 +529,17 @@ export class AvailabilityController extends BaseController {
 
         // Calculate capacity for this week
         for (const person of people) {
-          const personOverrides = overrides.filter((o: any) => 
+          const personOverrides = overrides.filter((o) =>
             o.person_id === person.id &&
             o.start_date <= weekEnd.toISOString().split('T')[0] &&
             o.end_date >= weekStart.toISOString().split('T')[0]
           );
 
           let availability = person.default_availability_percentage;
-          
+
           if (personOverrides.length > 0) {
             // Use the most restrictive override
-            availability = Math.min(...personOverrides.map((o: any) => o.availability_percentage));
+            availability = Math.min(...personOverrides.map((o) => o.availability_percentage));
             
             if (availability === 0) {
               weekData.people_on_leave++;
@@ -532,9 +590,9 @@ export class AvailabilityController extends BaseController {
   }
 
   private calculateTeamAvailabilitySummary(
-    calendar: any[],
-    start_date: string,
-    end_date: string
+    calendar: PersonCalendarEntry[],
+    _start_date: string,
+    _end_date: string
   ) {
     const summary = {
       total_people: calendar.length,
@@ -548,9 +606,9 @@ export class AvailabilityController extends BaseController {
     // For simplicity, just check current date
     // In production, would check each day in range
     const today = new Date().toISOString().split('T')[0];
-    
+
     calendar.forEach(person => {
-      const currentOverride = person.overrides.find((o: any) => 
+      const currentOverride = person.overrides.find((o) =>
         o.start_date <= today && o.end_date >= today
       );
 
