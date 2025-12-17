@@ -25,19 +25,35 @@ interface PersonRoleFormData {
   end_date: string;
 }
 
+interface RoleData {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface PersonRoleData {
+  role_id: string;
+  proficiency_level: number;
+  is_primary: boolean;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+interface EditingRole {
+  id: string;
+  role_id: string;
+  proficiency_level: string;
+  is_primary: boolean;
+  start_date?: string;
+  end_date?: string;
+}
+
 interface PersonRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (roleData: any) => void;
+  onSuccess: (roleData: PersonRoleData) => void;
   personId: string;
-  editingRole?: {
-    id: string;
-    role_id: string;
-    proficiency_level: string;
-    is_primary: boolean;
-    start_date?: string;
-    end_date?: string;
-  } | null;
+  editingRole?: EditingRole | null;
 }
 
 const PROFICIENCY_LEVELS = [
@@ -158,7 +174,7 @@ export default function PersonRoleModal({
                 <SelectValue placeholder="Select a role..." />
               </SelectTrigger>
               <SelectContent>
-                {Array.isArray(roles) && roles.map((role: any) => (
+                {Array.isArray(roles) && roles.map((role: RoleData) => (
                   <SelectItem key={role.id} value={role.id}>
                     {role.name}
                   </SelectItem>

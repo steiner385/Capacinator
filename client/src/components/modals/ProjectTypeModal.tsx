@@ -25,11 +25,19 @@ interface ProjectTypeFormData {
   color_code: string;
 }
 
+interface ProjectTypeData {
+  id?: string;
+  name: string;
+  description?: string;
+  color_code: string;
+  [key: string]: unknown;
+}
+
 interface ProjectTypeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (projectType: any) => void;
-  editingProjectType?: any;
+  onSuccess?: (projectType: ProjectTypeData) => void;
+  editingProjectType?: ProjectTypeData;
 }
 
 const DEFAULT_COLORS = [
@@ -132,7 +140,7 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
     }
   };
 
-  const handleChange = (field: keyof ProjectTypeFormData, value: any) => {
+  const handleChange = (field: keyof ProjectTypeFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));

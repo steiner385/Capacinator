@@ -33,11 +33,64 @@ interface AssignmentFormData {
   notes: string;
 }
 
+interface ProjectData {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface PersonData {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface RoleData {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface ProjectPhaseData {
+  phase_id: string;
+  start_date: string;
+  end_date: string;
+  [key: string]: unknown;
+}
+
+interface PhaseDetail {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface AvailablePhase {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface AssignmentData {
+  id?: string;
+  project_id: string;
+  person_id: string;
+  role_id: string;
+  phase_id?: string;
+  assignment_date_mode: 'fixed' | 'phase' | 'project';
+  start_date: string;
+  end_date: string;
+  allocation_percentage: number;
+  billable: boolean;
+  notes: string;
+  [key: string]: unknown;
+}
+
 interface AssignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (assignment: any) => void;
-  editingAssignment?: any;
+  onSuccess?: (assignment: AssignmentData) => void;
+  editingAssignment?: AssignmentData;
 }
 
 const initialValues: AssignmentFormData = {
@@ -161,14 +214,14 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
   const availablePhases = useMemo(() => {
     if (!projectPhases || !phases || !Array.isArray(projectPhases)) return [];
 
-    return projectPhases.map((pp: any) => {
-      const phaseDetail = phases.find((p: any) => p.id === pp.phase_id);
+    return projectPhases.map((pp: ProjectPhaseData) => {
+      const phaseDetail = phases.find((p: PhaseDetail) => p.id === pp.phase_id);
       return {
         id: pp.phase_id,
         name: phaseDetail?.name || 'Unknown Phase',
         start_date: pp.start_date,
         end_date: pp.end_date
-      };
+      } as AvailablePhase;
     });
   }, [projectPhases, phases]);
 
@@ -209,7 +262,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects?.data?.map((project: any) => (
+                  {projects?.data?.map((project: ProjectData) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
@@ -232,7 +285,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select person" />
                 </SelectTrigger>
                 <SelectContent>
-                  {people?.data?.map((person: any) => (
+                  {people?.data?.map((person: PersonData) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name}
                     </SelectItem>
@@ -255,7 +308,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.isArray(roles) && roles.map((role: any) => (
+                  {Array.isArray(roles) && roles.map((role: RoleData) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
                     </SelectItem>
@@ -272,7 +325,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
                   <SelectValue placeholder="Select phase (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availablePhases?.map((phase: any) => (
+                  {availablePhases?.map((phase: AvailablePhase) => (
                     <SelectItem key={phase.id} value={phase.id}>
                       {phase.name}
                     </SelectItem>
@@ -330,7 +383,7 @@ export const AssignmentModalNew: React.FC<AssignmentModalProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="assignment_date_mode">Date Mode</Label>
-              <Select value={formData.assignment_date_mode} onValueChange={(value: any) => handleChange('assignment_date_mode', value)}>
+              <Select value={formData.assignment_date_mode} onValueChange={(value: string) => handleChange('assignment_date_mode', value as 'fixed' | 'phase' | 'project')}>
                 <SelectTrigger id="assignment_date_mode">
                   <SelectValue />
                 </SelectTrigger>

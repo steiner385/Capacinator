@@ -34,11 +34,57 @@ interface ProjectFormData {
   current_phase_id: string;
 }
 
+interface ProjectTypeData {
+  id: string;
+  name: string;
+  parent_id?: string | null;
+  [key: string]: unknown;
+}
+
+interface LocationData {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface PersonData {
+  id: string;
+  name: string;
+  title?: string;
+  location_id?: string;
+  roles?: Array<{
+    role_name?: string;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
+interface PhaseData {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+interface ProjectData {
+  id?: string;
+  name: string;
+  project_type_id: string;
+  location_id: string;
+  priority: number;
+  description?: string;
+  data_restrictions?: string;
+  include_in_demand: boolean;
+  external_id?: string;
+  owner_id: string;
+  current_phase_id?: string;
+  [key: string]: unknown;
+}
+
 interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (project: any) => void;
-  editingProject?: any;
+  onSuccess?: (project: ProjectData) => void;
+  editingProject?: ProjectData;
 }
 
 const initialValues: ProjectFormData = {
@@ -149,21 +195,21 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   // Filter project types to only show project sub-types (not main project types)
   const filteredProjectTypes = useMemo(() => {
     if (!projectTypes || !Array.isArray(projectTypes)) return [];
-    return projectTypes.filter((type: any) => type.parent_id !== null);
+    return projectTypes.filter((type: ProjectTypeData) => type.parent_id !== null);
   }, [projectTypes]);
 
   // Filter potential owners based on location
   const filteredOwners = useMemo(() => {
     if (!people || !Array.isArray(people)) return [];
 
-    return people.filter((person: any) => {
+    return people.filter((person: PersonData) => {
       if (formData.location_id) {
         return person.location_id === formData.location_id ||
-               person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('manager')) ||
-               person.roles?.some((role: any) => role.role_name?.toLowerCase().includes('owner'));
+               person.roles?.some((role: { role_name?: string }) => role.role_name?.toLowerCase().includes('manager')) ||
+               person.roles?.some((role: { role_name?: string }) => role.role_name?.toLowerCase().includes('owner'));
       }
 
-      return person.roles?.some((role: any) =>
+      return person.roles?.some((role: { role_name?: string }) =>
         role.role_name?.toLowerCase().includes('manager') ||
         role.role_name?.toLowerCase().includes('owner') ||
         role.role_name?.toLowerCase().includes('lead')
@@ -229,7 +275,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <SelectValue placeholder="Select project type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredProjectTypes?.map((type: any) => (
+                  {filteredProjectTypes?.map((type: ProjectTypeData) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
                     </SelectItem>
@@ -252,7 +298,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locations?.map((location: any) => (
+                  {locations?.map((location: LocationData) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
                     </SelectItem>
@@ -275,7 +321,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   <SelectValue placeholder="Select project owner" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredOwners?.map((person: any) => (
+                  {filteredOwners?.map((person: PersonData) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name} ({person.title || 'No Title'})
                     </SelectItem>
@@ -319,7 +365,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {phases?.data?.map((phase: any) => (
+                  {phases?.data?.map((phase: PhaseData) => (
                     <SelectItem key={phase.id} value={phase.id}>
                       {phase.name}
                     </SelectItem>
