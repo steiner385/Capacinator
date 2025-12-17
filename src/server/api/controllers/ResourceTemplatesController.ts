@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 export class ResourceTemplatesController extends BaseController {
   constructor(container?: ServiceContainer) {
@@ -577,7 +578,7 @@ export class ResourceTemplatesController extends BaseController {
 
       return templates;
     } catch (error) {
-      console.error('Error getting effective allocations:', error);
+      logger.error('Error getting effective allocations', error instanceof Error ? error : undefined);
       return [];
     }
   }

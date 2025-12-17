@@ -1,6 +1,20 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
 import { Request, Response, NextFunction } from 'express';
+
+// Mock logger before imports
+const mockLogger = {
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  http: jest.fn()
+};
+
+jest.mock('../../../../src/server/services/logging/config.js', () => ({
+  logger: mockLogger
+}));
+
 import {
   createAuditMiddleware,
   auditModelChanges,
@@ -201,8 +215,7 @@ describe('Audit Middleware', () => {
 
     test('should return null when audit context is missing', async () => {
       mockRequest.audit = undefined;
-
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      mockLogger.warn.mockClear();
 
       const auditId = await auditModelChanges(
         mockRequest,
@@ -214,17 +227,15 @@ describe('Audit Middleware', () => {
       );
 
       expect(auditId).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'Audit context not available - audit middleware may not be configured'
       );
       expect(mockAuditService.logChange).not.toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
     });
 
     test('should handle audit service errors gracefully', async () => {
       mockAuditService.logChange.mockRejectedValue(new Error('Database error'));
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const auditId = await auditModelChanges(
         mockRequest,
@@ -236,12 +247,11 @@ describe('Audit Middleware', () => {
       );
 
       expect(auditId).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to log audit entry:',
-        expect.any(Error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to log audit entry',
+        expect.any(Error),
+        expect.objectContaining({ tableName: 'people', recordId: 'user-456' })
       );
-
-      consoleSpy.mockRestore();
     });
 
     test('should handle missing optional parameters', async () => {

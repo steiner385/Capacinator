@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { initializeAuditService, getAuditService } from '../services/audit/index.js';
 import { createAuditedDatabase } from './AuditedDatabase.js';
+import { logger } from '../services/logging/config.js';
 
 // Store database instance
 let _db: Knex | null = null;
@@ -27,9 +28,9 @@ export function getDb(): Knex {
     
     // Log which database we're using (only on first connection)
     if (process.env.NODE_ENV === 'e2e') {
-      console.log('🧪 Using E2E test database');
+      logger.info('Using E2E test database');
     } else {
-      console.log('🔧 Using development database');
+      logger.info('Using development database');
     }
   }
   
@@ -114,10 +115,10 @@ export function reinitializeDb(): void {
 export async function testConnection(): Promise<boolean> {
   try {
     await getDb().raw('SELECT 1');
-    console.log('Database connection successful');
+    logger.info('Database connection successful');
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    logger.error('Database connection failed', error instanceof Error ? error : undefined);
     return false;
   }
 }
@@ -129,7 +130,7 @@ export async function initializeDatabase(): Promise<void> {
     
     // Run migrations
     await database.migrate.latest();
-    console.log('Database migrations completed');
+    logger.info('Database migrations completed');
     
     // Initialize audit service after migrations
     initializeAuditService(database);
@@ -139,11 +140,11 @@ export async function initializeDatabase(): Promise<void> {
       const hasData = await database('roles').count('* as count').first();
       if (hasData?.count === 0) {
         await database.seed.run();
-        console.log('Database seeded with initial data');
+        logger.info('Database seeded with initial data');
       }
     }
   } catch (error) {
-    console.error('Database initialization failed:', error);
+    logger.error('Database initialization failed', error instanceof Error ? error : undefined);
     throw error;
   }
 }

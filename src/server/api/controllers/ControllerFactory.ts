@@ -18,6 +18,7 @@
  */
 
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 // Import all controllers
 import { ProjectsController } from './ProjectsController.js';
@@ -138,7 +139,7 @@ export function createController<T>(
  * @deprecated Use createControllers(container) instead
  */
 export function createLegacyControllers(): Partial<Controllers> {
-  console.warn('createLegacyControllers is deprecated. Use createControllers(container) instead.');
+  logger.warn('createLegacyControllers is deprecated. Use createControllers(container) instead.');
   return {
     projects: new ProjectsController(),
     people: new PeopleController(),

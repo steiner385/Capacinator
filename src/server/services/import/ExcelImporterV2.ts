@@ -1,4 +1,5 @@
 import { getAuditedDb } from '../../database/index.js';
+import { logger } from '../logging/config.js';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -485,7 +486,7 @@ export class ExcelImporterV2 {
       }
 
     } catch (error) {
-      console.error('Error validating duplicates:', error);
+      logger.error('Error validating duplicates', error instanceof Error ? error : undefined);
     }
 
     return { duplicatesFound: duplicates };

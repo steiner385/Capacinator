@@ -1,4 +1,6 @@
+import { logger } from '../logging/config.js';
+
 export function initializeNotificationScheduler() {
-  console.log('📧 Notification scheduler initialized');
+  logger.info('Notification scheduler initialized');
   // Notification scheduler implementation
 }

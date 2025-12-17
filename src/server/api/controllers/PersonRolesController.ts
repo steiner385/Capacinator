@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 export class PersonRolesController extends BaseController {
   constructor(container?: ServiceContainer) {
@@ -33,7 +34,7 @@ export class PersonRolesController extends BaseController {
 
       res.json({ data: personRoles });
     } catch (error) {
-      console.error('Error fetching person roles:', error);
+      logger.error('Error fetching person roles', error instanceof Error ? error : undefined);
       res.status(500).json({ error: 'Failed to fetch person roles' });
     }
   }
@@ -118,7 +119,7 @@ export class PersonRolesController extends BaseController {
 
       res.status(201).json({ data: result });
     } catch (error) {
-      console.error('Error adding person role:', error);
+      logger.error('Error adding person role', error instanceof Error ? error : undefined);
       res.status(500).json({ error: 'Failed to add person role' });
     }
   }
@@ -188,7 +189,7 @@ export class PersonRolesController extends BaseController {
 
       res.json({ data: result });
     } catch (error) {
-      console.error('Error updating person role:', error);
+      logger.error('Error updating person role', error instanceof Error ? error : undefined);
       res.status(500).json({ error: 'Failed to update person role' });
     }
   }
@@ -245,7 +246,7 @@ export class PersonRolesController extends BaseController {
 
       res.status(204).send();
     } catch (error) {
-      console.error('Error removing person role:', error);
+      logger.error('Error removing person role', error instanceof Error ? error : undefined);
       res.status(500).json({ error: 'Failed to remove person role' });
     }
   }
@@ -265,7 +266,7 @@ export class PersonRolesController extends BaseController {
 
       res.json({ data: expertiseLevels });
     } catch (error) {
-      console.error('Error fetching expertise levels:', error);
+      logger.error('Error fetching expertise levels', error instanceof Error ? error : undefined);
       res.status(500).json({ error: 'Failed to fetch expertise levels' });
     }
   }

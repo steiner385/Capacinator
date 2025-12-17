@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getAuditedDb } from '../database/index.js';
+import { logger } from './logging/config.js';
 
 export interface EmailConfig {
   host: string;
@@ -95,7 +96,7 @@ export class EmailService {
       await this.transporter.verify();
       return true;
     } catch (error) {
-      console.error('Email service connection test failed:', error);
+      logger.error('Email service connection test failed', error instanceof Error ? error : undefined);
       return false;
     }
   }
@@ -116,7 +117,7 @@ export class EmailService {
         variables: JSON.parse(template.variables || '[]')
       };
     } catch (error) {
-      console.error('Error fetching email template:', error);
+      logger.error('Error fetching email template', error instanceof Error ? error : undefined, { templateName });
       return null;
     }
   }
@@ -127,7 +128,7 @@ export class EmailService {
         .where('user_id', userId)
         .where('enabled', true);
     } catch (error) {
-      console.error('Error fetching notification preferences:', error);
+      logger.error('Error fetching notification preferences', error instanceof Error ? error : undefined, { userId });
       return [];
     }
   }
@@ -154,7 +155,7 @@ export class EmailService {
 
       return preference ? preference.enabled && preference.email_enabled : false;
     } catch (error) {
-      console.error('Error checking notification preferences:', error);
+      logger.error('Error checking notification preferences', error instanceof Error ? error : undefined, { userId, notificationType });
       return false;
     }
   }
@@ -192,7 +193,7 @@ export class EmailService {
 
   public async sendEmail(options: SendEmailOptions): Promise<boolean> {
     if (!this.transporter || !this.config) {
-      console.warn('Email service not configured - skipping email send');
+      logger.warn('Email service not configured - skipping email send');
       return false;
     }
 
@@ -200,7 +201,7 @@ export class EmailService {
       // Check if user wants to receive this type of notification
       const shouldSend = await this.shouldSendNotification(options.userId, options.type);
       if (!shouldSend) {
-        console.log(`Email notification skipped for user ${options.userId} - notifications disabled`);
+        logger.info('Email notification skipped - notifications disabled', { userId: options.userId, type: options.type });
         return false;
       }
 
@@ -225,10 +226,10 @@ export class EmailService {
         errorMessage: null
       });
 
-      console.log('Email sent successfully:', info.messageId);
+      logger.info('Email sent successfully', { messageId: info.messageId, to: options.to });
       return true;
     } catch (error) {
-      console.error('Failed to send email:', error);
+      logger.error('Failed to send email', error instanceof Error ? error : undefined, { to: options.to, type: options.type });
       
       // Log the failed email to notification history
       await this.logEmailToHistory({
@@ -272,7 +273,7 @@ export class EmailService {
         updated_at: new Date()
       });
     } catch (error) {
-      console.error('Failed to log email to history:', error);
+      logger.error('Failed to log email to history', error instanceof Error ? error : undefined, { userId: logData.userId, type: logData.type });
     }
   }
 
@@ -285,14 +286,14 @@ export class EmailService {
       // Get the user's email
       const user = await this.db('people').where('id', userId).first();
       if (!user || !user.email) {
-        console.warn(`User ${userId} not found or has no email address`);
+        logger.warn('User not found or has no email address', { userId });
         return false;
       }
 
       // Get the email template
       const template = await this.getEmailTemplate(templateName);
       if (!template) {
-        console.warn(`Email template '${templateName}' not found`);
+        logger.warn('Email template not found', { templateName });
         return false;
       }
 
@@ -318,7 +319,7 @@ export class EmailService {
         userId
       });
     } catch (error) {
-      console.error('Error sending notification email:', error);
+      logger.error('Error sending notification email', error instanceof Error ? error : undefined, { userId, templateName });
       return false;
     }
   }
@@ -350,10 +351,10 @@ export class EmailService {
         `
       });
 
-      console.log('Test email sent successfully:', info.messageId);
+      logger.info('Test email sent successfully', { messageId: info.messageId, to });
       return true;
     } catch (error) {
-      console.error('Failed to send test email:', error);
+      logger.error('Failed to send test email', error instanceof Error ? error : undefined, { to });
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logger } from '../services/logger';
 
 // Force use of proxy for E2E testing
 const API_BASE_URL = '/api';
@@ -46,7 +47,7 @@ apiClient.interceptors.request.use((config) => {
         config.headers['X-Scenario-Id'] = scenario.id;
       }
     } catch (error) {
-      console.error('Failed to parse scenario context:', error);
+      logger.error('Failed to parse scenario context', { error });
     }
   }
 

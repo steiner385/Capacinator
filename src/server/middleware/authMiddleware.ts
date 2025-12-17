@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { authService, AuthError, TokenPayload } from '../services/auth/index.js';
+import { logger } from '../services/logging/config.js';
 
 // Extend Express Request to include auth user
 declare global {
@@ -62,7 +63,7 @@ export function requireAuth() {
         });
       }
 
-      console.error('Auth middleware error:', error);
+      logger.error('Auth middleware error', error instanceof Error ? error : undefined, { context: 'requireAuth' });
       return res.status(500).json({
         error: 'Authentication error',
         code: 'AUTH_ERROR',
@@ -166,7 +167,7 @@ export function requireAdmin() {
         });
       }
 
-      console.error('Admin middleware error:', error);
+      logger.error('Admin middleware error', error instanceof Error ? error : undefined, { context: 'requireAdmin' });
       return res.status(500).json({
         error: 'Authentication error',
         code: 'AUTH_ERROR',

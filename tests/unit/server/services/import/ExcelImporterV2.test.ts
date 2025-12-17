@@ -6,6 +6,19 @@ jest.mock('../../../../../src/server/database/index.js', () => ({
   getAuditedDb: mockGetAuditedDb
 }));
 
+// Mock logger
+const mockLogger = {
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  http: jest.fn()
+};
+
+jest.mock('../../../../../src/server/services/logging/config.js', () => ({
+  logger: mockLogger
+}));
+
 // Mock fiscal week utilities
 const mockFiscalWeekToDate = jest.fn();
 const mockExtractFiscalWeekColumns = jest.fn();
@@ -517,8 +530,7 @@ describe('ExcelImporterV2', () => {
 
     it('should handle errors gracefully and return empty duplicates', async () => {
       mockWorkbookRead.mockRejectedValue(new Error('File error'));
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockLogger.error.mockClear();
 
       const result = await (importer as any).validateDuplicates('/path/to/test.xlsx');
 
@@ -529,8 +541,7 @@ describe('ExcelImporterV2', () => {
         locations: []
       });
 
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should handle case-insensitive duplicate detection', async () => {

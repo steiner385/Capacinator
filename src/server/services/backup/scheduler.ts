@@ -1,4 +1,6 @@
+import { logger } from '../logging/config.js';
+
 export function initializeAutomaticBackups() {
-  console.log('💾 Automatic backup scheduler initialized');
+  logger.info('Automatic backup scheduler initialized');
   // Backup scheduler implementation
 }
