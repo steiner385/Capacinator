@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Settings, Download, FileText, Database } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { useScenario } from '../contexts/ScenarioContext';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import { UnifiedTabComponent } from '../components/ui/UnifiedTabComponent';
+import { ProgressIndicator } from '../components/ui/ProgressIndicator';
+import { useProgressOperation } from '../hooks/useProgressOperation';
 import './Import.css';
 
 interface ImportResult {
@@ -53,19 +55,38 @@ function ImportUnified() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Export state
-  const [exportingScenario, setExportingScenario] = useState(false);
-  const [exportingTemplate, setExportingTemplate] = useState(false);
   const [exportScenarioId, setExportScenarioId] = useState<string>('');
   const [exportIncludeAssignments, setExportIncludeAssignments] = useState(true);
   const [exportIncludePhases, setExportIncludePhases] = useState(true);
   const [templateType, setTemplateType] = useState('complete');
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [showTemplateOptions, setShowTemplateOptions] = useState(false);
-  
+
   const { currentScenario, scenarios } = useScenario();
 
+  // Progress tracking for import
+  const importProgress = useProgressOperation({
+    initialStage: 'Preparing upload...',
+    onComplete: () => {
+      // Progress completes when upload finishes
+    },
+    onError: (error) => {
+      console.error('Import failed:', error);
+    },
+  });
+
+  // Progress tracking for scenario export
+  const exportScenarioProgress = useProgressOperation({
+    initialStage: 'Preparing export...',
+  });
+
+  // Progress tracking for template export
+  const exportTemplateProgress = useProgressOperation({
+    initialStage: 'Generating template...',
+  });
+
   // Use bookmarkable tabs for import/export
-  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+  const { activeTab, setActiveTab } = useBookmarkableTabs({
     tabs: importExportTabs,
     defaultTab: 'import'
   });
@@ -124,37 +145,66 @@ function ImportUnified() {
     event.preventDefault();
   };
 
-  const handleUpload = async () => {
+  const handleUpload = useCallback(async () => {
     if (!file) return;
 
     setUploading(true);
     setResult(null);
 
+    // Create abort controller for cancellation support
+    const abortController = importProgress.createAbortController();
+
+    // Start progress tracking (file size in bytes)
+    importProgress.start(file.size, 'Uploading file...');
+
     try {
       const uploadOptions = {
         clearExisting,
         useV2,
-        ...settingsOverrides
+        ...settingsOverrides,
+        onUploadProgress: (progressEvent: { loaded: number; total?: number }) => {
+          const total = progressEvent.total || file.size;
+          const percent = Math.round((progressEvent.loaded / total) * 100);
+          importProgress.update(progressEvent.loaded,
+            percent < 100 ? `Uploading file... ${percent}%` : 'Processing data...'
+          );
+        },
+        signal: abortController.signal,
       };
 
       const response = await api.import.uploadExcel(file, uploadOptions);
       setResult(response.data as ImportResult);
+
       if (response.data.success) {
+        importProgress.complete();
         setFile(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
+      } else {
+        importProgress.fail(response.data.message || 'Import completed with errors');
       }
     } catch (error: any) {
-      setResult({
-        success: false,
-        message: 'Import failed',
-        errors: [error.response?.data?.message || error.message || 'Unknown error occurred']
-      });
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        // User cancelled the operation
+        setResult({
+          success: false,
+          message: 'Import cancelled',
+          errors: ['Upload was cancelled by user']
+        });
+      } else {
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+        importProgress.fail(errorMessage);
+        setResult({
+          success: false,
+          message: 'Import failed',
+          errors: [errorMessage]
+        });
+      }
     } finally {
       setUploading(false);
     }
-  };
+  }, [file, clearExisting, useV2, settingsOverrides, importProgress]);
 
   const handleRemoveFile = () => {
     setFile(null);
@@ -164,32 +214,44 @@ function ImportUnified() {
     }
   };
 
-  const handleExportScenario = async () => {
+  const handleExportScenario = useCallback(async () => {
     const scenarioToExport = exportScenarioId || currentScenario?.id;
-    
+
     if (!scenarioToExport) {
       alert('Please select a scenario to export');
       return;
     }
 
-    setExportingScenario(true);
+    // Create abort controller for cancellation support
+    const abortController = exportScenarioProgress.createAbortController();
+
+    // Start progress tracking (estimate 1MB for typical export)
+    const estimatedSize = 1024 * 1024;
+    exportScenarioProgress.start(estimatedSize, 'Preparing export...');
+
     try {
       console.log('Exporting scenario:', scenarioToExport);
-      
+
       const response = await api.import.exportScenario(scenarioToExport, {
         includeAssignments: exportIncludeAssignments,
         includePhases: exportIncludePhases,
+        onDownloadProgress: (progressEvent: { loaded: number; total?: number }) => {
+          const total = progressEvent.total || estimatedSize;
+          const percent = Math.round((progressEvent.loaded / total) * 100);
+          exportScenarioProgress.update(progressEvent.loaded, `Downloading... ${percent}%`);
+        },
+        signal: abortController.signal,
       });
 
       // Create blob and download link
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
-      
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      
+
       // Extract filename from response headers or create default
       const contentDisposition = response.headers['content-disposition'];
       let filename = 'scenario_export.xlsx';
@@ -199,29 +261,28 @@ function ImportUnified() {
           filename = filenameMatch[1];
         }
       }
-      
+
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the blob URL
       window.URL.revokeObjectURL(url);
-      
+
+      exportScenarioProgress.complete();
       console.log('Export completed successfully');
     } catch (error: any) {
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        exportScenarioProgress.fail('Export cancelled');
+        return;
+      }
+
       console.error('Export failed:', error);
-      console.error('Error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers
-      });
-      
+
       let message = 'Unknown error occurred';
-      
+
       if (error.response) {
-        // Server responded with error status
         if (error.response.status === 404) {
           message = 'Export endpoint not found. Please check if the server is running properly.';
         } else if (error.response.status === 500) {
@@ -232,39 +293,47 @@ function ImportUnified() {
           message = `Server error: ${error.response.status} ${error.response.statusText}`;
         }
       } else if (error.request) {
-        // Request was made but no response received
         message = 'No response from server. Please check your connection and that the server is running.';
       } else {
-        // Something else happened
         message = error.message || 'Unknown error occurred';
       }
-      
-      alert('Export failed: ' + message);
-    } finally {
-      setExportingScenario(false);
-    }
-  };
 
-  const handleExportTemplate = async () => {
-    setExportingTemplate(true);
+      exportScenarioProgress.fail(message);
+    }
+  }, [exportScenarioId, currentScenario?.id, exportIncludeAssignments, exportIncludePhases, exportScenarioProgress]);
+
+  const handleExportTemplate = useCallback(async () => {
+    // Create abort controller for cancellation support
+    const abortController = exportTemplateProgress.createAbortController();
+
+    // Start progress tracking (estimate 500KB for templates)
+    const estimatedSize = 512 * 1024;
+    exportTemplateProgress.start(estimatedSize, 'Generating template...');
+
     try {
       console.log('Exporting template:', templateType);
-      
+
       const response = await api.import.exportTemplate({
         templateType,
         includeAssignments: exportIncludeAssignments,
         includePhases: exportIncludePhases,
+        onDownloadProgress: (progressEvent: { loaded: number; total?: number }) => {
+          const total = progressEvent.total || estimatedSize;
+          const percent = Math.round((progressEvent.loaded / total) * 100);
+          exportTemplateProgress.update(progressEvent.loaded, `Downloading... ${percent}%`);
+        },
+        signal: abortController.signal,
       });
 
       // Create blob and download link
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
-      
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      
+
       // Extract filename from response headers or create default
       const contentDisposition = response.headers['content-disposition'];
       let filename = 'capacinator_template.xlsx';
@@ -274,24 +343,28 @@ function ImportUnified() {
           filename = filenameMatch[1];
         }
       }
-      
+
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the blob URL
       window.URL.revokeObjectURL(url);
-      
+
+      exportTemplateProgress.complete();
       console.log('Template export completed successfully');
     } catch (error: any) {
+      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+        exportTemplateProgress.fail('Template generation cancelled');
+        return;
+      }
+
       console.error('Template export failed:', error);
       const message = error.response?.data?.message || error.message || 'Unknown error occurred';
-      alert('Template export failed: ' + message);
-    } finally {
-      setExportingTemplate(false);
+      exportTemplateProgress.fail(message);
     }
-  };
+  }, [templateType, exportIncludeAssignments, exportIncludePhases, exportTemplateProgress]);
 
   // Set default export scenario when current scenario changes
   useEffect(() => {
@@ -478,6 +551,21 @@ function ImportUnified() {
               {uploading ? 'Uploading...' : 'Upload and Import'}
             </button>
           )}
+
+          {/* Progress indicator for import */}
+          {importProgress.progress.status !== 'idle' && (
+            <div className="import-progress-section">
+              <ProgressIndicator
+                progress={importProgress.progress}
+                label="Importing Excel Data"
+                showDetails={true}
+                showEta={true}
+                canCancel={importProgress.isRunning}
+                onCancel={importProgress.cancel}
+                onRetry={importProgress.hasError ? handleUpload : undefined}
+              />
+            </div>
+          )}
         </div>
 
         {result && (
@@ -622,7 +710,7 @@ function ImportUnified() {
                         value={exportScenarioId}
                         onChange={(e) => setExportScenarioId(e.target.value)}
                         className="form-select"
-                        disabled={exportingScenario || exportingTemplate}
+                        disabled={exportScenarioProgress.isRunning || exportTemplateProgress.isRunning}
                       >
                         <option value="">
                           {currentScenario ? `Current: ${currentScenario.name} (${currentScenario.scenario_type})` : 'Loading scenarios...'}
@@ -643,7 +731,7 @@ function ImportUnified() {
                         type="button"
                         className="btn btn-sm btn-ghost"
                         onClick={() => setShowExportOptions(!showExportOptions)}
-                        disabled={exportingScenario}
+                        disabled={exportScenarioProgress.isRunning}
                         aria-expanded={showExportOptions}
                         aria-controls="export-options-content"
                         aria-label={showExportOptions ? 'Hide export options' : 'Show export options'}
@@ -667,7 +755,7 @@ function ImportUnified() {
                               type="checkbox"
                               checked={exportIncludeAssignments}
                               onChange={(e) => setExportIncludeAssignments(e.target.checked)}
-                              disabled={exportingScenario}
+                              disabled={exportScenarioProgress.isRunning}
                               aria-describedby="assignments-help"
                             />
                             <span>Include Project Assignments</span>
@@ -677,7 +765,7 @@ function ImportUnified() {
                               type="checkbox"
                               checked={exportIncludePhases}
                               onChange={(e) => setExportIncludePhases(e.target.checked)}
-                              disabled={exportingScenario}
+                              disabled={exportScenarioProgress.isRunning}
                               aria-describedby="phases-help"
                             />
                             <span>Include Phase Timelines</span>
@@ -704,17 +792,32 @@ function ImportUnified() {
                 <button
                   className="btn btn-primary export-action-button"
                   onClick={handleExportScenario}
-                  disabled={exportingScenario || exportingTemplate || (!exportScenarioId && !currentScenario)}
+                  disabled={exportScenarioProgress.isRunning || exportTemplateProgress.isRunning || (!exportScenarioId && !currentScenario)}
                   aria-describedby="export-scenario-status"
-                  aria-label={exportingScenario ? 'Exporting scenario data, please wait' : 'Export selected scenario data as Excel file'}
+                  aria-label={exportScenarioProgress.isRunning ? 'Exporting scenario data, please wait' : 'Export selected scenario data as Excel file'}
                 >
                   <Download size={18} aria-hidden="true" />
-                  {exportingScenario ? 'Exporting Scenario...' : 'Export Scenario Data'}
+                  {exportScenarioProgress.isRunning ? 'Exporting Scenario...' : 'Export Scenario Data'}
                 </button>
-                
+
+                {/* Progress indicator for scenario export */}
+                {exportScenarioProgress.progress.status !== 'idle' && (
+                  <div className="export-progress-section">
+                    <ProgressIndicator
+                      progress={exportScenarioProgress.progress}
+                      label="Exporting Scenario Data"
+                      showDetails={true}
+                      showEta={true}
+                      canCancel={exportScenarioProgress.isRunning}
+                      onCancel={exportScenarioProgress.cancel}
+                      onRetry={exportScenarioProgress.hasError ? handleExportScenario : undefined}
+                    />
+                  </div>
+                )}
+
                 <div id="export-scenario-status" className="sr-only">
-                  {exportingScenario ? 'Export in progress, please wait' : 
-                   (!exportScenarioId && !currentScenario) ? 'Please select a scenario to export' : 
+                  {exportScenarioProgress.isRunning ? 'Export in progress, please wait' :
+                   (!exportScenarioId && !currentScenario) ? 'Please select a scenario to export' :
                    'Ready to export scenario data'}
                 </div>
               </div>
@@ -741,7 +844,7 @@ function ImportUnified() {
                         type="button"
                         className="btn btn-sm btn-ghost"
                         onClick={() => setShowTemplateOptions(!showTemplateOptions)}
-                        disabled={exportingTemplate}
+                        disabled={exportTemplateProgress.isRunning}
                         aria-expanded={showTemplateOptions}
                         aria-controls="template-options-content"
                         aria-label={showTemplateOptions ? 'Hide template options' : 'Show template customization options'}
@@ -765,7 +868,7 @@ function ImportUnified() {
                             value={templateType}
                             onChange={(e) => setTemplateType(e.target.value)}
                             className="form-select"
-                            disabled={exportingTemplate}
+                            disabled={exportTemplateProgress.isRunning}
                             aria-describedby="template-type-help"
                           >
                             <option value="complete">Complete Template (All Sheets)</option>
@@ -796,16 +899,31 @@ function ImportUnified() {
                 <button
                   className="btn btn-outline export-action-button"
                   onClick={handleExportTemplate}
-                  disabled={exportingTemplate}
+                  disabled={exportTemplateProgress.isRunning || exportScenarioProgress.isRunning}
                   aria-describedby="export-template-status"
-                  aria-label={exportingTemplate ? 'Generating template, please wait' : 'Download blank Excel template'}
+                  aria-label={exportTemplateProgress.isRunning ? 'Generating template, please wait' : 'Download blank Excel template'}
                 >
                   <Download size={18} aria-hidden="true" />
-                  {exportingTemplate ? 'Generating Template...' : 'Download Template'}
+                  {exportTemplateProgress.isRunning ? 'Generating Template...' : 'Download Template'}
                 </button>
-                
+
+                {/* Progress indicator for template export */}
+                {exportTemplateProgress.progress.status !== 'idle' && (
+                  <div className="export-progress-section">
+                    <ProgressIndicator
+                      progress={exportTemplateProgress.progress}
+                      label="Generating Template"
+                      showDetails={true}
+                      showEta={true}
+                      canCancel={exportTemplateProgress.isRunning}
+                      onCancel={exportTemplateProgress.cancel}
+                      onRetry={exportTemplateProgress.hasError ? handleExportTemplate : undefined}
+                    />
+                  </div>
+                )}
+
                 <div id="export-template-status" className="sr-only">
-                  {exportingTemplate ? 'Template generation in progress, please wait' : 'Ready to download template'}
+                  {exportTemplateProgress.isRunning ? 'Template generation in progress, please wait' : 'Ready to download template'}
                 </div>
               </div>
             </div>

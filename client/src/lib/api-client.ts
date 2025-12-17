@@ -264,6 +264,8 @@ export const api = {
       autoCreateMissingLocations?: boolean;
       defaultProjectPriority?: number;
       dateFormat?: string;
+      onUploadProgress?: (progressEvent: { loaded: number; total?: number }) => void;
+      signal?: AbortSignal;
     } = {}) => {
       const formData = new FormData();
       formData.append('excelFile', file);
@@ -286,6 +288,8 @@ export const api = {
       }
       return apiClient.post('/import/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: options.onUploadProgress,
+        signal: options.signal,
       });
     },
     validateFile: (file: File) => {
@@ -335,6 +339,8 @@ export const api = {
     exportScenario: (scenarioId: string, options: {
       includeAssignments?: boolean;
       includePhases?: boolean;
+      onDownloadProgress?: (progressEvent: { loaded: number; total?: number }) => void;
+      signal?: AbortSignal;
     } = {}) => {
       const params = new URLSearchParams({
         scenarioId,
@@ -343,12 +349,16 @@ export const api = {
       });
       return apiClient.get(`/import/export/scenario?${params.toString()}`, {
         responseType: 'blob',
+        onDownloadProgress: options.onDownloadProgress,
+        signal: options.signal,
       });
     },
     exportTemplate: (options: {
       templateType?: string;
       includeAssignments?: boolean;
       includePhases?: boolean;
+      onDownloadProgress?: (progressEvent: { loaded: number; total?: number }) => void;
+      signal?: AbortSignal;
     } = {}) => {
       const params = new URLSearchParams({
         templateType: options.templateType || 'complete',
@@ -357,6 +367,8 @@ export const api = {
       });
       return apiClient.get(`/import/template?${params.toString()}`, {
         responseType: 'blob',
+        onDownloadProgress: options.onDownloadProgress,
+        signal: options.signal,
       });
     },
   },

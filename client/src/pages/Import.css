@@ -224,6 +224,20 @@
   justify-content: center;
 }
 
+/* Progress Section Styles */
+.import-progress-section,
+.export-progress-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.export-progress-section {
+  margin-top: 1rem;
+}
+
 .import-result {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
