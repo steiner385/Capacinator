@@ -305,7 +305,7 @@
             
             <div class="button-group">
                 <div></div>
-                <button class="btn btn-primary" onclick="nextStep()">Get Started →</button>
+                <button class="btn btn-primary" data-action="next">Get Started →</button>
             </div>
         </div>
         
@@ -318,7 +318,7 @@
                 <label for="dbLocation">Database Location</label>
                 <div class="input-group">
                     <input type="text" id="dbLocation" placeholder="Default: User data directory">
-                    <button class="btn btn-secondary" onclick="browseFolder()">Browse...</button>
+                    <button class="btn btn-secondary" data-action="browse">Browse...</button>
                 </div>
                 <p class="help-text">Leave empty to use the default location in your user data folder</p>
             </div>
@@ -353,11 +353,11 @@
             </div>
             
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
-                <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+                <button class="btn btn-secondary" data-action="previous">← Back</button>
+                <button class="btn btn-primary" data-action="next">Next →</button>
             </div>
         </div>
-        
+
         <!-- Server Step -->
         <div class="step-content" id="server">
             <h1>Server Configuration</h1>
@@ -388,11 +388,11 @@
             </div>
             
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
-                <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+                <button class="btn btn-secondary" data-action="previous">← Back</button>
+                <button class="btn btn-primary" data-action="next">Next →</button>
             </div>
         </div>
-        
+
         <!-- Advanced Step -->
         <div class="step-content" id="advanced">
             <h1>Advanced Settings</h1>
@@ -436,11 +436,11 @@
             </div>
             
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
-                <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+                <button class="btn btn-secondary" data-action="previous">← Back</button>
+                <button class="btn btn-primary" data-action="next">Next →</button>
             </div>
         </div>
-        
+
         <!-- Review Step -->
         <div class="step-content" id="review">
             <h1>Review Configuration</h1>
@@ -454,8 +454,8 @@
             </div>
             
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="previousStep()">← Back</button>
-                <button class="btn btn-primary" onclick="saveAndFinish()" id="finishBtn">
+                <button class="btn btn-secondary" data-action="previous">← Back</button>
+                <button class="btn btn-primary" id="finishBtn">
                     Save Configuration
                 </button>
             </div>

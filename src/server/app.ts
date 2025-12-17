@@ -17,16 +17,28 @@ import { logger } from './services/logging/config.js';
 export async function createExpressApp() {
   const app = express();
 
-  // Security middleware
+  // Security middleware - Configure CSP
+  // Note: 'unsafe-inline' for styles is acceptable per OWASP guidelines
+  // 'unsafe-eval' is only allowed in development for Vite HMR
+  const scriptSrcDirective: string[] = ["'self'"];
+  if (process.env.NODE_ENV === 'development') {
+    // Vite HMR requires unsafe-eval in development
+    scriptSrcDirective.push("'unsafe-eval'");
+  }
+
+  const cspDirectives: Record<string, string[]> = {
+    defaultSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    scriptSrc: scriptSrcDirective,
+    imgSrc: ["'self'", "data:", "blob:"],
+    connectSrc: ["'self'"],
+    reportUri: ['/api/csp-report'],
+  };
+
   app.use(helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        imgSrc: ["'self'", "data:", "blob:"],
-        connectSrc: ["'self'"],
-      },
+      directives: cspDirectives,
+      reportOnly: false,
     },
   }));
 

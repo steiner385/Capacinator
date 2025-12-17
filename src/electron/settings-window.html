@@ -152,11 +152,11 @@
     </div>
     
     <div class="tabs">
-        <button class="tab active" onclick="switchTab('general')">General</button>
-        <button class="tab" onclick="switchTab('database')">Database</button>
-        <button class="tab" onclick="switchTab('server')">Server</button>
-        <button class="tab" onclick="switchTab('backup')">Backup</button>
-        <button class="tab" onclick="switchTab('advanced')">Advanced</button>
+        <button class="tab active" data-tab="general">General</button>
+        <button class="tab" data-tab="database">Database</button>
+        <button class="tab" data-tab="server">Server</button>
+        <button class="tab" data-tab="backup">Backup</button>
+        <button class="tab" data-tab="advanced">Advanced</button>
     </div>
     
     <!-- General Tab -->
@@ -216,7 +216,7 @@
         </div>
         
         <div class="form-group">
-            <button class="btn btn-secondary" onclick="optimizeDatabase()">
+            <button class="btn btn-secondary" data-action="optimize-database">
                 Optimize Database
             </button>
             <p class="help-text">Compact and optimize database performance</p>
@@ -279,7 +279,7 @@
             <label>Backup Location</label>
             <div style="display: flex; gap: 10px;">
                 <input type="text" id="backupLocation" style="flex: 1;">
-                <button class="btn btn-secondary" onclick="browseBackupFolder()">Browse...</button>
+                <button class="btn btn-secondary" data-action="browse-backup">Browse...</button>
             </div>
         </div>
         
@@ -292,7 +292,7 @@
         <div class="form-group">
             <label>Last Backup</label>
             <p class="current-value" id="lastBackup">Never</p>
-            <button class="btn btn-secondary" onclick="backupNow()">Backup Now</button>
+            <button class="btn btn-secondary" data-action="backup-now">Backup Now</button>
         </div>
     </div>
     
@@ -312,7 +312,7 @@
         <div class="form-group">
             <label>Log File Location</label>
             <input type="text" id="logLocation" readonly>
-            <button class="btn btn-secondary" onclick="openLogFolder()">Open Folder</button>
+            <button class="btn btn-secondary" data-action="open-logs">Open Folder</button>
         </div>
         
         <div class="form-group">
@@ -337,14 +337,14 @@
         </div>
         
         <div class="form-group">
-            <button class="btn btn-secondary" onclick="clearCache()">Clear Cache</button>
-            <button class="btn btn-secondary" onclick="resetSettings()">Reset All Settings</button>
+            <button class="btn btn-secondary" data-action="clear-cache">Clear Cache</button>
+            <button class="btn btn-secondary" data-action="reset-settings">Reset All Settings</button>
         </div>
     </div>
     
     <div class="button-group">
-        <button class="btn btn-secondary" onclick="closeSettings()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+        <button class="btn btn-secondary" data-action="close">Cancel</button>
+        <button class="btn btn-primary" data-action="save">Save</button>
     </div>
     
     <script src="settings-window.js"></script>

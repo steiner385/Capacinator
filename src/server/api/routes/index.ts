@@ -65,6 +65,28 @@ router.use('/test-data', testDataRoutes);
 // Test context routes (for per-test data isolation)
 router.use('/test-context', testContextRoutes);
 
+// CSP violation reporting endpoint
+router.post('/csp-report', (req: RequestWithLogging, res) => {
+  const report = req.body['csp-report'] || req.body;
+
+  if (report) {
+    req.logger.warn('CSP Violation Report', {
+      documentUri: report['document-uri'],
+      violatedDirective: report['violated-directive'],
+      effectiveDirective: report['effective-directive'],
+      blockedUri: report['blocked-uri'],
+      sourceFile: report['source-file'],
+      lineNumber: report['line-number'],
+      columnNumber: report['column-number'],
+      originalPolicy: report['original-policy'],
+      disposition: report.disposition,
+    });
+  }
+
+  // Return 204 No Content (standard for CSP reports)
+  res.status(204).end();
+});
+
 // Client logging endpoint for remote logging
 router.post('/client-logs', (req: RequestWithLogging, res) => {
   const { logs } = req.body;

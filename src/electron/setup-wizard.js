@@ -32,7 +32,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('autoBackup').addEventListener('change', (e) => {
         document.getElementById('backupOptions').style.display = e.target.checked ? 'block' : 'none';
     });
-    
+
+    // Navigation button listeners
+    document.querySelectorAll('[data-action="next"]').forEach(btn => {
+        btn.addEventListener('click', nextStep);
+    });
+
+    document.querySelectorAll('[data-action="previous"]').forEach(btn => {
+        btn.addEventListener('click', previousStep);
+    });
+
+    // Browse folder button
+    const browseBtn = document.querySelector('[data-action="browse"]');
+    if (browseBtn) {
+        browseBtn.addEventListener('click', browseFolder);
+    }
+
+    // Finish/save button
+    const finishBtn = document.getElementById('finishBtn');
+    if (finishBtn) {
+        finishBtn.addEventListener('click', saveAndFinish);
+    }
+
     // Load default paths
     loadDefaults();
 });
