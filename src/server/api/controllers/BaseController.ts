@@ -1,8 +1,35 @@
 import type { Request, Response, NextFunction } from 'express';
+import type { Knex } from 'knex';
 import { db, getAuditedDb } from '../../database/index.js';
 import { AuditContext } from '../../database/AuditedDatabase.js';
 import { logger } from '../../services/logging/config.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+
+// Type for request logger
+interface RequestLogger {
+  error: (message: string, error: unknown, metadata?: Record<string, unknown>) => void;
+  info: (message: string, metadata?: Record<string, unknown>) => void;
+  warn: (message: string, metadata?: Record<string, unknown>) => void;
+  logPerformance?: (operation: string, duration: number, metadata?: Record<string, unknown>) => void;
+  logBusinessOperation?: (
+    operation: string,
+    entityType: string,
+    entityId: string,
+    userId?: string,
+    metadata?: Record<string, unknown>
+  ) => void;
+}
+
+// Type for validation errors
+type ValidationErrors = Record<string, string | string[]> | string | string[];
+
+// Type for success response
+interface SuccessResponse<T> {
+  success: true;
+  data: T;
+  requestId?: string;
+  message?: string;
+}
 
 /**
  * Extended Request interface with logging context
@@ -10,11 +37,12 @@ import { ServiceContainer } from '../../services/ServiceContainer.js';
 export interface RequestWithContext extends Request {
   requestId?: string;
   startTime?: number;
-  logger?: any;
+  logger?: RequestLogger;
   user?: {
     id: string;
     role?: string;
-    [key: string]: any;
+    name?: string;
+    email?: string;
   };
 }
 
@@ -73,10 +101,10 @@ export interface ControllerDependencies {
  */
 export abstract class BaseController {
   /** Database instance - use this for simple queries */
-  protected db: any;
+  protected db: Knex;
 
   /** Audited database instance - initialized on first access */
-  private _auditedDb: any = null;
+  private _auditedDb: Knex | null = null;
 
   /** Controller feature options */
   protected options: ControllerOptions;
@@ -111,7 +139,7 @@ export abstract class BaseController {
   /**
    * Get audited database instance with lazy initialization
    */
-  protected get auditedDb(): any {
+  protected get auditedDb(): Knex {
     if (!this._auditedDb) {
       this._auditedDb = getAuditedDb();
     }
@@ -122,7 +150,7 @@ export abstract class BaseController {
    * Get database instance with optional audit context from request
    * Use this when you need audit trail for database operations
    */
-  protected getDb(req?: RequestWithContext): any {
+  protected getDb(req?: RequestWithContext): Knex {
     if (!this.options.enableAudit || !req) {
       return this.db;
     }
@@ -153,7 +181,7 @@ export abstract class BaseController {
    * Automatically detects if request has logging context
    */
   protected handleError(
-    error: any,
+    error: unknown,
     reqOrRes: RequestWithContext | Response,
     resOrMessage?: Response | string,
     message: string = 'Internal server error'
@@ -176,22 +204,30 @@ export abstract class BaseController {
       errorMessage = (resOrMessage as string) || message;
     }
 
+    // Type guard helpers
+    const isErrorWithCode = (e: unknown): e is { code: string; message: string } =>
+      typeof e === 'object' && e !== null && 'code' in e && 'message' in e;
+    const isOperationalError = (e: unknown): e is OperationalError =>
+      typeof e === 'object' && e !== null && 'isOperational' in e && (e as OperationalError).isOperational;
+    const getErrorMessage = (e: unknown): string =>
+      e instanceof Error ? e.message : String(e);
+
     // Log error with context if available
     if (req?.logger && this.options.enableLogging) {
       req.logger.error('Controller error', error, {
         controller: this.constructor.name,
-        sqlError: error.code === 'SQLITE_ERROR' ? error.message : undefined
+        sqlError: isErrorWithCode(error) && error.code === 'SQLITE_ERROR' ? error.message : undefined
       });
     } else {
       // Fallback to console for backwards compatibility
       console.error('Controller error:', error);
-      if (error.code === 'SQLITE_ERROR') {
+      if (isErrorWithCode(error) && error.code === 'SQLITE_ERROR') {
         console.error('SQL Error details:', error.message);
       }
     }
 
     // Handle operational errors (safe to show to users)
-    if (error.isOperational) {
+    if (isOperationalError(error)) {
       res.status(error.statusCode).json({
         error: error.message,
         requestId: req?.requestId
@@ -204,7 +240,7 @@ export abstract class BaseController {
     res.status(500).json({
       error: errorMessage,
       requestId: req?.requestId,
-      details: isDev ? error.message : undefined
+      details: isDev ? getErrorMessage(error) : undefined
     });
   }
 
@@ -247,13 +283,13 @@ export abstract class BaseController {
    */
   protected handleValidationError(
     reqOrRes: RequestWithContext | Response,
-    resOrErrors?: Response | any,
-    errors?: any
+    resOrErrors?: Response | ValidationErrors,
+    errors?: ValidationErrors
   ): void {
     // Support both signatures
     let req: RequestWithContext | undefined;
     let res: Response;
-    let validationErrors: any;
+    let validationErrors: ValidationErrors | undefined;
 
     if (resOrErrors && typeof resOrErrors === 'object' && 'status' in resOrErrors) {
       req = reqOrRes as RequestWithContext;
@@ -333,7 +369,7 @@ export abstract class BaseController {
    */
   protected async executeAuditedQuery<T>(
     req: RequestWithContext,
-    queryFn: (db: any) => Promise<T>,
+    queryFn: (db: Knex) => Promise<T>,
     res: Response,
     errorMessage?: string
   ): Promise<T | undefined> {
@@ -363,16 +399,16 @@ export abstract class BaseController {
   /**
    * Apply pagination to a query
    */
-  protected paginate(query: any, page: number = 1, limit: number = 50): any {
+  protected paginate<T extends Knex.QueryBuilder>(query: T, page: number = 1, limit: number = 50): T {
     const offset = (page - 1) * limit;
-    return query.limit(limit).offset(offset);
+    return query.limit(limit).offset(offset) as T;
   }
 
   /**
    * Build WHERE filters from a record
    * Supports exact match, LIKE patterns (%), and arrays (IN clause)
    */
-  protected buildFilters(query: any, filters: Record<string, any>): any {
+  protected buildFilters<T extends Knex.QueryBuilder>(query: T, filters: Record<string, unknown>): T {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         if (Array.isArray(value)) {
@@ -395,7 +431,7 @@ export abstract class BaseController {
     operation: string,
     entityType: string,
     entityId: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): void {
     if (req.logger?.logBusinessOperation) {
       req.logger.logBusinessOperation(
@@ -415,7 +451,7 @@ export abstract class BaseController {
    * Wrap async route handlers to catch errors
    */
   protected asyncHandler(
-    fn: (req: RequestWithContext, res: Response, next: NextFunction) => Promise<any>
+    fn: (req: RequestWithContext, res: Response, next: NextFunction) => Promise<void>
   ): (req: RequestWithContext, res: Response, next: NextFunction) => void {
     return (req: RequestWithContext, res: Response, next: NextFunction) => {
       Promise.resolve(fn(req, res, next)).catch(next);
@@ -425,13 +461,13 @@ export abstract class BaseController {
   /**
    * Send a success response with standard format
    */
-  protected sendSuccess(
+  protected sendSuccess<T>(
     req: RequestWithContext,
     res: Response,
-    data: any,
+    data: T,
     message?: string
   ): void {
-    const response: any = {
+    const response: SuccessResponse<T> = {
       success: true,
       data,
       requestId: req.requestId
@@ -447,10 +483,10 @@ export abstract class BaseController {
   /**
    * Send a paginated response with metadata
    */
-  protected sendPaginatedResponse(
+  protected sendPaginatedResponse<T>(
     req: RequestWithContext,
     res: Response,
-    data: any[],
+    data: T[],
     total: number,
     page: number,
     limit: number

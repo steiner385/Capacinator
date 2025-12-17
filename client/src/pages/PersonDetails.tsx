@@ -18,6 +18,85 @@ import { DetailTable, DetailTableColumn } from '../components/ui/DetailTable';
 import { Badge } from '../components/ui/badge';
 import './PersonDetails.css';
 import '../components/Charts.css';
+import type { LucideIcon } from 'lucide-react';
+
+// Types for time off / availability overrides
+interface AvailabilityOverrideData {
+  id?: string;
+  person_id: string;
+  start_date: string;
+  end_date: string;
+  availability_percentage: number;
+  hours_per_day?: number | null;
+  reason?: string;
+  override_type: string;
+  is_approved?: number;
+  approved_by?: string | null;
+  approved_at?: number;
+  created_by?: string | null;
+  created_at?: number;
+  updated_at?: number;
+}
+
+// Types for role editing
+interface PersonRoleData {
+  id: string;
+  person_id: string;
+  role_id: string;
+  role_name: string;
+  role_description?: string;
+  start_date?: string;
+  end_date?: string;
+  proficiency_level: string;
+  is_primary: number;
+}
+
+// Types for locations
+interface LocationData {
+  id: string;
+  name: string;
+}
+
+// Types for roles
+interface RoleData {
+  id: string;
+  name: string;
+}
+
+// Types for people in dropdown
+interface PersonListItem {
+  id: string;
+  name: string;
+}
+
+// Types for assignment
+interface AssignmentData {
+  id: string;
+  project_id: string;
+  project_name: string;
+  role_id: string;
+  role_name: string;
+  start_date: string;
+  end_date: string;
+  computed_start_date?: string;
+  computed_end_date?: string;
+  allocation_percentage: number;
+  billable: boolean;
+}
+
+// Types for action buttons
+interface ActionButton {
+  label: string;
+  action: string;
+  icon: LucideIcon;
+  variant: string;
+}
+
+// Types for select options
+interface SelectOption {
+  value: string | number;
+  label: string;
+}
 
 interface PersonDetails {
   id: string;
@@ -99,15 +178,15 @@ export default function PersonDetails() {
   
   // Role management modal state
   const [roleModalOpen, setRoleModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<any>(null);
+  const [editingRole, setEditingRole] = useState<PersonRoleData | null>(null);
 
   // Time off editing state
   const [editingTimeOff, setEditingTimeOff] = useState<string | null>(null);
-  const [editingTimeOffData, setEditingTimeOffData] = useState<any>(null);
-  
+  const [editingTimeOffData, setEditingTimeOffData] = useState<AvailabilityOverrideData | null>(null);
+
   // New time off creation state
   const [isCreatingTimeOff, setIsCreatingTimeOff] = useState<boolean>(false);
-  const [newTimeOffData, setNewTimeOffData] = useState<any>(null);
+  const [newTimeOffData, setNewTimeOffData] = useState<AvailabilityOverrideData | null>(null);
 
   // Smart assignment modal state
   const [smartAssignmentModalOpen, setSmartAssignmentModalOpen] = useState(false);
@@ -120,7 +199,7 @@ export default function PersonDetails() {
   const canDelete = localStorage.getItem('userRole') === 'admin';
 
   // Define table columns for each section
-  const timeOffColumns: DetailTableColumn<any>[] = [
+  const timeOffColumns: DetailTableColumn<AvailabilityOverrideData>[] = [
     {
       key: 'dates',
       header: 'Dates',
@@ -152,7 +231,7 @@ export default function PersonDetails() {
     }
   ];
 
-  const rolesColumns: DetailTableColumn<any>[] = [
+  const rolesColumns: DetailTableColumn<PersonRoleData>[] = [
     {
       key: 'role',
       header: 'Role',
@@ -189,7 +268,7 @@ export default function PersonDetails() {
     }
   ];
 
-  const assignmentsColumns: DetailTableColumn<any>[] = [
+  const assignmentsColumns: DetailTableColumn<AssignmentData>[] = [
     {
       key: 'project',
       header: 'Project',
@@ -292,7 +371,7 @@ export default function PersonDetails() {
 
   // Individual field update mutations
   const updatePersonFieldMutation = useMutation({
-    mutationFn: async ({ field, value }: { field: string; value: any }) => {
+    mutationFn: async ({ field, value }: { field: string; value: string | number | boolean | null }) => {
       const response = await api.people.update(id!, { [field]: value });
       return response.data;
     },
@@ -329,7 +408,7 @@ export default function PersonDetails() {
 
   // Availability override mutations
   const updateOverrideMutation = useMutation({
-    mutationFn: async (override: any) => {
+    mutationFn: async (override: AvailabilityOverrideData & { id: string }) => {
       const response = await fetch(`/api/availability/${override.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -363,7 +442,7 @@ export default function PersonDetails() {
   });
 
   const createOverrideMutation = useMutation({
-    mutationFn: async (overrideData: any) => {
+    mutationFn: async (overrideData: AvailabilityOverrideData) => {
       const response = await fetch('/api/availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -382,25 +461,25 @@ export default function PersonDetails() {
   });
 
   // Handle individual field updates
-  const handleFieldUpdate = (field: string, value: any) => {
+  const handleFieldUpdate = (field: string, value: string | number | boolean | null) => {
     updatePersonFieldMutation.mutate({ field, value });
   };
 
   // Inline editing component
-  const InlineEdit = ({ 
-    field, 
-    value, 
-    type = 'text', 
-    options = [], 
+  const InlineEdit = ({
+    field,
+    value,
+    type = 'text',
+    options = [],
     placeholder = '',
     icon = null
   }: {
     field: string;
-    value: any;
+    value: string | number | null | undefined;
     type?: 'text' | 'email' | 'tel' | 'number' | 'select';
-    options?: Array<{ value: any; label: string }>;
+    options?: SelectOption[];
     placeholder?: string;
-    icon?: any;
+    icon?: LucideIcon | null;
   }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(value);
@@ -485,7 +564,7 @@ export default function PersonDetails() {
     setRoleModalOpen(true);
   };
 
-  const handleEditRole = (role: any) => {
+  const handleEditRole = (role: PersonRoleData) => {
     setEditingRole(role);
     setRoleModalOpen(true);
   };
@@ -504,7 +583,7 @@ export default function PersonDetails() {
   };
 
   // Time off management handlers
-  const handleEditTimeOff = (override: any) => {
+  const handleEditTimeOff = (override: PersonDetails['availabilityOverrides'][0]) => {
     setEditingTimeOff(override.id);
     setEditingTimeOffData({
       ...override,
@@ -574,7 +653,7 @@ export default function PersonDetails() {
     setSmartAssignmentModalOpen(true);
   };
 
-  const handleDeleteAssignment = (assignment: any) => {
+  const handleDeleteAssignment = (assignment: AssignmentData) => {
     if (window.confirm('Are you sure you want to delete this assignment?')) {
       deleteAssignmentMutation.mutate(assignment.id);
     }
@@ -622,7 +701,7 @@ export default function PersonDetails() {
     
     let status: 'over_allocated' | 'fully_allocated' | 'under_allocated' | 'available';
     let statusColor: string;
-    let actions: Array<{ label: string; action: string; icon: any; variant: string }> = [];
+    let actions: ActionButton[] = [];
     
     if (utilizationPercentage > 100) {
       status = 'over_allocated';
@@ -860,7 +939,7 @@ export default function PersonDetails() {
                     field="location_id"
                     value={person.location_id}
                     type="select"
-                    options={Array.isArray(locations) ? locations.map((location: any) => ({
+                    options={Array.isArray(locations) ? locations.map((location: LocationData) => ({
                       value: location.id,
                       label: location.name
                     })) : []}
@@ -873,9 +952,9 @@ export default function PersonDetails() {
                   <label>Primary Role</label>
                   <InlineEdit
                     field="primary_person_role_id"
-                    value={person.roles.find((role: any) => role.is_primary)?.role_id}
+                    value={person.roles.find((role) => role.is_primary)?.role_id}
                     type="select"
-                    options={Array.isArray(roles) ? roles.map((role: any) => ({
+                    options={Array.isArray(roles) ? roles.map((role: RoleData) => ({
                       value: role.id,
                       label: role.name
                     })) : []}
@@ -890,7 +969,7 @@ export default function PersonDetails() {
                     field="supervisor_id"
                     value={person.supervisor_id}
                     type="select"
-                    options={Array.isArray(allPeople) ? allPeople.filter((p: any) => p.id !== id).map((supervisor: any) => ({
+                    options={Array.isArray(allPeople) ? allPeople.filter((p: PersonListItem) => p.id !== id).map((supervisor: PersonListItem) => ({
                       value: supervisor.id,
                       label: supervisor.name
                     })) : []}

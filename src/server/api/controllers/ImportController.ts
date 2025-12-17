@@ -6,59 +6,21 @@ import { ExcelImporterV2 } from '../../services/import/ExcelImporterV2.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
-import type ExcelJSTypes from 'exceljs';
+import type { Workbook, Worksheet } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
-let ExcelJS: typeof ExcelJSTypes | null = null;
+// Type for the dynamically imported ExcelJS module
+interface ExcelJSModule {
+  Workbook: new () => Workbook;
+}
 
-async function initializeExcelJS(): Promise<typeof ExcelJSTypes> {
+let ExcelJS: ExcelJSModule | null = null;
+
+async function initializeExcelJS() {
   if (!ExcelJS) {
     ExcelJS = (await import('exceljs')).default;
   }
   return ExcelJS;
-}
-
-// ============================================================================
-// Import Types
-// ============================================================================
-
-/**
- * Template options for export/import templates
- */
-interface TemplateOptions {
-  includeInstructions?: boolean;
-  includeExamples?: boolean;
-  dataTypes?: string[];
-  templateType?: string;
-  includeAssignments?: boolean;
-  includePhases?: boolean;
-  generatedAt?: string;
-}
-
-/**
- * Scenario data for export metadata
- */
-interface ScenarioData {
-  id: string;
-  name: string;
-  description?: string;
-  scenario_type?: string;
-  status?: string;
-  created_at?: string;
-  parent_scenario_id?: string;
-  created_by_name?: string;
-}
-
-/**
- * Export options for data export
- */
-interface ExportOptions {
-  includeMetadata?: boolean;
-  dataTypes?: string[];
-  includeAssignments?: boolean;
-  includePhases?: boolean;
-  exportedBy?: string;
-  exportedAt?: string;
 }
 
 interface ImportSettings {
@@ -70,60 +32,28 @@ interface ImportSettings {
   dateFormat: string;
 }
 
-/**
- * Import history record from database
- */
-interface ImportHistoryRecord {
-  id: string;
-  file_name: string;
-  file_size: string;
-  file_mime_type: string;
-  import_type: string;
-  status: string;
-  imported_counts?: string;
-  errors?: string;
-  warnings?: string;
-  duplicates_found?: string;
-  started_at?: Date;
-  completed_at?: Date;
-  duration_ms?: number;
-  imported_by?: string;
+interface TemplateOptions {
+  templateType: string;
+  includeAssignments: boolean;
+  includePhases: boolean;
+  generatedAt: string;
 }
 
-/**
- * Project record for export
- */
-interface ExportProjectRecord {
+interface ExportOptions {
+  includeAssignments: boolean;
+  includePhases: boolean;
+  exportedBy: string;
+  exportedAt: string;
+}
+
+interface ScenarioRecord {
   id: string;
   name: string;
   description?: string;
-  project_type_id?: string;
-  project_sub_type_id?: string;
-  location_id?: string;
-  priority?: number;
-  aspiration_start?: string;
-  aspiration_finish?: string;
-  project_type_name?: string;
-  project_sub_type_name?: string;
-  location_name?: string;
-}
-
-/**
- * Person record for export
- */
-interface ExportPersonRecord {
-  id: string;
-  name: string;
-  email?: string;
-  primary_role_id?: string;
-  supervisor_id?: string;
-  location_id?: string;
-  worker_type?: string;
-  default_availability_percentage?: number;
-  default_hours_per_day?: number;
-  role_name?: string;
-  supervisor_name?: string;
-  location_name?: string;
+  scenario_type: string;
+  parent_scenario_id?: string;
+  created_by_name?: string;
+  created_at?: string;
 }
 
 /**
@@ -267,27 +197,26 @@ export class ImportController extends BaseController {
         status: 'processing',
         imported_by: req.user?.name || req.user?.email || 'anonymous',
         started_at: new Date(),
-        request_id: req.headers['x-request-id'] || (req as Request & { id?: string }).id,
+        request_id: req.headers['x-request-id'] || req.id,
         ip_address: req.ip
       };
-
+      
       const [historyId] = await this.db('import_history')
         .insert(historyRecord)
         .returning('id');
-
+      
       let result;
       try {
-        result = importOptions.useV2
+        result = importOptions.useV2 
           ? await new ExcelImporterV2().importFromFile(req.file.path, importOptions)
           : await new ExcelImporter().importFromFile(req.file.path, importOptions);
-      } catch (importError: unknown) {
+      } catch (importError) {
         // Update history record with failure
-        const errorMessage = importError instanceof Error ? importError.message : 'Unknown import error';
         await this.db('import_history')
           .where('id', historyId.id || historyId)
           .update({
             status: 'failed',
-            errors: JSON.stringify([errorMessage]),
+            errors: JSON.stringify([importError.message]),
             duration_ms: Date.now() - startTime,
             completed_at: new Date()
           });
@@ -360,9 +289,9 @@ export class ImportController extends BaseController {
       workbook.lastModifiedBy = 'System';
       workbook.created = new Date();
       workbook.modified = new Date();
-      (workbook.properties as unknown as Record<string, unknown>).title = 'Capacinator Import Template';
-      (workbook.properties as unknown as Record<string, unknown>).subject = 'Capacinator Data Import Template';
-      (workbook.properties as unknown as Record<string, unknown>).description = 'Blank template for importing scenario data into Capacinator';
+      workbook.properties.title = 'Capacinator Import Template';
+      workbook.properties.subject = 'Capacinator Data Import Template';
+      workbook.properties.description = 'Blank template for importing scenario data into Capacinator';
 
       // Create Template Info sheet first
       await this.addTemplateInfoSheet(workbook, {
@@ -433,7 +362,7 @@ export class ImportController extends BaseController {
         .offset(offset);
       
       // Parse JSON fields
-      const formattedImports = imports.map((record: ImportHistoryRecord) => ({
+      const formattedImports = imports.map(record => ({
         ...record,
         imported_counts: record.imported_counts ? JSON.parse(record.imported_counts) : null,
         errors: record.errors ? JSON.parse(record.errors) : [],
@@ -614,9 +543,9 @@ export class ImportController extends BaseController {
       workbook.lastModifiedBy = req.user?.name || 'System';
       workbook.created = new Date();
       workbook.modified = new Date();
-      (workbook.properties as unknown as Record<string, unknown>).title = `${scenario.name} - Scenario Export`;
-      (workbook.properties as unknown as Record<string, unknown>).subject = 'Capacinator Scenario Data Export';
-      (workbook.properties as unknown as Record<string, unknown>).description = `Complete scenario data export for re-import. Scenario: ${scenario.name} (${scenario.scenario_type})`;
+      workbook.properties.title = `${scenario.name} - Scenario Export`;
+      workbook.properties.subject = 'Capacinator Scenario Data Export';
+      workbook.properties.description = `Complete scenario data export for re-import. Scenario: ${scenario.name} (${scenario.scenario_type})`;
 
       // Export Projects
       await this.addProjectsToWorkbook(workbook, targetScenarioId, scenario.scenario_type);
@@ -647,8 +576,8 @@ export class ImportController extends BaseController {
 
       // Generate Excel buffer
       console.log('Generating Excel buffer...');
-      const buffer = await workbook.xlsx.writeBuffer() as ArrayBuffer;
-      console.log(`Excel buffer generated successfully, size: ${buffer.byteLength} bytes`);
+      const buffer = await workbook.xlsx.writeBuffer();
+      console.log(`Excel buffer generated successfully, size: ${buffer.length} bytes`);
       
       // Set response headers
       const filename = `${scenario.name.replace(/[^a-zA-Z0-9]/g, '_')}_export_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -697,8 +626,7 @@ export class ImportController extends BaseController {
       let analysisResult;
       try {
         if (importOptions.useV2) {
-          // Note: ExcelImporterV2 doesn't have analyzeImport yet - falling back to v1
-          const importer = new ExcelImporter();
+          const importer = new ExcelImporterV2();
           analysisResult = await importer.analyzeImport(req.file.path, importOptions);
         } else {
           const importer = new ExcelImporter();
@@ -748,7 +676,7 @@ export class ImportController extends BaseController {
     }
   }
 
-  private async addTemplateInfoSheet(workbook: ExcelJSTypes.Workbook, templateOptions: TemplateOptions): Promise<void> {
+  private async addTemplateInfoSheet(workbook: Workbook, templateOptions: TemplateOptions) {
     const infoSheet = workbook.addWorksheet('Template Info');
     
     // Define columns for template info
@@ -786,7 +714,7 @@ export class ImportController extends BaseController {
     infoSheet.addRow({ property: '5. Review Instructions', value: 'Check the Instructions tab for detailed requirements' });
   }
 
-  private async addProjectsTemplateSheet(workbook: ExcelJSTypes.Workbook): Promise<void> {
+  private async addProjectsTemplateSheet(workbook: Workbook) {
     const projectsSheet = workbook.addWorksheet('Projects');
     
     // Define columns with enhanced format
@@ -836,7 +764,7 @@ export class ImportController extends BaseController {
     ]);
   }
 
-  private async addPeopleTemplateSheet(workbook: ExcelJSTypes.Workbook): Promise<void> {
+  private async addPeopleTemplateSheet(workbook: Workbook) {
     const rostersSheet = workbook.addWorksheet('Rosters');
     
     // Define columns with enhanced format
@@ -891,7 +819,7 @@ export class ImportController extends BaseController {
     ]);
   }
 
-  private async addStandardAllocationsTemplateSheet(workbook: ExcelJSTypes.Workbook): Promise<void> {
+  private async addStandardAllocationsTemplateSheet(workbook: Workbook) {
     const allocationsSheet = workbook.addWorksheet('Standard Allocations');
     
     // Define columns with enhanced format
@@ -941,7 +869,7 @@ export class ImportController extends BaseController {
     ]);
   }
 
-  private async addAssignmentsTemplateSheet(workbook: ExcelJSTypes.Workbook): Promise<void> {
+  private async addAssignmentsTemplateSheet(workbook: Workbook) {
     const assignmentsSheet = workbook.addWorksheet('Project Assignments');
     
     // Define columns for assignments
@@ -996,7 +924,7 @@ export class ImportController extends BaseController {
     ]);
   }
 
-  private async addPhaseTimelinesTemplateSheet(workbook: ExcelJSTypes.Workbook): Promise<void> {
+  private async addPhaseTimelinesTemplateSheet(workbook: Workbook) {
     const phasesSheet = workbook.addWorksheet('Project Phase Timelines');
     
     // Define columns for phase timelines
@@ -1046,7 +974,7 @@ export class ImportController extends BaseController {
     ]);
   }
 
-  private async addInstructionsSheet(workbook: ExcelJSTypes.Workbook, templateOptions: TemplateOptions): Promise<void> {
+  private async addInstructionsSheet(workbook: Workbook, templateOptions: Partial<TemplateOptions>) {
     const instructionsSheet = workbook.addWorksheet('Instructions');
     
     // Define columns for instructions
@@ -1102,25 +1030,22 @@ export class ImportController extends BaseController {
     });
   }
 
-  private addFormatNotesToSheet(worksheet: ExcelJSTypes.Worksheet, notes: string[]): void {
+  private addFormatNotesToSheet(worksheet: Worksheet, notes: string[]) {
     // Add spacing
     worksheet.addRow({});
-
-    // Get first column key, default to 'A' if not set
-    const firstColumnKey = worksheet.columns[0]?.key as string || 'A';
-
+    
     // Add notes header
-    const notesHeaderRow = worksheet.addRow({ [firstColumnKey]: 'FORMAT NOTES:' });
+    const notesHeaderRow = worksheet.addRow({ [worksheet.columns[0].key]: 'FORMAT NOTES:' });
     notesHeaderRow.font = { bold: true, color: { argb: 'FF0066CC' } };
-
+    
     // Add each note
     notes.forEach(note => {
-      const noteRow = worksheet.addRow({ [firstColumnKey]: `• ${note}` });
+      const noteRow = worksheet.addRow({ [worksheet.columns[0].key]: `• ${note}` });
       noteRow.font = { italic: true, color: { argb: 'FF666666' } };
     });
   }
 
-  private async addProjectsToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addProjectsToWorkbook(workbook: Workbook, scenarioId: string, scenarioType: string) {
     const projectsSheet = workbook.addWorksheet('Projects');
     
     // Define columns for projects
@@ -1182,10 +1107,10 @@ export class ImportController extends BaseController {
         );
     }
 
-    const projects: Array<Record<string, unknown>> = await projectsQuery;
+    const projects = await projectsQuery;
 
     // Add project data
-    projects.forEach((project) => {
+    projects.forEach(project => {
       projectsSheet.addRow({
         name: scenarioType !== 'baseline' && project.scenario_name ? project.scenario_name : project.name,
         project_type: project.project_type_name,
@@ -1193,22 +1118,22 @@ export class ImportController extends BaseController {
         location: project.location_name,
         priority: scenarioType !== 'baseline' && project.scenario_priority !== null ? project.scenario_priority : project.priority,
         description: project.description,
-        start_date: project.start_date ? new Date(project.start_date as string).toISOString().split('T')[0] : '',
-        end_date: project.end_date ? new Date(project.end_date as string).toISOString().split('T')[0] : '',
+        start_date: project.start_date ? new Date(project.start_date).toISOString().split('T')[0] : '',
+        end_date: project.end_date ? new Date(project.end_date).toISOString().split('T')[0] : '',
         owner: project.owner_name,
         status: project.status,
-        aspiration_start: scenarioType !== 'baseline' && project.scenario_aspiration_start ?
-          new Date(project.scenario_aspiration_start as string).toISOString().split('T')[0] :
-          (project.aspiration_start ? new Date(project.aspiration_start as string).toISOString().split('T')[0] : ''),
-        aspiration_finish: scenarioType !== 'baseline' && project.scenario_aspiration_finish ?
-          new Date(project.scenario_aspiration_finish as string).toISOString().split('T')[0] :
-          (project.aspiration_finish ? new Date(project.aspiration_finish as string).toISOString().split('T')[0] : ''),
+        aspiration_start: scenarioType !== 'baseline' && project.scenario_aspiration_start ? 
+          new Date(project.scenario_aspiration_start).toISOString().split('T')[0] : 
+          (project.aspiration_start ? new Date(project.aspiration_start).toISOString().split('T')[0] : ''),
+        aspiration_finish: scenarioType !== 'baseline' && project.scenario_aspiration_finish ? 
+          new Date(project.scenario_aspiration_finish).toISOString().split('T')[0] : 
+          (project.aspiration_finish ? new Date(project.aspiration_finish).toISOString().split('T')[0] : ''),
         external_id: project.external_id
       });
     });
   }
 
-  private async addPeopleToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addPeopleToWorkbook(workbook: Workbook, scenarioId: string, scenarioType: string) {
     const rostersSheet = workbook.addWorksheet('Rosters');
     
     // Define columns for people
@@ -1228,7 +1153,7 @@ export class ImportController extends BaseController {
     this.styleHeaderRow(rostersSheet);
 
     // Get people data - scenarios don't typically modify people directly, so get from base table
-    const people: Array<Record<string, unknown>> = await this.db('people')
+    const people = await this.db('people')
       .leftJoin('roles', 'people.primary_person_role_id', 'roles.id')
       .leftJoin('people as supervisors', 'people.supervisor_id', 'supervisors.id')
       .leftJoin('locations', 'people.location_id', 'locations.id')
@@ -1240,7 +1165,7 @@ export class ImportController extends BaseController {
       );
 
     // Add people data
-    people.forEach((person) => {
+    people.forEach(person => {
       rostersSheet.addRow({
         name: person.name,
         email: person.email,
@@ -1255,7 +1180,7 @@ export class ImportController extends BaseController {
     });
   }
 
-  private async addStandardAllocationsToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addStandardAllocationsToWorkbook(workbook: Workbook, scenarioId: string, scenarioType: string) {
     const allocationsSheet = workbook.addWorksheet('Standard Allocations');
     
     // Define columns for standard allocations
@@ -1286,7 +1211,7 @@ export class ImportController extends BaseController {
       );
 
       // Add allocation data
-      allocations.forEach((allocation: Record<string, unknown>) => {
+      allocations.forEach(allocation => {
         allocationsSheet.addRow({
           project_type: allocation.project_type_name,
           project_sub_type: allocation.project_sub_type_name,
@@ -1311,7 +1236,7 @@ export class ImportController extends BaseController {
     }
   }
 
-  private async addAssignmentsToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addAssignmentsToWorkbook(workbook: Workbook, scenarioId: string, scenarioType: string) {
     const assignmentsSheet = workbook.addWorksheet('Project Assignments');
     
     // Define columns for assignments
@@ -1364,10 +1289,10 @@ export class ImportController extends BaseController {
         );
     }
 
-    const assignments: Array<Record<string, unknown>> = await assignmentsQuery;
+    const assignments = await assignmentsQuery;
 
     // Add assignment data
-    assignments.forEach((assignment) => {
+    assignments.forEach(assignment => {
       assignmentsSheet.addRow({
         project_name: assignment.project_name,
         person_name: assignment.person_name,
@@ -1375,14 +1300,14 @@ export class ImportController extends BaseController {
         phase_name: assignment.phase_name,
         allocation_percentage: assignment.allocation_percentage,
         assignment_date_mode: assignment.assignment_date_mode,
-        start_date: assignment.start_date ? new Date(assignment.start_date as string).toISOString().split('T')[0] : '',
-        end_date: assignment.end_date ? new Date(assignment.end_date as string).toISOString().split('T')[0] : '',
+        start_date: assignment.start_date ? new Date(assignment.start_date).toISOString().split('T')[0] : '',
+        end_date: assignment.end_date ? new Date(assignment.end_date).toISOString().split('T')[0] : '',
         notes: assignment.notes
       });
     });
   }
 
-  private async addPhaseTimelinesToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addPhaseTimelinesToWorkbook(workbook: Workbook, scenarioId: string, scenarioType: string) {
     const phasesSheet = workbook.addWorksheet('Project Phase Timelines');
     
     // Define columns for phase timelines
@@ -1423,21 +1348,21 @@ export class ImportController extends BaseController {
         );
     }
 
-    const phases: Array<Record<string, unknown>> = await phasesQuery;
+    const phases = await phasesQuery;
 
     // Add phase timeline data
-    phases.forEach((phase) => {
+    phases.forEach(phase => {
       phasesSheet.addRow({
         project_name: phase.project_name,
         phase_name: phase.phase_name,
-        start_date: phase.start_date ? new Date(phase.start_date as string).toISOString().split('T')[0] : '',
-        end_date: phase.end_date ? new Date(phase.end_date as string).toISOString().split('T')[0] : '',
+        start_date: phase.start_date ? new Date(phase.start_date).toISOString().split('T')[0] : '',
+        end_date: phase.end_date ? new Date(phase.end_date).toISOString().split('T')[0] : '',
         notes: phase.notes
       });
     });
   }
 
-  private async addMetadataToWorkbook(workbook: ExcelJSTypes.Workbook, scenario: ScenarioData, exportOptions: ExportOptions): Promise<void> {
+  private async addMetadataToWorkbook(workbook: Workbook, scenario: ScenarioRecord, exportOptions: ExportOptions) {
     const metadataSheet = workbook.addWorksheet('Export Metadata');
     
     // Define columns for metadata
@@ -1479,7 +1404,7 @@ export class ImportController extends BaseController {
     metadataSheet.addRow({ property: 'Data Integrity', value: 'Verify all relationships exist in target environment before import' });
   }
 
-  private styleHeaderRow(worksheet: ExcelJSTypes.Worksheet): void {
+  private styleHeaderRow(worksheet: Worksheet) {
     // Style the header row
     worksheet.getRow(1).font = { bold: true };
     worksheet.getRow(1).fill = {
