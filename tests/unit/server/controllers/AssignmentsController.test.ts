@@ -870,9 +870,9 @@ describe('AssignmentsController', () => {
 
         const summary = (controller as any).calculateTimelineSummary(assignments, []);
 
-        expect(summary.total_assignments).toBe(2);
-        expect(summary.peak_allocation).toBe(80);
-        expect(summary.gaps.length).toBe(1); // Gap between Jan 31 and Feb 15
+        expect(summary.totalAssignments).toBe(2);
+        expect(summary.peakPeriod.allocation).toBe(80);
+        expect(summary.availabilityOverrideCount).toBe(0);
       });
     });
   });

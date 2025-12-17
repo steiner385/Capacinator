@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
@@ -6,6 +7,74 @@ import { notificationScheduler } from '../../services/NotificationScheduler.js';
 
 // Alias for backward compatibility with existing code
 type RequestWithLogging = RequestWithContext;
+
+// ============================================================================
+// Assignment Types
+// ============================================================================
+
+/**
+ * Assignment row from database view
+ */
+interface AssignmentRow {
+  id: string;
+  person_id: string;
+  project_id: string;
+  role_id: string;
+  phase_id?: string;
+  start_date?: string;
+  end_date?: string;
+  allocation_percentage: number;
+  assignment_date_mode?: 'fixed' | 'project' | 'phase';
+  notes?: string;
+  scenario_id?: string;
+  computed_start_date?: string;
+  computed_end_date?: string;
+  project_name?: string;
+  person_name?: string;
+  role_name?: string;
+  phase_name?: string;
+  aspiration_start?: string;
+  aspiration_finish?: string;
+}
+
+/**
+ * Person row for suggestions and capacity calculations
+ */
+interface PersonRow {
+  id: string;
+  name: string;
+  email?: string;
+  primary_role_id?: string;
+  supervisor_id?: string;
+  worker_type?: 'FTE' | 'Contractor' | 'Consultant';
+  default_availability_percentage: number;
+  default_hours_per_day: number;
+  role_name?: string;
+  total_allocation?: number;
+  proficiency_level?: string;
+}
+
+/**
+ * Availability override row
+ */
+interface AvailabilityOverrideRow {
+  id: string;
+  person_id: string;
+  start_date: string;
+  end_date: string;
+  availability_percentage: number;
+  hours_per_day?: number;
+  reason?: string;
+  override_type?: string;
+}
+
+/**
+ * Assignment with overlapping info
+ */
+interface OverlappingAssignment extends AssignmentRow {
+  person_name: string;
+  project_name: string;
+}
 
 interface AssignmentConflict {
   person_id: string;
@@ -18,6 +87,31 @@ interface AssignmentConflict {
   }>;
   total_allocation: number;
   available_capacity: number;
+}
+
+/**
+ * Overlapping assignment group for conflict detection
+ */
+interface OverlappingGroup {
+  period: {
+    start: string | undefined;
+    end: string | undefined;
+  };
+  assignments: AssignmentRow[];
+  total_allocation: number;
+  is_overallocated: boolean;
+  overallocation_amount: number;
+}
+
+/**
+ * Timeline summary for person assignments
+ */
+interface TimelineSummary {
+  totalAssignments: number;
+  averageAllocation: number;
+  timeSpan: { start: string; end: string } | null;
+  peakPeriod: { start: string; end: string; allocation: number } | null;
+  availabilityOverrideCount: number;
 }
 
 export class AssignmentsController extends BaseController {
@@ -61,18 +155,18 @@ export class AssignmentsController extends BaseController {
 
       // Add date range filter using computed dates
       if (req.query.start_date) {
-        query = query.where(function(this: any) {
+        query = query.where(function(this: Knex.QueryBuilder) {
           this.where('assignments_view.computed_end_date', '>=', req.query.start_date as string)
-            .orWhere(function(this: any) {
+            .orWhere(function(this: Knex.QueryBuilder) {
               this.whereNull('assignments_view.computed_end_date')
                 .andWhere('assignments_view.end_date', '>=', req.query.start_date as string);
             });
         });
       }
       if (req.query.end_date) {
-        query = query.where(function(this: any) {
+        query = query.where(function(this: Knex.QueryBuilder) {
           this.where('assignments_view.computed_start_date', '<=', req.query.end_date as string)
-            .orWhere(function(this: any) {
+            .orWhere(function(this: Knex.QueryBuilder) {
               this.whereNull('assignments_view.computed_start_date')
                 .andWhere('assignments_view.start_date', '<=', req.query.end_date as string);
             });
@@ -88,7 +182,7 @@ export class AssignmentsController extends BaseController {
 
       // Compute dates for each assignment
       const assignmentsWithComputedDates = await Promise.all(
-        assignments.map(async (assignment: any) => {
+        assignments.map(async (assignment: AssignmentRow) => {
           // Map the query result fields to what computeAssignmentDates expects
           const assignmentForComputation = {
             ...assignment,
@@ -668,16 +762,16 @@ export class AssignmentsController extends BaseController {
       .join('projects', 'assignments_view.project_id', 'projects.id')
       .where('assignments_view.person_id', person_id)
       .where('assignments_view.scenario_id', scenarioId)
-      .where(function() {
+      .where(function(this: Knex.QueryBuilder) {
         this.where('assignments_view.computed_start_date', '<=', end_date)
-          .orWhere(function() {
+          .orWhere(function(this: Knex.QueryBuilder) {
             this.whereNull('assignments_view.computed_start_date')
               .andWhere('assignments_view.start_date', '<=', end_date);
           });
       })
-      .where(function() {
+      .where(function(this: Knex.QueryBuilder) {
         this.where('assignments_view.computed_end_date', '>=', start_date)
-          .orWhere(function() {
+          .orWhere(function(this: Knex.QueryBuilder) {
             this.whereNull('assignments_view.computed_end_date')
               .andWhere('assignments_view.end_date', '>=', start_date);
           });
@@ -692,7 +786,7 @@ export class AssignmentsController extends BaseController {
       'projects.name as project_name'
     );
 
-    const total_allocation = overlapping.reduce((sum: number, assignment: any) => 
+    const total_allocation = overlapping.reduce((sum: number, assignment: OverlappingAssignment) =>
       sum + assignment.allocation_percentage, allocation_percentage
     );
 
@@ -707,10 +801,10 @@ export class AssignmentsController extends BaseController {
       return {
         person_id,
         person_name: person.name,
-        conflicting_projects: overlapping.map((a: any) => ({
+        conflicting_projects: overlapping.map((a: OverlappingAssignment) => ({
           project_name: a.project_name,
-          start_date: a.computed_start_date || a.start_date,
-          end_date: a.computed_end_date || a.end_date,
+          start_date: a.computed_start_date || a.start_date || '',
+          end_date: a.computed_end_date || a.end_date || '',
           allocation_percentage: a.allocation_percentage
         })),
         total_allocation,
@@ -736,16 +830,16 @@ export class AssignmentsController extends BaseController {
 
       if (start_date && end_date) {
         query = query
-          .where(function() {
+          .where(function(this: Knex.QueryBuilder) {
             this.where('assignments_view.computed_start_date', '<=', end_date)
-              .orWhere(function() {
+              .orWhere(function(this: Knex.QueryBuilder) {
                 this.whereNull('assignments_view.computed_start_date')
                   .andWhere('assignments_view.start_date', '<=', end_date);
               });
           })
-          .where(function() {
+          .where(function(this: Knex.QueryBuilder) {
             this.where('assignments_view.computed_end_date', '>=', start_date)
-              .orWhere(function() {
+              .orWhere(function(this: Knex.QueryBuilder) {
                 this.whereNull('assignments_view.computed_end_date')
                   .andWhere('assignments_view.end_date', '>=', start_date);
               });
@@ -758,7 +852,7 @@ export class AssignmentsController extends BaseController {
       );
 
       // Transform date fields
-      const transformedAssignments = transformDatesInArray(assignments, COMMON_DATE_FIELDS);
+      const transformedAssignments = transformDatesInArray(assignments, COMMON_DATE_FIELDS) as AssignmentRow[];
 
       // Group by overlapping time periods
       const conflicts = this.groupOverlappingAssignments(transformedAssignments);
@@ -856,18 +950,18 @@ export class AssignmentsController extends BaseController {
         );
 
       if (start_date) {
-        query = query.where(function() {
+        query = query.where(function(this: Knex.QueryBuilder) {
           this.where('assignments_view.computed_end_date', '>=', start_date)
-            .orWhere(function() {
+            .orWhere(function(this: Knex.QueryBuilder) {
               this.whereNull('assignments_view.computed_end_date')
                 .andWhere('assignments_view.end_date', '>=', start_date);
             });
         });
       }
       if (end_date) {
-        query = query.where(function() {
+        query = query.where(function(this: Knex.QueryBuilder) {
           this.where('assignments_view.computed_start_date', '<=', end_date)
-            .orWhere(function() {
+            .orWhere(function(this: Knex.QueryBuilder) {
               this.whereNull('assignments_view.computed_start_date')
                 .andWhere('assignments_view.start_date', '<=', end_date);
             });
@@ -892,8 +986,8 @@ export class AssignmentsController extends BaseController {
       const availabilityOverrides = await availabilityQuery.orderBy('start_date');
 
       // Transform date fields
-      const transformedAssignments = transformDatesInArray(assignments, COMMON_DATE_FIELDS);
-      const transformedOverrides = transformDatesInArray(availabilityOverrides, COMMON_DATE_FIELDS);
+      const transformedAssignments = transformDatesInArray(assignments, COMMON_DATE_FIELDS) as AssignmentRow[];
+      const transformedOverrides = transformDatesInArray(availabilityOverrides, COMMON_DATE_FIELDS) as AvailabilityOverrideRow[];
 
       return {
         person_id,
@@ -910,10 +1004,10 @@ export class AssignmentsController extends BaseController {
     }
   })
 
-  private groupOverlappingAssignments(assignments: any[]) {
+  private groupOverlappingAssignments(assignments: AssignmentRow[]): OverlappingGroup[] {
     // Group assignments that overlap in time
-    const groups = [];
-    const processed = new Set();
+    const groups: OverlappingGroup[] = [];
+    const processed = new Set<number>();
 
     for (let i = 0; i < assignments.length; i++) {
       if (processed.has(i)) continue;
@@ -924,7 +1018,9 @@ export class AssignmentsController extends BaseController {
           end: assignments[i].end_date
         },
         assignments: [assignments[i]],
-        total_allocation: assignments[i].allocation_percentage
+        total_allocation: assignments[i].allocation_percentage,
+        is_overallocated: false,
+        overallocation_amount: 0
       };
 
       processed.add(i);
@@ -948,30 +1044,33 @@ export class AssignmentsController extends BaseController {
       }
 
       if (group.total_allocation > 100) {
-        groups.push({
-          ...group,
-          is_overallocated: true,
-          overallocation_amount: group.total_allocation - 100
-        });
+        group.is_overallocated = true;
+        group.overallocation_amount = group.total_allocation - 100;
+        groups.push(group);
       }
     }
 
     return groups;
   }
 
-  private datesOverlap(start1: string, end1: string, start2: string, end2: string): boolean {
+  private datesOverlap(start1: string | undefined, end1: string | undefined, start2: string | undefined, end2: string | undefined): boolean {
+    if (!start1 || !end1 || !start2 || !end2) return false;
     return start1 <= end2 && end1 >= start2;
   }
 
-  private minDate(date1: string, date2: string): string {
+  private minDate(date1: string | undefined, date2: string | undefined): string | undefined {
+    if (!date1) return date2;
+    if (!date2) return date1;
     return date1 < date2 ? date1 : date2;
   }
 
-  private maxDate(date1: string, date2: string): string {
+  private maxDate(date1: string | undefined, date2: string | undefined): string | undefined {
+    if (!date1) return date2;
+    if (!date2) return date1;
     return date1 > date2 ? date1 : date2;
   }
 
-  private calculateSuggestionScore(person: any, availableCapacity: number): number {
+  private calculateSuggestionScore(person: PersonRow, availableCapacity: number): number {
     let score = 0;
 
     // Higher score for more available capacity
@@ -984,7 +1083,7 @@ export class AssignmentsController extends BaseController {
       'Intermediate': 20,
       'Junior': 10
     };
-    score += proficiencyScores[person.proficiency_level] || 0;
+    score += (person.proficiency_level && proficiencyScores[person.proficiency_level]) || 0;
 
     // Could add years of experience if it was in the schema
     // score += Math.min(person.years_experience * 2, 20);
@@ -992,56 +1091,89 @@ export class AssignmentsController extends BaseController {
     return score;
   }
 
-  private calculateTimelineSummary(assignments: any[], availabilityOverrides: any[]) {
-    const summary = {
-      total_assignments: assignments.length,
-      total_days_assigned: 0,
-      average_allocation: 0,
-      peak_allocation: 0,
-      gaps: [] as any[]
+  private calculateTimelineSummary(assignments: AssignmentRow[], availabilityOverrides: AvailabilityOverrideRow[]): TimelineSummary {
+    if (assignments.length === 0) {
+      return {
+        totalAssignments: 0,
+        averageAllocation: 0,
+        timeSpan: null,
+        peakPeriod: null,
+        availabilityOverrideCount: availabilityOverrides.length
+      };
+    }
+
+    // Define type for validated assignments with effective dates
+    type ValidatedAssignment = AssignmentRow & {
+      effective_start_date: string;
+      effective_end_date: string;
     };
 
-    if (assignments.length === 0) return summary;
-
     // Filter out assignments without any valid dates and use effective dates
-    const validAssignments = assignments.filter(a => {
+    const validAssignments: ValidatedAssignment[] = assignments.filter(a => {
       const startDate = a.computed_start_date || a.start_date;
       const endDate = a.computed_end_date || a.end_date;
       return startDate && endDate;
     }).map(a => ({
       ...a,
-      effective_start_date: a.computed_start_date || a.start_date,
-      effective_end_date: a.computed_end_date || a.end_date
+      effective_start_date: (a.computed_start_date || a.start_date) as string,
+      effective_end_date: (a.computed_end_date || a.end_date) as string
     }));
-    
-    // Calculate metrics
-    let totalAllocationDays = 0;
-    validAssignments.forEach(assignment => {
-      const days = this.daysBetween(assignment.effective_start_date, assignment.effective_end_date);
-      summary.total_days_assigned += days;
-      totalAllocationDays += days * assignment.allocation_percentage;
-      summary.peak_allocation = Math.max(summary.peak_allocation, assignment.allocation_percentage);
-    });
 
-    summary.average_allocation = totalAllocationDays / summary.total_days_assigned;
-
-    // Find gaps between assignments (using filtered valid assignments)
-    const sortedAssignments = [...validAssignments].sort((a, b) => {
-      return a.effective_start_date.localeCompare(b.effective_start_date);
-    });
-
-    for (let i = 0; i < sortedAssignments.length - 1; i++) {
-      const gap = this.daysBetween(sortedAssignments[i].effective_end_date, sortedAssignments[i + 1].effective_start_date) - 1;
-      if (gap > 0) {
-        summary.gaps.push({
-          start: sortedAssignments[i].effective_end_date,
-          end: sortedAssignments[i + 1].effective_start_date,
-          days: gap
-        });
-      }
+    if (validAssignments.length === 0) {
+      return {
+        totalAssignments: assignments.length,
+        averageAllocation: 0,
+        timeSpan: null,
+        peakPeriod: null,
+        availabilityOverrideCount: availabilityOverrides.length
+      };
     }
 
-    return summary;
+    // Calculate metrics
+    let totalAllocationDays = 0;
+    let totalDaysAssigned = 0;
+    let peakAllocation = 0;
+    let peakIndex = -1;
+
+    validAssignments.forEach((assignment, index) => {
+      const days = this.daysBetween(assignment.effective_start_date, assignment.effective_end_date);
+      totalDaysAssigned += days;
+      totalAllocationDays += days * assignment.allocation_percentage;
+      if (assignment.allocation_percentage > peakAllocation) {
+        peakAllocation = assignment.allocation_percentage;
+        peakIndex = index;
+      }
+    });
+
+    const averageAllocation = totalDaysAssigned > 0 ? totalAllocationDays / totalDaysAssigned : 0;
+
+    // Sort to find time span
+    const sortedAssignments = [...validAssignments].sort((a, b) =>
+      a.effective_start_date.localeCompare(b.effective_start_date)
+    );
+
+    const timeSpan = {
+      start: sortedAssignments[0].effective_start_date,
+      end: sortedAssignments.reduce((maxEnd, a) =>
+        a.effective_end_date > maxEnd ? a.effective_end_date : maxEnd,
+        sortedAssignments[0].effective_end_date
+      )
+    };
+
+    const peakAssignment = peakIndex >= 0 ? validAssignments[peakIndex] : null;
+    const peakPeriod = peakAssignment ? {
+      start: peakAssignment.effective_start_date,
+      end: peakAssignment.effective_end_date,
+      allocation: peakAllocation
+    } : null;
+
+    return {
+      totalAssignments: assignments.length,
+      averageAllocation,
+      timeSpan,
+      peakPeriod,
+      availabilityOverrideCount: availabilityOverrides.length
+    };
   }
 
   deleteTestData = this.asyncHandler(async (req: RequestWithLogging, res: Response) => {
@@ -1075,7 +1207,7 @@ export class AssignmentsController extends BaseController {
   /**
    * Compute assignment start and end dates based on assignment_date_mode
    */
-  private async computeAssignmentDates(assignment: any): Promise<{
+  private async computeAssignmentDates(assignment: AssignmentRow & { project?: { name?: string; aspiration_start?: string; aspiration_finish?: string; start_date?: string | null; end_date?: string | null } }): Promise<{
     computed_start_date?: string;
     computed_end_date?: string;
   }> {
