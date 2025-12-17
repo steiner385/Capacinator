@@ -2,6 +2,15 @@ import { Knex } from 'knex';
 import { AuditService } from '../services/audit/AuditService.js';
 import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
 
+/**
+ * Generic database record type
+ */
+interface DatabaseRecord {
+  id?: string | number;
+  pk?: string | number;
+  [key: string]: unknown;
+}
+
 // Table name mapping for audit configuration
 const AUDIT_TABLE_MAPPING: Record<string, string> = {
   'person_availability_overrides': 'availability',
@@ -54,9 +63,16 @@ export class AuditedDatabase {
 
   // Get a table query builder with audit capabilities
   table(tableName: string): AuditableQueryBuilder {
-    const queryBuilder = this.db(tableName) as any;
+    const queryBuilder = this.db(tableName) as AuditableQueryBuilder & {
+      insert: (data: DatabaseRecord | DatabaseRecord[]) => Promise<unknown>;
+      update: (data: Record<string, unknown>) => Promise<unknown>;
+      del: () => Promise<number>;
+      delete: () => Promise<number>;
+      clone: () => Knex.QueryBuilder;
+      select: (...args: string[]) => Promise<DatabaseRecord[]>;
+    };
     const auditedDbInstance = this;
-    
+
     // Add audit context storage
     let auditContext: AuditContext = { ...this.defaultContext };
     let skipAuditFlag = false;
@@ -75,30 +91,30 @@ export class AuditedDatabase {
 
     // Wrap insert method
     const originalInsert = queryBuilder.insert.bind(queryBuilder);
-    queryBuilder.insert = async function(data: any) {
+    queryBuilder.insert = async function(data: DatabaseRecord | DatabaseRecord[]) {
       const result = await originalInsert(data);
-      
+
       if (!skipAuditFlag && shouldAuditTable(tableName)) {
         await auditedDbInstance._auditInsert(tableName, data, result, auditContext);
       }
-      
+
       return result;
     };
 
     // Wrap update method
     const originalUpdate = queryBuilder.update.bind(queryBuilder);
-    queryBuilder.update = async function(data: any) {
+    queryBuilder.update = async function(data: Record<string, unknown>) {
       if (!skipAuditFlag && shouldAuditTable(tableName)) {
         // Get old values before update
-        const oldRecords = await queryBuilder.clone().select('*');
-        
+        const oldRecords = await queryBuilder.clone().select('*') as DatabaseRecord[];
+
         const result = await originalUpdate(data);
-        
+
         // Log audit for each updated record
         for (const oldRecord of oldRecords) {
           await auditedDbInstance._auditUpdate(tableName, oldRecord, data, auditContext);
         }
-        
+
         return result;
       } else {
         return await originalUpdate(data);
@@ -110,15 +126,15 @@ export class AuditedDatabase {
     queryBuilder.del = queryBuilder.delete = async function() {
       if (!skipAuditFlag && shouldAuditTable(tableName)) {
         // Get records before deletion
-        const recordsToDelete = await queryBuilder.clone().select('*');
-        
+        const recordsToDelete = await queryBuilder.clone().select('*') as DatabaseRecord[];
+
         const result = await originalDel();
-        
+
         // Log audit for each deleted record
         for (const record of recordsToDelete) {
           await auditedDbInstance._auditDelete(tableName, record, auditContext);
         }
-        
+
         return result;
       } else {
         return await originalDel();
@@ -129,22 +145,23 @@ export class AuditedDatabase {
   }
 
   // Helper method to audit insert operations
-  async _auditInsert(tableName: string, data: any, result: any, context: AuditContext): Promise<void> {
+  async _auditInsert(tableName: string, data: DatabaseRecord | DatabaseRecord[], result: unknown, context: AuditContext): Promise<void> {
     try {
       // For single inserts, data might be an object, for bulk inserts, an array
       const records = Array.isArray(data) ? data : [data];
-      
+      const resultArray = Array.isArray(result) ? result as DatabaseRecord[] : [];
+
       for (let i = 0; i < records.length; i++) {
         const record = records[i];
-        
+
         // Try to get the record ID from various sources
         let recordId: string;
         if (record.id) {
-          recordId = record.id;
-        } else if (Array.isArray(result) && result[i]) {
-          recordId = result[i].id || result[i];
-        } else if (result && result.id) {
-          recordId = result.id;
+          recordId = String(record.id);
+        } else if (resultArray[i]) {
+          recordId = String(resultArray[i].id || resultArray[i]);
+        } else if (result && typeof result === 'object' && 'id' in result) {
+          recordId = String((result as DatabaseRecord).id);
         } else {
           recordId = `unknown-${Date.now()}-${i}`;
         }
@@ -168,10 +185,10 @@ export class AuditedDatabase {
   }
 
   // Helper method to audit update operations
-  async _auditUpdate(tableName: string, oldRecord: any, newData: any, context: AuditContext): Promise<void> {
+  async _auditUpdate(tableName: string, oldRecord: DatabaseRecord, newData: Record<string, unknown>, context: AuditContext): Promise<void> {
     try {
       const recordId = oldRecord.id || oldRecord.pk || `unknown-${Date.now()}`;
-      
+
       // Merge old record with new data to get complete new values
       const newValues = { ...oldRecord, ...newData };
 
@@ -194,7 +211,7 @@ export class AuditedDatabase {
   }
 
   // Helper method to audit delete operations
-  async _auditDelete(tableName: string, record: any, context: AuditContext): Promise<void> {
+  async _auditDelete(tableName: string, record: DatabaseRecord, context: AuditContext): Promise<void> {
     try {
       const recordId = record.id || record.pk || `unknown-${Date.now()}`;
 
@@ -255,10 +272,26 @@ export class AuditedDatabase {
   }
 }
 
+/**
+ * Audited database callable interface
+ */
+type AuditedDbFunction = ((tableName?: string) => AuditableQueryBuilder | Knex) & {
+  setDefaultContext: (context: AuditContext) => void;
+  table: (tableName: string) => AuditableQueryBuilder;
+  raw: Knex;
+  transaction: Knex['transaction'] | undefined;
+  migrate: Knex['migrate'] | undefined;
+  seed: Knex['seed'] | undefined;
+  schema: Knex['schema'] | undefined;
+  fn: Knex['fn'] | undefined;
+  ref: Knex['ref'] | undefined;
+  destroy: (() => Promise<void>) | undefined;
+};
+
 // Factory function to create audited database with proper proxy
-export function createAuditedDatabase(db: Knex, auditService?: AuditService): any {
+export function createAuditedDatabase(db: Knex, auditService?: AuditService): AuditedDbFunction {
   const auditedDb = new AuditedDatabase(db, auditService);
-  
+
   // Create a function that acts like Knex but with audit capabilities
   const dbFunction = function(tableName?: string) {
     if (tableName) {
@@ -269,26 +302,26 @@ export function createAuditedDatabase(db: Knex, auditService?: AuditService): an
 
   // Proxy to forward all properties and methods
   return new Proxy(dbFunction, {
-    get(target, prop) {
+    get(target, prop: string) {
       // Handle direct method calls on the audited database
       if (prop in auditedDb) {
-        const value = (auditedDb as any)[prop];
-        return typeof value === 'function' ? value.bind(auditedDb) : value;
+        const value = (auditedDb as unknown as Record<string, unknown>)[prop];
+        return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(auditedDb) : value;
       }
-      
+
       // Handle calls to the underlying database
       if (prop in auditedDb.raw) {
-        const value = (auditedDb.raw as any)[prop];
-        return typeof value === 'function' ? value.bind(auditedDb.raw) : value;
+        const value = (auditedDb.raw as unknown as Record<string, unknown>)[prop];
+        return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(auditedDb.raw) : value;
       }
-      
+
       return undefined;
     },
     has(target, prop) {
       return (prop in auditedDb) || (prop in auditedDb.raw);
     },
     apply(target, thisArg, args) {
-      return target.apply(thisArg, args);
+      return target.apply(thisArg, args as [string?]);
     }
-  });
+  }) as AuditedDbFunction;
 }
