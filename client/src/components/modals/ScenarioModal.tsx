@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { GitBranch } from 'lucide-react';
 import { api } from '../../lib/api-client';
+import { queryKeys } from '../../lib/queryKeys';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,7 @@ export const CreateScenarioModal: React.FC<CreateScenarioModalProps> = ({
   const createMutation = useMutation({
     mutationFn: (data: any) => api.scenarios.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scenarios.all });
       handleClose();
       setName('');
       setDescription('');
@@ -156,7 +157,7 @@ export const EditScenarioModal: React.FC<EditScenarioModalProps> = ({
   const updateMutation = useMutation({
     mutationFn: (data: any) => api.scenarios.update(scenario.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scenarios.all });
       handleClose();
     },
   });

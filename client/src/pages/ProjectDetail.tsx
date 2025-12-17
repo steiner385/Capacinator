@@ -25,6 +25,7 @@ import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
@@ -112,7 +113,7 @@ export function ProjectDetail() {
 
   // Fetch project details
   const { data: project, isLoading, error } = useQuery({
-    queryKey: ['project', id],
+    queryKey: queryKeys.projects.detail(id!),
     queryFn: async () => {
       const response = await api.projects.get(id!);
       return response.data.data as ProjectDetail;
@@ -122,7 +123,7 @@ export function ProjectDetail() {
 
   // Fetch project types for dropdown
   const { data: projectTypes } = useQuery({
-    queryKey: ['project-types'],
+    queryKey: queryKeys.projectTypes.list(),
     queryFn: async () => {
       const response = await api.projectTypes.list();
       return response.data.data || response.data;
@@ -131,7 +132,7 @@ export function ProjectDetail() {
 
   // Fetch locations for dropdown
   const { data: locations } = useQuery({
-    queryKey: ['locations'],
+    queryKey: queryKeys.locations.list(),
     queryFn: async () => {
       const response = await api.locations.list();
       return response.data.data;
@@ -145,7 +146,7 @@ export function ProjectDetail() {
       return response.data.data || response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id!) });
     }
   });
 
@@ -155,7 +156,7 @@ export function ProjectDetail() {
       await api.assignments.delete(assignmentId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id!) });
     }
   });
 
@@ -166,7 +167,7 @@ export function ProjectDetail() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id!) });
       setSelectedAssignment(null);
       setIsEditingAssignment(false);
     }

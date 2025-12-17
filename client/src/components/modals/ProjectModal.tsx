@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import { queryKeys } from '../../lib/queryKeys';
 import { useModalForm } from '../../hooks/useModalForm';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -91,8 +92,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       const response = await api.projects.update(id, data);
       return response.data;
     },
-    queryKeysToInvalidate: [['projects']],
-    additionalUpdateQueryKeys: (item) => [['project', item.id]],
+    queryKeysToInvalidate: [queryKeys.projects.all],
+    additionalUpdateQueryKeys: (item) => [queryKeys.projects.detail(item.id)],
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
     },

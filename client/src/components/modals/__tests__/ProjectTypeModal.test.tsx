@@ -408,7 +408,6 @@ describe('ProjectTypeModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Create Project Type/i }));
 
       await waitFor(() => {
-        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['projectTypes'] });
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['project-types'] });
       });
 
@@ -484,7 +483,7 @@ describe('ProjectTypeModal', () => {
       fireEvent.click(screen.getByRole('button', { name: /Update Project Type/i }));
 
       await waitFor(() => {
-        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['projectType', 'project-type-1'] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['project-types', 'detail', 'project-type-1'] });
       });
 
       invalidateSpy.mockRestore();

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from './InteractiveTimeline';
 import useInteractiveTimeline from '../hooks/useInteractiveTimeline';
 import './InteractiveTimeline.css';
@@ -92,7 +93,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Fetch project phases
   const { data: phasesData, isLoading } = useQuery({
-    queryKey: ['project-phases', projectId],
+    queryKey: queryKeys.projectPhases.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data;
@@ -101,7 +102,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Fetch available phase templates for adding new phases
   const { data: phaseTemplates } = useQuery({
-    queryKey: ['phase-templates'],
+    queryKey: queryKeys.phases.templates(),
     queryFn: async () => {
       const response = await api.phases.list();
       return response.data;
@@ -110,7 +111,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Fetch project phase dependencies
   const { data: dependenciesData, refetch: refetchDependencies } = useQuery({
-    queryKey: ['project-phase-dependencies', projectId],
+    queryKey: queryKeys.projectPhases.dependencies(projectId),
     queryFn: async () => {
       const response = await api.projectPhaseDependencies.list({ project_id: projectId });
       return response.data;
@@ -264,13 +265,13 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     },
     onMutate: async ({ phaseId, updates }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['project-phases', projectId] });
-      
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+
       // Snapshot the previous value
-      const previousPhases = queryClient.getQueryData(['project-phases', projectId]);
-      
+      const previousPhases = queryClient.getQueryData(queryKeys.projectPhases.byProject(projectId));
+
       // Optimistically update to the new value
-      queryClient.setQueryData(['project-phases', projectId], (old: any) => {
+      queryClient.setQueryData(queryKeys.projectPhases.byProject(projectId), (old: any) => {
         if (!old?.data) return old;
         return {
           ...old,
@@ -288,9 +289,9 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     onError: (err: any, variables, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousPhases) {
-        queryClient.setQueryData(['project-phases', projectId], context.previousPhases);
+        queryClient.setQueryData(queryKeys.projectPhases.byProject(projectId), context.previousPhases);
       }
-      
+
       // Show validation errors to user
       if (err?.response?.data?.validation_errors) {
         const errors = err.response.data.validation_errors;
@@ -303,7 +304,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       onPhasesChange?.();
     }
   });
@@ -314,7 +315,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       await api.projectPhases.delete(phaseId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       onPhasesChange?.();
     }
   });
@@ -326,7 +327,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       onPhasesChange?.();
     }
   });

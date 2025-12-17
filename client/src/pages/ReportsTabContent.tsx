@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  BarChart3, PieChart, TrendingUp, Users, Calendar, 
+import {
+  BarChart3, PieChart, TrendingUp, Users, Calendar,
   Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, UserMinus, ClipboardList, ChevronDown,
   Briefcase, User, Plus, X, Minus
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { useScenario } from '../contexts/ScenarioContext';
 import { getDefaultReportDateRange } from '../utils/date';
 import {
@@ -92,7 +93,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch report data
   const { data: capacityReport, isLoading: capacityLoading, refetch: refetchCapacity } = useQuery({
-    queryKey: ['report-capacity', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.capacity(filters, currentScenario?.id),
     queryFn: async () => {
       const [capacityResponse, peopleResponse] = await Promise.all([
         api.reporting.getCapacity(filters),
@@ -159,7 +160,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   const { data: utilizationReport, isLoading: utilizationLoading, refetch: refetchUtilization } = useQuery({
-    queryKey: ['report-utilization', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.utilization(filters, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getUtilization(filters);
       const data = response.data.data;
@@ -218,7 +219,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   const { data: demandReport, isLoading: demandLoading, refetch: refetchDemand } = useQuery({
-    queryKey: ['report-demand', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.demand(filters, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getDemand(filters);
       const data = response.data.data;
@@ -291,7 +292,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   const { data: gapsReport, isLoading: gapsLoading, refetch: refetchGaps } = useQuery({
-    queryKey: ['report-gaps', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.gaps(filters, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getGaps(filters);
       const data = response.data.data;
@@ -339,7 +340,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch person's assignments for modals
   const { data: personAssignments = [], refetch: refetchPersonAssignments } = useQuery({
-    queryKey: ['person-assignments', selectedPerson?.id, currentScenario?.id],
+    queryKey: queryKeys.people.assignments(selectedPerson?.id, currentScenario?.id),
     queryFn: async () => {
       const response = await api.assignments.list({ person_id: selectedPerson.id });
       return response.data?.data || [];
@@ -349,7 +350,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch available projects with gaps for recommendations
   const { data: availableProjects = [], refetch: refetchAvailableProjects } = useQuery({
-    queryKey: ['available-projects', selectedPerson?.id, currentScenario?.id],
+    queryKey: queryKeys.reports.availableProjects(selectedPerson?.id, currentScenario?.id),
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data?.data || [];
@@ -359,7 +360,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch filter options
   const { data: filterOptions = {} } = useQuery({
-    queryKey: ['report-filter-options'],
+    queryKey: queryKeys.reports.filterOptions(),
     queryFn: async () => {
       const [projectTypes, locations, roles] = await Promise.all([
         api.projectTypes.list(),

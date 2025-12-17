@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { 
   parseDateSafe, 
@@ -91,7 +92,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
   // Fetch project phases
   const { data: phasesData, isLoading: phasesLoading } = useQuery({
-    queryKey: ['project-phases', projectId],
+    queryKey: queryKeys.projectPhases.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data.data || response.data;
@@ -100,7 +101,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
   // Fetch dependencies
   const { data: dependenciesData, isLoading: dependenciesLoading } = useQuery({
-    queryKey: ['project-phase-dependencies', projectId],
+    queryKey: queryKeys.projectPhases.dependencies(projectId),
     queryFn: async () => {
       const response = await api.projectPhaseDependencies.list({ project_id: projectId });
       return response.data.data || response.data;
@@ -109,7 +110,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
 
   // Fetch available phase templates
   const { data: phaseTemplates } = useQuery({
-    queryKey: ['phase-templates'],
+    queryKey: queryKeys.phases.templates(),
     queryFn: async () => {
       const response = await api.phases.list();
       return response.data.data || response.data;
@@ -123,7 +124,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
       return response.data.data || response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       setEditingPhase(null);
     },
     onError: (err: any, variables, context) => {
@@ -148,7 +149,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
       return response.data.data || response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       setShowAddPhaseModal(false);
       setPhaseForm({ phase_name: '', start_date: '', end_date: '' });
     }
@@ -159,7 +160,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
       await api.projectPhases.delete(phaseId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
     }
   });
 
@@ -174,7 +175,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
     },
     onSuccess: async (newDependency) => {
       // Refresh dependencies first
-      await queryClient.invalidateQueries({ queryKey: ['project-phase-dependencies', projectId] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.dependencies(projectId) });
       
       // Check if the new dependency creates date conflicts and auto-correct if needed
       setTimeout(async () => {
@@ -212,7 +213,7 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
       await api.projectPhaseDependencies.delete(dependencyId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phase-dependencies', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.dependencies(projectId) });
     }
   });
 
@@ -772,10 +773,10 @@ export function PhaseTimeline({ projectId, projectName }: PhaseTimelineProps) {
                     
                     console.log('✅ Bulk corrections applied:', result.data);
                   }
-                  
+
                   // Force re-validation and refresh after all corrections are applied
-                  queryClient.invalidateQueries({ queryKey: ['project-phases'] });
-                  queryClient.invalidateQueries({ queryKey: ['project-phase-dependencies'] });
+                  queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.all });
+                  queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.all });
                   console.log('🎉 Fix All completed! Refreshing data...');
                 } catch (error) {
                   console.error('❌ Fix All failed:', error);

@@ -5,6 +5,7 @@ import {
   TrendingUp, Sparkles, Clock, BarChart3, Link2, RefreshCw, ExternalLink, Trash2
 } from 'lucide-react';
 import { api } from '../../lib/api-client';
+import { queryKeys } from '../../lib/queryKeys';
 import { formatDate } from '../../utils/date';
 import { calculatePhaseDurationWeeks } from '../../utils/phaseDurations';
 import {
@@ -77,13 +78,13 @@ export function SmartAssignmentModal({
   // Invalidate project phases cache when modal opens to ensure fresh data
   useEffect(() => {
     if (isOpen && formData.project_id) {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', formData.project_id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(formData.project_id) });
     }
   }, [isOpen, formData.project_id, queryClient]);
 
   // Fetch person details with current assignments
   const { data: person } = useQuery({
-    queryKey: ['person-with-assignments', personId],
+    queryKey: queryKeys.people.withAssignments(personId),
     queryFn: async () => {
       const response = await api.people.get(personId);
       // The PeopleController returns the person data directly, not wrapped in { data: ... }
@@ -95,7 +96,7 @@ export function SmartAssignmentModal({
 
   // Fetch all required data
   const { data: projects } = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects.list(),
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data;
@@ -104,10 +105,10 @@ export function SmartAssignmentModal({
 
   // Fetch all project allocations to determine which projects have demand
   const { data: allProjectAllocations, isLoading: isLoadingAllocations } = useQuery({
-    queryKey: ['all-project-allocations'],
+    queryKey: queryKeys.projectAllocations.allProjects(),
     queryFn: async () => {
       if (!projects?.data) return [];
-      
+
       // Fetch allocations for all projects in parallel
       const allocationPromises = projects.data.map(async (project: any) => {
         try {
@@ -124,14 +125,14 @@ export function SmartAssignmentModal({
           };
         }
       });
-      
+
       return Promise.all(allocationPromises);
     },
     enabled: !!projects?.data
   });
 
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       // console.log('Roles response:', response);
@@ -140,7 +141,7 @@ export function SmartAssignmentModal({
   });
 
   const { data: phases } = useQuery({
-    queryKey: ['phases'],
+    queryKey: queryKeys.phases.list(),
     queryFn: async () => {
       const response = await api.phases.list();
       return response.data;
@@ -149,7 +150,7 @@ export function SmartAssignmentModal({
 
   // Fetch project phases with dates
   const { data: projectPhases, refetch: refetchPhases } = useQuery({
-    queryKey: ['project-phases', formData.project_id],
+    queryKey: queryKeys.projectPhases.byProject(formData.project_id),
     queryFn: async () => {
       if (!formData.project_id) return [];
       const response = await api.projects.getPhases(formData.project_id);
@@ -160,7 +161,7 @@ export function SmartAssignmentModal({
 
   // Fetch project allocations to determine which roles and phases have demand
   const { data: projectAllocations } = useQuery({
-    queryKey: ['project-allocations', formData.project_id],
+    queryKey: queryKeys.projects.allocations(formData.project_id),
     queryFn: async () => {
       if (!formData.project_id) return [];
       const response = await api.projectAllocations.get(formData.project_id);
@@ -434,38 +435,37 @@ export function SmartAssignmentModal({
     onSuccess: (response) => {
       // Invalidate all queries that might be affected by the new assignment
       const projectId = selectedRecommendation?.project.id || formData.project_id;
-      
+
       // Person-related queries
-      queryClient.invalidateQueries({ queryKey: ['person', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-with-assignments', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-assignments', personId] });
-      
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.withAssignments(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.assignments(personId) });
+
       // Project-related queries
       if (projectId) {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.assignments(projectId) });
       }
-      
+
       // General queries
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+
       onClose();
     },
     onError: (error: any) => {
       console.error('Failed to create assignment');
       console.error('Error details:', error.response?.data?.details);
       console.error('Error message:', error.response?.data?.error || error.response?.data?.message);
-      
-      const errorMessage = error.response?.data?.error || 
-                          error.response?.data?.message || 
-                          error.response?.data?.details || 
-                          error.message || 
+
+      const errorMessage = error.response?.data?.error ||
+                          error.response?.data?.message ||
+                          error.response?.data?.details ||
+                          error.message ||
                           'Failed to create assignment';
-      
+
       alert(`Error: ${errorMessage}\n\nDetails: ${error.response?.data?.details || 'Unknown error'}`);
     }
   });
@@ -477,12 +477,11 @@ export function SmartAssignmentModal({
     },
     onSuccess: () => {
       // Invalidate queries after deletion
-      queryClient.invalidateQueries({ queryKey: ['person', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-with-assignments', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.withAssignments(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     },
     onError: (error: any) => {
       console.error('Failed to delete assignment:', error);

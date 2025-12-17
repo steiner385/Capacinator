@@ -446,7 +446,7 @@ describe('PersonModal', () => {
       });
 
       await waitFor(() => {
-        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['person', 'person-1'] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['people', 'detail', 'person-1'] });
       });
 
       invalidateSpy.mockRestore();

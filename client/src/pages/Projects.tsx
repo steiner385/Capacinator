@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, Users } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -34,7 +35,7 @@ export function Projects() {
 
   // Fetch projects - will refetch when scenario changes
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useQuery({
-    queryKey: ['projects', filters, currentScenario?.id],
+    queryKey: queryKeys.projects.list(filters, currentScenario?.id),
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
@@ -57,7 +58,7 @@ export function Projects() {
 
   // Fetch locations for filter
   const { data: locations } = useQuery({
-    queryKey: ['locations'],
+    queryKey: queryKeys.locations.list(),
     queryFn: async () => {
       const response = await api.locations.list();
       // Handle both wrapped {data: [...]} and direct array [...] responses
@@ -67,7 +68,7 @@ export function Projects() {
 
   // Fetch project types for filter
   const { data: projectTypes } = useQuery({
-    queryKey: ['projectTypes'],
+    queryKey: queryKeys.projectTypes.list(),
     queryFn: async () => {
       const response = await api.projectTypes.list();
       // Handle both wrapped {data: [...]} and direct array [...] responses
@@ -81,7 +82,7 @@ export function Projects() {
       await api.projects.delete(projectId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
     }
   });
 

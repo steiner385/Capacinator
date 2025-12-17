@@ -1,14 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { 
-  Calendar, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
-  Lock, 
-  Edit2, 
-  Save, 
-  X, 
+import {
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  Lock,
+  Edit2,
+  Save,
+  X,
   Plus,
   Trash2,
   Info,
@@ -17,6 +17,7 @@ import {
   ZoomOut
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from './InteractiveTimeline';
 import { parseDate, toISODateString } from '../utils/dateUtils';
 import './EnhancedProjectTimeline.css';
@@ -100,7 +101,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
 
   // Fetch project timeline
   const { data: timeline, refetch: refetchTimeline } = useQuery({
-    queryKey: ['projectTimeline', projectId],
+    queryKey: queryKeys.projects.timeline(projectId),
     queryFn: async () => {
       const response = await fetch(`/api/projects/${projectId}/timeline`);
       if (!response.ok) throw new Error('Failed to fetch timeline');
@@ -121,7 +122,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
 
   // Fetch template compliance
   const { data: compliance } = useQuery({
-    queryKey: ['templateCompliance', projectId],
+    queryKey: queryKeys.projects.templateCompliance(projectId),
     queryFn: async () => {
       const response = await api.projects.getTemplateCompliance(projectId);
       return response.data;
@@ -150,7 +151,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
     onSuccess: () => {
       refetchTimeline();
       setEditingPhase(null);
-      queryClient.invalidateQueries({ queryKey: ['templateCompliance', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.templateCompliance(projectId) });
     }
   });
 
@@ -163,7 +164,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
     onSuccess: () => {
       refetchTimeline();
       setShowAddCustomPhase(false);
-      queryClient.invalidateQueries({ queryKey: ['templateCompliance', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.templateCompliance(projectId) });
     }
   });
 
@@ -175,7 +176,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
     },
     onSuccess: () => {
       refetchTimeline();
-      queryClient.invalidateQueries({ queryKey: ['templateCompliance', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.templateCompliance(projectId) });
     }
   });
 
@@ -188,7 +189,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
     const newDurationDays = Math.round((newEndDate.getTime() - newStartDate.getTime()) / (24 * 60 * 60 * 1000));
 
     // Optimistic update
-    queryClient.setQueryData(['projectTimeline', projectId], (oldData: ProjectPhaseTimeline[] | undefined) => {
+    queryClient.setQueryData(queryKeys.projects.timeline(projectId), (oldData: ProjectPhaseTimeline[] | undefined) => {
       if (!oldData) return oldData;
       
       return oldData.map(p => {

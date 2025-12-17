@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  ArrowLeft, Edit2, Save, X, Calendar, Briefcase, Users, Clock, 
+import {
+  ArrowLeft, Edit2, Save, X, Calendar, Briefcase, Users, Clock,
   Shield, Mail, Phone, MapPin, Award, AlertCircle, History,
   Plus, Trash2, ChevronDown, ChevronUp, UserPlus, UserMinus,
   Search, TrendingUp, TrendingDown, Target, Zap
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 import { PersonAllocationChart } from '../components/PersonAllocationChart';
 import PersonRoleModal from '../components/modals/PersonRoleModal';
@@ -234,7 +235,7 @@ export default function PersonDetails() {
 
   // Fetch person details
   const { data: person, isLoading, error } = useQuery({
-    queryKey: ['person', id],
+    queryKey: queryKeys.people.detail(id!),
     queryFn: async () => {
       const response = await api.people.get(id!);
       return response.data as PersonDetails;
@@ -244,7 +245,7 @@ export default function PersonDetails() {
 
   // Fetch locations for dropdown
   const { data: locations } = useQuery({
-    queryKey: ['locations'],
+    queryKey: queryKeys.locations.list(),
     queryFn: async () => {
       const response = await api.locations.list();
       return response.data.data;
@@ -253,7 +254,7 @@ export default function PersonDetails() {
 
   // Fetch roles for dropdown
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       return response.data;
@@ -262,7 +263,7 @@ export default function PersonDetails() {
 
   // Fetch all people for supervisor dropdown
   const { data: allPeople } = useQuery({
-    queryKey: ['people-list'],
+    queryKey: queryKeys.people.list(),
     queryFn: async () => {
       const response = await api.people.list();
       return response.data.data;
@@ -278,7 +279,7 @@ export default function PersonDetails() {
 
   // Utilization timeline query
   const { data: utilizationTimeline } = useQuery({
-    queryKey: ['person-utilization-timeline', id, standardStartDate, standardEndDate],
+    queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate),
     queryFn: async () => {
       const response = await fetch(`/api/people/${id}/utilization-timeline?startDate=${standardStartDate}&endDate=${standardEndDate}`);
       if (!response.ok) {
@@ -296,9 +297,9 @@ export default function PersonDetails() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['person', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
     }
   });
 
@@ -308,9 +309,9 @@ export default function PersonDetails() {
       await api.assignments.delete(assignmentId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['person', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
     }
   });
 
@@ -320,9 +321,9 @@ export default function PersonDetails() {
       await api.people.removeRole(id!, roleId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['person', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
     }
   });
 
@@ -338,9 +339,9 @@ export default function PersonDetails() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['person', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
       setEditingTimeOff(null);
       setEditingTimeOffData(null);
     }
@@ -355,9 +356,9 @@ export default function PersonDetails() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['person', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
     }
   });
 
@@ -372,9 +373,9 @@ export default function PersonDetails() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['person', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
       setIsCreatingTimeOff(false);
       setNewTimeOffData(null);
     }
@@ -490,9 +491,9 @@ export default function PersonDetails() {
   };
 
   const handleRoleModalSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['person', id] });
-    queryClient.invalidateQueries({ queryKey: ['person-timeline', id] });
-    queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', id] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
     setRoleModalOpen(false);
     setEditingRole(null);
   };

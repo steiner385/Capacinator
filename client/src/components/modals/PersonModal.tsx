@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import { queryKeys } from '../../lib/queryKeys';
 import { useModalForm } from '../../hooks/useModalForm';
 import {
   Dialog,
@@ -96,8 +97,8 @@ export const PersonModal: React.FC<PersonModalProps> = ({
       const response = await api.people.update(id, data);
       return response.data;
     },
-    queryKeysToInvalidate: [['people']],
-    additionalUpdateQueryKeys: (item) => [['person', item.id]],
+    queryKeysToInvalidate: [queryKeys.people.all],
+    additionalUpdateQueryKeys: (item) => [queryKeys.people.detail(item.id)],
     onSuccess: (data) => {
       if (onSuccess) onSuccess(data);
     },

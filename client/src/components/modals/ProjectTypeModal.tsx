@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import { queryKeys } from '../../lib/queryKeys';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -87,8 +88,7 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['projectTypes'] });
-      queryClient.invalidateQueries({ queryKey: ['project-types'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectTypes.all });
       if (onSuccess) {
         onSuccess(data);
       }
@@ -102,9 +102,8 @@ export const ProjectTypeModal: React.FC<ProjectTypeModalProps> = ({
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['projectTypes'] });
-      queryClient.invalidateQueries({ queryKey: ['project-types'] });
-      queryClient.invalidateQueries({ queryKey: ['projectType', editingProjectType.id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectTypes.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectTypes.detail(editingProjectType.id) });
       if (onSuccess) {
         onSuccess(data);
       }

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush, ComposedChart, Cell, ReferenceLine } from 'recharts';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 import { VisualPhaseManager } from './VisualPhaseManager';
 import { TimelineViewport } from './InteractiveTimeline';
@@ -270,7 +271,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const [sharedViewport, setSharedViewport] = useState<TimelineViewport | null>(null);
   
   const { data: apiResponse, isLoading, error } = useQuery({
-    queryKey: ['project-demand', projectId],
+    queryKey: queryKeys.demands.project(projectId),
     queryFn: async () => {
       const response = await api.demands.getProjectDemands(projectId);
       return response.data;
@@ -280,7 +281,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
 
   // Get project assignments for capacity calculation
   const { data: assignmentsResponse, isLoading: assignmentsLoading } = useQuery({
-    queryKey: ['project-assignments', projectId],
+    queryKey: queryKeys.projects.assignments(projectId),
     queryFn: async () => {
       const response = await api.assignments.list({ project_id: projectId });
       return response.data;
@@ -291,14 +292,14 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   // Callback to refetch demand data when phases change
   const handlePhasesChange = useCallback(() => {
     // Invalidate demand data to trigger refetch
-    queryClient.invalidateQueries({ queryKey: ['project-demand', projectId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.demands.project(projectId) });
     // Also invalidate assignments as they might be affected
-    queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.assignments(projectId) });
   }, [queryClient, projectId]);
 
   // Get project phases for integrated visualization
   const { data: phasesResponse } = useQuery({
-    queryKey: ['project-phases', projectId],
+    queryKey: queryKeys.projectPhases.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data;

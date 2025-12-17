@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { Scenario } from '../types';
 
 interface ScenarioContextType {
@@ -22,7 +23,7 @@ export function ScenarioProvider({ children }: ScenarioProviderProps) {
 
   // Fetch all scenarios
   const { data: scenarios = [], isLoading, error } = useQuery({
-    queryKey: ['scenarios'],
+    queryKey: queryKeys.scenarios.list(),
     queryFn: async () => {
       const response = await api.scenarios.list();
       // Handle both nested and flat response structures for backward compatibility

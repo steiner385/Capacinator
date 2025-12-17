@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { useScenario } from '../contexts/ScenarioContext';
 
 interface CriticalAlert {
@@ -20,7 +21,7 @@ export function useCriticalAlerts() {
 
   // Fetch dashboard data
   const { data: dashboard, isLoading: dashboardLoading, error: dashboardError } = useQuery({
-    queryKey: ['dashboard', currentScenario?.id],
+    queryKey: queryKeys.reports.dashboard(currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getDashboard();
       return response.data.data;
@@ -30,7 +31,7 @@ export function useCriticalAlerts() {
 
   // Fetch capacity report for more detailed information
   const { data: capacityReport, isLoading: capacityLoading } = useQuery({
-    queryKey: ['capacity-report', currentScenario?.id],
+    queryKey: queryKeys.reports.capacity(undefined, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getCapacityReport();
       return response.data.data;

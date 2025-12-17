@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  GitBranch, 
+import {
+  User,
+  GitBranch,
   Clock,
   Activity,
   RefreshCw,
@@ -17,6 +17,7 @@ import { useScenario } from '../contexts/ScenarioContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import './AppHeader.css';
 
 export const AppHeader: React.FC = () => {
@@ -83,7 +84,7 @@ export const AppHeader: React.FC = () => {
 
   // Get system health status
   const { data: healthData, isLoading: healthLoading } = useQuery({
-    queryKey: ['health'],
+    queryKey: queryKeys.health.check(),
     queryFn: () => api.health(),
     refetchInterval: 30000, // Check every 30 seconds
     retry: 1,

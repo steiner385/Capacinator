@@ -4,16 +4,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, AlertTriangle, Lightbulb, Play, Users, TrendingUp } from 'lucide-react';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
-import { TestModal } from '../components/modals/TestModal';
+import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { InlineEdit } from '../components/ui/InlineEdit';
-import { useModal } from '../hooks/useModal';
 import { useScenario } from '../contexts/ScenarioContext';
-import type { ProjectAssignment, Project, Person, Role } from '../types';
+import type { ProjectAssignment, Role } from '../types';
 import './Assignments.css';
 
 
@@ -81,7 +80,7 @@ export default function Assignments() {
 
   // Fetch assignments - will refetch when scenario changes
   const { data: assignments, isLoading: assignmentsLoading, error: assignmentsError } = useQuery({
-    queryKey: ['assignments', filters, currentScenario?.id],
+    queryKey: queryKeys.assignments.list(filters, currentScenario?.id),
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
@@ -94,7 +93,7 @@ export default function Assignments() {
 
   // Fetch projects for filter - will refetch when scenario changes
   const { data: projects } = useQuery({
-    queryKey: ['projects', currentScenario?.id],
+    queryKey: queryKeys.projects.list(undefined, currentScenario?.id),
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data;
@@ -104,7 +103,7 @@ export default function Assignments() {
 
   // Fetch people for filter
   const { data: people } = useQuery({
-    queryKey: ['people'],
+    queryKey: queryKeys.people.list(),
     queryFn: async () => {
       const response = await api.people.list();
       return response.data;
@@ -113,7 +112,7 @@ export default function Assignments() {
 
   // Fetch roles for filter
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       return response.data as Role[];
@@ -122,7 +121,7 @@ export default function Assignments() {
 
   // Fetch recommendations
   const { data: recommendationsData, isLoading: recommendationsLoading, refetch: refetchRecommendations } = useQuery({
-    queryKey: ['recommendations', filters],
+    queryKey: queryKeys.recommendations.list(filters),
     queryFn: async () => {
       const params = {
         startDate: filters.date_range ? filters.date_range.split('_')[0] : undefined,
@@ -141,7 +140,7 @@ export default function Assignments() {
       await api.assignments.delete(assignmentId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     }
   });
 
@@ -151,7 +150,7 @@ export default function Assignments() {
       await api.assignments.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     },
     onError: (error) => {
       console.error('Failed to update assignment:', error);
@@ -191,17 +190,6 @@ export default function Assignments() {
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString();
-  };
-
-  const getUtilizationColor = (percentage: number) => {
-    if (percentage > 100) return 'text-danger';
-    if (percentage >= 80) return 'text-warning';
-    return 'text-success';
-  };
-
-  const getUtilizationIcon = (percentage: number) => {
-    if (percentage > 100) return <AlertTriangle size={14} className="text-danger" />;
-    return null;
   };
 
   const columns: Column<ProjectAssignment>[] = [
@@ -771,7 +759,7 @@ export default function Assignments() {
                               if (confirmed) {
                                 try {
                                   await api.recommendations.execute(rec.id, rec.actions);
-                                  queryClient.invalidateQueries({ queryKey: ['assignments'] });
+                                  queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
                                   refetchRecommendations();
                                 } catch (error) {
                                   console.error('Failed to execute recommendation:', error);
@@ -892,7 +880,7 @@ export default function Assignments() {
       {activeTab === 'assignments' ? renderAssignmentsTab() : renderRecommendationsTab()}
 
       {/* Add Assignment Modal */}
-      <AssignmentModalNew
+      <AssignmentModal
         isOpen={isAddModalOpen}
         onClose={() => {
           // console.log('Modal close called');
@@ -902,7 +890,7 @@ export default function Assignments() {
       />
 
       {/* Edit Assignment Modal */}
-      <AssignmentModalNew
+      <AssignmentModal
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);
