@@ -9,7 +9,7 @@ import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-import { AssignmentModal } from '../components/modals/AssignmentModal';
+import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
 import { InlineEdit } from '../components/ui/InlineEdit';
 import { useScenario } from '../contexts/ScenarioContext';
 import type { ProjectAssignment, Role } from '../types';
@@ -880,7 +880,7 @@ export default function Assignments() {
       {activeTab === 'assignments' ? renderAssignmentsTab() : renderRecommendationsTab()}
 
       {/* Add Assignment Modal */}
-      <AssignmentModal
+      <AssignmentModalNew
         isOpen={isAddModalOpen}
         onClose={() => {
           // console.log('Modal close called');
@@ -890,7 +890,7 @@ export default function Assignments() {
       />
 
       {/* Edit Assignment Modal */}
-      <AssignmentModal
+      <AssignmentModalNew
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);
