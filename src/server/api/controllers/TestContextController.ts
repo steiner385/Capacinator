@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 /**
  * Represents a registered test context
@@ -91,7 +92,7 @@ export class TestContextController extends BaseController {
 
     testContexts.set(contextId, context);
 
-    console.log(`[TestContext] Created context: ${contextId} (prefix: ${prefix})`);
+    logger.debug(`[TestContext] Created context`, { contextId, prefix });
 
     return res.json({
       success: true,
@@ -198,7 +199,7 @@ export class TestContextController extends BaseController {
     const deleted = await this.cleanupContextData(context);
     testContexts.delete(contextId);
 
-    console.log(`[TestContext] Cleaned up context: ${contextId}`, deleted);
+    logger.debug(`[TestContext] Cleaned up context`, { contextId, deleted });
 
     return res.json({
       success: true,
@@ -238,7 +239,7 @@ export class TestContextController extends BaseController {
     // Also clean up orphaned data in the database by prefix pattern
     const orphanedDbData = await this.cleanupOrphanedDbData(cutoffTime);
 
-    console.log(`[TestContext] Cleaned up ${orphanedContexts.length} orphaned contexts`);
+    logger.debug(`[TestContext] Cleaned up orphaned contexts`, { count: orphanedContexts.length });
 
     return res.json({
       success: true,
@@ -358,7 +359,7 @@ export class TestContextController extends BaseController {
           const count = await this.db(table).whereIn('id', ids).del();
           deleted[type] = count;
         } catch (error) {
-          console.warn(`[TestContext] Failed to delete ${type}:`, error);
+          logger.warn(`[TestContext] Failed to delete entity type`, { type, error });
           deleted[type] = 0;
         }
       }
@@ -416,7 +417,7 @@ export class TestContextController extends BaseController {
         }
       }
     } catch (error) {
-      console.error('[TestContext] Error cleaning up orphaned DB data:', error);
+      logger.error('[TestContext] Error cleaning up orphaned DB data', error as Error);
     }
 
     return deleted;
@@ -452,7 +453,7 @@ export class TestContextController extends BaseController {
             deleted[table] = count;
           }
         } catch (error) {
-          console.warn(`[TestContext] Failed to cleanup ${table} by prefix:`, error);
+          logger.warn(`[TestContext] Failed to cleanup table by prefix`, { table, error });
         }
       }
     }

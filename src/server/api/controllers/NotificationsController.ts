@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { db as globalDb } from '../../database/index.js';
 import { emailService } from '../../services/EmailService.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 export class NotificationsController {
   private db: any;
@@ -37,7 +38,7 @@ export class NotificationsController {
         }
       });
     } catch (error) {
-      console.error('Error sending notification:', error);
+      logger.error('Error sending notification', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to send notification'
@@ -59,7 +60,7 @@ export class NotificationsController {
         data: preferences
       });
     } catch (error) {
-      console.error('Error fetching notification preferences:', error);
+      logger.error('Error fetching notification preferences', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch notification preferences'
@@ -98,7 +99,7 @@ export class NotificationsController {
         message: 'Notification preferences updated successfully'
       });
     } catch (error) {
-      console.error('Error updating notification preferences:', error);
+      logger.error('Error updating notification preferences', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to update notification preferences'
@@ -124,7 +125,7 @@ export class NotificationsController {
         data: templatesWithParsedVariables
       });
     } catch (error) {
-      console.error('Error fetching email templates:', error);
+      logger.error('Error fetching email templates', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch email templates'
@@ -164,7 +165,7 @@ export class NotificationsController {
         data: history
       });
     } catch (error) {
-      console.error('Error fetching notification history:', error);
+      logger.error('Error fetching notification history', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch notification history'
@@ -203,7 +204,7 @@ export class NotificationsController {
         }
       });
     } catch (error) {
-      console.error('Error sending test email:', error);
+      logger.error('Error sending test email', error as Error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send test email'
@@ -232,7 +233,7 @@ export class NotificationsController {
         }
       });
     } catch (error) {
-      console.error('Error checking email configuration:', error);
+      logger.error('Error checking email configuration', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to check email configuration'
@@ -274,7 +275,7 @@ export class NotificationsController {
         }
       });
     } catch (error) {
-      console.error('Error fetching notification stats:', error);
+      logger.error('Error fetching notification stats', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch notification statistics'
@@ -302,7 +303,7 @@ export class NotificationsController {
 
       await emailService.sendNotificationEmail(userId, templateName, variables);
     } catch (error) {
-      console.error('Error triggering assignment notification:', error);
+      logger.error('Error triggering assignment notification', error as Error, { userId, action });
     }
   }
 
@@ -321,7 +322,7 @@ export class NotificationsController {
 
       await emailService.sendNotificationEmail(approverUserId, 'approval_request', variables);
     } catch (error) {
-      console.error('Error triggering approval notification:', error);
+      logger.error('Error triggering approval notification', error as Error, { approverUserId });
     }
   }
 
@@ -346,7 +347,7 @@ export class NotificationsController {
         await emailService.sendNotificationEmail(userId, templateName, variables);
       }
     } catch (error) {
-      console.error('Error triggering project notification:', error);
+      logger.error('Error triggering project notification', error as Error, { notificationType, projectName: projectData.name });
     }
   }
 }

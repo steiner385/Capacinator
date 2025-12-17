@@ -4,6 +4,7 @@ import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { transformDates, transformDatesInArray, COMMON_DATE_FIELDS } from '../../utils/dateTransform.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
+import { logger } from '../../services/logging/config.js';
 
 // Alias for backward compatibility with existing code
 type RequestWithLogging = RequestWithContext;
@@ -1265,7 +1266,7 @@ export class AssignmentsController extends BaseController {
         const endDate = project.aspiration_finish || project.end_date;
         
         if (!startDate || !endDate) {
-          console.warn(`Project ${assignment.project_id} (${project.name || 'Unknown'}) missing both aspiration and start/end dates, using assignment dates as fallback`);
+          logger.warn(`Project missing both aspiration and start/end dates, using assignment dates as fallback`, { projectId: assignment.project_id, projectName: project.name || 'Unknown' });
           
           // If assignment dates are also missing, use reasonable defaults
           const fallbackStartDate = assignment.start_date || new Date().toISOString().split('T')[0];

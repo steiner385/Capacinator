@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 // Alias for backward compatibility
 type RequestWithLogging = RequestWithContext;
@@ -324,7 +325,7 @@ export class RolesController extends BaseController {
 
       res.json({ data: expertiseLevels });
     } catch (error) {
-      console.error('Error fetching expertise levels:', error);
+      logger.error('Error fetching expertise levels', error as Error);
       res.status(500).json({ error: 'Failed to fetch expertise levels' });
     }
   }

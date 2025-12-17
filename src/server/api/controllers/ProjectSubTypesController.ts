@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { db as globalDb } from '../../database/index.js';
 import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 export class ProjectSubTypesController {
   private db: any;
@@ -63,7 +64,7 @@ export class ProjectSubTypesController {
         data: projectSubTypes
       });
     } catch (error) {
-      console.error('Error fetching project sub-types:', error);
+      logger.error('Error fetching project sub-types', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch project sub-types'
@@ -130,7 +131,7 @@ export class ProjectSubTypesController {
         }
       });
     } catch (error) {
-      console.error('Error fetching project sub-type:', error);
+      logger.error('Error fetching project sub-type', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch project sub-type'
@@ -205,7 +206,7 @@ export class ProjectSubTypesController {
         data: created
       });
     } catch (error) {
-      console.error('Error creating project sub-type:', error);
+      logger.error('Error creating project sub-type', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to create project sub-type'
@@ -274,7 +275,7 @@ export class ProjectSubTypesController {
         data: updated
       });
     } catch (error) {
-      console.error('Error updating project sub-type:', error);
+      logger.error('Error updating project sub-type', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to update project sub-type'
@@ -342,7 +343,7 @@ export class ProjectSubTypesController {
         message: 'Project sub-type deleted successfully'
       });
     } catch (error) {
-      console.error('Error deleting project sub-type:', error);
+      logger.error('Error deleting project sub-type', error as Error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete project sub-type'
@@ -386,7 +387,7 @@ export class ProjectSubTypesController {
         });
       }
     } catch (error) {
-      console.error('Error inheriting from project type:', error);
+      logger.error('Error inheriting from project type', error as Error, { subTypeId, projectTypeId });
       throw error;
     }
   }
