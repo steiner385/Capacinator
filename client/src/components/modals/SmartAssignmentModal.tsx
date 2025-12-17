@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle, CheckCircle, Info, Calendar, Users,
-  TrendingUp, Sparkles, Clock, BarChart3, Link2, RefreshCw, ExternalLink, Trash2
+  TrendingUp, Sparkles, Clock, BarChart3, Link2, RefreshCw, ExternalLink, Trash2, AlertCircle
 } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { formatDate } from '../../utils/date';
+import { validateDateRange, validateSelection, validateAllocation } from '../../utils/formValidation';
 import { calculatePhaseDurationWeeks } from '../../utils/phaseDurations';
 import {
   calculateRoleBasedScore,
@@ -25,8 +26,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
+import { Alert, AlertDescription } from '../ui/alert';
 import { cn } from '../../lib/utils';
 import './SmartAssignmentModal.css';
+
+interface FormErrors {
+  project_id?: string;
+  role_id?: string;
+  start_date?: string;
+  end_date?: string;
+  allocation_percentage?: string;
+}
 
 interface SmartAssignmentModalProps {
   isOpen: boolean;
@@ -73,6 +83,10 @@ export function SmartAssignmentModal({
     start_date: '',
     end_date: ''
   });
+
+  // Validation errors state
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.keys(errors).length > 0;
   
   // Invalidate project phases cache when modal opens to ensure fresh data
   useEffect(() => {
@@ -510,39 +524,48 @@ export function SmartAssignmentModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    const newErrors: FormErrors = {};
+
     // Validate required fields
-    if (!formData.project_id && !selectedRecommendation) {
-      alert('Please select a project');
-      return;
-    }
-    
-    if (!formData.role_id) {
-      alert('Please select a role');
-      return;
-    }
-    
+    const projectId = selectedRecommendation?.project.id || formData.project_id;
+    const projectError = validateSelection(projectId, 'Project');
+    if (projectError) newErrors.project_id = projectError;
+
+    const roleError = validateSelection(formData.role_id, 'Role');
+    if (roleError) newErrors.role_id = roleError;
+
     // Validate role exists in database
-    const rolesData = roles || [];
-    const roleExists = rolesData.some((r: any) => r.id === formData.role_id);
-    if (!roleExists) {
-      console.error('Invalid role ID:', formData.role_id);
-      console.error('Available roles:', rolesData);
-      alert('Selected role is invalid. Please select a different role.');
-      return;
+    if (formData.role_id) {
+      const rolesData = roles || [];
+      const roleExists = rolesData.some((r: any) => r.id === formData.role_id);
+      if (!roleExists) {
+        console.error('Invalid role ID:', formData.role_id);
+        console.error('Available roles:', rolesData);
+        newErrors.role_id = 'Selected role is invalid. Please select a different role.';
+      }
     }
-    
+
+    // Validate allocation
+    const allocationError = validateAllocation(formData.allocation_percentage, true);
+    if (allocationError) newErrors.allocation_percentage = allocationError;
+
     // Only validate dates if not using phase mode
     if (!formData.phase_id) {
-      if (!formData.start_date) {
-        alert('Please select a start date');
-        return;
-      }
-      
-      if (!formData.end_date) {
-        alert('Please select an end date');
-        return;
-      }
+      const dateErrors = validateDateRange(formData.start_date, formData.end_date, {
+        startRequired: true,
+        endRequired: true,
+        startFieldLabel: 'Start date',
+        endFieldLabel: 'End date',
+      });
+      if (dateErrors.start_date) newErrors.start_date = dateErrors.start_date;
+      if (dateErrors.end_date) newErrors.end_date = dateErrors.end_date;
+    }
+
+    // If there are validation errors, show them and return
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
     }
     
     // Build assignment data
@@ -574,6 +597,15 @@ export function SmartAssignmentModal({
   };
 
   const handleFormChange = (field: string, value: any) => {
+    // Clear error for this field when user makes changes
+    if (errors[field as keyof FormErrors]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field as keyof FormErrors];
+        return newErrors;
+      });
+    }
+
     if (field === 'phase_id' && value) {
       // When a phase is selected, set reasonable future dates instead of historical phase dates
       const today = new Date();
@@ -808,6 +840,18 @@ export function SmartAssignmentModal({
               ) : (
                 // Show add interface for adding assignments
                 <div className="grid grid-cols-2 gap-4">
+
+                {hasErrors && (
+                  <div className="col-span-2">
+                    <Alert variant="destructive" role="alert" aria-live="assertive">
+                      <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                      <AlertDescription>
+                        Please fix the errors below before submitting.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="project-select">
                     Project <span aria-hidden="true">*</span><span className="sr-only">(required)</span>
@@ -822,7 +866,13 @@ export function SmartAssignmentModal({
                     onValueChange={(value) => handleFormChange('project_id', value)}
                     disabled={!isLoadingAllocations && projectsWithDemand.length === 0}
                   >
-                    <SelectTrigger id="project-select" aria-required="true">
+                    <SelectTrigger
+                      id="project-select"
+                      aria-required="true"
+                      className={errors.project_id ? 'border-destructive' : ''}
+                      aria-invalid={!!errors.project_id}
+                      aria-describedby={errors.project_id ? 'project-select-error' : undefined}
+                    >
                       <SelectValue placeholder={
                         isLoadingAllocations
                           ? 'Loading projects...'
@@ -839,6 +889,7 @@ export function SmartAssignmentModal({
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.project_id && <p id="project-select-error" className="text-sm text-destructive" role="alert">{errors.project_id}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -855,7 +906,13 @@ export function SmartAssignmentModal({
                     onValueChange={(value) => handleFormChange('role_id', value)}
                     disabled={!formData.project_id || projectRoles.length === 0 || projectsWithDemand.length === 0}
                   >
-                    <SelectTrigger id="role-select" aria-required="true">
+                    <SelectTrigger
+                      id="role-select"
+                      aria-required="true"
+                      className={errors.role_id ? 'border-destructive' : ''}
+                      aria-invalid={!!errors.role_id}
+                      aria-describedby={errors.role_id ? 'role-select-error' : undefined}
+                    >
                       <SelectValue placeholder={
                         formData.project_id && projectRoles.length === 0
                           ? 'No roles needed for this project'
@@ -872,6 +929,7 @@ export function SmartAssignmentModal({
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.role_id && <p id="role-select-error" className="text-sm text-destructive" role="alert">{errors.role_id}</p>}
                 </div>
 
                 <div className="space-y-2 col-span-2">
@@ -984,8 +1042,14 @@ export function SmartAssignmentModal({
                     required
                     aria-required="true"
                     disabled={!!formData.phase_id}
-                    className={formData.phase_id ? 'opacity-70 cursor-not-allowed' : ''}
+                    className={cn(
+                      formData.phase_id ? 'opacity-70 cursor-not-allowed' : '',
+                      errors.start_date ? 'border-destructive' : ''
+                    )}
+                    aria-invalid={!!errors.start_date}
+                    aria-describedby={errors.start_date ? 'start-date-error' : undefined}
                   />
+                  {errors.start_date && <p id="start-date-error" className="text-sm text-destructive" role="alert">{errors.start_date}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -1006,8 +1070,14 @@ export function SmartAssignmentModal({
                     required
                     aria-required="true"
                     disabled={!!formData.phase_id}
-                    className={formData.phase_id ? 'opacity-70 cursor-not-allowed' : ''}
+                    className={cn(
+                      formData.phase_id ? 'opacity-70 cursor-not-allowed' : '',
+                      errors.end_date ? 'border-destructive' : ''
+                    )}
+                    aria-invalid={!!errors.end_date}
+                    aria-describedby={errors.end_date ? 'end-date-error' : undefined}
                   />
+                  {errors.end_date && <p id="end-date-error" className="text-sm text-destructive" role="alert">{errors.end_date}</p>}
                 </div>
               </div>
               )}

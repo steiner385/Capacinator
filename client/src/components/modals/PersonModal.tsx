@@ -3,6 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
 import { useModalForm } from '../../hooks/useModalForm';
 import {
+  validateEmail,
+  validateDateRange,
+  validatePercentage,
+  validateHoursPerDay,
+} from '../../utils/formValidation';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -62,10 +68,39 @@ const initialValues: PersonFormData = {
 const validatePerson = (values: PersonFormData): Partial<Record<keyof PersonFormData, string>> => {
   const errors: Partial<Record<keyof PersonFormData, string>> = {};
 
+  // Required fields
   if (!values.name.trim()) errors.name = 'Name is required';
-  if (!values.email.trim()) errors.email = 'Email is required';
-  if (values.email && !values.email.includes('@')) errors.email = 'Valid email is required';
   if (!values.primary_person_role_id) errors.primary_person_role_id = 'Primary role is required';
+
+  // Email validation with proper format checking
+  const emailError = validateEmail(values.email, true);
+  if (emailError) errors.email = emailError;
+
+  // Date range validation (start date must be before or equal to end date)
+  if (values.start_date || values.end_date) {
+    const dateErrors = validateDateRange(values.start_date, values.end_date, {
+      startRequired: false,
+      endRequired: false,
+      startFieldLabel: 'Start date',
+      endFieldLabel: 'End date',
+    });
+    if (dateErrors.start_date) errors.start_date = dateErrors.start_date;
+    if (dateErrors.end_date) errors.end_date = dateErrors.end_date;
+  }
+
+  // Availability percentage validation (0-100)
+  const availabilityError = validatePercentage(values.default_availability_percentage, {
+    min: 0,
+    max: 100,
+    required: false,
+    fieldLabel: 'Availability',
+    allowZero: true,
+  });
+  if (availabilityError) errors.default_availability_percentage = availabilityError;
+
+  // Hours per day validation (0-24)
+  const hoursError = validateHoursPerDay(values.default_hours_per_day, false);
+  if (hoursError) errors.default_hours_per_day = hoursError;
 
   return errors;
 };
@@ -344,7 +379,11 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 min="0"
                 max="100"
                 placeholder="100"
+                className={errors.default_availability_percentage ? 'border-destructive' : ''}
+                aria-invalid={!!errors.default_availability_percentage}
+                aria-describedby={errors.default_availability_percentage ? 'default_availability_percentage-error' : undefined}
               />
+              {errors.default_availability_percentage && <p id="default_availability_percentage-error" className="text-sm text-destructive" role="alert">{errors.default_availability_percentage}</p>}
             </div>
 
             <div className="space-y-2">
@@ -358,7 +397,11 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 max="24"
                 step="0.5"
                 placeholder="8"
+                className={errors.default_hours_per_day ? 'border-destructive' : ''}
+                aria-invalid={!!errors.default_hours_per_day}
+                aria-describedby={errors.default_hours_per_day ? 'default_hours_per_day-error' : undefined}
               />
+              {errors.default_hours_per_day && <p id="default_hours_per_day-error" className="text-sm text-destructive" role="alert">{errors.default_hours_per_day}</p>}
             </div>
 
             <div className="space-y-2">
@@ -368,7 +411,11 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 id="start_date"
                 value={formData.start_date}
                 onChange={(e) => handleChange('start_date', e.target.value)}
+                className={errors.start_date ? 'border-destructive' : ''}
+                aria-invalid={!!errors.start_date}
+                aria-describedby={errors.start_date ? 'start_date-error' : undefined}
               />
+              {errors.start_date && <p id="start_date-error" className="text-sm text-destructive" role="alert">{errors.start_date}</p>}
             </div>
 
             <div className="space-y-2">
@@ -378,7 +425,11 @@ export const PersonModal: React.FC<PersonModalProps> = ({
                 id="end_date"
                 value={formData.end_date}
                 onChange={(e) => handleChange('end_date', e.target.value)}
+                className={errors.end_date ? 'border-destructive' : ''}
+                aria-invalid={!!errors.end_date}
+                aria-describedby={errors.end_date ? 'end_date-error' : undefined}
               />
+              {errors.end_date && <p id="end_date-error" className="text-sm text-destructive" role="alert">{errors.end_date}</p>}
             </div>
 
             <div className="space-y-2">

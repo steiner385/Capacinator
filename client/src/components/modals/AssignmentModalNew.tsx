@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { useModalForm } from '../../hooks/useModalForm';
+import { validateDateRange, validateAllocation } from '../../utils/formValidation';
 import {
   Dialog,
   DialogContent,
@@ -56,14 +57,24 @@ const initialValues: AssignmentFormData = {
 const validateAssignment = (values: AssignmentFormData): Partial<Record<keyof AssignmentFormData, string>> => {
   const errors: Partial<Record<keyof AssignmentFormData, string>> = {};
 
+  // Required fields
   if (!values.project_id) errors.project_id = 'Project is required';
   if (!values.person_id) errors.person_id = 'Person is required';
   if (!values.role_id) errors.role_id = 'Role is required';
-  if (!values.start_date) errors.start_date = 'Start date is required';
-  if (!values.end_date) errors.end_date = 'End date is required';
-  if (values.allocation_percentage <= 0 || values.allocation_percentage > 100) {
-    errors.allocation_percentage = 'Allocation must be between 1 and 100';
-  }
+
+  // Date validation: required and must form a valid range
+  const dateErrors = validateDateRange(values.start_date, values.end_date, {
+    startRequired: true,
+    endRequired: true,
+    startFieldLabel: 'Start date',
+    endFieldLabel: 'End date',
+  });
+  if (dateErrors.start_date) errors.start_date = dateErrors.start_date;
+  if (dateErrors.end_date) errors.end_date = dateErrors.end_date;
+
+  // Allocation percentage validation (1-100, no zero)
+  const allocationError = validateAllocation(values.allocation_percentage, true);
+  if (allocationError) errors.allocation_percentage = allocationError;
 
   return errors;
 };
