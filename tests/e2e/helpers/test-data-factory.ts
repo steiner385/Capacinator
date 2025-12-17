@@ -1,5 +1,45 @@
 import { APIRequestContext } from '@playwright/test';
 
+// Entity interfaces for type safety
+interface FactoryPerson {
+  id: string;
+  name: string;
+  email?: string;
+  location_id?: string;
+  primary_role_id?: string;
+  worker_type?: 'FTE' | 'Contractor';
+  default_availability_percentage?: number;
+  default_hours_per_day?: number;
+}
+
+interface FactoryProject {
+  id: string;
+  name: string;
+  project_type_id?: string;
+  project_sub_type_id?: string;
+  location_id?: string;
+  priority?: number;
+  description?: string;
+}
+
+interface FactoryAssignment {
+  id: string;
+  person_id: string;
+  project_id: string;
+  role_id: string;
+  start_date?: string;
+  end_date?: string;
+  allocation_percentage?: number;
+}
+
+interface FactoryScenario {
+  id: string;
+  name: string;
+  description?: string;
+  scenario_type?: 'custom' | 'baseline' | 'optimistic' | 'pessimistic';
+  parent_scenario_id?: string;
+}
+
 /**
  * @deprecated This class is deprecated. Use UnifiedTestDataFactory from './unified-test-data-factory' instead.
  *
@@ -61,7 +101,7 @@ export class TestDataFactory {
     worker_type: 'FTE' | 'Contractor';
     default_availability_percentage: number;
     default_hours_per_day: number;
-  }> = {}): Promise<any> {
+  }> = {}): Promise<FactoryPerson> {
     const name = overrides.name || this.getUniqueName('Test Person');
     const email = overrides.email || `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
 
@@ -99,7 +139,7 @@ export class TestDataFactory {
     description: string;
     aspiration_start: string;
     aspiration_finish: string;
-  }> = {}): Promise<any> {
+  }> = {}): Promise<FactoryProject> {
     const name = overrides.name || this.getUniqueName('Test Project');
 
     const response = await this.apiContext.post('/api/projects', {
@@ -133,7 +173,7 @@ export class TestDataFactory {
     start_date: string;
     end_date: string;
     allocation_percentage: number;
-  }> = {}): Promise<any> {
+  }> = {}): Promise<FactoryAssignment> {
     const today = new Date();
     const nextMonth = new Date(today);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -167,7 +207,7 @@ export class TestDataFactory {
     description: string;
     scenario_type: 'custom' | 'baseline' | 'optimistic' | 'pessimistic';
     parent_scenario_id: string;
-  }> = {}): Promise<any> {
+  }> = {}): Promise<FactoryScenario> {
     const name = overrides.name || this.getUniqueName('Test Scenario');
 
     const response = await this.apiContext.post('/api/scenarios', {
@@ -197,20 +237,20 @@ export class TestDataFactory {
     assignments?: number;
     withUtilizationScenarios?: boolean;
   } = {}): Promise<{
-    people: any[];
-    projects: any[];
-    assignments: any[];
+    people: FactoryPerson[];
+    projects: FactoryProject[];
+    assignments: FactoryAssignment[];
   }> {
-    const { 
-      people: peopleCount = 3, 
-      projects: projectCount = 2, 
+    const {
+      people: peopleCount = 3,
+      projects: projectCount = 2,
       assignments: assignmentCount = 5,
       withUtilizationScenarios = false
     } = config;
 
-    const people: any[] = [];
-    const projects: any[] = [];
-    const assignments: any[] = [];
+    const people: FactoryPerson[] = [];
+    const projects: FactoryProject[] = [];
+    const assignments: FactoryAssignment[] = [];
 
     // Create people
     for (let i = 0; i < peopleCount; i++) {
@@ -280,12 +320,16 @@ export class TestDataFactory {
   /**
    * Create test data for specific scenarios
    */
-  async createScenarioTestData(scenario: 
-    | 'overUtilization' 
-    | 'underUtilization' 
+  async createScenarioTestData(scenario:
+    | 'overUtilization'
+    | 'underUtilization'
     | 'conflictingAssignments'
     | 'largeDataset'
-  ): Promise<any> {
+  ): Promise<
+    | { person: FactoryPerson; projects: FactoryProject[] }
+    | { people: FactoryPerson[]; project: FactoryProject }
+    | { people: FactoryPerson[]; projects: FactoryProject[]; assignments: FactoryAssignment[] }
+  > {
     switch (scenario) {
       case 'overUtilization':
         const overUtilizedPerson = await this.createPerson({

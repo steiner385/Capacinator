@@ -285,15 +285,22 @@ export class UnifiedTestDataFactory {
           const subTypesResult = await subTypesResponse.json();
           const subTypes = subTypesResult.data || subTypesResult;
 
+          // Define interface for subtype with optional grouping
+          interface SubTypeWithGroup {
+            id?: string;
+            project_type_id?: string;
+            sub_types?: SubTypeWithGroup[];
+          }
+
           // Handle grouped data
-          let flatSubTypes: any[] = [];
+          let flatSubTypes: SubTypeWithGroup[] = [];
           if (Array.isArray(subTypes) && subTypes[0]?.sub_types) {
-            flatSubTypes = subTypes.flatMap((g: any) => g.sub_types || []);
+            flatSubTypes = subTypes.flatMap((g: SubTypeWithGroup) => g.sub_types || []);
           } else if (Array.isArray(subTypes)) {
             flatSubTypes = subTypes;
           }
 
-          const matchingSubType = flatSubTypes.find((st: any) => st.project_type_id === projectTypeId);
+          const matchingSubType = flatSubTypes.find((st: SubTypeWithGroup) => st.project_type_id === projectTypeId);
           if (matchingSubType) {
             projectSubTypeId = matchingSubType.id;
           }

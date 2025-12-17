@@ -1,6 +1,62 @@
 import { faker } from '@faker-js/faker';
 import { APIRequestContext } from '@playwright/test';
 
+// ============================================================================
+// Test Data Entity Interfaces
+// ============================================================================
+
+/**
+ * Location entity for test data
+ */
+export interface TestLocation {
+  id: string;
+  name: string;
+  description?: string;
+  code?: string;
+}
+
+/**
+ * Project type entity for test data
+ */
+export interface TestProjectType {
+  id: string;
+  name: string;
+  color_code?: string;
+  description?: string;
+  parent_id?: string;
+  sub_types?: TestProjectType[];
+}
+
+/**
+ * Phase entity for test data
+ */
+export interface TestPhase {
+  id: string;
+  name: string;
+  description?: string;
+  order_index?: number;
+}
+
+/**
+ * Role entity for test data
+ */
+export interface TestRole {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Standard allocation (resource template) for test data
+ */
+export interface TestStandardAllocation {
+  id?: string;
+  project_type_id: string;
+  phase_id: string;
+  role_id: string;
+  allocation_percentage: number;
+}
+
 export interface TestEmployee {
   id?: string;
   name: string;
@@ -10,19 +66,25 @@ export interface TestEmployee {
   worker_type: 'FTE' | 'Contractor' | 'Consultant';
   default_availability_percentage: number;
   default_hours_per_day: number;
+  // Optional extended fields for consulting scenarios
+  title?: string;
+  department?: string;
+  location_id?: string;
+  start_date?: string;
+  utilization_target?: number;
 }
 
 export interface TestProject {
   id?: string;
   name: string;
   project_type_id: string;
-  project_sub_type_id: string;
+  project_sub_type_id?: string;
   location_id: string;
   priority: number;
   description: string;
   include_in_demand: boolean;
-  aspiration_start: string;
-  aspiration_finish: string;
+  aspiration_start?: string;
+  aspiration_finish?: string;
   owner_id: string;
 }
 
@@ -57,16 +119,42 @@ export interface TestAvailabilityOverride {
 }
 
 export interface TestScenarioData {
-  locations: any[];
-  projectTypes: any[];
-  phases: any[];
-  roles: any[];
+  locations: TestLocation[];
+  projectTypes: TestProjectType[];
+  phases: TestPhase[];
+  roles: TestRole[];
   employees: TestEmployee[];
   projects: TestProject[];
   projectPhases: TestProjectPhase[];
   assignments: TestAssignment[];
   availabilityOverrides: TestAvailabilityOverride[];
-  allocations: any[];
+  allocations: TestStandardAllocation[];
+}
+
+/**
+ * API response wrapper interface
+ * Handles both direct response and data-wrapped responses
+ */
+interface ApiResponse<T> {
+  data?: T[];
+  error?: string;
+}
+
+/**
+ * Type guard to check if a response is an array
+ */
+function isArray<T>(value: T[] | ApiResponse<T>): value is T[] {
+  return Array.isArray(value);
+}
+
+/**
+ * Extract array from API response (handles both direct and wrapped formats)
+ */
+function extractArray<T>(response: T[] | ApiResponse<T>): T[] {
+  if (isArray(response)) {
+    return response;
+  }
+  return response.data || [];
 }
 
 export class TestDataGenerator {
@@ -336,7 +424,7 @@ export class TestDataGenerator {
     const availabilityOverrides = this.generateAvailabilityOverrides(employees);
     
     // Generate standard allocations (simplified for now)
-    const allocations: any[] = [];
+    const allocations: TestStandardAllocation[] = [];
 
     return {
       locations,
@@ -515,7 +603,7 @@ export class TestDataGenerator {
   /**
    * Create child project types for existing parent types
    */
-  private async createChildProjectTypes(parentTypes: any[], childConfigs: { parentName: string; name: string; color: string; description?: string }[]): Promise<any[]> {
+  private async createChildProjectTypes(parentTypes: TestProjectType[], childConfigs: { parentName: string; name: string; color: string; description?: string }[]): Promise<TestProjectType[]> {
     const created = [];
     const timestamp = Date.now().toString().slice(-6); // Same timestamp for consistency
     
@@ -562,7 +650,7 @@ export class TestDataGenerator {
   /**
    * Create custom role allocations for project types
    */
-  private async createRoleAllocations(projectTypeId: string, phases: any[], roles: any[], allocations: { phaseName: string; roleName: string; percentage: number }[]): Promise<any[]> {
+  private async createRoleAllocations(projectTypeId: string, phases: TestPhase[], roles: TestRole[], allocations: { phaseName: string; roleName: string; percentage: number }[]): Promise<TestStandardAllocation[]> {
     const created = [];
     
     for (const allocation of allocations) {
@@ -622,7 +710,7 @@ export class TestDataGenerator {
   }
 
   // Employee generation methods
-  private generateEmployees(locations: any[], roles: any[], count: number): TestEmployee[] {
+  private generateEmployees(locations: TestLocation[], roles: TestRole[], count: number): TestEmployee[] {
     const employees: TestEmployee[] = [];
     
     for (let i = 0; i < count; i++) {
@@ -644,7 +732,7 @@ export class TestDataGenerator {
     return employees;
   }
 
-  private generateAgileTeamMembers(locations: any[], roles: any[], count: number): TestEmployee[] {
+  private generateAgileTeamMembers(locations: TestLocation[], roles: TestRole[], count: number): TestEmployee[] {
     const employees: TestEmployee[] = [];
     
     for (let i = 0; i < count; i++) {
@@ -663,7 +751,7 @@ export class TestDataGenerator {
     return employees;
   }
 
-  private generateConsultingTeam(locations: any[], roles: any[], count: number): TestEmployee[] {
+  private generateConsultingTeam(locations: TestLocation[], roles: TestRole[], count: number): TestEmployee[] {
     const employees: TestEmployee[] = [];
     const practices = ['Strategy', 'Technology', 'Operations', 'Change Management'];
     
@@ -691,7 +779,7 @@ export class TestDataGenerator {
   }
 
   // Project generation methods
-  private generateProjects(projectTypes: any[], locations: any[], employees: TestEmployee[], count: number): TestProject[] {
+  private generateProjects(projectTypes: TestProjectType[], locations: TestLocation[], employees: TestEmployee[], count: number): TestProject[] {
     const projects: TestProject[] = [];
     const projectNames = [
       'AI-Powered Analytics Platform',
@@ -730,7 +818,7 @@ export class TestDataGenerator {
     return projects;
   }
 
-  private generateAgileProjects(projectTypes: any[], locations: any[], employees: TestEmployee[], count: number): TestProject[] {
+  private generateAgileProjects(projectTypes: TestProjectType[], locations: TestLocation[], employees: TestEmployee[], count: number): TestProject[] {
     const projects: TestProject[] = [];
     const features = [
       'User Authentication System',
@@ -772,7 +860,7 @@ export class TestDataGenerator {
     return projects;
   }
 
-  private generateConsultingProjects(projectTypes: any[], locations: any[], employees: TestEmployee[], count: number): TestProject[] {
+  private generateConsultingProjects(projectTypes: TestProjectType[], locations: TestLocation[], employees: TestEmployee[], count: number): TestProject[] {
     const projects: TestProject[] = [];
     const clientProjects = [
       'Digital Transformation Strategy',
@@ -869,7 +957,7 @@ export class TestDataGenerator {
   }
 
   // Phase generation methods
-  private generateProjectPhases(projects: TestProject[], phases: any[]): TestProjectPhase[] {
+  private generateProjectPhases(projects: TestProject[], phases: TestPhase[]): TestProjectPhase[] {
     const projectPhases: TestProjectPhase[] = [];
     
     projects.forEach(project => {
@@ -897,7 +985,7 @@ export class TestDataGenerator {
     return projectPhases;
   }
 
-  private generateSprintPhases(projects: TestProject[], phases: any[]): TestProjectPhase[] {
+  private generateSprintPhases(projects: TestProject[], phases: TestPhase[]): TestProjectPhase[] {
     const projectPhases: TestProjectPhase[] = [];
     
     projects.forEach(project => {
@@ -950,7 +1038,7 @@ export class TestDataGenerator {
     return projectPhases;
   }
 
-  private generateConsultingPhases(projects: TestProject[], phases: any[]): TestProjectPhase[] {
+  private generateConsultingPhases(projects: TestProject[], phases: TestPhase[]): TestProjectPhase[] {
     const projectPhases: TestProjectPhase[] = [];
     
     projects.forEach(project => {
@@ -986,9 +1074,9 @@ export class TestDataGenerator {
 
   // Assignment generation methods
   private generateAssignments(
-    projects: TestProject[], 
-    employees: TestEmployee[], 
-    roles: any[], 
+    projects: TestProject[],
+    employees: TestEmployee[],
+    roles: TestRole[],
     projectPhases: TestProjectPhase[]
   ): TestAssignment[] {
     const assignments: TestAssignment[] = [];
@@ -1022,9 +1110,9 @@ export class TestDataGenerator {
   }
 
   private generateAgileAssignments(
-    projects: TestProject[], 
-    employees: TestEmployee[], 
-    roles: any[], 
+    projects: TestProject[],
+    employees: TestEmployee[],
+    roles: TestRole[],
     projectPhases: TestProjectPhase[]
   ): TestAssignment[] {
     const assignments: TestAssignment[] = [];
@@ -1069,9 +1157,9 @@ export class TestDataGenerator {
   }
 
   private generateConsultingAssignments(
-    projects: TestProject[], 
-    employees: TestEmployee[], 
-    roles: any[], 
+    projects: TestProject[],
+    employees: TestEmployee[],
+    roles: TestRole[],
     projectPhases: TestProjectPhase[]
   ): TestAssignment[] {
     const assignments: TestAssignment[] = [];
@@ -1211,8 +1299,8 @@ export class TestDataGenerator {
   }
 
   // Standard allocation generation
-  private generateStandardAllocations(projectTypes: any[], phases: any[], roles: any[]): any[] {
-    const allocations: any[] = [];
+  private generateStandardAllocations(projectTypes: TestProjectType[], phases: TestPhase[], roles: TestRole[]): TestStandardAllocation[] {
+    const allocations: TestStandardAllocation[] = [];
     
     projectTypes.forEach(projectType => {
       phases.forEach(phase => {
@@ -1233,8 +1321,8 @@ export class TestDataGenerator {
     return allocations;
   }
 
-  private generateAgileAllocations(projectTypes: any[], phases: any[], roles: any[]): any[] {
-    const allocations: any[] = [];
+  private generateAgileAllocations(projectTypes: TestProjectType[], phases: TestPhase[], roles: TestRole[]): TestStandardAllocation[] {
+    const allocations: TestStandardAllocation[] = [];
     
     const agileAllocations = {
       'Sprint Planning': {
@@ -1283,8 +1371,8 @@ export class TestDataGenerator {
     return allocations;
   }
 
-  private generateConsultingAllocations(projectTypes: any[], phases: any[], roles: any[]): any[] {
-    const allocations: any[] = [];
+  private generateConsultingAllocations(projectTypes: TestProjectType[], phases: TestPhase[], roles: TestRole[]): TestStandardAllocation[] {
+    const allocations: TestStandardAllocation[] = [];
     
     const consultingAllocations = {
       'Proposal': {
@@ -1378,7 +1466,7 @@ export class TestDataGenerator {
     return generator ? generator() : faker.number.int({ min: 50, max: 80 });
   }
 
-  private getConsultingRolesForPhase(phaseId: string, roles: any[]): { role: any; allocation: number }[] {
+  private getConsultingRolesForPhase(phaseId: string, roles: TestRole[]): { role: TestRole; allocation: number }[] {
     // This would need to be implemented based on the actual phase IDs
     // For now, return a default set
     return roles.map(role => ({
@@ -1545,7 +1633,7 @@ export class TestDataGenerator {
   /**
    * Generate projects with roadmap-friendly timelines
    */
-  private generateRoadmapProjects(projectTypes: any[], locations: any[], employees: TestEmployee[], count: number): TestProject[] {
+  private generateRoadmapProjects(projectTypes: TestProjectType[], locations: TestLocation[], employees: TestEmployee[], count: number): TestProject[] {
     const projects: TestProject[] = [];
     const projectNames = [
       'Customer Portal Redesign',
@@ -1590,7 +1678,7 @@ export class TestDataGenerator {
   /**
    * Generate project phases with roadmap-friendly timelines
    */
-  private generateRoadmapPhases(projects: TestProject[], phases: any[]): TestProjectPhase[] {
+  private generateRoadmapPhases(projects: TestProject[], phases: TestPhase[]): TestProjectPhase[] {
     const projectPhases: TestProjectPhase[] = [];
     
     projects.forEach(project => {
@@ -1721,7 +1809,7 @@ export class TestDataGenerator {
     return created;
   }
 
-  private async createAllocations(allocations: any[]): Promise<any[]> {
+  private async createAllocations(allocations: TestStandardAllocation[]): Promise<TestStandardAllocation[]> {
     const created = [];
     for (const allocation of allocations) {
       try {
@@ -1809,32 +1897,33 @@ export class TestDataGenerator {
   }): Promise<{ id: string; name: string }> {
     // First get available project types and locations
     const projectTypesResponse = await this.request.get(`${this.baseURL}/api/project-types`);
-    const projectTypes = await projectTypesResponse.json();
-    
+    const projectTypesData = await projectTypesResponse.json() as TestProjectType[] | ApiResponse<TestProjectType>;
+    const projectTypesList = extractArray(projectTypesData);
+
     const locationsResponse = await this.request.get(`${this.baseURL}/api/locations`);
-    const locations = await locationsResponse.json();
-    
+    const locationsData = await locationsResponse.json() as TestLocation[] | ApiResponse<TestLocation>;
+    const locationsList = extractArray(locationsData);
+
     // Find matching project type
-    const projectType = projectTypes.data?.find((pt: any) => pt.name.includes(config.projectType)) || 
-                       projectTypes.find((pt: any) => pt.name.includes(config.projectType));
-    
+    const projectType = projectTypesList.find((pt: TestProjectType) => pt.name.includes(config.projectType));
+
     if (!projectType) {
       throw new Error(`Project type containing "${config.projectType}" not found`);
     }
 
     // Find matching location
-    const location = locations.data?.find((loc: any) => loc.name === config.location) || 
-                     locations.find((loc: any) => loc.name === config.location);
-    
+    const location = locationsList.find((loc: TestLocation) => loc.name === config.location);
+
     if (!location) {
       throw new Error(`Location "${config.location}" not found`);
     }
 
     // Get or create a test user for owner
     const peopleResponse = await this.request.get(`${this.baseURL}/api/people`);
-    const people = await peopleResponse.json();
-    let owner = people.data?.[0] || people[0];
-    
+    const peopleData = await peopleResponse.json() as TestEmployee[] | ApiResponse<TestEmployee>;
+    const peopleList = extractArray(peopleData);
+    let owner: TestEmployee | undefined = peopleList[0];
+
     if (!owner) {
       // Create a test owner if none exist
       const ownerResponse = await this.request.post(`${this.baseURL}/api/people`, {
@@ -1846,7 +1935,7 @@ export class TestDataGenerator {
           default_hours_per_day: 8
         }
       });
-      owner = await ownerResponse.json();
+      owner = await ownerResponse.json() as TestEmployee;
     }
 
     // Get first sub-type for the project type
@@ -1860,17 +1949,17 @@ export class TestDataGenerator {
       priority: config.priority || 3,
       description: `Test project for e2e testing: ${config.name}`,
       include_in_demand: true,
-      owner_id: owner.id || owner.data?.id
+      owner_id: owner?.id
     };
 
     const response = await this.request.post(`${this.baseURL}/api/projects`, {
       data: projectData
     });
 
-    const project = await response.json();
-    return { 
-      id: project.id || project.data?.id, 
-      name: project.name || project.data?.name 
+    const project = await response.json() as TestProject & { data?: TestProject };
+    return {
+      id: project.id || project.data?.id || '',
+      name: project.name || project.data?.name || ''
     };
   }
 
@@ -1884,13 +1973,13 @@ export class TestDataGenerator {
   }>): Promise<void> {
     // Get available phases
     const phasesResponse = await this.request.get(`${this.baseURL}/api/phases`);
-    const availablePhases = await phasesResponse.json();
-    const phasesList = availablePhases.data || availablePhases;
+    const availablePhasesData = await phasesResponse.json() as TestPhase[] | ApiResponse<TestPhase>;
+    const phasesList = extractArray(availablePhasesData);
 
     for (const phaseConfig of phases) {
       // Find matching phase
-      const phase = phasesList.find((p: any) => p.name === phaseConfig.phaseName);
-      
+      const phase = phasesList.find((p: TestPhase) => p.name === phaseConfig.phaseName);
+
       if (!phase) {
         throw new Error(`Phase "${phaseConfig.phaseName}" not found`);
       }
