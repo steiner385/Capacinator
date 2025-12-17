@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Plus, Edit2, Trash2, Check, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import type { Person, PersonAvailabilityOverride } from '../types';
 
@@ -47,7 +48,7 @@ export default function Availability() {
 
   // Fetch data
   const { data: people } = useQuery({
-    queryKey: ['people'],
+    queryKey: queryKeys.people.list(),
     queryFn: async () => {
       const response = await api.people.list();
       return response.data.data as Person[];
@@ -55,7 +56,7 @@ export default function Availability() {
   });
 
   const { data: overrides, isLoading } = useQuery({
-    queryKey: ['availability-overrides', selectedPerson, currentMonth],
+    queryKey: queryKeys.availability.overrides(selectedPerson, currentMonth.toISOString()),
     queryFn: async () => {
       const response = await api.availability.list({
         person_id: selectedPerson || undefined,
@@ -70,7 +71,7 @@ export default function Availability() {
   const createMutation = useMutation({
     mutationFn: (data: OverrideForm) => api.availability.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability-overrides'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.availability.all });
       setShowAddForm(false);
       resetForm();
     }
@@ -82,7 +83,7 @@ export default function Availability() {
       return api.availability.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability-overrides'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.availability.all });
       setEditingId(null);
     }
   });
@@ -94,14 +95,14 @@ export default function Availability() {
       return Promise.resolve();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability-overrides'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.availability.all });
     }
   });
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => api.availability.approve(id, { approved: true }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability-overrides'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.availability.all });
     }
   });
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import type { Person } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
@@ -20,7 +21,7 @@ export const Login: React.FC<LoginProps> = ({ onClose }) => {
 
   // Fetch all people for the dropdown
   const { data: people, isLoading, error } = useQuery({
-    queryKey: ['people'],
+    queryKey: queryKeys.people.all,
     queryFn: async () => {
       console.log('🔄 Fetching people data...');
       const response = await api.people.list();

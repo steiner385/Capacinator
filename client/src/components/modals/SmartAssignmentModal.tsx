@@ -7,12 +7,9 @@ import {
 import { api } from '../../lib/api-client';
 import { formatDate } from '../../utils/date';
 import { validateDateRange, validateSelection, validateAllocation } from '../../utils/formValidation';
+import { queryKeys } from '../../lib/queryKeys';
 import { calculatePhaseDurationWeeks } from '../../utils/phaseDurations';
-import {
-  calculateRoleBasedScore,
-  calculatePriorityBasedScore,
-  calculateSuggestedAllocation
-} from '../../utils/recommendationScoring';
+import { useAssignmentRecommendations, ProjectRecommendation } from '../../hooks/useAssignmentRecommendations';
 import {
   Dialog,
   DialogContent,
@@ -28,14 +25,95 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import { cn } from '../../lib/utils';
+import type { Project, Role, AssignmentDateMode } from '../../types';
 import './SmartAssignmentModal.css';
 
+// Form validation errors
 interface FormErrors {
   project_id?: string;
   role_id?: string;
   start_date?: string;
   end_date?: string;
   allocation_percentage?: string;
+}
+
+// Person role from person.roles array
+interface PersonRoleLink {
+  role_id: string;
+  is_primary?: boolean;
+}
+
+// Project phase link
+interface ProjectPhaseLink {
+  phase_id: string;
+  phase_name: string;
+  start_date: string;
+  end_date: string;
+}
+
+// Phase for selection
+interface FilteredPhase {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+// Role with demand
+interface RoleWithDemand {
+  id: string;
+  name: string;
+}
+
+// Project allocation
+interface ProjectAllocation {
+  role_id: string;
+  role_name: string;
+  phase_id: string;
+  allocation_percentage: number;
+}
+
+// Active assignment from utilization data
+interface ActiveAssignment {
+  id?: string;
+  project_name?: string;
+  role_name?: string;
+  phase_name?: string;
+  allocation_percentage?: number;
+  computed_start_date?: string;
+  computed_end_date?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+// Project with demand for selection
+interface ProjectWithDemand {
+  id: string;
+  name: string;
+}
+
+// Assignment data for API
+interface AssignmentCreateData {
+  person_id: string;
+  project_id: string;
+  role_id: string;
+  allocation_percentage: number;
+  phase_id?: string;
+  assignment_date_mode?: AssignmentDateMode;
+  start_date?: string;
+  end_date?: string;
+}
+
+// API error response
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+      message?: string;
+      details?: string;
+    };
+  };
+  message?: string;
 }
 
 interface SmartAssignmentModalProps {
@@ -48,15 +126,6 @@ interface SmartAssignmentModalProps {
   actionType?: string;
 }
 
-interface ProjectRecommendation {
-  project: any;
-  suggestedRole: any;
-  score: number;
-  matchedSkills: string[];
-  fitLevel: 'excellent' | 'good' | 'partial';
-  suggestedAllocation: number;
-  reason: string;
-}
 
 export function SmartAssignmentModal({ 
   isOpen, 
@@ -91,13 +160,13 @@ export function SmartAssignmentModal({
   // Invalidate project phases cache when modal opens to ensure fresh data
   useEffect(() => {
     if (isOpen && formData.project_id) {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', formData.project_id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(formData.project_id) });
     }
   }, [isOpen, formData.project_id, queryClient]);
 
   // Fetch person details with current assignments
   const { data: person } = useQuery({
-    queryKey: ['person-with-assignments', personId],
+    queryKey: queryKeys.people.withAssignments(personId),
     queryFn: async () => {
       const response = await api.people.get(personId);
       // The PeopleController returns the person data directly, not wrapped in { data: ... }
@@ -109,7 +178,7 @@ export function SmartAssignmentModal({
 
   // Fetch all required data
   const { data: projects } = useQuery({
-    queryKey: ['projects'],
+    queryKey: queryKeys.projects.list(),
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data;
@@ -118,12 +187,12 @@ export function SmartAssignmentModal({
 
   // Fetch all project allocations to determine which projects have demand
   const { data: allProjectAllocations, isLoading: isLoadingAllocations } = useQuery({
-    queryKey: ['all-project-allocations'],
+    queryKey: queryKeys.projectAllocations.allProjects(),
     queryFn: async () => {
       if (!projects?.data) return [];
-      
+
       // Fetch allocations for all projects in parallel
-      const allocationPromises = projects.data.map(async (project: any) => {
+      const allocationPromises = (projects.data as Project[]).map(async (project) => {
         try {
           const response = await api.projectAllocations.get(project.id);
           return {
@@ -138,14 +207,14 @@ export function SmartAssignmentModal({
           };
         }
       });
-      
+
       return Promise.all(allocationPromises);
     },
     enabled: !!projects?.data
   });
 
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       // console.log('Roles response:', response);
@@ -154,7 +223,7 @@ export function SmartAssignmentModal({
   });
 
   const { data: phases } = useQuery({
-    queryKey: ['phases'],
+    queryKey: queryKeys.phases.list(),
     queryFn: async () => {
       const response = await api.phases.list();
       return response.data;
@@ -163,7 +232,7 @@ export function SmartAssignmentModal({
 
   // Fetch project phases with dates
   const { data: projectPhases, refetch: refetchPhases } = useQuery({
-    queryKey: ['project-phases', formData.project_id],
+    queryKey: queryKeys.projectPhases.byProject(formData.project_id),
     queryFn: async () => {
       if (!formData.project_id) return [];
       const response = await api.projects.getPhases(formData.project_id);
@@ -174,7 +243,7 @@ export function SmartAssignmentModal({
 
   // Fetch project allocations to determine which roles and phases have demand
   const { data: projectAllocations } = useQuery({
-    queryKey: ['project-allocations', formData.project_id],
+    queryKey: queryKeys.projects.allocations(formData.project_id),
     queryFn: async () => {
       if (!formData.project_id) return [];
       const response = await api.projectAllocations.get(formData.project_id);
@@ -184,173 +253,21 @@ export function SmartAssignmentModal({
   });
 
 
-  // Calculate current utilization and availability
-  const utilizationData = useMemo(() => {
-    if (!person) return { currentUtilization: 0, availability: 100, remainingCapacity: 100 };
-    
-    
-    const activeAssignments = person.assignments?.filter((a: any) => {
-      const today = new Date().toISOString().split('T')[0];
-      const startDate = a.computed_start_date || a.start_date;
-      const endDate = a.computed_end_date || a.end_date;
-      
-      // If no dates are set, don't count it as active
-      if (!startDate || !endDate) return false;
-      
-      return startDate <= today && endDate >= today;
-    }) || [];
-
-    const totalAllocation = activeAssignments.reduce((sum: number, a: any) => 
-      sum + (a.allocation_percentage || 0), 0
-    );
-
-    const availability = person.default_availability_percentage || 100;
-    const remainingCapacity = availability - totalAllocation;
-
-    return {
-      currentUtilization: totalAllocation,
-      availability,
-      remainingCapacity,
-      activeAssignments
-    };
-  }, [person]);
-
-  // Filter projects that have demand - moved before projectRecommendations
-  const projectsWithDemand = useMemo(() => {
-    if (!projects?.data || !allProjectAllocations || isLoadingAllocations) {
-      // If allocations are still loading, show all projects
-      return projects?.data || [];
-    }
-    
-    return projects.data.filter((project: any) => {
-      const projectAllocation = allProjectAllocations.find(
-        (pa: any) => pa.projectId === project.id
-      );
-      
-      // Check if project has any allocation > 0
-      const hasAllocations = projectAllocation?.allocations?.some(
-        (allocation: any) => allocation.allocation_percentage > 0
-      );
-      
-      if (hasAllocations) {
-        // Extract required roles from allocations
-        const requiredRoles = [...new Set(
-          projectAllocation.allocations
-            .filter((a: any) => a.allocation_percentage > 0)
-            .map((a: any) => a.role_id)
-        )];
-        
-        // Add required_roles to the project object
-        project.required_roles = requiredRoles;
-      }
-      
-      return hasAllocations;
-    });
-  }, [projects, allProjectAllocations, isLoadingAllocations]);
-
-  // Generate project recommendations
-  const projectRecommendations = useMemo(() => {
-    if (!projectsWithDemand || !person) return [];
-    
-    // Get person's actual role IDs from their role assignments
-    const personRoleIds = new Set(
-      person.roles?.map((r: any) => r.role_id).filter(Boolean) || []
-    );
-    
-    // console.log('Person roles:', person.roles?.map((r: any) => ({ role_id: r.role_id, is_primary: r.is_primary })));
-    // console.log('Person role IDs:', Array.from(personRoleIds));
-    // console.log('Available roles in DB:', roles?.slice(0, 3).map((r: any) => ({ id: r.id, name: r.name })));
-
-    const recommendations: ProjectRecommendation[] = [];
-    
-    // Only consider projects that have demand
-    projectsWithDemand.forEach((project: any) => {
-      // Skip if project is already assigned to this person
-      if (person.assignments?.some((a: any) => a.project_id === project.id)) {
-        return;
-      }
-
-      // Find the best matching role for this person on this project
-      const projectRoleNeeds = new Set(project.required_roles || []);
-      const personRoles = person.roles?.map((r: any) => r.role_id).filter(Boolean) || [];
-      
-      // Find roles that match both the person's skills and project needs
-      const matchingRoles = personRoles.filter(roleId => projectRoleNeeds.has(roleId));
-      
-      // If project has no role requirements, any person can be assigned
-      // Otherwise, only show if there are matching roles or it's an assign_project action
-      const hasNoRoleRequirements = !project.required_roles || project.required_roles.length === 0;
-      
-      if (hasNoRoleRequirements || matchingRoles.length > 0 || actionType === 'assign_project') {
-        // Select the best role (prefer primary role if it matches)
-        const rolesData = roles || [];
-        
-        // Find a valid role ID that exists in the database
-        let suggestedRoleId = null;
-        const primaryRole = person.roles?.find((r: any) => r.is_primary);
-        
-        if (hasNoRoleRequirements && primaryRole) {
-          // If project has no requirements, use person's primary role
-          suggestedRoleId = primaryRole.role_id;
-        } else if (primaryRole && matchingRoles.includes(primaryRole.role_id) && 
-            rolesData.some((r: any) => r.id === primaryRole.role_id)) {
-          suggestedRoleId = primaryRole.role_id;
-        } else if (matchingRoles.length > 0) {
-          // Find first matching role that exists in database
-          suggestedRoleId = matchingRoles.find(roleId => 
-            rolesData.some((r: any) => r.id === roleId)
-          );
-        }
-        
-        // Fallback to person's primary role or first available role
-        if (!suggestedRoleId) {
-          suggestedRoleId = primaryRole?.role_id || (rolesData.length > 0 ? rolesData[0].id : null);
-        }
-          
-        const suggestedRole = rolesData.find((r: any) => r.id === suggestedRoleId);
-        
-        // Calculate score using extracted utility functions
-        const scoring = hasNoRoleRequirements
-          ? calculatePriorityBasedScore(project.priority, suggestedRole?.name)
-          : calculateRoleBasedScore(matchingRoles.length, projectRoleNeeds.size, suggestedRole?.name);
-
-        const score = scoring.score;
-        const fitLevel = scoring.fitLevel;
-        const reason = scoring.reason;
-
-        // Suggest allocation based on remaining capacity and project priority
-        const suggestedAllocation = calculateSuggestedAllocation(
-          utilizationData.remainingCapacity,
-          project.priority
-        );
-
-        // Only add recommendation if we have a valid role
-        if (suggestedRole) {
-          recommendations.push({
-            project,
-            suggestedRole,
-            score,
-            matchedSkills: matchingRoles,
-            fitLevel,
-            suggestedAllocation,
-            reason
-          });
-        }
-      }
-    });
-
-    // Sort by score and priority
-    return recommendations.sort((a, b) => {
-      if (a.score !== b.score) return b.score - a.score;
-      return a.project.priority - b.project.priority;
-    }).slice(0, 5); // Top 5 recommendations
-  }, [projectsWithDemand, person, actionType, utilizationData.remainingCapacity, roles]);
+  // Use the extracted hook for recommendations, utilization, and projects with demand
+  const { recommendations: projectRecommendations, utilizationData, projectsWithDemand } = useAssignmentRecommendations({
+    person,
+    projects: projects?.data,
+    roles,
+    allProjectAllocations,
+    isLoadingAllocations,
+    actionType,
+  });
 
   // Set default role based on person's primary role
   useEffect(() => {
     if (person && !formData.role_id) {
       // Find the actual role_id from person's roles where is_primary is true
-      const primaryRole = person.roles?.find((r: any) => r.is_primary);
+      const primaryRole = person.roles?.find((r: PersonRoleLink) => r.is_primary);
       setFormData(prev => ({
         ...prev,
         role_id: primaryRole?.role_id || ''
@@ -371,7 +288,7 @@ export function SmartAssignmentModal({
   // Get selected project details
   const selectedProject = useMemo(() => {
     const projectId = selectedRecommendation?.project.id || formData.project_id;
-    return projects?.data?.find((p: any) => p.id === projectId);
+    return (projects?.data as Project[] | undefined)?.find((p) => p.id === projectId);
   }, [projects, formData.project_id, selectedRecommendation]);
 
   // Get roles that have demand in the selected project
@@ -380,7 +297,7 @@ export function SmartAssignmentModal({
     
     // Get unique roles that have allocations > 0
     const roleMap = new Map();
-    projectAllocations.forEach((allocation: any) => {
+    (projectAllocations as ProjectAllocation[]).forEach((allocation) => {
       if (allocation.allocation_percentage > 0 && !roleMap.has(allocation.role_id)) {
         roleMap.set(allocation.role_id, {
           id: allocation.role_id,
@@ -397,7 +314,7 @@ export function SmartAssignmentModal({
     if (!projectPhases || !Array.isArray(projectPhases)) return [];
     if (!formData.role_id || !projectAllocations) {
       // If no role selected, return all project phases
-      return projectPhases.map((projectPhase: any) => ({
+      return (projectPhases as ProjectPhaseLink[]).map((projectPhase) => ({
         id: projectPhase.phase_id,
         name: projectPhase.phase_name,
         start_date: projectPhase.start_date,
@@ -407,15 +324,15 @@ export function SmartAssignmentModal({
     
     // Filter phases that have allocation for the selected role
     const phasesWithRole = projectAllocations
-      .filter((allocation: any) => 
-        allocation.role_id === formData.role_id && 
+      .filter((allocation: ProjectAllocation) =>
+        allocation.role_id === formData.role_id &&
         allocation.allocation_percentage > 0
       )
-      .map((allocation: any) => allocation.phase_id);
+      .map((allocation: ProjectAllocation) => allocation.phase_id);
     
     return projectPhases
-      .filter((projectPhase: any) => phasesWithRole.includes(projectPhase.phase_id))
-      .map((projectPhase: any) => ({
+      .filter((projectPhase: ProjectPhaseLink) => phasesWithRole.includes(projectPhase.phase_id))
+      .map((projectPhase: ProjectPhaseLink) => ({
         id: projectPhase.phase_id,
         name: projectPhase.phase_name,
         start_date: projectPhase.start_date,
@@ -441,45 +358,44 @@ export function SmartAssignmentModal({
 
   // Create assignment mutation
   const createAssignmentMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: AssignmentCreateData) => {
       console.log('Creating assignment with data:', data);
       return api.assignments.create(data);
     },
     onSuccess: (response) => {
       // Invalidate all queries that might be affected by the new assignment
       const projectId = selectedRecommendation?.project.id || formData.project_id;
-      
+
       // Person-related queries
-      queryClient.invalidateQueries({ queryKey: ['person', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-with-assignments', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-assignments', personId] });
-      
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.withAssignments(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.assignments(personId) });
+
       // Project-related queries
       if (projectId) {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.assignments(projectId) });
       }
-      
+
       // General queries
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['people'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+
       onClose();
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       console.error('Failed to create assignment');
       console.error('Error details:', error.response?.data?.details);
       console.error('Error message:', error.response?.data?.error || error.response?.data?.message);
-      
-      const errorMessage = error.response?.data?.error || 
-                          error.response?.data?.message || 
-                          error.response?.data?.details || 
-                          error.message || 
+
+      const errorMessage = error.response?.data?.error ||
+                          error.response?.data?.message ||
+                          error.response?.data?.details ||
+                          error.message ||
                           'Failed to create assignment';
-      
+
       alert(`Error: ${errorMessage}\n\nDetails: ${error.response?.data?.details || 'Unknown error'}`);
     }
   });
@@ -491,14 +407,13 @@ export function SmartAssignmentModal({
     },
     onSuccess: () => {
       // Invalidate queries after deletion
-      queryClient.invalidateQueries({ queryKey: ['person', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-with-assignments', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['person-utilization-timeline', personId] });
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.withAssignments(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(personId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       console.error('Failed to delete assignment:', error);
       alert('Failed to delete assignment. Please try again.');
     }
@@ -537,8 +452,8 @@ export function SmartAssignmentModal({
 
     // Validate role exists in database
     if (formData.role_id) {
-      const rolesData = roles || [];
-      const roleExists = rolesData.some((r: any) => r.id === formData.role_id);
+      const rolesData = (roles as Role[]) || [];
+      const roleExists = rolesData.some((r) => r.id === formData.role_id);
       if (!roleExists) {
         console.error('Invalid role ID:', formData.role_id);
         console.error('Available roles:', rolesData);
@@ -569,7 +484,7 @@ export function SmartAssignmentModal({
     }
     
     // Build assignment data
-    const assignmentData: any = {
+    const assignmentData: AssignmentCreateData = {
       person_id: personId,
       project_id: selectedRecommendation?.project.id || formData.project_id,
       role_id: formData.role_id,
@@ -596,7 +511,7 @@ export function SmartAssignmentModal({
     createAssignmentMutation.mutate(assignmentData);
   };
 
-  const handleFormChange = (field: string, value: any) => {
+  const handleFormChange = (field: string, value: string | number) => {
     // Clear error for this field when user makes changes
     if (errors[field as keyof FormErrors]) {
       setErrors(prev => {
@@ -613,7 +528,7 @@ export function SmartAssignmentModal({
       const defaultEndDate = new Date(today);
       
       // Set default duration based on phase using extracted utility
-      const selectedPhase = projectPhases?.find((phase: any) => phase.phase_id === value);
+      const selectedPhase = (projectPhases as ProjectPhaseLink[] | undefined)?.find((phase) => phase.phase_id === value);
       if (selectedPhase) {
         // Calculate duration using utility function
         const durationWeeks = calculatePhaseDurationWeeks(selectedPhase.phase_name);
@@ -773,7 +688,7 @@ export function SmartAssignmentModal({
                   
                   {utilizationData.activeAssignments && utilizationData.activeAssignments.length > 0 ? (
                     <div className="assignments-list">
-                      {utilizationData.activeAssignments.map((assignment: any, index: number) => (
+                      {utilizationData.activeAssignments.map((assignment: ActiveAssignment, index: number) => (
                         <div key={assignment.id || `assignment-${index}`} className="assignment-item" style={{
                           padding: '1rem',
                           marginBottom: '0.5rem',
@@ -882,7 +797,7 @@ export function SmartAssignmentModal({
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {projectsWithDemand.map((project: any) => (
+                      {projectsWithDemand.map((project: ProjectWithDemand) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
                         </SelectItem>
@@ -922,7 +837,7 @@ export function SmartAssignmentModal({
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.isArray(formData.project_id ? projectRoles : roles) && (formData.project_id ? projectRoles : roles).map((role: any) => (
+                      {Array.isArray(formData.project_id ? projectRoles : roles) && (formData.project_id ? projectRoles : roles).map((role: RoleWithDemand) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
                         </SelectItem>
@@ -981,7 +896,7 @@ export function SmartAssignmentModal({
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredPhases?.map((phase: any) => (
+                      {filteredPhases?.map((phase: FilteredPhase) => (
                         <SelectItem key={phase.id} value={phase.id}>
                           {phase.name} ({new Date(phase.start_date).toLocaleDateString()} - {new Date(phase.end_date).toLocaleDateString()})
                         </SelectItem>

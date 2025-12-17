@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Palette, ChevronRight, ChevronDown, List, GitBranch, Eye } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -41,7 +42,7 @@ export default function ProjectTypes() {
 
   // Fetch project types - list or hierarchy based on view mode
   const { data: projectTypes, isLoading: projectTypesLoading, error: projectTypesError } = useQuery({
-    queryKey: ['projectTypes', filters, viewMode],
+    queryKey: queryKeys.projectTypes.list(filters, viewMode),
     queryFn: async () => {
       if (viewMode === 'hierarchy') {
         const response = await api.projectTypes.getHierarchy();
@@ -62,8 +63,7 @@ export default function ProjectTypes() {
       await api.projectTypes.delete(projectTypeId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectTypes'] });
-      queryClient.invalidateQueries({ queryKey: ['project-types'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectTypes.all });
     }
   });
 

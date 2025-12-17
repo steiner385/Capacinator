@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { Edit2, RotateCcw, Save, X } from 'lucide-react';
 import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
 import type { Project } from '../types';
@@ -39,7 +40,7 @@ export const ProjectAllocations: React.FC<ProjectAllocationsProps> = ({
 
   // Fetch project data for type color
   const { data: project } = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: queryKeys.projects.detail(projectId),
     queryFn: async () => {
       const response = await api.projects.get(projectId);
       const rawProject = response.data;
@@ -59,7 +60,7 @@ export const ProjectAllocations: React.FC<ProjectAllocationsProps> = ({
 
   // Fetch project allocations
   const { data: allocationData, isLoading, error } = useQuery({
-    queryKey: ['projectAllocations', projectId],
+    queryKey: queryKeys.projectAllocations.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectAllocations.get(projectId);
       return response.data.data;
@@ -73,7 +74,7 @@ export const ProjectAllocations: React.FC<ProjectAllocationsProps> = ({
       return api.projectAllocations.override(projectId, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectAllocations', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectAllocations.byProject(projectId) });
       setEditingAllocation(null);
       setEditValue(0);
       setEditNotes('');
@@ -86,7 +87,7 @@ export const ProjectAllocations: React.FC<ProjectAllocationsProps> = ({
       return api.projectAllocations.reset(projectId, data.phaseId, data.roleId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectAllocations', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectAllocations.byProject(projectId) });
     }
   });
 

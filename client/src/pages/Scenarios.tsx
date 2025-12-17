@@ -18,6 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { Scenario } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { CreateScenarioModal, EditScenarioModal, DeleteConfirmationModal } from '../components/modals/ScenarioModal';
@@ -265,7 +266,7 @@ const MergeModal: React.FC<MergeModalProps> = ({
   const mergeMutation = useMutation({
     mutationFn: (data: any) => api.scenarios.merge(scenario.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scenarios.all });
       handleClose();
       setConfirmMerge(false);
     },
@@ -903,13 +904,13 @@ export const Scenarios: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (scenarioId: string) => api.scenarios.delete(scenarioId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scenarios'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scenarios.all });
       handleCloseDeleteModal();
     },
   });
 
   const { data: scenarios, isLoading, error } = useQuery({
-    queryKey: ['scenarios'],
+    queryKey: queryKeys.scenarios.list(),
     queryFn: async () => {
       const response = await api.scenarios.list();
       return response.data as Scenario[];

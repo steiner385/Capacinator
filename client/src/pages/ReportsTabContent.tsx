@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  BarChart3, PieChart, TrendingUp, Users, Calendar, 
+import {
+  BarChart3, PieChart, TrendingUp, Users, Calendar,
   Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, UserMinus, ClipboardList, ChevronDown,
   Briefcase, User, Plus, X, Minus
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { useScenario } from '../contexts/ScenarioContext';
 import { getDefaultReportDateRange } from '../utils/date';
 import {
@@ -25,6 +26,7 @@ import {
   type ActionButton
 } from '../components/reports';
 import '../styles/reports.css';
+import type { Location, ProjectType, Role, Person, ProjectAssignment, Project, AllocationStatus } from '../types';
 
 interface ReportFilters {
   startDate: string;
@@ -32,6 +34,149 @@ interface ReportFilters {
   projectTypeId?: string;
   locationId?: string;
   roleId?: string;
+}
+
+// Report-specific types
+interface TooltipPayloadEntry {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string;
+}
+
+interface RoleCapacityData {
+  role: string;
+  capacity: number;
+  utilized?: number;
+}
+
+interface PersonCapacityData {
+  person_id: string;
+  person_name: string;
+  available_hours: number;
+  default_hours_per_day: number;
+  default_availability_percentage: number;
+  allocation_status: AllocationStatus;
+}
+
+interface LocationCapacityData {
+  location: string;
+  capacity: number;
+}
+
+interface CapacityOverTimeData {
+  period: string;
+  capacity: number;
+}
+
+interface CapacityReportData {
+  totalCapacity: number;
+  utilizedCapacity: number;
+  personUtilization: PersonCapacityData[];
+  byRole: RoleCapacityData[];
+  byLocation: LocationCapacityData[];
+  capacityOverTime: CapacityOverTimeData[];
+  utilizationData?: PersonCapacityData[];
+}
+
+interface PersonUtilizationData {
+  id: string;
+  name: string;
+  role: string;
+  utilization: number;
+  availableHours: number;
+  projectCount: number;
+  projects: string;
+}
+
+interface RoleUtilizationData {
+  role: string;
+  avgUtilization: number;
+}
+
+interface UtilizationReportData {
+  summary?: { averageUtilization: number };
+  utilizationData?: Array<{
+    person_id: string;
+    person_name: string;
+    primary_role_name?: string;
+    total_allocation_percentage?: number;
+    available_hours?: number;
+    project_count?: number;
+    project_names?: string;
+  }>;
+  peopleUtilization: PersonUtilizationData[];
+  roleUtilization: RoleUtilizationData[];
+  averageUtilization: number;
+  overAllocatedCount: number;
+  underUtilizedCount: number;
+  optimalCount: number;
+}
+
+interface DemandByProject {
+  project: string;
+  demand: number;
+}
+
+interface DemandTrendData {
+  month: string;
+  total_hours: number;
+}
+
+interface DemandReportData {
+  summary?: { total_hours: number };
+  byProject: DemandByProject[];
+  timeline?: Array<{ month: string; total_hours: number }>;
+  trendOverTime: DemandTrendData[];
+  peakMonth: string;
+}
+
+interface GapsByRole {
+  roleId: string;
+  roleName: string;
+  demand: number;
+  capacity: number;
+  gap: number;
+  isShortage: boolean;
+}
+
+interface GapTrendData {
+  period: string;
+  gap: number;
+}
+
+interface GapsReportData {
+  summary?: { totalGapHours: number };
+  capacityGaps: Array<{
+    role_id: string;
+    role_name: string;
+    total_demand_fte: number;
+    total_capacity_fte: number;
+    capacity_gap_fte: number;
+  }>;
+  gapsByRole: GapsByRole[];
+  gapTrend: GapTrendData[];
+  totalGap: number;
+  criticalRolesCount: number;
+}
+
+interface FilterOptions {
+  projectTypes: ProjectType[];
+  locations: Location[];
+  roles: Role[];
+}
+
+interface SelectedPerson {
+  id: string;
+  name: string;
+  utilization: number;
+  role_id?: string;
+  availableCapacity?: number;
 }
 
 // Helper function to format month-year string
@@ -43,7 +188,7 @@ const formatMonthYear = (monthStr: string): string => {
 };
 
 // Custom tooltip component for charts
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="recharts-custom-tooltip" style={{
@@ -55,7 +200,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p className="recharts-tooltip-label" style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
           {label}
         </p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: TooltipPayloadEntry, index: number) => (
           <p key={index} style={{ color: entry.color, margin: '0.25rem 0' }}>
             {entry.name}: {entry.value}
           </p>
@@ -76,7 +221,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showReduceLoadModal, setShowReduceLoadModal] = useState(false);
   const [showAddProjectsModal, setShowAddProjectsModal] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<any>(null);
+  const [selectedPerson, setSelectedPerson] = useState<SelectedPerson | null>(null);
   
   // Modal notification states
   const [modalNotification, setModalNotification] = useState<{
@@ -92,7 +237,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch report data
   const { data: capacityReport, isLoading: capacityLoading, refetch: refetchCapacity } = useQuery({
-    queryKey: ['report-capacity', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.capacity(filters, currentScenario?.id),
     queryFn: async () => {
       const [capacityResponse, peopleResponse] = await Promise.all([
         api.reporting.getCapacity(filters),
@@ -105,23 +250,28 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
       // Transform the API data to match chart requirements
       if (data) {
         // Use the correctly calculated byRole data from the API instead of frontend calculation
-        const byRole = data.byRole || [];
-        
+        const byRole: RoleCapacityData[] = data.byRole || [];
+
         // Calculate totals
-        const totalCapacity = byRole.reduce((sum: number, r: any) => sum + r.capacity, 0);
-        const utilizedCapacity = byRole.reduce((sum: number, r: any) => sum + r.utilized, 0);
+        const totalCapacity = byRole.reduce((sum: number, r: RoleCapacityData) => sum + r.capacity, 0);
+        const utilizedCapacity = byRole.reduce((sum: number, r: RoleCapacityData) => sum + (r.utilized || 0), 0);
         
         // Calculate actual location-based capacity using people data
-        const locationCapacity = new Map();
-        
-        peopleData.forEach((person: any) => {
+        const locationCapacity = new Map<string, number>();
+
+        interface PeopleDataItem {
+          location_name?: string;
+          default_availability_percentage?: number;
+          default_hours_per_day?: number;
+        }
+        (peopleData as PeopleDataItem[]).forEach((person) => {
           const locationName = person.location_name || 'Unknown';
           const personCapacity = Math.round((person.default_availability_percentage || 100) * (person.default_hours_per_day || 8) * 20 / 100); // Monthly hours
-          
+
           if (!locationCapacity.has(locationName)) {
             locationCapacity.set(locationName, 0);
           }
-          locationCapacity.set(locationName, locationCapacity.get(locationName) + personCapacity);
+          locationCapacity.set(locationName, (locationCapacity.get(locationName) || 0) + personCapacity);
         });
         
         // Convert to array format for the chart
@@ -130,7 +280,15 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
         });
         
         // Transform personUtilization to provide daily hours
-        const personUtilization = (data.utilizationData || []).map((person: any) => ({
+        interface UtilizationDataItem {
+          person_id?: string;
+          person_name?: string;
+          name?: string;
+          available_hours?: number;
+          default_availability_percentage?: number;
+          allocation_status?: AllocationStatus;
+        }
+        const personUtilization = ((data.utilizationData || []) as UtilizationDataItem[]).map((person) => ({
           ...person,
           default_hours_per_day: person.available_hours || 8,
           person_name: person.person_name || person.name
@@ -159,14 +317,23 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   const { data: utilizationReport, isLoading: utilizationLoading, refetch: refetchUtilization } = useQuery({
-    queryKey: ['report-utilization', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.utilization(filters, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getUtilization(filters);
       const data = response.data.data;
       
       if (data) {
         // Transform the data to match what the UtilizationReport component expects
-        const peopleUtilization = data.utilizationData?.map((person: any) => ({
+        interface UtilizationApiItem {
+          person_id: string;
+          person_name: string;
+          primary_role_name?: string;
+          total_allocation_percentage?: number;
+          available_hours?: number;
+          project_count?: number;
+          project_names?: string;
+        }
+        const peopleUtilization: PersonUtilizationData[] = ((data.utilizationData || []) as UtilizationApiItem[]).map((person) => ({
           id: person.person_id,
           name: person.person_name,
           role: person.primary_role_name || 'No Role',
@@ -174,32 +341,33 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
           availableHours: person.available_hours || 8,
           projectCount: person.project_count || 0,
           projects: person.project_names || ''
-        })) || [];
-        
+        }));
+
         // Calculate role-based utilization
-        const roleMap = new Map();
-        peopleUtilization.forEach((person: any) => {
+        interface RoleMapEntry { role: string; totalUtilization: number; count: number }
+        const roleMap = new Map<string, RoleMapEntry>();
+        peopleUtilization.forEach((person: PersonUtilizationData) => {
           if (!roleMap.has(person.role)) {
-            roleMap.set(person.role, { 
-              role: person.role, 
-              totalUtilization: 0, 
-              count: 0 
+            roleMap.set(person.role, {
+              role: person.role,
+              totalUtilization: 0,
+              count: 0
             });
           }
-          const roleData = roleMap.get(person.role);
+          const roleData = roleMap.get(person.role)!;
           roleData.totalUtilization += person.utilization;
           roleData.count += 1;
         });
-        
-        const roleUtilization = Array.from(roleMap.values()).map(role => ({
+
+        const roleUtilization: RoleUtilizationData[] = Array.from(roleMap.values()).map(role => ({
           role: role.role,
           avgUtilization: role.count > 0 ? role.totalUtilization / role.count : 0
         }));
-        
+
         // Calculate counts for summary cards
-        const overAllocatedCount = peopleUtilization.filter((p: any) => p.utilization > 100).length;
-        const underUtilizedCount = peopleUtilization.filter((p: any) => p.utilization > 0 && p.utilization < 80).length;
-        const optimalCount = peopleUtilization.filter((p: any) => p.utilization >= 80 && p.utilization <= 100).length;
+        const overAllocatedCount = peopleUtilization.filter((p: PersonUtilizationData) => p.utilization > 100).length;
+        const underUtilizedCount = peopleUtilization.filter((p: PersonUtilizationData) => p.utilization > 0 && p.utilization < 80).length;
+        const optimalCount = peopleUtilization.filter((p: PersonUtilizationData) => p.utilization >= 80 && p.utilization <= 100).length;
         
         return {
           ...data,
@@ -218,7 +386,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   const { data: demandReport, isLoading: demandLoading, refetch: refetchDemand } = useQuery({
-    queryKey: ['report-demand', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.demand(filters, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getDemand(filters);
       const data = response.data.data;
@@ -226,12 +394,13 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
       // Transform data for charts
       if (data) {
         // The API already returns byProject as an array, just limit to top 10 for visibility
-        const byProject = (data.byProject || [])
-          .sort((a: any, b: any) => b.demand - a.demand)
+        const byProject: DemandByProject[] = ((data.byProject || []) as DemandByProject[])
+          .sort((a: DemandByProject, b: DemandByProject) => b.demand - a.demand)
           .slice(0, 10);
-        
+
         // Add trend data over time
-        let trendOverTime = (data.timeline || []).map((item: any) => ({
+        interface TimelineItem { month: string; total_hours: number }
+        let trendOverTime: DemandTrendData[] = ((data.timeline || []) as TimelineItem[]).map((item) => ({
           month: formatMonthYear(item.month),
           total_hours: item.total_hours
         }));
@@ -272,8 +441,8 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
         }
         
         // Find peak month from timeline data
-        const peakMonth = trendOverTime.reduce((peak: any, current: any) => 
-          current.total_hours > (peak?.total_hours || 0) ? current : peak, 
+        const peakMonth = trendOverTime.reduce((peak: DemandTrendData | null, current: DemandTrendData) =>
+          current.total_hours > (peak?.total_hours || 0) ? current : peak,
           null
         )?.month || 'N/A';
         
@@ -291,16 +460,23 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   const { data: gapsReport, isLoading: gapsLoading, refetch: refetchGaps } = useQuery({
-    queryKey: ['report-gaps', filters, currentScenario?.id],
+    queryKey: queryKeys.reports.gaps(filters, currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getGaps(filters);
       const data = response.data.data;
       
       if (data) {
         // Transform capacity gaps data for charts
-        const gapsByRole = data.capacityGaps
-          .filter((gap: any) => gap.total_demand_fte > 0 || gap.total_capacity_fte > 0)
-          .map((gap: any) => ({
+        interface CapacityGapApiItem {
+          role_id: string;
+          role_name: string;
+          total_demand_fte: number;
+          total_capacity_fte: number;
+          capacity_gap_fte: number;
+        }
+        const gapsByRole: GapsByRole[] = ((data.capacityGaps || []) as CapacityGapApiItem[])
+          .filter((gap: CapacityGapApiItem) => gap.total_demand_fte > 0 || gap.total_capacity_fte > 0)
+          .map((gap: CapacityGapApiItem) => ({
             roleId: gap.role_id,
             roleName: gap.role_name,
             demand: Math.round(gap.total_demand_fte * 160),
@@ -308,20 +484,20 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
             gap: Math.round(-gap.capacity_gap_fte * 160), // Negative means shortage
             isShortage: gap.capacity_gap_fte < 0
           }))
-          .filter((gap: any) => gap.gap !== 0)
-          .sort((a: any, b: any) => b.gap - a.gap);
-        
+          .filter((gap: GapsByRole) => gap.gap !== 0)
+          .sort((a: GapsByRole, b: GapsByRole) => b.gap - a.gap);
+
         // Calculate trend over time
-        const gapTrend = [
+        const gapTrend: GapTrendData[] = [
           { period: 'Current', gap: data.summary?.totalGapHours || 0 },
           { period: 'Next Month', gap: Math.round((data.summary?.totalGapHours || 0) * 0.8) },
           { period: 'In 3 Months', gap: Math.round((data.summary?.totalGapHours || 0) * 0.5) }
         ];
-        
+
         // Calculate total gap hours and other metrics
-        const totalGapFte = data.capacityGaps.reduce((sum: number, g: any) => sum + Math.max(0, -g.capacity_gap_fte || 0), 0);
+        const totalGapFte = ((data.capacityGaps || []) as CapacityGapApiItem[]).reduce((sum: number, g: CapacityGapApiItem) => sum + Math.max(0, -g.capacity_gap_fte || 0), 0);
         const totalGap = Math.round(totalGapFte * 160); // Convert to hours
-        const criticalRolesCount = gapsByRole.filter((g: any) => g.gap > 80).length;
+        const criticalRolesCount = gapsByRole.filter((g: GapsByRole) => g.gap > 80).length;
         
         return {
           ...data,
@@ -339,7 +515,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch person's assignments for modals
   const { data: personAssignments = [], refetch: refetchPersonAssignments } = useQuery({
-    queryKey: ['person-assignments', selectedPerson?.id, currentScenario?.id],
+    queryKey: queryKeys.people.assignments(selectedPerson?.id, currentScenario?.id),
     queryFn: async () => {
       const response = await api.assignments.list({ person_id: selectedPerson.id });
       return response.data?.data || [];
@@ -349,7 +525,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
 
   // Fetch available projects with gaps for recommendations
   const { data: availableProjects = [], refetch: refetchAvailableProjects } = useQuery({
-    queryKey: ['available-projects', selectedPerson?.id, currentScenario?.id],
+    queryKey: queryKeys.reports.availableProjects(selectedPerson?.id, currentScenario?.id),
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data?.data || [];
@@ -358,8 +534,8 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   // Fetch filter options
-  const { data: filterOptions = {} } = useQuery({
-    queryKey: ['report-filter-options'],
+  const { data: filterOptions = {} as FilterOptions } = useQuery<FilterOptions>({
+    queryKey: queryKeys.reports.filterOptions(),
     queryFn: async () => {
       const [projectTypes, locations, roles] = await Promise.all([
         api.projectTypes.list(),
@@ -376,54 +552,64 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   // Get project removal recommendations
-  const getProjectRemovalRecommendations = (person: any) => {
+  interface AssignmentWithRecommendation extends ProjectAssignment {
+    reductionAmount: number;
+    newUtilization: number;
+  }
+  const getProjectRemovalRecommendations = (person: SelectedPerson): AssignmentWithRecommendation[] => {
     // Sort by allocation percentage descending to suggest removing highest allocations first
-    const sortedAssignments = [...personAssignments].sort((a, b) => 
+    const sortedAssignments = [...personAssignments].sort((a, b) =>
       b.allocation_percentage - a.allocation_percentage
     );
-    
-    const recommendations = [];
+
+    const recommendations: AssignmentWithRecommendation[] = [];
     let cumulativeReduction = 0;
-    
+
     for (const assignment of sortedAssignments) {
       if (cumulativeReduction >= person.utilization - 100) break;
-      
+
       recommendations.push({
         ...assignment,
         reductionAmount: assignment.allocation_percentage,
         newUtilization: person.utilization - cumulativeReduction - assignment.allocation_percentage
       });
-      
+
       cumulativeReduction += assignment.allocation_percentage;
     }
-    
+
     return recommendations;
   };
 
   // Get project addition recommendations
-  const getProjectAdditionRecommendations = (person: any) => {
+  interface ProjectWithAllocation extends Project {
+    allocation_status?: string;
+    required_role_id?: string;
+    remaining_demand?: number;
+    suggestedAllocation: number;
+  }
+  const getProjectAdditionRecommendations = (person: SelectedPerson): ProjectWithAllocation[] => {
     const availableCapacity = person.availableCapacity || 0;
-    
+
     // Find projects with gaps
-    const projectsWithGaps = availableProjects
-      .filter((project: any) => {
+    const projectsWithGaps = (availableProjects as Project[])
+      .filter((project: Project & { allocation_status?: string; required_role_id?: string }) => {
         // Check if project has unmet demand
         const hasGap = project.allocation_status === 'UNDER_ALLOCATED';
         // Check if person has required role
         const hasRole = !project.required_role_id || person.role_id === project.required_role_id;
         return hasGap && hasRole;
       })
-      .map((project: any) => ({
+      .map((project: Project & { remaining_demand?: number }) => ({
         ...project,
         suggestedAllocation: Math.min(availableCapacity, project.remaining_demand || 20)
       }))
       .sort((a, b) => b.priority - a.priority);
-    
+
     return projectsWithGaps;
   };
 
   // Handle person actions from utilization report
-  const handlePersonAction = (person: any, action: 'reduce' | 'add') => {
+  const handlePersonAction = (person: SelectedPerson, action: 'reduce' | 'add') => {
     setSelectedPerson(person);
     if (action === 'reduce') {
       setShowReduceLoadModal(true);
@@ -562,7 +748,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
       }
     ];
 
-    const peopleCapacityActions = (row: any): ActionButton[] => {
+    const peopleCapacityActions = (row: PersonCapacityData): ActionButton[] => {
       if (row.allocation_status === 'AVAILABLE') {
         return [{
           to: `/assignments?person=${encodeURIComponent(row.person_name)}&action=assign&from=capacity-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`,
@@ -611,7 +797,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
       }
     ];
 
-    const roleCapacityActions = (row: any): ActionButton[] => [{
+    const roleCapacityActions = (row: RoleCapacityData): ActionButton[] => [{
       to: `/people?role=${encodeURIComponent(row.role)}&from=capacity-report&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`,
       icon: Users,
       text: 'View People',
@@ -779,7 +965,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
             onChange={(e) => handleFilterChange('projectTypeId', e.target.value)}
           >
             <option value="">All Types</option>
-            {filterOptions.projectTypes?.map((type: any) => (
+            {filterOptions.projectTypes?.map((type) => (
               <option key={type.id} value={type.id}>{type.name}</option>
             ))}
           </select>
@@ -791,7 +977,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
             onChange={(e) => handleFilterChange('locationId', e.target.value)}
           >
             <option value="">All Locations</option>
-            {filterOptions.locations?.map((loc: any) => (
+            {filterOptions.locations?.map((loc) => (
               <option key={loc.id} value={loc.id}>{loc.name}</option>
             ))}
           </select>

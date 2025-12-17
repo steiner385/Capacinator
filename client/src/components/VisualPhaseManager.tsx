@@ -1,11 +1,26 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from './InteractiveTimeline';
-import useInteractiveTimeline from '../hooks/useInteractiveTimeline';
 import './InteractiveTimeline.css';
-import { addDays, format, startOfMonth, endOfMonth } from 'date-fns';
-import { X, Calendar, Type, Save, Plus } from 'lucide-react';
+import { addDays, format } from 'date-fns';
+import { Calendar, Plus } from 'lucide-react';
+
+// Import extracted components
+import {
+  PhaseAddModal,
+  PhaseEditModal,
+  DependencyModal,
+  PhaseContextMenu,
+  ProjectPhaseTimeline,
+  AddPhaseFormData,
+  EditPhaseFormData,
+  DependencyFormData,
+  ContextMenuPosition,
+  PhaseDependency,
+  getPhaseColor
+} from './phase-manager';
 
 interface VisualPhaseManagerProps {
   projectId: string;
@@ -21,39 +36,7 @@ interface VisualPhaseManagerProps {
   chartTimeData?: Array<{ date: string; [key: string]: any }>; // Chart data for time axis alignment
 }
 
-interface ProjectPhaseTimeline {
-  id: string;
-  project_id: string;
-  phase_id: string;
-  start_date: string;
-  end_date: string;
-  phase_name: string;
-  phase_order: number;
-  is_custom_phase?: number;
-}
-
-// Phase colors matching the existing system
-// NOTE: Using hex values instead of CSS variables because these colors
-// are passed to InteractiveTimeline which may use canvas rendering
-// where CSS variables cannot be resolved
-const PHASE_COLORS: Record<string, string> = {
-  'business planning': '#3b82f6',
-  'development': '#10b981',
-  'system integration testing': '#f59e0b',
-  'user acceptance testing': '#8b5cf6',
-  'validation': '#ec4899',
-  'cutover': '#ef4444',
-  'hypercare': '#06b6d4',
-  'support': '#84cc16',
-  'custom': '#6b7280'
-};
-
-const getPhaseColor = (phaseName: string): string => {
-  const normalizedName = phaseName.toLowerCase();
-  return PHASE_COLORS[normalizedName] || PHASE_COLORS['custom'];
-};
-
-export function VisualPhaseManager({ projectId, projectName, onPhasesChange, compact = false, externalViewport, onViewportChange, alignmentDimensions, chartTimeData }: VisualPhaseManagerProps) {
+export function VisualPhaseManager({ projectId, projectName: _projectName, onPhasesChange, compact = false, externalViewport, onViewportChange, alignmentDimensions, chartTimeData }: VisualPhaseManagerProps) {
   // Debug alignment dimensions
   React.useEffect(() => {
     if (alignmentDimensions) {
@@ -62,18 +45,19 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       console.log('⚠️ VisualPhaseManager: No alignment dimensions provided');
     }
   }, [alignmentDimensions]);
+
   const queryClient = useQueryClient();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPhase, setEditingPhase] = useState<ProjectPhaseTimeline | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; phaseId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
   const [isModalActive, setIsModalActive] = useState(false);
-  const [addPhaseForm, setAddPhaseForm] = useState({
+  const [addPhaseForm, setAddPhaseForm] = useState<AddPhaseFormData>({
     phase_id: '',
     start_date: '',
     end_date: '',
     phase_order: 1
   });
-  const [editPhaseForm, setEditPhaseForm] = useState({
+  const [editPhaseForm, setEditPhaseForm] = useState<EditPhaseFormData>({
     phase_name: '',
     start_date: '',
     end_date: '',
@@ -82,17 +66,17 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Dependency-related state
   const [showDependencyModal, setShowDependencyModal] = useState(false);
-  const [editingDependency, setEditingDependency] = useState<any>(null);
-  const [dependencyForm, setDependencyForm] = useState({
+  const [editingDependency, setEditingDependency] = useState<PhaseDependency | null>(null);
+  const [dependencyForm, setDependencyForm] = useState<DependencyFormData>({
     predecessor_phase_timeline_id: '',
     successor_phase_timeline_id: '',
-    dependency_type: 'FS' as 'FS' | 'SS' | 'FF' | 'SF',
+    dependency_type: 'FS',
     lag_days: 0
   });
 
   // Fetch project phases
   const { data: phasesData, isLoading } = useQuery({
-    queryKey: ['project-phases', projectId],
+    queryKey: queryKeys.projectPhases.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data;
@@ -101,7 +85,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Fetch available phase templates for adding new phases
   const { data: phaseTemplates } = useQuery({
-    queryKey: ['phase-templates'],
+    queryKey: queryKeys.phases.templates(),
     queryFn: async () => {
       const response = await api.phases.list();
       return response.data;
@@ -110,7 +94,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
   // Fetch project phase dependencies
   const { data: dependenciesData, refetch: refetchDependencies } = useQuery({
-    queryKey: ['project-phase-dependencies', projectId],
+    queryKey: queryKeys.projectPhases.dependencies(projectId),
     queryFn: async () => {
       const response = await api.projectPhaseDependencies.list({ project_id: projectId });
       return response.data;
@@ -120,26 +104,26 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
   // Convert phases to timeline items (filter out garbage/test phases)
   const timelineItems: TimelineItem[] = React.useMemo(() => {
     if (!phasesData?.data) return [];
-    
+
     // Filter out test/garbage phases based on common patterns
     const cleanPhases = phasesData.data.filter((phase: ProjectPhaseTimeline) => {
       const phaseName = phase.phase_name.toLowerCase();
-      
+
       // Filter out obvious test/garbage phases
       if (phaseName.includes('test phase') && (phaseName.includes('1753') || phaseName.includes('1754'))) return false;
       if (phaseName.includes('no adjust phase') && (phaseName.includes('1753') || phaseName.includes('1754'))) return false;
       if (phaseName.includes('duplicated phase') && (phaseName.includes('1753') || phaseName.includes('1754'))) return false;
       if (phaseName.includes('custom date phase') && (phaseName.includes('1753') || phaseName.includes('1754'))) return false;
-      
+
       // Keep standard phases and clean custom phases
       return true;
     });
-    
+
     // Sort by start date
-    const sortedPhases = cleanPhases.sort((a: any, b: any) => 
+    const sortedPhases = cleanPhases.sort((a: ProjectPhaseTimeline, b: ProjectPhaseTimeline) =>
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
-    
+
     return sortedPhases.map((phase: ProjectPhaseTimeline) => ({
       id: phase.id,
       name: phase.phase_name,
@@ -194,7 +178,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     if (externalViewport && !isValidViewport(externalViewport)) {
       console.warn('⚠️ VisualPhaseManager received invalid external viewport (empty date objects), falling back to internal calculation:', externalViewport);
     }
-    
+
     // Only calculate own viewport if no external control AND not in compact mode
     // In compact mode (integrated with resource chart), we should wait for external viewport
     if (compact) {
@@ -206,7 +190,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         pixelsPerDay: 2
       };
     }
-    
+
     // Calculate own viewport only for standalone mode
     if (timelineItems.length === 0) {
       const today = new Date();
@@ -217,44 +201,42 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
         endDate,
         pixelsPerDay: 2
       };
-      
+
       // Only notify parent in standalone mode
       if (!compact) {
         onViewportChange?.(viewport);
       }
       return viewport;
     }
-    
+
     // Calculate date range from actual phase data - only in standalone mode
     const allDates = timelineItems.flatMap(item => [item.startDate, item.endDate]);
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
-    
+
     // Add padding
     const paddingDays = Math.max(30, Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24) * 0.05));
     const startDate = addDays(minDate, -paddingDays);
     const endDate = addDays(maxDate, paddingDays);
-    
+
     // Calculate appropriate zoom level for full page width
     const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     // Target wider viewport - use more pixels per day to utilize full width
     const pixelsPerDay = Math.max(2, Math.min(12, 1400 / totalDays)); // Target ~1400px width
-    
+
     const viewport = {
       startDate,
       endDate,
       pixelsPerDay
     };
-    
+
     // Only notify parent in standalone mode
     if (!compact) {
       onViewportChange?.(viewport);
     }
-    
-    return viewport;
-  }, [timelineItems, externalViewport, onViewportChange, compact]);
 
-  // Remove the separate effect since we handle notification in the useMemo above
+    return viewport;
+  }, [timelineItems, externalViewport, onViewportChange, compact, alignmentDimensions]);
 
   // Update phase mutation
   const updatePhaseMutation = useMutation({
@@ -264,38 +246,37 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     },
     onMutate: async ({ phaseId, updates }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['project-phases', projectId] });
-      
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+
       // Snapshot the previous value
-      const previousPhases = queryClient.getQueryData(['project-phases', projectId]);
-      
+      const previousPhases = queryClient.getQueryData(queryKeys.projectPhases.byProject(projectId));
+
       // Optimistically update to the new value
-      queryClient.setQueryData(['project-phases', projectId], (old: any) => {
+      queryClient.setQueryData(queryKeys.projectPhases.byProject(projectId), (old: any) => {
         if (!old?.data) return old;
         return {
           ...old,
-          data: old.data.map((phase: ProjectPhaseTimeline) => 
-            phase.id === phaseId 
+          data: old.data.map((phase: ProjectPhaseTimeline) =>
+            phase.id === phaseId
               ? { ...phase, ...updates }
               : phase
           )
         };
       });
-      
+
       // Return a context object with the snapshotted value
       return { previousPhases };
     },
     onError: (err: any, variables, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousPhases) {
-        queryClient.setQueryData(['project-phases', projectId], context.previousPhases);
+        queryClient.setQueryData(queryKeys.projectPhases.byProject(projectId), context.previousPhases);
       }
-      
+
       // Show validation errors to user
       if (err?.response?.data?.validation_errors) {
         const errors = err.response.data.validation_errors;
         console.error('Phase update validation failed:', errors);
-        // TODO: Display errors in UI (could use a toast notification or modal)
         alert('Dependency validation failed:\n' + errors.join('\n'));
       } else {
         console.error('Phase update failed:', err);
@@ -303,7 +284,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       onPhasesChange?.();
     }
   });
@@ -314,7 +295,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       await api.projectPhases.delete(phaseId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       onPhasesChange?.();
     }
   });
@@ -326,7 +307,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
       onPhasesChange?.();
     }
   });
@@ -379,7 +360,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
   const handleAddPhase = useCallback((afterItemId?: string, position?: { x: number, date: Date }) => {
     // Don't open add modal if any modal is active
     if (isModalActive) return;
-    
+
     // Pre-populate form with suggested dates if position is provided
     if (position?.date) {
       const startDate = format(position.date, 'yyyy-MM-dd');
@@ -405,8 +386,23 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     setShowAddModal(true);
   }, [timelineItems, isModalActive]);
 
+  // Handle phase duplication (from context menu)
+  const handlePhaseDuplicate = useCallback((phase: ProjectPhaseTimeline) => {
+    const duplicateStartDate = addDays(new Date(phase.end_date), 1);
+    const duplicateEndDate = addDays(duplicateStartDate,
+      (new Date(phase.end_date).getTime() - new Date(phase.start_date).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    setAddPhaseForm({
+      phase_id: phase.phase_id,
+      start_date: format(duplicateStartDate, 'yyyy-MM-dd'),
+      end_date: format(duplicateEndDate, 'yyyy-MM-dd'),
+      phase_order: phase.phase_order + 1
+    });
+    setShowAddModal(true);
+  }, []);
+
   // Dependency handlers
-  const handleEditDependency = useCallback((dependency: any) => {
+  const handleEditDependency = useCallback((dependency: PhaseDependency) => {
     setEditingDependency(dependency);
     setDependencyForm({
       predecessor_phase_timeline_id: dependency.predecessor_phase_timeline_id,
@@ -428,12 +424,6 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     }
   }, [refetchDependencies]);
 
-  // Handle context menu
-  const handleContextMenu = useCallback((e: React.MouseEvent, phaseId: string) => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, phaseId });
-  }, []);
-
   // Close context menu on click outside
   useEffect(() => {
     const handleClickOutside = () => setContextMenu(null);
@@ -445,6 +435,83 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
   useEffect(() => {
     setIsModalActive(showAddModal || editingPhase !== null || showDependencyModal);
   }, [showAddModal, editingPhase, showDependencyModal]);
+
+  // Modal handlers
+  const handleAddModalClose = useCallback(() => {
+    setShowAddModal(false);
+    setIsModalActive(false);
+  }, []);
+
+  const handleAddModalSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const selectedPhase = (phaseTemplates as any)?.data?.find((p: any) => p.id === addPhaseForm.phase_id)
+      || (Array.isArray(phaseTemplates) ? phaseTemplates.find((p: any) => p.id === addPhaseForm.phase_id) : null);
+    addPhaseMutation.mutate({
+      project_id: projectId,
+      phase_id: addPhaseForm.phase_id,
+      phase_name: selectedPhase?.name || 'Unknown Phase',
+      start_date: addPhaseForm.start_date,
+      end_date: addPhaseForm.end_date,
+      phase_order: addPhaseForm.phase_order
+    });
+    setShowAddModal(false);
+    setIsModalActive(false);
+    setAddPhaseForm({ phase_id: '', start_date: '', end_date: '', phase_order: 1 });
+  }, [addPhaseForm, phaseTemplates, projectId, addPhaseMutation]);
+
+  const handleEditModalClose = useCallback(() => {
+    setEditingPhase(null);
+    setIsModalActive(false);
+    setEditPhaseForm({ phase_name: '', start_date: '', end_date: '', phase_order: 1 });
+  }, []);
+
+  const handleEditModalSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPhase) return;
+    updatePhaseMutation.mutate({
+      phaseId: editingPhase.id,
+      updates: {
+        start_date: editPhaseForm.start_date,
+        end_date: editPhaseForm.end_date,
+        phase_order: editPhaseForm.phase_order
+      }
+    });
+    setEditingPhase(null);
+    setIsModalActive(false);
+    setEditPhaseForm({ phase_name: '', start_date: '', end_date: '', phase_order: 1 });
+  }, [editingPhase, editPhaseForm, updatePhaseMutation]);
+
+  const handleDependencyModalClose = useCallback(() => {
+    setShowDependencyModal(false);
+    setEditingDependency(null);
+    setDependencyForm({
+      predecessor_phase_timeline_id: '',
+      successor_phase_timeline_id: '',
+      dependency_type: 'FS',
+      lag_days: 0
+    });
+  }, []);
+
+  const handleDependencyModalSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const data = {
+        project_id: projectId,
+        ...dependencyForm
+      };
+
+      if (editingDependency) {
+        await api.projectPhaseDependencies.update(editingDependency.id, data);
+      } else {
+        await api.projectPhaseDependencies.create(data);
+      }
+
+      refetchDependencies();
+      handleDependencyModalClose();
+    } catch (error) {
+      console.error('Failed to save dependency:', error);
+    }
+  }, [projectId, dependencyForm, editingDependency, refetchDependencies, handleDependencyModalClose]);
 
   if (isLoading) {
     return (
@@ -458,8 +525,8 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     <div className="visual-phase-manager" style={compact ? {
       width: '100%',
       maxWidth: 'none'
-    } : { 
-      width: '100vw', 
+    } : {
+      width: '100vw',
       maxWidth: 'none',
       position: 'relative',
       left: '50%',
@@ -469,24 +536,23 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
     }}>
       {/* Header */}
       {!compact && (
-        <div className="phase-manager-header" style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start', 
-          marginBottom: '20px' 
+        <div className="phase-manager-header" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '20px'
         }}>
           <div>
             <div style={{ fontSize: '14px', color: 'hsl(var(--muted-foreground))', marginBottom: '8px' }}>
               <span>Drag phases to move them • Resize by dragging edges • Double-click to edit • Right-click for more options</span>
             </div>
           </div>
-          
+
           {/* Timeline controls */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginRight: '8px' }}>
               {timelineItems.length} phases
             </div>
-            {/* Zoom controls temporarily removed for simplicity */}
             <button
               onClick={() => setShowAddModal(true)}
               style={{
@@ -508,11 +574,11 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       )}
 
       {compact && (
-        <div className="phase-manager-header-compact" style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '12px' 
+        <div className="phase-manager-header-compact" style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '12px'
         }}>
           <h4 style={{ margin: '0', fontSize: '14px', color: 'hsl(var(--muted-foreground))', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={16} />
@@ -537,25 +603,24 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
       )}
 
       {/* Interactive Timeline */}
-      <div style={{ 
-        marginBottom: compact ? '12px' : '24px', 
-        minHeight: compact ? '160px' : '220px', 
-        position: 'relative', 
+      <div style={{
+        marginBottom: compact ? '12px' : '24px',
+        minHeight: compact ? '160px' : '220px',
+        position: 'relative',
         width: '100%',
-        overflow: 'hidden', // Always clip content to container bounds
+        overflow: 'hidden',
       }}>
         {/* Timeline container with precise alignment */}
         <div style={{
           position: 'relative',
-          // Apply exact chart alignment when in compact mode
           ...(alignmentDimensions && compact ? {
             marginLeft: `${alignmentDimensions.left}px`,
             width: `${alignmentDimensions.width}px`,
             maxWidth: `${alignmentDimensions.width}px`,
-            overflow: 'hidden' // Ensure content stays within bounds
+            overflow: 'hidden'
           } : {
             width: '100%',
-            overflow: 'hidden' // Also clip in non-compact mode
+            overflow: 'hidden'
           })
         }}>
         {timelineItems.length > 0 ? (
@@ -569,7 +634,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               viewport={timelineViewport}
               mode="phase-manager"
               height={170}
-              width={alignmentDimensions?.width} // Pass explicit width for precise alignment
+              width={alignmentDimensions?.width}
               dependencies={dependenciesData?.data?.map((dep: any) => ({
                 id: dep.id,
                 predecessorId: dep.predecessor_phase_timeline_id,
@@ -589,7 +654,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
               allowOverlap={false}
               minItemDuration={1}
               className="project-phase-timeline"
-              chartTimeData={chartTimeData} // Pass chart data for exact time axis alignment
+              chartTimeData={chartTimeData}
               style={{
                 backgroundColor: 'hsl(var(--background))',
                 border: '1px solid hsl(var(--border))',
@@ -597,7 +662,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
             />
-            
+
             {/* Date Timeline Reference */}
             <div style={{
               height: '40px',
@@ -614,19 +679,19 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 const startDate = new Date(timelineViewport.startDate);
                 const endDate = new Date(timelineViewport.endDate);
                 const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-                
+
                 while (current <= endDate) {
                   const monthStart = new Date(current);
                   const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0);
                   const actualStart = monthStart > startDate ? monthStart : startDate;
                   const actualEnd = monthEnd < endDate ? monthEnd : endDate;
-                  
+
                   const leftPos = ((actualStart.getTime() - timelineViewport.startDate.getTime()) / (1000 * 60 * 60 * 24)) * timelineViewport.pixelsPerDay;
                   const width = ((actualEnd.getTime() - actualStart.getTime()) / (1000 * 60 * 60 * 24)) * timelineViewport.pixelsPerDay;
-                  
+
                   const monthName = current.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
                   const isCurrentMonth = new Date().getMonth() === current.getMonth() && new Date().getFullYear() === current.getFullYear();
-                  
+
                   markers.push(
                     <div
                       key={current.getTime()}
@@ -650,18 +715,18 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                       {width > 50 ? monthName : (width > 30 ? current.toLocaleDateString('en-US', { month: 'short' }) : '')}
                     </div>
                   );
-                  
+
                   current.setMonth(current.getMonth() + 1);
                 }
-                
+
                 return markers;
               })()}
-              
+
               {/* Today indicator line */}
               {(() => {
                 const today = new Date();
                 const todayPos = ((today.getTime() - timelineViewport.startDate.getTime()) / (1000 * 60 * 60 * 24)) * timelineViewport.pixelsPerDay;
-                
+
                 if (todayPos >= 0 && todayPos <= ((timelineViewport.endDate.getTime() - timelineViewport.startDate.getTime()) / (1000 * 60 * 60 * 24)) * timelineViewport.pixelsPerDay) {
                   return (
                     <div
@@ -697,7 +762,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             {isLoading ? 'Loading project phases...' : 'No project phases found. Click "Add Phase" to create the first phase.'}
           </div>
         )}
-        
+
         {/* Phase Dependencies Section */}
         {!compact && timelineItems.length > 0 && (
           <div style={{ marginTop: '24px' }}>
@@ -730,7 +795,7 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
                 Add Dependency
               </button>
             </div>
-            
+
             {/* Dependencies List */}
             <div style={{
               backgroundColor: 'hsl(var(--card))',
@@ -810,17 +875,17 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
       {/* Phase Statistics */}
       {!compact && (
-        <div className="phase-statistics" style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+        <div className="phase-statistics" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           gap: '16px',
           marginBottom: '20px'
         }}>
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: 'hsl(var(--card))', 
-          border: '1px solid hsl(var(--border))', 
-          borderRadius: '8px' 
+        <div style={{
+          padding: '16px',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '8px'
         }}>
           <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length}
@@ -829,16 +894,16 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             Total Phases
           </div>
         </div>
-        
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: 'hsl(var(--card))', 
-          border: '1px solid hsl(var(--border))', 
-          borderRadius: '8px' 
+
+        <div style={{
+          padding: '16px',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '8px'
         }}>
           <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length > 0 ? Math.ceil(
-              (timelineItems[timelineItems.length - 1].endDate.getTime() - 
+              (timelineItems[timelineItems.length - 1].endDate.getTime() -
                timelineItems[0].startDate.getTime()) / (1000 * 60 * 60 * 24)
             ) : 0}
           </div>
@@ -846,12 +911,12 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             Project Duration (Days)
           </div>
         </div>
-        
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: 'hsl(var(--card))', 
-          border: '1px solid hsl(var(--border))', 
-          borderRadius: '8px' 
+
+        <div style={{
+          padding: '16px',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '8px'
         }}>
           <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length > 0 ? format(timelineItems[0].startDate, 'MMM yyyy') : '-'}
@@ -860,12 +925,12 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
             Project Start
           </div>
         </div>
-        
-        <div style={{ 
-          padding: '16px', 
-          backgroundColor: 'hsl(var(--card))', 
-          border: '1px solid hsl(var(--border))', 
-          borderRadius: '8px' 
+
+        <div style={{
+          padding: '16px',
+          backgroundColor: 'hsl(var(--card))',
+          border: '1px solid hsl(var(--border))',
+          borderRadius: '8px'
         }}>
           <div style={{ fontSize: '24px', fontWeight: 600, color: 'hsl(var(--foreground))' }}>
             {timelineItems.length > 0 ? format(timelineItems[timelineItems.length - 1].endDate, 'MMM yyyy') : '-'}
@@ -879,430 +944,46 @@ export function VisualPhaseManager({ projectId, projectName, onPhasesChange, com
 
       {/* Context Menu */}
       {contextMenu && (
-        <div
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            top: contextMenu.y,
-            left: contextMenu.x,
-            background: 'hsl(var(--popover))',
-            border: '1px solid hsl(var(--border))',
-            borderRadius: '6px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
-            padding: '4px 0',
-            minWidth: '150px',
-            zIndex: 1000
-          }}
-        >
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              handlePhaseEdit(contextMenu.phaseId);
-              setContextMenu(null);
-            }}
-          >
-            Edit Phase
-          </button>
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              const phase = phasesData?.data.find((p: ProjectPhaseTimeline) => p.id === contextMenu.phaseId);
-              if (phase) {
-                const duplicateStartDate = addDays(new Date(phase.end_date), 1);
-                const duplicateEndDate = addDays(duplicateStartDate, 
-                  (new Date(phase.end_date).getTime() - new Date(phase.start_date).getTime()) / (1000 * 60 * 60 * 24)
-                );
-                setAddPhaseForm({
-                  phase_id: phase.phase_id,
-                  start_date: format(duplicateStartDate, 'yyyy-MM-dd'),
-                  end_date: format(duplicateEndDate, 'yyyy-MM-dd'),
-                  phase_order: phase.phase_order + 1
-                });
-                setShowAddModal(true);
-              }
-              setContextMenu(null);
-            }}
-          >
-            Duplicate Phase
-          </button>
-          <button
-            className="context-menu-item danger"
-            onClick={() => {
-              handlePhaseDelete(contextMenu.phaseId);
-              setContextMenu(null);
-            }}
-          >
-            Delete Phase
-          </button>
-        </div>
+        <PhaseContextMenu
+          contextMenu={contextMenu}
+          phases={phasesData?.data || []}
+          onEdit={handlePhaseEdit}
+          onDuplicate={handlePhaseDuplicate}
+          onDelete={handlePhaseDelete}
+          onClose={() => setContextMenu(null)}
+        />
       )}
 
       {/* Add Phase Modal */}
-      {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">
-                Add New Phase
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setIsModalActive(false);
-                }}
-                className="modal-close"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form className="modal-form" onSubmit={(e) => {
-              e.preventDefault();
-              const selectedPhase = phaseTemplates?.data?.find((p: any) => p.id === addPhaseForm.phase_id);
-              addPhaseMutation.mutate({
-                project_id: projectId,
-                phase_id: addPhaseForm.phase_id,
-                phase_name: selectedPhase?.name || 'Unknown Phase',
-                start_date: addPhaseForm.start_date,
-                end_date: addPhaseForm.end_date,
-                phase_order: addPhaseForm.phase_order
-              });
-              setShowAddModal(false);
-              setIsModalActive(false);
-              setAddPhaseForm({ phase_id: '', start_date: '', end_date: '', phase_order: 1 });
-            }}>
-              <div className="form-group">
-                <label className="form-label">
-                  <Type size={16} />
-                  Phase Type
-                </label>
-                <select
-                  value={addPhaseForm.phase_id}
-                  onChange={(e) => setAddPhaseForm(prev => ({ ...prev, phase_id: e.target.value }))}
-                  required
-                  className="form-select"
-                >
-                  <option value="">Select a phase type...</option>
-                  {Array.isArray(phaseTemplates?.data) ? phaseTemplates.data.map((template: any) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  )) : Array.isArray(phaseTemplates) ? phaseTemplates.map((template: any) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  )) : null}
-                </select>
-              </div>
-              
-              <div className="form-group grid">
-                <div>
-                  <label className="form-label">
-                    <Calendar size={16} />
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={addPhaseForm.start_date}
-                    onChange={(e) => setAddPhaseForm(prev => ({ ...prev, start_date: e.target.value }))}
-                    required
-                    className="form-input"
-                  />
-                </div>
-                
-                <div>
-                  <label className="form-label">
-                    <Calendar size={16} />
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={addPhaseForm.end_date}
-                    onChange={(e) => setAddPhaseForm(prev => ({ ...prev, end_date: e.target.value }))}
-                    required
-                    min={addPhaseForm.start_date}
-                    className="form-input"
-                  />
-                </div>
-              </div>
-              
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setIsModalActive(false);
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!addPhaseForm.phase_id || !addPhaseForm.start_date || !addPhaseForm.end_date}
-                  className="btn btn-primary"
-                >
-                  <Save size={16} />
-                  Add Phase
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      
+      <PhaseAddModal
+        isOpen={showAddModal}
+        formData={addPhaseForm}
+        phaseTemplates={phaseTemplates}
+        onFormChange={(updates) => setAddPhaseForm(prev => ({ ...prev, ...updates }))}
+        onSubmit={handleAddModalSubmit}
+        onClose={handleAddModalClose}
+      />
+
       {/* Edit Phase Modal */}
-      {editingPhase && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">
-                Edit Phase: {editingPhase.phase_name}
-              </h3>
-              <button
-                onClick={() => {
-                  setEditingPhase(null);
-                  setIsModalActive(false);
-                  setEditPhaseForm({ phase_name: '', start_date: '', end_date: '', phase_order: 1 });
-                }}
-                className="modal-close"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form className="modal-form" onSubmit={(e) => {
-              e.preventDefault();
-              updatePhaseMutation.mutate({
-                phaseId: editingPhase.id,
-                updates: {
-                  start_date: editPhaseForm.start_date,
-                  end_date: editPhaseForm.end_date,
-                  phase_order: editPhaseForm.phase_order
-                }
-              });
-              setEditingPhase(null);
-              setIsModalActive(false);
-              setEditPhaseForm({ phase_name: '', start_date: '', end_date: '', phase_order: 1 });
-            }}>
-              <div className="form-group">
-                <label className="form-label">
-                  <Type size={16} />
-                  Phase Type (read-only)
-                </label>
-                <input
-                  type="text"
-                  value={editPhaseForm.phase_name}
-                  disabled
-                  className="form-input"
-                />
-              </div>
-              
-              <div className="form-group grid">
-                <div>
-                  <label className="form-label">
-                    <Calendar size={16} />
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={editPhaseForm.start_date}
-                    onChange={(e) => setEditPhaseForm(prev => ({ ...prev, start_date: e.target.value }))}
-                    required
-                    className="form-input"
-                  />
-                </div>
-                
-                <div>
-                  <label className="form-label">
-                    <Calendar size={16} />
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={editPhaseForm.end_date}
-                    onChange={(e) => setEditPhaseForm(prev => ({ ...prev, end_date: e.target.value }))}
-                    required
-                    min={editPhaseForm.start_date}
-                    className="form-input"
-                  />
-                </div>
-              </div>
-              
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingPhase(null);
-                    setIsModalActive(false);
-                    setEditPhaseForm({ phase_name: '', start_date: '', end_date: '', phase_order: 1 });
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!editPhaseForm.start_date || !editPhaseForm.end_date}
-                  className="btn btn-primary"
-                >
-                  <Save size={16} />
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <PhaseEditModal
+        isOpen={!!editingPhase}
+        editingPhase={editingPhase}
+        formData={editPhaseForm}
+        onFormChange={(updates) => setEditPhaseForm(prev => ({ ...prev, ...updates }))}
+        onSubmit={handleEditModalSubmit}
+        onClose={handleEditModalClose}
+      />
 
       {/* Add/Edit Dependency Modal */}
-      {showDependencyModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {editingDependency ? 'Edit' : 'Add'} Phase Dependency
-              </h3>
-              <button
-                onClick={() => {
-                  setShowDependencyModal(false);
-                  setEditingDependency(null);
-                  setDependencyForm({
-                    predecessor_phase_timeline_id: '',
-                    successor_phase_timeline_id: '',
-                    dependency_type: 'FS',
-                    lag_days: 0
-                  });
-                }}
-                className="modal-close"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form className="modal-form" onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                const data = {
-                  project_id: projectId,
-                  ...dependencyForm
-                };
-                
-                if (editingDependency) {
-                  await api.projectPhaseDependencies.update(editingDependency.id, data);
-                } else {
-                  await api.projectPhaseDependencies.create(data);
-                }
-                
-                refetchDependencies();
-                setShowDependencyModal(false);
-                setEditingDependency(null);
-                setDependencyForm({
-                  predecessor_phase_timeline_id: '',
-                  successor_phase_timeline_id: '',
-                  dependency_type: 'FS',
-                  lag_days: 0
-                });
-              } catch (error) {
-                console.error('Failed to save dependency:', error);
-              }
-            }}>
-              <div className="form-group">
-                <label className="form-label">
-                  Predecessor Phase (must complete first)
-                </label>
-                <select
-                  value={dependencyForm.predecessor_phase_timeline_id}
-                  onChange={(e) => setDependencyForm(prev => ({ ...prev, predecessor_phase_timeline_id: e.target.value }))}
-                  required
-                  className="form-select"
-                >
-                  <option value="">Select predecessor phase...</option>
-                  {timelineItems.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  Successor Phase (depends on predecessor)
-                </label>
-                <select
-                  value={dependencyForm.successor_phase_timeline_id}
-                  onChange={(e) => setDependencyForm(prev => ({ ...prev, successor_phase_timeline_id: e.target.value }))}
-                  required
-                  className="form-select"
-                >
-                  <option value="">Select successor phase...</option>
-                  {timelineItems.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  Dependency Type
-                </label>
-                <select
-                  value={dependencyForm.dependency_type}
-                  onChange={(e) => setDependencyForm(prev => ({ ...prev, dependency_type: e.target.value as 'FS' | 'SS' | 'FF' | 'SF' }))}
-                  className="form-select"
-                  disabled
-                >
-                  <option value="FS">Finish-to-Start (FS)</option>
-                </select>
-                <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginTop: '4px' }}>
-                  Successor phase starts after predecessor phase finishes
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  Lag Days (optional delay)
-                </label>
-                <input
-                  type="number"
-                  value={dependencyForm.lag_days}
-                  onChange={(e) => setDependencyForm(prev => ({ ...prev, lag_days: parseInt(e.target.value, 10) || 0 }))}
-                  min="-365"
-                  max="365"
-                  className="form-input"
-                />
-                <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginTop: '4px' }}>
-                  Positive values add delay, negative values create overlap
-                </div>
-              </div>
-              
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDependencyModal(false);
-                    setEditingDependency(null);
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!dependencyForm.predecessor_phase_timeline_id || !dependencyForm.successor_phase_timeline_id}
-                  className="btn btn-primary"
-                >
-                  <Save size={16} />
-                  {editingDependency ? 'Update' : 'Create'} Dependency
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <DependencyModal
+        isOpen={showDependencyModal}
+        editingDependency={editingDependency}
+        formData={dependencyForm}
+        timelineItems={timelineItems}
+        onFormChange={(updates) => setDependencyForm(prev => ({ ...prev, ...updates }))}
+        onSubmit={handleDependencyModalSubmit}
+        onClose={handleDependencyModalClose}
+      />
     </div>
   );
 }

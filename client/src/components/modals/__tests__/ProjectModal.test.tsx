@@ -425,7 +425,7 @@ describe('ProjectModal', () => {
       });
 
       await waitFor(() => {
-        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['project', 'project-1'] });
+        expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['projects', 'detail', 'project-1'] });
       });
 
       invalidateSpy.mockRestore();

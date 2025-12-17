@@ -1,32 +1,20 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, BarChart, Bar, Brush, ComposedChart, Cell, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 import { VisualPhaseManager } from './VisualPhaseManager';
 import { TimelineViewport } from './InteractiveTimeline';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
+import { useProjectDemandData, ChartDataPoint, DemandApiResponse, AssignmentData } from '../hooks/useProjectDemandData';
+import { useChartGranularity, ChartView } from '../hooks/useChartGranularity';
+import { useChartDisplayData } from '../hooks/useChartDisplayData';
 
 interface ProjectDemandChartProps {
   projectId: string;
   projectName: string;
 }
-
-interface ChartDataPoint {
-  date: string;
-  timestamp: number;
-  [roleName: string]: any;
-}
-
-interface PhaseInfo {
-  id: string;
-  phase_name: string;
-  start_date: string;
-  end_date: string;
-  phase_order: number;
-}
-
-type ChartView = 'demand' | 'capacity' | 'gaps';
 
 // Define chart view tabs configuration
 const chartViewTabs = [
@@ -36,12 +24,12 @@ const chartViewTabs = [
 ];
 
 // Simple Brush Control Component for timeline selection
-const SimpleBrushControl = ({ 
-  data, 
+const SimpleBrushControl = ({
+  data: _data,
   dailyData,
-  brushStart, 
-  brushEnd, 
-  onBrushChange 
+  brushStart,
+  brushEnd,
+  onBrushChange
 }: {
   data: ChartDataPoint[];
   dailyData: ChartDataPoint[];
@@ -270,7 +258,7 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   const [sharedViewport, setSharedViewport] = useState<TimelineViewport | null>(null);
   
   const { data: apiResponse, isLoading, error } = useQuery({
-    queryKey: ['project-demand', projectId],
+    queryKey: queryKeys.demands.project(projectId),
     queryFn: async () => {
       const response = await api.demands.getProjectDemands(projectId);
       return response.data;
@@ -279,8 +267,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   });
 
   // Get project assignments for capacity calculation
-  const { data: assignmentsResponse, isLoading: assignmentsLoading } = useQuery({
-    queryKey: ['project-assignments', projectId],
+  const { data: assignmentsResponse } = useQuery({
+    queryKey: queryKeys.projects.assignments(projectId),
     queryFn: async () => {
       const response = await api.assignments.list({ project_id: projectId });
       return response.data;
@@ -291,14 +279,14 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
   // Callback to refetch demand data when phases change
   const handlePhasesChange = useCallback(() => {
     // Invalidate demand data to trigger refetch
-    queryClient.invalidateQueries({ queryKey: ['project-demand', projectId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.demands.project(projectId) });
     // Also invalidate assignments as they might be affected
-    queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.assignments(projectId) });
   }, [queryClient, projectId]);
 
-  // Get project phases for integrated visualization
-  const { data: phasesResponse } = useQuery({
-    queryKey: ['project-phases', projectId],
+  // Get project phases for integrated visualization (used by VisualPhaseManager child component)
+  useQuery({
+    queryKey: queryKeys.projectPhases.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data;
@@ -306,523 +294,20 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     enabled: !!projectId
   });
 
-  // Phase colors matching the existing system
-  const getPhaseColor = React.useCallback((phaseName: string): string => {
-    const phaseColors: Record<string, string> = {
-      'business planning': '#3b82f6',
-      'development': '#10b981',
-      'system integration testing': '#f59e0b',
-      'user acceptance testing': '#8b5cf6',
-      'validation': '#ec4899',
-      'cutover': '#ef4444',
-      'hypercare': '#06b6d4',
-      'support': '#84cc16',
-      'custom': '#6b7280'
-    };
-    
-    const normalizedName = phaseName.toLowerCase();
-    return phaseColors[normalizedName] || phaseColors['custom'];
-  }, []);
+  // Process data for all three views using extracted hook
+  const { demandData, capacityData, gapsData, phases, dateRange, allRoles } = useProjectDemandData({
+    apiResponse: apiResponse as DemandApiResponse | null,
+    assignmentsResponse: assignmentsResponse as { data: AssignmentData[] } | null
+  });
 
-  // Process data for all three views: demand, capacity, and gaps
-  const { demandData, capacityData, gapsData, phases, dateRange } = React.useMemo(() => {
-    if (!apiResponse || !apiResponse.phases || !Array.isArray(apiResponse.phases)) {
-      return { 
-        demandData: [], 
-        capacityData: [], 
-        gapsData: [], 
-        phases: [], 
-        dateRange: { start: new Date(), end: new Date() }
-      };
-    }
-
-    // Extract phase information for the roadmap overlay
-    const phases: PhaseInfo[] = apiResponse.phases.map((phase: any) => ({
-      id: phase.phase_id,
-      phase_name: phase.phase_name,
-      start_date: phase.start_date,
-      end_date: phase.end_date,
-      phase_order: phase.phase_order
-    })).sort((a, b) => a.phase_order - b.phase_order);
-
-    // Find the overall date range for the project - consider both phases AND demands/assignments
-    const allDates = phases.flatMap(p => [new Date(p.start_date), new Date(p.end_date)]);
-    
-    // Also include dates from demands and assignments to ensure full coverage
-    const demandDates = apiResponse.demands.flatMap(d => [new Date(d.start_date), new Date(d.end_date)]);
-    const assignmentDates = assignmentsResponse?.data ? 
-      assignmentsResponse.data.flatMap(a => [
-        new Date(a.computed_start_date || a.start_date), 
-        new Date(a.computed_end_date || a.end_date)
-      ]) : [];
-    
-    const allProjectDates = [...allDates, ...demandDates, ...assignmentDates];
-
-    // Guard against empty date arrays
-    if (allProjectDates.length === 0) {
-      return {
-        demandData: [],
-        capacityData: [],
-        gapsData: [],
-        phases: [],
-        dateRange: { start: new Date(), end: new Date() }
-      };
-    }
-
-    const minDate = new Date(Math.min(...allProjectDates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...allProjectDates.map(d => d.getTime())));
-
-    console.log('🗓️ Complete project date range:', { 
-      minDate: minDate.toISOString().split('T')[0], 
-      maxDate: maxDate.toISOString().split('T')[0],
-      phases: phases.map(p => ({ name: p.phase_name, start: p.start_date, end: p.end_date })),
-      demandDateRange: demandDates.length > 0 ? {
-        min: new Date(Math.min(...demandDates.map(d => d.getTime()))).toISOString().split('T')[0],
-        max: new Date(Math.max(...demandDates.map(d => d.getTime()))).toISOString().split('T')[0]
-      } : 'none',
-      assignmentDateRange: assignmentDates.length > 0 ? {
-        min: new Date(Math.min(...assignmentDates.map(d => d.getTime()))).toISOString().split('T')[0],
-        max: new Date(Math.max(...assignmentDates.map(d => d.getTime()))).toISOString().split('T')[0]
-      } : 'none',
-      totalDateSources: {
-        phases: allDates.length,
-        demands: demandDates.length,
-        assignments: assignmentDates.length
-      }
-    });
-    
-    // Create daily data points across the entire project timeline
-    const createEmptyTimeline = () => {
-      const timeline: { [dateKey: string]: ChartDataPoint } = {};
-      const currentDate = new Date(minDate);
-      const maxDatePlusOne = new Date(maxDate);
-      maxDatePlusOne.setDate(maxDatePlusOne.getDate() + 1);
-      
-      while (currentDate < maxDatePlusOne) {
-        const dateKey = currentDate.toISOString().split('T')[0];
-        timeline[dateKey] = {
-          date: dateKey,
-          timestamp: currentDate.getTime()
-        };
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      return timeline;
-    };
-
-    // 1. DEMAND DATA - convert allocation percentages to FTE
-    const demandTimeline = createEmptyTimeline();
-    apiResponse.demands.forEach((demand: any) => {
-      const phaseStart = new Date(demand.start_date);
-      const phaseEnd = new Date(demand.end_date);
-      const roleName = demand.role_name;
-      const allocation = demand.allocation_percentage || 0;
-      
-      const currentDay = new Date(phaseStart);
-      while (currentDay <= phaseEnd) {
-        const dayKey = currentDay.toISOString().split('T')[0];
-        if (demandTimeline[dayKey]) {
-          if (!demandTimeline[dayKey][roleName]) {
-            demandTimeline[dayKey][roleName] = 0;
-          }
-          demandTimeline[dayKey][roleName] += allocation / 100; // Convert percentage to FTE
-        }
-        currentDay.setDate(currentDay.getDate() + 1);
-      }
-    });
-
-    // 2. CAPACITY DATA - calculate from project assignments
-    const capacityTimeline = createEmptyTimeline();
-    const uniqueRoles = [...new Set(apiResponse.demands.map((d: any) => d.role_name))];
-    
-    // Calculate capacity from people assigned to this specific project
-    if (assignmentsResponse?.data && assignmentsResponse.data.length > 0) {
-      assignmentsResponse.data.forEach((assignment: any) => {
-        const assignmentStart = new Date(assignment.computed_start_date || assignment.start_date);
-        const assignmentEnd = new Date(assignment.computed_end_date || assignment.end_date);
-        const roleName = assignment.role_name;
-        const allocationPercentage = assignment.allocation_percentage || 0;
-        
-        // Only include if role is relevant to demand data
-        if (roleName && uniqueRoles.includes(roleName)) {
-          // Apply allocation across assignment date range
-          const currentDay = new Date(assignmentStart);
-          while (currentDay <= assignmentEnd) {
-            const dayKey = currentDay.toISOString().split('T')[0];
-            if (capacityTimeline[dayKey]) {
-              if (!capacityTimeline[dayKey][roleName]) {
-                capacityTimeline[dayKey][roleName] = 0;
-              }
-              // Add this person's allocation as FTE to the role's total capacity for this day
-              capacityTimeline[dayKey][roleName] += allocationPercentage / 100; // Convert percentage to FTE
-            }
-            currentDay.setDate(currentDay.getDate() + 1);
-          }
-        }
-      });
-    } else {
-      // No assignments found - show zero capacity for all roles
-      // This makes it clear that there is no capacity assigned to this project
-      Object.keys(capacityTimeline).forEach(dateKey => {
-        uniqueRoles.forEach(roleName => {
-          capacityTimeline[dateKey][roleName] = 0; // Already in FTE (0 people)
-        });
-      });
-    }
-
-    // 3. GAPS DATA - demand minus capacity (shortfalls)
-    const gapsTimeline = createEmptyTimeline();
-    Object.keys(gapsTimeline).forEach(dateKey => {
-      const demandDay = demandTimeline[dateKey];
-      const capacityDay = capacityTimeline[dateKey];
-      
-      // Calculate gaps for each role that has demand
-      uniqueRoles.forEach(roleName => {
-        const demand = demandDay[roleName] || 0;
-        const capacity = capacityDay[roleName] || 0;
-        const gap = demand - capacity;
-        
-        // Only show shortfalls (positive gaps) where demand exceeds capacity
-        if (gap > 0) {
-          gapsTimeline[dateKey][roleName] = gap; // Already in FTE from calculation above
-        }
-        // For negative gaps (surplus capacity), we don't show them in this view
-        // as it represents resource availability, not shortage
-      });
-    });
-
-    // Convert to arrays and sort by date
-    const demandData = Object.values(demandTimeline).sort((a, b) => a.timestamp - b.timestamp);
-    const capacityData = Object.values(capacityTimeline).sort((a, b) => a.timestamp - b.timestamp);
-    const gapsData = Object.values(gapsTimeline).sort((a, b) => a.timestamp - b.timestamp);
-    
-    console.log('📊 Final data ranges:', {
-      demandStart: demandData[0]?.date,
-      demandEnd: demandData[demandData.length - 1]?.date,
-      capacityStart: capacityData[0]?.date,
-      capacityEnd: capacityData[capacityData.length - 1]?.date,
-      dataLength: demandData.length
-    });
-
-    return {
-      demandData,
-      capacityData,
-      gapsData,
-      phases,
-      dateRange: { start: minDate, end: maxDate }
-    };
-  }, [apiResponse, assignmentsResponse, currentView, phasesResponse, getPhaseColor]);
-
-  // Variable granularity functions (copied from PersonAllocationChart)
-  const getGranularity = (startMonth: string, endMonth: string) => {
-    const start = new Date(startMonth + '-01');
-    const end = new Date(endMonth + '-01');
-    const monthsDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
-    
-    if (monthsDiff <= 3) return 'daily';     // 3 months or less: daily
-    if (monthsDiff <= 12) return 'weekly';   // 4-12 months: weekly
-    if (monthsDiff <= 24) return 'monthly';  // 13-24 months: monthly
-    return 'quarterly';                      // > 24 months: quarterly
-  };
-
-  // Generate date points based on granularity - original version using month boundaries
-  const generateDatePoints = (startMonth: string, endMonth: string, granularity: string) => {
-    const start = new Date(startMonth + '-01');
-    const [year, month] = endMonth.split('-').map(Number);
-    const end = new Date(year, month, 0); // Last day of the end month (month is 1-indexed here)
-    
-    console.log('🔧 Date calculation debug (generateDatePoints):', {
-      endMonth,
-      year, month,
-      calculatedEndDate: end.toISOString().split('T')[0],
-      endGetMonth: end.getMonth(),
-      endGetDate: end.getDate(),
-      context: 'generateDatePoints function - this determines the theoretical month end'
-    });
-    
-    const points: string[] = [];
-    const current = new Date(start);
-    
-    if (granularity === 'weekly') {
-      // Start from the beginning of the week containing the start date
-      const startOfWeek = new Date(current);
-      startOfWeek.setDate(current.getDate() - current.getDay()); // Go to Sunday
-      
-      current.setTime(startOfWeek.getTime());
-      
-      while (current <= end) {
-        points.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 7); // Add 7 days for weekly
-      }
-      
-      // Check if we need to add a partial week at the end
-      const lastWeekStart = new Date(current);
-      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // Go back to the last added week
-      const lastWeekEnd = new Date(lastWeekStart);
-      lastWeekEnd.setDate(lastWeekEnd.getDate() + 6); // End of that week
-      
-      // If the target end date is beyond the last complete week, add a partial week point
-      if (end > lastWeekEnd && points.length > 0) {
-        // Find a representative date within the partial week (could be the end date itself)
-        const partialWeekStart = new Date(lastWeekEnd);
-        partialWeekStart.setDate(partialWeekStart.getDate() + 1); // Day after last complete week
-        points.push(partialWeekStart.toISOString().split('T')[0]);
-        
-        console.log('📅 Added partial week at end:', {
-          lastCompleteWeekEnd: lastWeekEnd.toISOString().split('T')[0],
-          partialWeekStart: partialWeekStart.toISOString().split('T')[0],
-          targetEnd: end.toISOString().split('T')[0]
-        });
-      }
-      
-      console.log('📅 Weekly date points generated:', {
-        startMonth, endMonth, granularity,
-        actualStartDate: start.toISOString().split('T')[0],
-        actualEndDate: end.toISOString().split('T')[0],
-        totalPoints: points.length,
-        firstFew: points.slice(0, 3),
-        lastFew: points.slice(-3)
-      });
-    } else if (granularity === 'daily') {
-      while (current <= end) {
-        points.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
-      }
-    } else { // monthly or quarterly
-      while (current <= end) {
-        const year = current.getFullYear();
-        const month = (current.getMonth() + 1).toString().padStart(2, '0');
-        points.push(`${year}-${month}`);
-        
-        if (granularity === 'quarterly') {
-          current.setMonth(current.getMonth() + 3);
-        } else {
-          current.setMonth(current.getMonth() + 1);
-        }
-      }
-    }
-    
-    return points.sort();
-  };
-
-  // Generate date points based on granularity - version that respects actual start and end dates  
-  const generateDatePointsWithActualEnd = (actualStartDate: Date, actualEndDate: Date, granularity: string) => {
-    const start = new Date(actualStartDate);
-    const end = new Date(actualEndDate); 
-    
-    console.log('🔧 Date calculation debug (generateDatePointsWithActualEnd):', {
-      actualStartDate: actualStartDate.toISOString().split('T')[0],
-      actualEndDate: actualEndDate.toISOString().split('T')[0],
-      granularity,
-      context: 'Using actual data start and end dates instead of month boundaries'
-    });
-    
-    const points: string[] = [];
-    const current = new Date(start);
-    
-    if (granularity === 'weekly') {
-      // Start from the beginning of the week containing the start date, but don't go before actual data start
-      const startOfWeek = new Date(current);
-      startOfWeek.setDate(current.getDate() - current.getDay()); // Go to Sunday
-      
-      // Don't start before the actual data start date
-      if (startOfWeek < start) {
-        current.setTime(start.getTime());
-      } else {
-        current.setTime(startOfWeek.getTime());
-      }
-      
-      console.log('📅 Weekly start adjusted:', {
-        originalStart: start.toISOString().split('T')[0],
-        weekStart: startOfWeek.toISOString().split('T')[0],
-        adjustedStart: current.toISOString().split('T')[0],
-        context: 'Ensuring weekly data doesnt start before actual data'
-      });
-      
-      while (current <= end) {
-        points.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 7); // Add 7 days for weekly
-      }
-      
-      // Check if we need to add a partial week at the end
-      const lastWeekStart = new Date(current);
-      lastWeekStart.setDate(lastWeekStart.getDate() - 7); // Go back to the last added week
-      const lastWeekEnd = new Date(lastWeekStart);
-      lastWeekEnd.setDate(lastWeekEnd.getDate() + 6); // End of that week
-      
-      // If the target end date is beyond the last complete week, add a partial week point
-      if (end > lastWeekEnd && points.length > 0) {
-        // Find a representative date within the partial week (could be the end date itself)
-        const partialWeekStart = new Date(lastWeekEnd);
-        partialWeekStart.setDate(partialWeekStart.getDate() + 1); // Day after last complete week
-        points.push(partialWeekStart.toISOString().split('T')[0]);
-        
-        console.log('📅 Added partial week at end (actualEnd version):', {
-          lastCompleteWeekEnd: lastWeekEnd.toISOString().split('T')[0],
-          partialWeekStart: partialWeekStart.toISOString().split('T')[0],
-          targetEnd: end.toISOString().split('T')[0]
-        });
-      }
-      
-      console.log('📅 Weekly date points generated (actualEnd version):', {
-        actualStartDate: actualStartDate.toISOString().split('T')[0],
-        actualEndDate: actualEndDate.toISOString().split('T')[0], 
-        granularity,
-        totalPoints: points.length,
-        firstFew: points.slice(0, 3),
-        lastFew: points.slice(-3)
-      });
-    } else if (granularity === 'daily') {
-      while (current <= end) {
-        points.push(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
-      }
-    } else { // monthly or quarterly
-      while (current <= end) {
-        const year = current.getFullYear();
-        const month = (current.getMonth() + 1).toString().padStart(2, '0');
-        points.push(`${year}-${month}-01`);
-        
-        if (granularity === 'quarterly') {
-          current.setMonth(current.getMonth() + 3);
-        } else {
-          current.setMonth(current.getMonth() + 1);
-        }
-      }
-    }
-    
-    return points.sort();
-  };
-
-  // Get unique roles for stacked areas (must be defined before processedDataWithGranularity)
-  const allRoles = React.useMemo(() => {
-    return [...new Set(demandData.flatMap(d => 
-      Object.keys(d).filter(key => 
-        !['date', 'timestamp'].includes(key)
-      )
-    ))];
-  }, [demandData]); // Use demandData to get all roles consistently
-
-  // Process data with variable granularity - convert daily data to appropriate granularity
-  const processedDataWithGranularity = React.useMemo(() => {
-    const baseData = (() => {
-      switch (currentView) {
-        case 'demand': return demandData;
-        case 'capacity': return capacityData;
-        case 'gaps': return gapsData;
-        default: return demandData;
-      }
-    })();
-
-    if (baseData.length === 0) return [];
-
-    // Determine appropriate granularity based on date range
-    const startDate = new Date(baseData[0].date);
-    const endDate = new Date(baseData[baseData.length - 1].date);
-    const startMonth = startDate.getFullYear() + '-' + (startDate.getMonth() + 1).toString().padStart(2, '0');
-    const endMonth = endDate.getFullYear() + '-' + (endDate.getMonth() + 1).toString().padStart(2, '0');
-    const granularity = getGranularity(startMonth, endMonth);
-    
-    console.log('📅 Granularity calculation:', {
-      baseDataStart: baseData[0]?.date,
-      baseDataEnd: baseData[baseData.length - 1]?.date,
-      baseDataLength: baseData.length,
-      startMonth, endMonth, granularity,
-      context: 'This endMonth determines what generateDatePoints will use',
-      actualEndDateObject: endDate,
-      calculatedEndMonth: endMonth
-    });
-
-    // If already daily and that's appropriate, return as-is
-    if (granularity === 'daily') {
-      return baseData.map(d => ({ ...d, granularity }));
-    }
-
-    // Aggregate data based on granularity - use actual start and end dates instead of month boundaries
-    const datePoints = generateDatePointsWithActualEnd(startDate, endDate, granularity);
-    
-    const processedData = datePoints.map(datePoint => {
-      let periodStart: Date;
-      let periodEnd: Date;
-      let displayDate: string;
-      
-      if (granularity === 'weekly') {
-        const pointDate = new Date(datePoint);
-        periodStart = new Date(pointDate);
-        periodEnd = new Date(pointDate);
-        periodEnd.setDate(periodEnd.getDate() + 6);
-        
-        // For partial weeks at the end, don't exceed the actual data end date
-        const actualEndDate = new Date(baseData[baseData.length - 1].date);
-        if (periodEnd > actualEndDate) {
-          periodEnd = new Date(actualEndDate);
-          // CRITICAL FIX: Use the actual end date as the display date for partial weeks
-          displayDate = periodEnd.toISOString().split('T')[0];
-          console.log('📅 Adjusted partial week end (CRITICAL FIX):', {
-            weekStart: pointDate.toISOString().split('T')[0],
-            originalWeekEnd: new Date(pointDate.getTime()).setDate(pointDate.getDate() + 6),
-            adjustedWeekEnd: periodEnd.toISOString().split('T')[0],
-            actualDataEnd: actualEndDate.toISOString().split('T')[0],
-            displayDate: displayDate,
-            context: 'Using actual end date as display date - should make chart show Dec 30'
-          });
-        } else {
-          displayDate = datePoint;
-        }
-      } else if (granularity === 'monthly') {
-        const [year, monthNum] = datePoint.split('-').map(Number);
-        periodStart = new Date(year, monthNum - 1, 1);
-        periodEnd = new Date(year, monthNum, 0); // Last day of month
-        displayDate = datePoint;
-      } else { // quarterly
-        const [year, monthNum] = datePoint.split('-').map(Number);
-        periodStart = new Date(year, monthNum - 1, 1);
-        periodEnd = new Date(year, monthNum - 1 + 3, 0); // Last day of quarter
-        displayDate = datePoint;
-      }
-      
-      // Aggregate data for this period by averaging daily values
-      const periodData: ChartDataPoint = {
-        date: displayDate,
-        timestamp: periodStart.getTime(),
-        granularity
-      };
-      
-      // For each role, calculate average value over the period
-      allRoles.forEach(role => {
-        const relevantDays = baseData.filter(d => {
-          const dayDate = new Date(d.date);
-          return dayDate >= periodStart && dayDate <= periodEnd;
-        });
-        
-        if (relevantDays.length > 0) {
-          const totalValue = relevantDays.reduce((sum, day) => sum + (day[role] || 0), 0);
-          periodData[role] = totalValue / relevantDays.length; // Average over the period
-        } else {
-          periodData[role] = 0;
-        }
-      });
-      
-      return periodData;
-    });
-    
-    console.log('📈 Processed data with granularity (DETAILED):', {
-      granularity,
-      length: processedData.length,
-      start: processedData[0]?.date,
-      end: processedData[processedData.length - 1]?.date,
-      sample: processedData.slice(0, 3).map(d => d.date),
-      endSample: processedData.slice(-3).map(d => d.date),
-      baseDataRange: {
-        start: baseData[0]?.date,
-        end: baseData[baseData.length - 1]?.date,
-        length: baseData.length
-      },
-      ALL_PROCESSED_DATES: processedData.map(d => d.date),
-      context: 'This is what the chart will display'
-    });
-    
-    return processedData;
-  }, [demandData, capacityData, gapsData, currentView, allRoles]);
+  // Process data with variable granularity - using useChartGranularity hook
+  const { processedData: processedDataWithGranularity } = useChartGranularity({
+    demandData,
+    capacityData,
+    gapsData,
+    currentView,
+    allRoles
+  });
 
   // Handle brush changes
   const handleBrushChange = React.useCallback((start: number, end: number) => {
@@ -1007,8 +492,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
       const phaseMinDate = phaseDates.length > 0 ? new Date(Math.min(...phaseDates.map(d => d.getTime()))) : dateRange.start;
       const phaseMaxDate = phaseDates.length > 0 ? new Date(Math.max(...phaseDates.map(d => d.getTime()))) : dateRange.end;
 
-      let targetStartDate = new Date(phaseMinDate);
-      let targetEndDate = new Date(phaseMaxDate);
+      const targetStartDate = new Date(phaseMinDate);
+      const targetEndDate = new Date(phaseMaxDate);
 
       // Add padding
       targetStartDate.setDate(targetStartDate.getDate() - paddingDays);
@@ -1137,249 +622,18 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
     }
   }, [processedDataWithGranularity]);
 
-  // Create filtered data based on brush selection
-  const displayData = React.useMemo(() => {
-    if (processedDataWithGranularity.length === 0) return processedDataWithGranularity;
+  // Create filtered data based on brush selection - now using useChartDisplayData hook
+  const { displayData } = useChartDisplayData({
+    processedDataWithGranularity,
+    demandData,
+    capacityData,
+    gapsData,
+    currentView,
+    allRoles,
+    brushStart,
+    brushEnd
+  });
 
-    // Get the current daily data to check if brush is showing full range
-    const currentDailyData = (
-      currentView === 'demand' ? demandData :
-      currentView === 'capacity' ? capacityData :
-      gapsData
-    );
-
-    // If brush is uninitialized (both at 0), return unfiltered data
-    if (brushStart === 0 && brushEnd === 0) {
-      console.log('🔍 Returning unfiltered data (uninitialized):', {
-        brushStart, brushEnd,
-        dailyDataLength: currentDailyData.length,
-        returning: 'processedDataWithGranularity',
-        dataStart: processedDataWithGranularity[0]?.date,
-        dataEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date
-      });
-      return processedDataWithGranularity;
-    }
-
-    if (currentDailyData.length === 0) return processedDataWithGranularity;
-
-    // CRITICAL FIX: Instead of filtering processed data, re-process the daily data
-    // with the appropriate granularity for the SELECTED range
-    const dailyStart = Math.max(0, Math.min(brushStart, brushEnd));
-    const dailyEnd = Math.min(currentDailyData.length - 1, Math.max(brushStart, brushEnd));
-
-    // Get the filtered daily data first
-    const filteredDailyData = currentDailyData.slice(dailyStart, dailyEnd + 1);
-
-    if (filteredDailyData.length === 0) return [];
-
-    // Calculate appropriate granularity for the FILTERED range
-    const rangeStartDate = new Date(filteredDailyData[0].date);
-    const rangeEndDate = new Date(filteredDailyData[filteredDailyData.length - 1].date);
-    const startMonth = rangeStartDate.getFullYear() + '-' + (rangeStartDate.getMonth() + 1).toString().padStart(2, '0');
-    const endMonth = rangeEndDate.getFullYear() + '-' + (rangeEndDate.getMonth() + 1).toString().padStart(2, '0');
-    const appropriateGranularity = getGranularity(startMonth, endMonth);
-
-    console.log('📊 Display data granularity recalculation:', {
-      brushRange: { start: dailyStart, end: dailyEnd },
-      dateRange: {
-        start: filteredDailyData[0].date,
-        end: filteredDailyData[filteredDailyData.length - 1].date
-      },
-      originalGranularity: processedDataWithGranularity[0]?.granularity,
-      appropriateGranularity,
-      filteredDailyDataLength: filteredDailyData.length
-    });
-
-    // If daily is appropriate, return filtered daily data
-    if (appropriateGranularity === 'daily') {
-      const result = filteredDailyData.map(d => ({ ...d, granularity: 'daily' }));
-      console.log('✅ Returning daily filtered data:', {
-        length: result.length,
-        start: result[0]?.date,
-        end: result[result.length - 1]?.date,
-        sampleData: result.slice(0, 2),
-        allRolesFound: allRoles,
-        firstItemRoles: allRoles.map(role => ({ role, value: result[0]?.[role] }))
-      });
-      return result;
-    }
-
-    // Otherwise, aggregate the filtered daily data with the appropriate granularity
-    const datePoints = generateDatePointsWithActualEnd(rangeStartDate, rangeEndDate, appropriateGranularity);
-
-    const processedFiltered = datePoints.map(datePoint => {
-      let periodStart: Date;
-      let periodEnd: Date;
-      let displayDate: string;
-
-      if (appropriateGranularity === 'weekly') {
-        const pointDate = new Date(datePoint);
-        periodStart = new Date(pointDate);
-        periodEnd = new Date(pointDate);
-        periodEnd.setDate(periodEnd.getDate() + 6);
-
-        if (periodEnd > rangeEndDate) {
-          periodEnd = new Date(rangeEndDate);
-          displayDate = periodEnd.toISOString().split('T')[0];
-        } else {
-          displayDate = datePoint;
-        }
-      } else if (appropriateGranularity === 'monthly') {
-        const [year, monthNum] = datePoint.split('-').map(Number);
-        periodStart = new Date(year, monthNum - 1, 1);
-        periodEnd = new Date(year, monthNum, 0);
-        displayDate = datePoint;
-      } else { // quarterly
-        const [year, monthNum] = datePoint.split('-').map(Number);
-        periodStart = new Date(year, monthNum - 1, 1);
-        periodEnd = new Date(year, monthNum - 1 + 3, 0);
-        displayDate = datePoint;
-      }
-
-      const periodData: ChartDataPoint = {
-        date: displayDate,
-        timestamp: periodStart.getTime(),
-        granularity: appropriateGranularity
-      };
-
-      allRoles.forEach(role => {
-        const relevantDays = filteredDailyData.filter(d => {
-          const dayDate = new Date(d.date);
-          return dayDate >= periodStart && dayDate <= periodEnd;
-        });
-
-        if (relevantDays.length > 0) {
-          const totalValue = relevantDays.reduce((sum, day) => sum + (day[role] || 0), 0);
-          periodData[role] = totalValue / relevantDays.length;
-        } else {
-          periodData[role] = 0;
-        }
-      });
-
-      return periodData;
-    });
-
-    console.log('✅ Returning reprocessed filtered data:', {
-      length: processedFiltered.length,
-      start: processedFiltered[0]?.date,
-      end: processedFiltered[processedFiltered.length - 1]?.date,
-      granularity: appropriateGranularity,
-      sampleData: processedFiltered.slice(0, 2),
-      allRolesFound: allRoles,
-      firstItemKeys: Object.keys(processedFiltered[0] || {})
-    });
-
-    return processedFiltered;
-  }, [processedDataWithGranularity, brushStart, brushEnd, currentView, demandData, capacityData, gapsData, allRoles, getGranularity, generateDatePointsWithActualEnd]);
-
-  // OLD FILTERING LOGIC - REPLACED ABOVE
-  const OLD_displayData_UNUSED = React.useMemo(() => {
-    if (processedDataWithGranularity.length === 0) return processedDataWithGranularity;
-
-    // Get the current daily data to check if brush is showing full range
-    const currentDailyData = (
-      currentView === 'demand' ? demandData :
-      currentView === 'capacity' ? capacityData :
-      gapsData
-    );
-
-    if (currentDailyData.length === 0) return processedDataWithGranularity;
-    
-    // Map daily brush indices to processed data date range
-    const dailyStart = Math.max(0, Math.min(brushStart, brushEnd));
-    const dailyEnd = Math.min(currentDailyData.length - 1, Math.max(brushStart, brushEnd));
-    
-    const startDate = currentDailyData[dailyStart]?.date;
-    const endDate = currentDailyData[dailyEnd]?.date;
-    
-    if (!startDate || !endDate) return processedDataWithGranularity;
-    
-    // Filter processed data by date range with granularity-aware filtering
-    const filtered = processedDataWithGranularity.filter((dataPoint, idx) => {
-      const pointDate = dataPoint.date;
-      const granularity = dataPoint.granularity || 'daily';
-
-      // For non-daily granularity, be more inclusive in filtering
-      if (granularity === 'weekly') {
-        // Include if the week overlaps with our date range
-        const weekStart = new Date(pointDate);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-
-        const rangeStart = new Date(startDate);
-        const rangeEnd = new Date(endDate);
-
-        const overlaps = weekStart <= rangeEnd && weekEnd >= rangeStart;
-
-        // Log first few items to debug
-        if (idx < 5) {
-          console.log(`🔎 Filter check [${idx}]:`, {
-            pointDate,
-            weekStart: weekStart.toISOString().split('T')[0],
-            weekEnd: weekEnd.toISOString().split('T')[0],
-            rangeStart: rangeStart.toISOString().split('T')[0],
-            rangeEnd: rangeEnd.toISOString().split('T')[0],
-            overlaps,
-            checks: {
-              'weekStart <= rangeEnd': weekStart <= rangeEnd,
-              'weekEnd >= rangeStart': weekEnd >= rangeStart
-            }
-          });
-        }
-
-        // Include if week overlaps with range
-        return overlaps;
-      } else if (granularity === 'monthly') {
-        // Include if the month overlaps with our date range
-        const [year, month] = pointDate.split('-').map(Number);
-        const monthStart = new Date(year, month - 1, 1);
-        const monthEnd = new Date(year, month, 0);
-
-        const rangeStart = new Date(startDate);
-        const rangeEnd = new Date(endDate);
-
-        // Include if month overlaps with range
-        return monthStart <= rangeEnd && monthEnd >= rangeStart;
-      } else if (granularity === 'quarterly') {
-        // Include if the quarter overlaps with our date range
-        const [year, month] = pointDate.split('-').map(Number);
-        const quarterStart = new Date(year, month - 1, 1);
-        const quarterEnd = new Date(year, month - 1 + 3, 0); // 3 months later, last day
-
-        const rangeStart = new Date(startDate);
-        const rangeEnd = new Date(endDate);
-
-        // Include if quarter overlaps with range
-        return quarterStart <= rangeEnd && quarterEnd >= rangeStart;
-      } else {
-        // Daily - use exact date filtering
-        return pointDate >= startDate && pointDate <= endDate;
-      }
-    });
-    
-    console.log('🔍 Brush filtering:', {
-      brushStart, brushEnd,
-      startDate, endDate,
-      currentDailyDataLength: currentDailyData.length,
-      dailyDataStart: currentDailyData[0]?.date,
-      dailyDataEnd: currentDailyData[currentDailyData.length - 1]?.date,
-      originalLength: processedDataWithGranularity.length,
-      filteredLength: filtered.length,
-      filteredStart: filtered[0]?.date,
-      filteredEnd: filtered[filtered.length - 1]?.date,
-      granularity: processedDataWithGranularity[0]?.granularity || 'unknown',
-      sampleProcessedDates: processedDataWithGranularity.slice(0, 3).map(d => d.date),
-      sampleFilteredDates: filtered.slice(-3).map(d => d.date),
-      processedStart: processedDataWithGranularity[0]?.date,
-      processedEnd: processedDataWithGranularity[processedDataWithGranularity.length - 1]?.date,
-      ALL_FILTERED_DATES: filtered.map(d => d.date),
-      filteredDataSample: filtered.length > 0 ? filtered[0] : 'no data'
-    });
-
-    console.log('❗ CRITICAL: Returning filtered data with', filtered.length, 'items. First item:', filtered[0]);
-
-    return filtered;
-  }, [processedDataWithGranularity, brushStart, brushEnd, currentView, demandData, capacityData, gapsData]);
 
   // Get current dataset for display
   const currentData = displayData;
@@ -1399,23 +653,8 @@ export function ProjectDemandChart({ projectId, projectName }: ProjectDemandChar
 
 
 
-  // Simplified: No complex chart measurement needed with integrated approach
-  
   // Bold colors for each role (cycled if more than 8) - matching phase diagram style
   const roleColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4', '#84cc16'];
-
-  // Phase colors matching the roadmap component
-  const phaseColors: Record<string, string> = {
-    'pending': '#64748b',
-    'business planning': '#3b82f6',
-    'development': '#10b981',
-    'system integration testing': '#f59e0b',
-    'user acceptance testing': '#8b5cf6',
-    'validation': '#ec4899',
-    'cutover': '#ef4444',
-    'hypercare': '#06b6d4',
-    'support': '#84cc16'
-  };
 
 
   // Calculate summary stats based on current view

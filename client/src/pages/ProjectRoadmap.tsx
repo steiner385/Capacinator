@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Edit2, Save, X, ZoomIn, ZoomOut, Filter, Search, ChevronLeft, ChevronRight, SkipBack, SkipForward } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from '../components/InteractiveTimeline';
@@ -206,7 +207,7 @@ export default function ProjectRoadmap() {
     },
     onError: () => {
       // Revert optimistic update on error
-      queryClient.invalidateQueries({ queryKey: ['projectsRoadmap'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.roadmap() });
     }
   });
 
@@ -224,35 +225,35 @@ export default function ProjectRoadmap() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectsRoadmap'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.roadmap() });
       setEditingPhase(null);
     }
   });
 
   // Fetch projects with phases
   const { data: projects, isLoading, error } = useQuery({
-    queryKey: ['projectsRoadmap', debouncedFilters],
+    queryKey: queryKeys.projects.roadmap(debouncedFilters),
     queryFn: async () => {
       const params = Object.entries(debouncedFilters)
         .filter(([_, value]) => value)
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-      
+
       const response = await api.projects.list(params);
       const projectsData = response.data.data as Project[];
-      
+
       // Fetch phases for each project
       const projectsWithPhases: ProjectWithPhases[] = await Promise.all(
         projectsData.map(async (project) => {
           const phasesResponse = await api.projectPhases.list({ project_id: project.id });
           const phases = (phasesResponse.data.data || []) as ProjectPhaseTimeline[];
-          
+
           return {
             ...project,
             phases: phases.sort((a, b) => a.phase_order - b.phase_order)
           };
         })
       );
-      
+
       return projectsWithPhases;
     }
   });
@@ -309,9 +310,9 @@ export default function ProjectRoadmap() {
     console.log('📦 Found project:', projectWithPhase.name);
 
     // Update in-memory state optimistically (immediate UI feedback)
-    queryClient.setQueryData(['projectsRoadmap', debouncedFilters], (oldData: ProjectWithPhases[] | undefined) => {
+    queryClient.setQueryData(queryKeys.projects.roadmap(debouncedFilters), (oldData: ProjectWithPhases[] | undefined) => {
       if (!oldData) return oldData;
-      
+
       return oldData.map(project => {
         if (project.id === projectWithPhase.id) {
           return {

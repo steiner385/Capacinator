@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Save, 
-  X, 
-  Lock, 
-  Unlock, 
-  ArrowUp, 
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Save,
+  X,
+  Lock,
+  Unlock,
+  ArrowUp,
   ArrowDown,
   AlertTriangle,
   Info
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import type { ProjectPhase } from '../types';
 import './PhaseTemplateDesigner.css';
 
@@ -47,7 +48,7 @@ export default function PhaseTemplateDesigner({ projectTypeId, phases }: PhaseTe
 
   // Fetch current project type phases
   const { data: projectTypePhases, refetch } = useQuery({
-    queryKey: ['projectTypePhases', projectTypeId],
+    queryKey: queryKeys.projectTypes.phases(projectTypeId),
     queryFn: async () => {
       const response = await api.projectTypes.getPhases(projectTypeId);
       return response.data.data as ProjectTypePhase[];

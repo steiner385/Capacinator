@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Settings as SettingsIcon, Save, Database, 
+import {
+  Settings as SettingsIcon, Save, Database,
   Users, X, Palette
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { useTheme } from '../contexts/ThemeContext';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import { UnifiedTabComponent } from '../components/ui/UnifiedTabComponent';
@@ -68,7 +69,7 @@ export default function Settings() {
 
   // Fetch system settings
   const { data: systemSettingsData } = useQuery({
-    queryKey: ['system-settings'],
+    queryKey: queryKeys.settings.system(),
     queryFn: async () => {
       const response = await api.settings.getSystemSettings();
       return response.data.data;
@@ -78,7 +79,7 @@ export default function Settings() {
 
   // Fetch import settings
   const { data: importSettingsData } = useQuery({
-    queryKey: ['import-settings'],
+    queryKey: queryKeys.settings.import(),
     queryFn: async () => {
       const response = await api.settings.getImportSettings();
       return response.data.data;
@@ -88,7 +89,7 @@ export default function Settings() {
 
   // Fetch user permissions
   const { data: users } = useQuery({
-    queryKey: ['users-permissions'],
+    queryKey: queryKeys.userPermissions.users(),
     queryFn: async () => {
       const response = await api.userPermissions.getUsersList();
       return response.data.data;
@@ -98,7 +99,7 @@ export default function Settings() {
 
   // Fetch user roles
   const { data: userRoles } = useQuery({
-    queryKey: ['user-roles'],
+    queryKey: queryKeys.userPermissions.roles(),
     queryFn: async () => {
       const response = await api.userPermissions.getUserRoles();
       return response.data.data;
@@ -108,7 +109,7 @@ export default function Settings() {
 
   // Fetch system permissions
   const { data: systemPermissions } = useQuery({
-    queryKey: ['system-permissions'],
+    queryKey: queryKeys.userPermissions.systemPermissions(),
     queryFn: async () => {
       const response = await api.userPermissions.getSystemPermissions();
       return response.data.data;
@@ -133,13 +134,13 @@ export default function Settings() {
   const handleSaveSystemSettings = async () => {
     setIsSaving(true);
     setSaveMessage('');
-    
+
     try {
       await api.settings.saveSystemSettings(systemSettings);
       setSaveMessage('System settings saved successfully!');
-      
+
       // Invalidate and refetch settings
-      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.system() });
     } catch (error: any) {
       console.error('Error saving system settings:', error);
       setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');
@@ -152,13 +153,13 @@ export default function Settings() {
   const handleSaveImportSettings = async () => {
     setIsSaving(true);
     setSaveMessage('');
-    
+
     try {
       await api.settings.saveImportSettings(importSettings);
       setSaveMessage('Import settings saved successfully!');
-      
+
       // Invalidate and refetch settings
-      queryClient.invalidateQueries({ queryKey: ['import-settings'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.import() });
     } catch (error: any) {
       console.error('Error saving import settings:', error);
       setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');

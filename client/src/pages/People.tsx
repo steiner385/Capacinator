@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Users, UserPlus, Search, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -35,7 +36,7 @@ export default function People() {
 
   // Fetch people
   const { data: people, isLoading: peopleLoading, error: peopleError } = useQuery({
-    queryKey: ['people', filters],
+    queryKey: queryKeys.people.list(filters),
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
@@ -47,7 +48,7 @@ export default function People() {
 
   // Fetch utilization data for actionable insights
   const { data: utilizationData } = useQuery({
-    queryKey: ['people-utilization'],
+    queryKey: queryKeys.people.utilization(),
     queryFn: async () => {
       const response = await api.people.getUtilization();
       return response.data;
@@ -56,7 +57,7 @@ export default function People() {
 
   // Fetch roles for filter
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       return response.data as Role[];
@@ -65,7 +66,7 @@ export default function People() {
 
   // Fetch locations for filter
   const { data: locations } = useQuery({
-    queryKey: ['locations'],
+    queryKey: queryKeys.locations.list(),
     queryFn: async () => {
       const response = await api.locations.list();
       return response.data.data as Location[];
@@ -78,7 +79,7 @@ export default function People() {
       await api.people.delete(personId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.all });
     }
   });
 
