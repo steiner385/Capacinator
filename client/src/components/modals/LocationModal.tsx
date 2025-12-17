@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Save } from 'lucide-react';
 import { Location } from '../../types';
 import { api } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Alert, AlertDescription } from '../ui/alert';
+import {
+  ModalFormLayout,
+  FormSection,
+  FormActions,
+  FormValidationErrors,
+} from '../forms';
 
 interface LocationModalProps {
   location?: Location | null;
@@ -22,127 +16,150 @@ interface LocationModalProps {
   onCancel: () => void;
 }
 
+interface FormData {
+  name: string;
+  description: string;
+}
+
+interface FormErrors {
+  name?: string;
+  general?: string;
+}
+
 export function LocationModal({ location, onSave, onCancel }: LocationModalProps) {
   const [isOpen, setIsOpen] = useState(true);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
-    description: ''
+    description: '',
   });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditing = !!location;
 
   useEffect(() => {
     if (location) {
       setFormData({
         name: location.name || '',
-        description: location.description || ''
+        description: location.description || '',
       });
     } else {
       setFormData({
         name: '',
-        description: ''
+        description: '',
       });
     }
+    setErrors({});
   }, [location]);
+
+  const validate = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      setError('Name is required');
+
+    if (!validate()) {
       return;
     }
 
     try {
-      setSaving(true);
-      setError(null);
+      setIsSubmitting(true);
+      setErrors({});
 
       if (location) {
-        // Update existing location
         await api.locations.update(location.id, formData);
       } else {
-        // Create new location
         await api.locations.create(formData);
       }
 
       onSave();
     } catch (err) {
-      setError('Failed to save location');
+      setErrors({ general: 'Failed to save location' });
       console.error('Error saving location:', err);
     } finally {
-      setSaving(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({
+  const handleChange = (field: keyof FormData, value: string) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: undefined,
+      }));
+    }
   };
 
   const handleClose = () => {
     setIsOpen(false);
-    // Give time for animation before calling onCancel
     setTimeout(() => onCancel(), 200);
   };
 
+  const hasErrors = Object.values(errors).some(Boolean);
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{location ? 'Edit Location' : 'Add Location'}</DialogTitle>
-          <DialogDescription>
-            {location
-              ? 'Update the location details below.'
-              : 'Fill in the information to create a new location.'}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
-            {error && (
-              <Alert variant="destructive" role="alert" aria-live="assertive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+    <ModalFormLayout
+      title={isEditing ? 'Edit Location' : 'Add Location'}
+      description={
+        isEditing
+          ? 'Update the location details below.'
+          : 'Fill in the information to create a new location.'
+      }
+      isOpen={isOpen}
+      onClose={handleClose}
+      hasErrors={hasErrors}
+      onSubmit={handleSubmit}
+      maxWidth="max-w-md"
+      footer={
+        <FormActions
+          isSubmitting={isSubmitting}
+          isEditing={isEditing}
+          onCancel={handleClose}
+          createText="Save Location"
+          updateText="Save Location"
+        />
+      }
+    >
+      {errors.general && (
+        <FormValidationErrors hasErrors={true} message={errors.general} />
+      )}
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name <span aria-hidden="true">*</span><span className="sr-only">(required)</span></Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="e.g., New York City, Remote, London"
-                  required
-                  aria-required="true"
-                />
-              </div>
+      <FormSection label="Name" required error={errors.name} htmlFor="name">
+        <Input
+          id="name"
+          type="text"
+          value={formData.name}
+          onChange={(e) => handleChange('name', e.target.value)}
+          placeholder="e.g., New York City, Remote, London"
+          className={errors.name ? 'border-destructive' : ''}
+          aria-required="true"
+          aria-invalid={!!errors.name}
+          aria-describedby={errors.name ? 'name-error' : undefined}
+        />
+      </FormSection>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  placeholder="Brief description of this location..."
-                  rows={3}
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Location'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <FormSection label="Description" htmlFor="description">
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => handleChange('description', e.target.value)}
+          placeholder="Brief description of this location..."
+          rows={3}
+        />
+      </FormSection>
+    </ModalFormLayout>
   );
 }

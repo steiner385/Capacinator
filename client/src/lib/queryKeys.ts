@@ -8,6 +8,16 @@
  * - Reliable cache invalidation
  * - Easy refactoring and maintenance
  *
+ * Key Hierarchy Pattern:
+ * - Entity root: ['entityName']
+ * - List queries: ['entityName', 'list', filters?]
+ * - Detail queries: ['entityName', 'detail', id]
+ * - Related data: ['entityName', 'subResource', id, additionalParams?]
+ *
+ * Scenario-Aware Pattern:
+ * Many queries are scenario-specific. Include scenarioId in the key
+ * to ensure data is cached per scenario.
+ *
  * Usage Examples:
  * ```typescript
  * // Fetching all projects
@@ -30,44 +40,69 @@
  */
 
 // Type definitions for filter parameters
-interface ProjectFilters {
+export interface ProjectFilters {
   search?: string;
   status?: string;
   location_id?: string;
+  locationId?: string;
   project_type_id?: string;
+  projectTypeId?: string;
   priority?: number;
+  [key: string]: unknown;
 }
 
-interface PeopleFilters {
+export interface PeopleFilters {
   search?: string;
   location_id?: string;
+  locationId?: string;
   role_id?: string;
+  roleId?: string;
   status?: string;
+  [key: string]: unknown;
 }
 
-interface AssignmentFilters {
+export interface AssignmentFilters {
   project_id?: string;
+  projectId?: string;
   person_id?: string;
+  personId?: string;
   role_id?: string;
   date_range?: string;
+  startDate?: string;
+  endDate?: string;
   search?: string;
+  [key: string]: unknown;
 }
 
-interface RoleFilters {
+export interface RoleFilters {
   search?: string;
   category?: string;
 }
 
-interface ReportFilters {
+export interface ReportFilters {
   start_date?: string;
+  startDate?: string;
   end_date?: string;
+  endDate?: string;
   location_id?: string;
+  locationId?: string;
   project_id?: string;
+  projectTypeId?: string;
   person_id?: string;
   role_id?: string;
+  roleId?: string;
+  [key: string]: unknown;
 }
 
-interface AvailabilityFilters {
+export interface RoadmapFilters {
+  startDate?: string;
+  endDate?: string;
+  projectTypeId?: string;
+  locationId?: string;
+  [key: string]: unknown;
+}
+
+export interface AvailabilityFilters {
   person_id?: string;
   month?: string;
 }
@@ -100,20 +135,37 @@ export const queryKeys = {
     phases: (projectId: string) =>
       [...queryKeys.projects.all, 'phases', projectId] as const,
     phaseDependencies: (projectId: string) =>
-      [...queryKeys.projects.all, 'phase-dependencies', projectId] as const,
+      [...queryKeys.projects.all, 'phaseDependencies', projectId] as const,
     timeline: (projectId: string) =>
       [...queryKeys.projects.all, 'timeline', projectId] as const,
     templateCompliance: (projectId: string) =>
-      [...queryKeys.projects.all, 'template-compliance', projectId] as const,
+      [...queryKeys.projects.all, 'templateCompliance', projectId] as const,
     allocations: (projectId: string) =>
       [...queryKeys.projects.all, 'allocations', projectId] as const,
     assignments: (projectId: string) =>
       [...queryKeys.projects.all, 'assignments', projectId] as const,
     demand: (projectId: string) =>
       [...queryKeys.projects.all, 'demand', projectId] as const,
-    roadmap: (filters?: ProjectFilters) =>
+    roadmap: (filters?: RoadmapFilters) =>
       [...queryKeys.projects.all, 'roadmap', filters] as const,
     health: () => [...queryKeys.projects.all, 'health'] as const,
+  },
+
+  // Project Types
+  projectTypes: {
+    all: ['project-types'] as const,
+    lists: () => [...queryKeys.projectTypes.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>, viewMode?: string) =>
+      [...queryKeys.projectTypes.lists(), filters, viewMode] as const,
+    details: () => [...queryKeys.projectTypes.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.projectTypes.details(), id] as const,
+    phases: (projectTypeId: string) =>
+      [...queryKeys.projectTypes.all, 'phases', projectTypeId] as const,
+    resourceTemplates: (projectTypeId: string) =>
+      [...queryKeys.projectTypes.all, 'resourceTemplates', projectTypeId] as const,
+    projects: (projectTypeId: string) =>
+      [...queryKeys.projectTypes.all, 'projects', projectTypeId] as const,
+    hierarchy: () => [...queryKeys.projectTypes.all, 'hierarchy'] as const,
   },
 
   // People
@@ -125,11 +177,11 @@ export const queryKeys = {
     details: () => [...queryKeys.people.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.people.details(), id] as const,
     withAssignments: (id: string) =>
-      [...queryKeys.people.all, 'with-assignments', id] as const,
+      [...queryKeys.people.all, 'withAssignments', id] as const,
     timeline: (id: string) =>
       [...queryKeys.people.all, 'timeline', id] as const,
     utilizationTimeline: (id: string, startDate?: string, endDate?: string) =>
-      [...queryKeys.people.all, 'utilization-timeline', id, startDate, endDate] as const,
+      [...queryKeys.people.all, 'utilizationTimeline', id, startDate, endDate] as const,
     assignments: (id: string, scenarioId?: string) =>
       [...queryKeys.people.all, 'assignments', id, scenarioId] as const,
     utilization: () => [...queryKeys.people.all, 'utilization'] as const,
@@ -144,7 +196,7 @@ export const queryKeys = {
       [...queryKeys.roles.lists(), filters] as const,
     details: () => [...queryKeys.roles.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.roles.details(), id] as const,
-    capacityGaps: () => [...queryKeys.roles.all, 'capacity-gaps'] as const,
+    capacityGaps: () => [...queryKeys.roles.all, 'capacityGaps'] as const,
   },
 
   // Assignments
@@ -159,6 +211,8 @@ export const queryKeys = {
       [...queryKeys.assignments.all, 'conflicts', personId] as const,
     suggestions: (params?: Record<string, unknown>) =>
       [...queryKeys.assignments.all, 'suggestions', params] as const,
+    recommendations: (filters?: AssignmentFilters) =>
+      [...queryKeys.assignments.all, 'recommendations', filters] as const,
     timeline: (personId: string) =>
       [...queryKeys.assignments.all, 'timeline', personId] as const,
   },
@@ -182,21 +236,6 @@ export const queryKeys = {
       [...queryKeys.projectPhases.all, 'dependencies', projectId] as const,
   },
 
-  // Project Types
-  projectTypes: {
-    all: ['project-types'] as const,
-    lists: () => [...queryKeys.projectTypes.all, 'list'] as const,
-    list: (filters?: Record<string, unknown>, viewMode?: string) =>
-      [...queryKeys.projectTypes.lists(), filters, viewMode] as const,
-    details: () => [...queryKeys.projectTypes.all, 'detail'] as const,
-    detail: (id: string) => [...queryKeys.projectTypes.details(), id] as const,
-    phases: (id: string) =>
-      [...queryKeys.projectTypes.all, 'phases', id] as const,
-    hierarchy: () => [...queryKeys.projectTypes.all, 'hierarchy'] as const,
-    projects: (id: string) =>
-      [...queryKeys.projectTypes.all, 'projects', id] as const,
-  },
-
   // Locations
   locations: {
     all: ['locations'] as const,
@@ -217,24 +256,6 @@ export const queryKeys = {
       [...queryKeys.scenarios.all, 'assignments', id] as const,
     comparison: (id: string, compareToId: string) =>
       [...queryKeys.scenarios.all, 'comparison', id, compareToId] as const,
-  },
-
-  // Reports
-  reports: {
-    all: ['reports'] as const,
-    dashboard: (scenarioId?: string) =>
-      [...queryKeys.reports.all, 'dashboard', scenarioId] as const,
-    capacity: (filters?: ReportFilters, scenarioId?: string) =>
-      [...queryKeys.reports.all, 'capacity', filters, scenarioId] as const,
-    utilization: (filters?: ReportFilters, scenarioId?: string) =>
-      [...queryKeys.reports.all, 'utilization', filters, scenarioId] as const,
-    demand: (filters?: ReportFilters, scenarioId?: string) =>
-      [...queryKeys.reports.all, 'demand', filters, scenarioId] as const,
-    gaps: (filters?: ReportFilters, scenarioId?: string) =>
-      [...queryKeys.reports.all, 'gaps', filters, scenarioId] as const,
-    filterOptions: () => [...queryKeys.reports.all, 'filter-options'] as const,
-    availableProjects: (personId?: string, scenarioId?: string) =>
-      [...queryKeys.reports.all, 'available-projects', personId, scenarioId] as const,
   },
 
   // Availability
@@ -263,13 +284,40 @@ export const queryKeys = {
     gaps: () => [...queryKeys.demands.all, 'gaps'] as const,
   },
 
+  // Reports
+  reports: {
+    all: ['reports'] as const,
+    dashboard: (scenarioId?: string) =>
+      [...queryKeys.reports.all, 'dashboard', scenarioId] as const,
+    capacity: (filters?: ReportFilters, scenarioId?: string) =>
+      [...queryKeys.reports.all, 'capacity', filters, scenarioId] as const,
+    utilization: (filters?: ReportFilters, scenarioId?: string) =>
+      [...queryKeys.reports.all, 'utilization', filters, scenarioId] as const,
+    demand: (filters?: ReportFilters, scenarioId?: string) =>
+      [...queryKeys.reports.all, 'demand', filters, scenarioId] as const,
+    gaps: (filters?: ReportFilters, scenarioId?: string) =>
+      [...queryKeys.reports.all, 'gaps', filters, scenarioId] as const,
+    filterOptions: () => [...queryKeys.reports.all, 'filterOptions'] as const,
+    availableProjects: (personId?: string, scenarioId?: string) =>
+      [...queryKeys.reports.all, 'availableProjects', personId, scenarioId] as const,
+  },
+
+  // Dashboard
+  dashboard: {
+    all: ['dashboard'] as const,
+    summary: (scenarioId?: string, dateRange?: Record<string, string>) =>
+      [...queryKeys.dashboard.all, 'summary', scenarioId, dateRange] as const,
+  },
+
   // Resource Templates
   resourceTemplates: {
     all: ['resource-templates'] as const,
     lists: () => [...queryKeys.resourceTemplates.all, 'list'] as const,
     list: () => [...queryKeys.resourceTemplates.lists()] as const,
     byProjectType: (projectTypeId: string) =>
-      [...queryKeys.resourceTemplates.all, 'by-project-type', projectTypeId] as const,
+      [...queryKeys.resourceTemplates.all, 'byProjectType', projectTypeId] as const,
+    byRole: (roleId: string) =>
+      [...queryKeys.resourceTemplates.all, 'byRole', roleId] as const,
     summary: () => [...queryKeys.resourceTemplates.all, 'summary'] as const,
   },
 
@@ -278,6 +326,9 @@ export const queryKeys = {
     all: ['settings'] as const,
     system: () => [...queryKeys.settings.all, 'system'] as const,
     import: () => [...queryKeys.settings.all, 'import'] as const,
+    usersPermissions: () => [...queryKeys.settings.all, 'usersPermissions'] as const,
+    userRoles: () => [...queryKeys.settings.all, 'userRoles'] as const,
+    systemPermissions: () => [...queryKeys.settings.all, 'systemPermissions'] as const,
   },
 
   // User Permissions
@@ -286,7 +337,7 @@ export const queryKeys = {
     users: () => [...queryKeys.userPermissions.all, 'users'] as const,
     roles: () => [...queryKeys.userPermissions.all, 'roles'] as const,
     systemPermissions: () =>
-      [...queryKeys.userPermissions.all, 'system-permissions'] as const,
+      [...queryKeys.userPermissions.all, 'systemPermissions'] as const,
     userPermissions: (userId: string) =>
       [...queryKeys.userPermissions.all, 'user', userId] as const,
     rolePermissions: (roleId: string) =>
@@ -342,6 +393,14 @@ export const queryKeys = {
       [...queryKeys.projectAllocations.all, projectId] as const,
     allProjects: () =>
       [...queryKeys.projectAllocations.all, 'all'] as const,
+    list: () => [...queryKeys.projectAllocations.all, 'list'] as const,
+  },
+
+  // Available projects for assignment
+  availableProjects: {
+    all: ['availableProjects'] as const,
+    forPerson: (personId: string, scenarioId?: string) =>
+      [...queryKeys.availableProjects.all, personId, scenarioId] as const,
   },
 } as const;
 
@@ -353,3 +412,43 @@ export type RolesQueryKeys = typeof queryKeys.roles;
 export type AssignmentQueryKeys = typeof queryKeys.assignments;
 export type ScenarioQueryKeys = typeof queryKeys.scenarios;
 export type ReportQueryKeys = typeof queryKeys.reports;
+
+// Type helper for extracting query key type
+export type QueryKey = ReturnType<
+  | typeof queryKeys.projects.list
+  | typeof queryKeys.projects.detail
+  | typeof queryKeys.people.list
+  | typeof queryKeys.people.detail
+  | typeof queryKeys.assignments.list
+  | typeof queryKeys.scenarios.list
+  | typeof queryKeys.reports.capacity
+  | typeof queryKeys.dashboard.summary
+>;
+
+/**
+ * Helper function to invalidate all queries for an entity
+ * @param queryClient - The query client instance
+ * @param entityKey - The base entity key (e.g., queryKeys.projects.all)
+ */
+export function invalidateEntity(
+  queryClient: { invalidateQueries: (options: { queryKey: readonly string[] }) => void },
+  entityKey: readonly string[]
+): void {
+  queryClient.invalidateQueries({ queryKey: entityKey });
+}
+
+/**
+ * Helper function to invalidate multiple related entities after a mutation
+ * @param queryClient - The query client instance
+ * @param entityKeys - Array of entity keys to invalidate
+ */
+export function invalidateMultiple(
+  queryClient: { invalidateQueries: (options: { queryKey: readonly string[] }) => void },
+  entityKeys: readonly (readonly string[])[]
+): void {
+  entityKeys.forEach((key) => {
+    queryClient.invalidateQueries({ queryKey: key });
+  });
+}
+
+export default queryKeys;

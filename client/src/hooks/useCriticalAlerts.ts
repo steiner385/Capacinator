@@ -21,7 +21,7 @@ export function useCriticalAlerts() {
 
   // Fetch dashboard data
   const { data: dashboard, isLoading: dashboardLoading, error: dashboardError } = useQuery({
-    queryKey: queryKeys.reports.dashboard(currentScenario?.id),
+    queryKey: queryKeys.dashboard.summary(currentScenario?.id),
     queryFn: async () => {
       const response = await api.reporting.getDashboard();
       return response.data.data;

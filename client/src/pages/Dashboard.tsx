@@ -12,6 +12,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { useScenario } from '../contexts/ScenarioContext';
 import { DashboardSummary } from '../types';
 import { Card } from '../components/ui/CustomCard';
@@ -46,7 +47,7 @@ export function Dashboard() {
   });
   
   const { data: dashboard, isLoading, error } = useQuery({
-    queryKey: ['dashboard', currentScenario?.id, dateRange],
+    queryKey: queryKeys.dashboard.summary(currentScenario?.id, dateRange),
     queryFn: async () => {
       const response = await api.reporting.getDashboard();
       // Handle the nested response structure: response.data.data

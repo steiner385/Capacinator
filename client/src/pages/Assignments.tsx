@@ -121,7 +121,7 @@ export default function Assignments() {
 
   // Fetch recommendations
   const { data: recommendationsData, isLoading: recommendationsLoading, refetch: refetchRecommendations } = useQuery({
-    queryKey: queryKeys.recommendations.list(filters),
+    queryKey: queryKeys.assignments.recommendations(filters),
     queryFn: async () => {
       const params = {
         startDate: filters.date_range ? filters.date_range.split('_')[0] : undefined,

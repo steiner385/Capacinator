@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, MapPin, Building } from 'lucide-react';
 import { Location } from '../types';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { InlineEdit } from '../components/ui/InlineEdit';
 import { LocationModal } from '../components/modals/LocationModal';
@@ -21,7 +22,7 @@ export function Locations() {
 
   // Fetch locations with React Query
   const { data: locations, isLoading, error } = useQuery({
-    queryKey: ['locations'],
+    queryKey: queryKeys.locations.list(),
     queryFn: async () => {
       const response = await api.locations.list();
       const locationsData = response.data?.data || response.data || [];
@@ -35,7 +36,7 @@ export function Locations() {
       await api.locations.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.all });
     },
     onError: (error) => {
       console.error('Failed to update location:', error);
@@ -49,7 +50,7 @@ export function Locations() {
       await api.locations.delete(locationId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations.all });
       setDeleteConfirm({ isOpen: false, location: null });
     },
     onError: (error) => {
@@ -73,7 +74,7 @@ export function Locations() {
   };
 
   const handleSave = () => {
-    queryClient.invalidateQueries({ queryKey: ['locations'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.locations.all });
     setIsModalOpen(false);
   };
 
