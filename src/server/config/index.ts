@@ -1,7 +1,2 @@
-export const config = {
-  features: {
-    get audit() {
-      return process.env.AUDIT_ENABLED === 'true' || process.env.NODE_ENV === 'e2e';
-    }
-  }
-};
+// Re-export centralized configuration
+export { config, validateConfiguration, logConfigurationSummary } from './environment.js';

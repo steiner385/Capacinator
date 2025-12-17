@@ -7,6 +7,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
 import type ExcelJSTypes from 'exceljs';
+import { config } from '../../config/environment.js';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: typeof ExcelJSTypes | null = null;
@@ -158,7 +159,7 @@ export class ImportController extends BaseController {
       }
     },
     limits: {
-      fileSize: parseInt(process.env.MAX_FILE_SIZE || '52428800', 10) // 50MB default
+      fileSize: config.server.maxFileSize
     }
   });
 

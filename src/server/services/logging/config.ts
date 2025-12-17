@@ -1,9 +1,10 @@
 import { LogLevel, LoggerConfig, Logger } from './Logger.js';
+import { config } from '../../config/environment.js';
 
 export function getLoggerConfig(): LoggerConfig {
-  const logLevelStr = process.env.LOG_LEVEL?.toLowerCase() || 'info';
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isTest = process.env.NODE_ENV === 'test';
+  const logLevelStr = config.logging.level.toLowerCase() || 'info';
+  const isProduction = config.app.isProduction;
+  const isTest = config.app.isTest;
 
   // Parse log level
   let level: LogLevel;
@@ -33,15 +34,15 @@ export function getLoggerConfig(): LoggerConfig {
     level = LogLevel.ERROR;
   }
 
-  const config: LoggerConfig = {
+  const loggerConfig: LoggerConfig = {
     level,
-    service: process.env.SERVICE_NAME || 'capacinator',
-    enableConsole: !isTest || process.env.ENABLE_TEST_LOGS === 'true',
+    service: config.app.serviceName,
+    enableConsole: !isTest || config.logging.enableTestLogs,
     enableFile: isProduction,
-    logDirectory: process.env.LOG_DIRECTORY || '/tmp/capacinator-logs',
-    maxFileSize: parseInt(process.env.LOG_MAX_FILE_SIZE || '10485760', 10), // 10MB
-    maxFiles: parseInt(process.env.LOG_MAX_FILES || '10', 10),
-    enableStructuredLogs: process.env.LOG_FORMAT === 'json' || isProduction,
+    logDirectory: config.logging.directory,
+    maxFileSize: parseInt(config.logging.maxFileSize, 10), // Already parsed by config
+    maxFiles: parseInt(config.logging.maxFiles, 10), // Already parsed by config
+    enableStructuredLogs: config.logging.format === 'json' || isProduction,
     redactedFields: [
       'password',
       'token',
@@ -60,15 +61,15 @@ export function getLoggerConfig(): LoggerConfig {
   };
 
   // Validate configuration
-  if (config.maxFileSize < 1024) {
+  if (loggerConfig.maxFileSize < 1024) {
     throw new Error('LOG_MAX_FILE_SIZE must be at least 1024 bytes');
   }
 
-  if (config.maxFiles < 1) {
+  if (loggerConfig.maxFiles < 1) {
     throw new Error('LOG_MAX_FILES must be at least 1');
   }
 
-  return config;
+  return loggerConfig;
 }
 
 export function createLogger() {

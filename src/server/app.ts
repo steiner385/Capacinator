@@ -11,7 +11,7 @@ import { requestLoggerMiddleware, userContextMiddleware } from './middleware/req
 import { enhancedAuditMiddleware } from './middleware/enhancedAuditMiddleware.js';
 import { initializeNotificationScheduler } from './services/notifications/scheduler.js';
 import { initializeAutomaticBackups } from './services/backup/scheduler.js';
-import { config } from './config/index.js';
+import { config } from './config/environment.js';
 import { logger } from './services/logging/config.js';
 
 export async function createExpressApp() {
@@ -32,7 +32,7 @@ export async function createExpressApp() {
 
   // CORS configuration
   const corsOptions = {
-    origin: process.env.NODE_ENV === 'production' 
+    origin: config.app.isProduction
       ? false // In production, frontend is served from same origin
       : ['http://localhost:3120', 'http://localhost:3121', 'http://localhost:5173'],
     credentials: true,
@@ -48,9 +48,9 @@ export async function createExpressApp() {
 
   // Enhanced request logging
   app.use(requestLoggerMiddleware);
-  
+
   // Legacy HTTP logging (kept for backward compatibility during migration)
-  if (process.env.NODE_ENV !== 'test') {
+  if (!config.app.isTest) {
     app.use(morgan('dev'));
   }
 
@@ -81,10 +81,10 @@ export async function createExpressApp() {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
+    res.json({
+      status: 'ok',
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV 
+      environment: config.app.env
     });
   });
 
@@ -92,11 +92,11 @@ export async function createExpressApp() {
   app.use(enhancedErrorHandler);
 
   // Initialize background services
-  if (process.env.NODE_ENV !== 'test') {
+  if (!config.app.isTest) {
     logger.info('Initializing notification scheduler');
     initializeNotificationScheduler();
     logger.info('Notification scheduler started');
-    
+
     initializeAutomaticBackups();
     logger.info('Automatic backups scheduled', { frequency: 'daily' });
   }

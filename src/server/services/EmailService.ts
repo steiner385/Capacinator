@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getAuditedDb } from '../database/index.js';
+import { config } from '../config/environment.js';
 
 export interface EmailConfig {
   host: string;
@@ -59,16 +60,16 @@ export class EmailService {
   }
 
   private initializeConfig(): void {
-    // Load email configuration from environment variables
+    // Load email configuration from centralized config
     this.config = {
-      host: process.env.SMTP_HOST || 'localhost',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
+      host: config.email.host,
+      port: config.email.port,
+      secure: config.email.secure,
       auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || ''
+        user: config.email.user,
+        pass: config.email.password
       },
-      from: process.env.SMTP_FROM || 'noreply@capacinator.com'
+      from: config.email.from
     };
 
     // Only create transporter if SMTP is configured
