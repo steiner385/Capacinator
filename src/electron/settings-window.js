@@ -8,6 +8,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     loadSettings();
     calculateDatabaseSize();
     checkLastBackup();
+
+    // Tab switching listeners
+    document.querySelectorAll('[data-tab]').forEach(tab => {
+        tab.addEventListener('click', function() {
+            switchTab(this.dataset.tab);
+        });
+    });
+
+    // Button action listeners
+    document.querySelectorAll('[data-action]').forEach(btn => {
+        const action = btn.dataset.action;
+        btn.addEventListener('click', () => {
+            switch (action) {
+                case 'save': saveSettings(); break;
+                case 'close': closeSettings(); break;
+                case 'optimize-database': optimizeDatabase(); break;
+                case 'browse-backup': browseBackupFolder(); break;
+                case 'backup-now': backupNow(); break;
+                case 'open-logs': openLogFolder(); break;
+                case 'clear-cache': clearCache(); break;
+                case 'reset-settings': resetSettings(); break;
+            }
+        });
+    });
 });
 
 // Tab switching
@@ -15,9 +39,11 @@ function switchTab(tabName) {
     // Update tab buttons
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('active');
+        }
     });
-    event.target.classList.add('active');
-    
+
     // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');

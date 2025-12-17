@@ -150,7 +150,8 @@ describe('Express App', () => {
       expect(app).toBe(mockApp);
     });
 
-    it('should configure helmet security middleware with CSP', async () => {
+    it('should configure helmet security middleware with CSP (production - no unsafe-eval)', async () => {
+      process.env.NODE_ENV = 'production';
       await createExpressApp();
 
       expect(mockHelmet).toHaveBeenCalledWith({
@@ -158,10 +159,32 @@ describe('Express App', () => {
           directives: {
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            scriptSrc: ["'self'"],
             imgSrc: ["'self'", "data:", "blob:"],
-            connectSrc: ["'self'"]
-          }
+            connectSrc: ["'self'"],
+            reportUri: ['/api/csp-report'],
+          },
+          reportOnly: false,
+        }
+      });
+      expect(mockUse).toHaveBeenCalledWith('helmet-middleware');
+    });
+
+    it('should configure helmet security middleware with CSP (development - with unsafe-eval)', async () => {
+      process.env.NODE_ENV = 'development';
+      await createExpressApp();
+
+      expect(mockHelmet).toHaveBeenCalledWith({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-eval'"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'"],
+            reportUri: ['/api/csp-report'],
+          },
+          reportOnly: false,
         }
       });
       expect(mockUse).toHaveBeenCalledWith('helmet-middleware');
