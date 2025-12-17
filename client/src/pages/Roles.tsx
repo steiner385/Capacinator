@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Users, Settings } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -21,7 +22,7 @@ export default function Roles() {
 
   // Fetch roles
   const { data: roles, isLoading: rolesLoading, error: rolesError } = useQuery({
-    queryKey: ['roles', filters],
+    queryKey: queryKeys.roles.list(filters),
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
@@ -39,7 +40,7 @@ export default function Roles() {
       await api.roles.delete(roleId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.roles.all });
     }
   });
 
