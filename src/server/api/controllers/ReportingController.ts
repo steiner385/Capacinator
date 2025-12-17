@@ -5,6 +5,65 @@ import { ServiceContainer } from '../../services/ServiceContainer.js';
 // Alias for backward compatibility
 type RequestWithLogging = RequestWithContext;
 
+/**
+ * Database record types for reporting
+ */
+interface ProjectDemandRecord {
+  project_id: string;
+  project_name?: string;
+  role_id?: string;
+  role_name?: string;
+  allocation_percentage?: number;
+  demand_hours?: number;
+  start_date?: string;
+  end_date?: string;
+  time_status?: string;
+  [key: string]: unknown;
+}
+
+interface RoleDemandRecord {
+  role_id: string;
+  role_name: string;
+  total_hours?: number;
+  [key: string]: unknown;
+}
+
+interface ProjectTypeDemandRecord {
+  project_type_id: string;
+  project_type_name: string;
+  total_hours?: number;
+  [key: string]: unknown;
+}
+
+interface MonthRecord {
+  month: string;
+  total_hours?: number;
+  [key: string]: unknown;
+}
+
+interface ProjectHealthRecord {
+  project_id: string;
+  project_name?: string;
+  total_allocation_percentage?: number;
+  allocation_health?: string;
+  [key: string]: unknown;
+}
+
+interface CapacityTimelineEntry {
+  period: string;
+  capacity: number;
+}
+
+interface ProjectGapRecord {
+  project_id: string;
+  project_name: string;
+  gap_type: string;
+  unmet_demands: number;
+  total_demand_percentage: number;
+  actual_allocation_percentage?: number;
+  coverage_ratio?: number;
+}
+
 export class ReportingController extends BaseController {
   constructor(container?: ServiceContainer) {
     super({ enableLogging: true }, { container });
@@ -463,7 +522,7 @@ export class ReportingController extends BaseController {
       const projectDemands = await projectQuery;
       
       // Format for frontend
-      const byProject = projectDemands.map((project: any) => ({
+      const byProject = (projectDemands as ProjectDemandRecord[]).map((project: ProjectDemandRecord) => ({
         id: project.project_id,
         name: project.project_name,
         demand: project.total_hours || 0
@@ -503,7 +562,7 @@ export class ReportingController extends BaseController {
       const roleDemands = await roleQuery;
       
       // Format for frontend
-      const by_role = roleDemands.map((role: any) => ({
+      const by_role = (roleDemands as RoleDemandRecord[]).map((role: RoleDemandRecord) => ({
         role_name: role.role_name,
         total_hours: role.total_hours || 0
       }));
@@ -541,7 +600,7 @@ export class ReportingController extends BaseController {
       
       const projectTypeDemands = await projectTypeQuery;
       
-      const by_project_type = projectTypeDemands.map((type: any) => ({
+      const by_project_type = (projectTypeDemands as ProjectTypeDemandRecord[]).map((type: ProjectTypeDemandRecord) => ({
         project_type_name: type.project_type_name,
         total_hours: type.total_hours || 0
       }));
@@ -634,14 +693,14 @@ export class ReportingController extends BaseController {
         
         const timelineData = await timelineQuery;
           
-        timeline.push(...timelineData.map((month: any) => ({
+        timeline.push(...(timelineData as MonthRecord[]).map((month: MonthRecord) => ({
           month: month.month,
           total_hours: Math.round(month.total_hours || 0)
         })));
       }
       
       // Calculate total hours across all projects
-      const totalHours = byProject.reduce((sum: number, project: any) => sum + project.demand, 0);
+      const totalHours = byProject.reduce((sum: number, project: { id: string; name?: string; demand: number }) => sum + project.demand, 0);
       
       // Count distinct projects and roles
       let projectCountQuery = this.db('project_demands_view')
@@ -938,7 +997,7 @@ export class ReportingController extends BaseController {
     }
   })
 
-  private async calculateCapacityTimeline(startDate?: string, endDate?: string): Promise<any[]> {
+  private async calculateCapacityTimeline(startDate?: string, endDate?: string): Promise<CapacityTimelineEntry[]> {
     // Get all people with their default hours and availability
     const people = await this.db('people')
       .select(
@@ -993,8 +1052,8 @@ export class ReportingController extends BaseController {
    * Calculate which projects have unmet demands by comparing project demands vs assignments
    * A project has gaps if it has role demands that aren't covered by assignments
    */
-  private calculateProjectsWithUnmetDemands(projectDemands: any[], projectHealth: any[]): any[] {
-    const projectsWithGaps: any[] = [];
+  private calculateProjectsWithUnmetDemands(projectDemands: ProjectDemandRecord[], projectHealth: ProjectHealthRecord[]): ProjectGapRecord[] {
+    const projectsWithGaps: ProjectGapRecord[] = [];
     
     // Group demands by project_id
     const demandsByProject = projectDemands.reduce((acc, demand) => {
@@ -1003,7 +1062,7 @@ export class ReportingController extends BaseController {
       }
       acc[demand.project_id].push(demand);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, ProjectDemandRecord[]>);
     
     // Check each project for unmet demands
     Object.entries(demandsByProject).forEach(([projectId, demands]) => {
