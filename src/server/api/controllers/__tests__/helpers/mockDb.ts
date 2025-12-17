@@ -19,39 +19,122 @@
  * // Returns: [{ id: 1, name: 'Test' }]
  * ```
  */
-export function createMockDb() {
+
+// Generic record type for database results
+type DbRecord = Record<string, unknown>;
+
+// Thenable interface for mock results
+interface MockThenable<T> {
+  then: <TResult>(resolve?: (value: T) => TResult | PromiseLike<TResult>) => Promise<TResult>;
+  catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => Promise<T | TResult>;
+}
+
+// Thenable with returning support
+interface MockThenableWithReturning<T> extends MockThenable<T> {
+  returning: jest.Mock<MockThenable<T>>;
+}
+
+// Mock database interface
+interface MockDbInterface {
+  // Query builder methods
+  where: jest.Mock;
+  andWhere: jest.Mock;
+  orWhere: jest.Mock;
+  whereIn: jest.Mock;
+  whereNotIn: jest.Mock;
+  whereNull: jest.Mock;
+  whereNotNull: jest.Mock;
+  whereBetween: jest.Mock;
+  whereNotBetween: jest.Mock;
+  whereExists: jest.Mock;
+  whereNotExists: jest.Mock;
+  join: jest.Mock;
+  leftJoin: jest.Mock;
+  rightJoin: jest.Mock;
+  innerJoin: jest.Mock;
+  outerJoin: jest.Mock;
+  crossJoin: jest.Mock;
+  select: jest.Mock;
+  orderBy: jest.Mock;
+  groupBy: jest.Mock;
+  having: jest.Mock;
+  limit: jest.Mock;
+  offset: jest.Mock;
+  sum: jest.Mock;
+  avg: jest.Mock;
+  min: jest.Mock;
+  max: jest.Mock;
+  count: jest.Mock;
+  returning: jest.Mock;
+  distinct: jest.Mock;
+  distinctOn: jest.Mock;
+  as: jest.Mock;
+
+  // Terminal methods
+  then: jest.Mock;
+  catch: jest.Mock;
+  first: jest.Mock<MockThenable<DbRecord | null>>;
+  insert: jest.Mock<MockThenableWithReturning<DbRecord[]>>;
+  update: jest.Mock<MockThenableWithReturning<DbRecord[]>>;
+  del: jest.Mock<MockThenable<number>>;
+  delete: jest.Mock<MockThenable<number>>;
+  countDistinct: jest.Mock;
+  raw: jest.Mock;
+  transaction: jest.Mock;
+
+  // Configuration methods
+  _setQueryResult: (data: DbRecord[]) => void;
+  _setFirstResult: (data: DbRecord | null) => void;
+  _setCountResult: (count: number) => void;
+  _setInsertResult: (data: DbRecord[]) => void;
+  _setUpdateResult: (data: DbRecord[]) => void;
+  _setDeleteResult: (count: number) => void;
+
+  // Queue methods
+  _queueQueryResult: (data: DbRecord[]) => void;
+  _queueFirstResult: (data: DbRecord | null) => void;
+  _queueInsertResult: (data: DbRecord[]) => void;
+  _queueUpdateResult: (data: DbRecord[]) => void;
+  _queueError: (error: Error) => void;
+
+  // Tracking methods
+  _getWhereCalls: () => unknown[][];
+  _reset: () => void;
+}
+
+export function createMockDb(): MockDbInterface & jest.Mock {
   // Storage for mock data that tests can configure
-  let queryResult: any[] = [];
-  let firstResult: any = null;
-  let countResult = { count: 0 };
-  let insertResult: any[] = [];
-  let updateResult: any[] = [];
+  let queryResult: DbRecord[] = [];
+  let firstResult: DbRecord | null = null;
+  let countResult: { count: number } = { count: 0 };
+  let insertResult: DbRecord[] = [];
+  let updateResult: DbRecord[] = [];
   let deleteResult = 0;
 
   // Queue storage for sequential different responses
-  let queryResultQueue: any[][] = [];
-  let firstResultQueue: any[] = [];
-  let insertResultQueue: any[][] = [];
-  let updateResultQueue: any[][] = [];
+  let queryResultQueue: DbRecord[][] = [];
+  let firstResultQueue: (DbRecord | null)[] = [];
+  let insertResultQueue: DbRecord[][] = [];
+  let updateResultQueue: DbRecord[][] = [];
 
   // Storage for errors to throw
   let errorQueue: Error[] = [];
 
   // Storage for tracking method calls
-  let whereCalls: any[][] = [];
+  let whereCalls: unknown[][] = [];
 
   // Track if count() was called in the current chain
   let countWasCalled = false;
 
   // Main mock function - calling it returns itself for chaining
-  const mock: any = jest.fn(() => {
+  const mock = jest.fn(() => {
     // Reset count flag when starting a new chain
     countWasCalled = false;
     return mock;
-  });
+  }) as MockDbInterface & jest.Mock;
 
   // Query building methods (all return self for chaining)
-  mock.where = jest.fn().mockImplementation((...args) => {
+  mock.where = jest.fn().mockImplementation((...args: unknown[]) => {
     whereCalls.push(args);
     return mock;
   });
@@ -91,16 +174,19 @@ export function createMockDb() {
   // This is what allows: await db('table').where(...)
   // Return a proper Promise that resolves with queryResult
   // Check queue first for sequential different responses
-  mock.then = jest.fn((onFulfilled, onRejected) => {
+  mock.then = jest.fn(<TResult>(
+    onFulfilled?: (value: DbRecord[]) => TResult | PromiseLike<TResult>,
+    onRejected?: (reason: unknown) => TResult | PromiseLike<TResult>
+  ): Promise<TResult | DbRecord[]> => {
     // Check if there's a queued query result first (priority over errors)
     // This allows specific queries to succeed before hitting a queued error
     if (queryResultQueue.length > 0) {
-      const data = queryResultQueue.shift();
+      const data = queryResultQueue.shift()!;
       return new Promise((resolve, reject) => {
         queueMicrotask(() => {
           try {
             const result = onFulfilled ? onFulfilled(data) : data;
-            resolve(result);
+            resolve(result as TResult | DbRecord[]);
           } catch (error) {
             reject(error);
           }
@@ -119,14 +205,15 @@ export function createMockDb() {
       queueMicrotask(() => {
         try {
           const result = onFulfilled ? onFulfilled(queryResult) : queryResult;
-          resolve(result);
+          resolve(result as TResult | DbRecord[]);
         } catch (error) {
           reject(error);
         }
       });
     });
   });
-  mock.catch = jest.fn((reject) => {
+
+  mock.catch = jest.fn(<TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => {
     return Promise.resolve(queryResult).catch(reject);
   });
 
@@ -137,15 +224,15 @@ export function createMockDb() {
    * Checks queue first for sequential different responses
    * If .count() was called before .first(), returns countResult (unless queue has a value)
    */
-  mock.first = jest.fn().mockImplementation(() => {
+  mock.first = jest.fn().mockImplementation((): MockThenable<DbRecord | null | { count: number }> => {
     // Capture data ONCE when .first() is called (not when then/catch are called)
     // This prevents the queue from being shifted multiple times
-    let data;
+    let data: DbRecord | null | { count: number };
     if (countWasCalled) {
       // If there's a queued first result, use that even if count was called
       // This allows tests to override the default count result
       if (firstResultQueue.length > 0) {
-        data = firstResultQueue.shift();
+        data = firstResultQueue.shift()!;
       } else {
         // Otherwise use count result
         data = countResult;
@@ -153,14 +240,14 @@ export function createMockDb() {
       countWasCalled = false; // Reset flag after use
     } else {
       // Normal first() behavior when count wasn't called
-      data = firstResultQueue.length > 0 ? firstResultQueue.shift() : firstResult;
+      data = firstResultQueue.length > 0 ? firstResultQueue.shift()! : firstResult;
     }
 
     return {
-      then: (resolve: any) => {
+      then: <TResult>(resolve?: (value: DbRecord | null | { count: number }) => TResult | PromiseLike<TResult>) => {
         return Promise.resolve(data).then(resolve);
       },
-      catch: (reject: any) => {
+      catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => {
         return Promise.resolve(data).catch(reject);
       }
     };
@@ -170,24 +257,24 @@ export function createMockDb() {
    * Mock for .insert() - returns inserted records
    * Checks queue first for sequential different responses
    */
-  mock.insert = jest.fn().mockImplementation((data) => {
+  mock.insert = jest.fn().mockImplementation((_data: DbRecord): MockThenableWithReturning<DbRecord[]> => {
     // Capture result ONCE when .insert() is called
-    const result = insertResultQueue.length > 0 ? insertResultQueue.shift() : insertResult;
+    const result = insertResultQueue.length > 0 ? insertResultQueue.shift()! : insertResult;
 
     return {
-      then: (resolve: any) => {
+      then: <TResult>(resolve?: (value: DbRecord[]) => TResult | PromiseLike<TResult>) => {
         return Promise.resolve(result).then(resolve);
       },
-      catch: (reject: any) => {
+      catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => {
         return Promise.resolve(result).catch(reject);
       },
-      returning: jest.fn().mockImplementation(() => {
+      returning: jest.fn().mockImplementation((): MockThenable<DbRecord[]> => {
         // Use the same result captured above
         return {
-          then: (resolve: any) => {
+          then: <TResult>(resolve?: (value: DbRecord[]) => TResult | PromiseLike<TResult>) => {
             return Promise.resolve(result).then(resolve);
           },
-          catch: (reject: any) => {
+          catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => {
             return Promise.resolve(result).catch(reject);
           }
         };
@@ -199,24 +286,24 @@ export function createMockDb() {
    * Mock for .update() - returns updated records
    * Checks queue first for sequential different responses
    */
-  mock.update = jest.fn().mockImplementation((data) => {
+  mock.update = jest.fn().mockImplementation((_data: DbRecord): MockThenableWithReturning<DbRecord[]> => {
     // Capture result ONCE when .update() is called
-    const result = updateResultQueue.length > 0 ? updateResultQueue.shift() : updateResult;
+    const result = updateResultQueue.length > 0 ? updateResultQueue.shift()! : updateResult;
 
     return {
-      then: (resolve: any) => {
+      then: <TResult>(resolve?: (value: DbRecord[]) => TResult | PromiseLike<TResult>) => {
         return Promise.resolve(result).then(resolve);
       },
-      catch: (reject: any) => {
+      catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => {
         return Promise.resolve(result).catch(reject);
       },
-      returning: jest.fn().mockImplementation(() => {
+      returning: jest.fn().mockImplementation((): MockThenable<DbRecord[]> => {
         // Use the same result captured above
         return {
-          then: (resolve: any) => {
+          then: <TResult>(resolve?: (value: DbRecord[]) => TResult | PromiseLike<TResult>) => {
             return Promise.resolve(result).then(resolve);
           },
-          catch: (reject: any) => {
+          catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => {
             return Promise.resolve(result).catch(reject);
           }
         };
@@ -227,10 +314,10 @@ export function createMockDb() {
   /**
    * Mock for .del() / .delete() - returns number of deleted records
    */
-  mock.del = jest.fn().mockImplementation(() => {
+  mock.del = jest.fn().mockImplementation((): MockThenable<number> => {
     return {
-      then: (resolve: any) => Promise.resolve(deleteResult).then(resolve),
-      catch: (reject: any) => Promise.resolve(deleteResult).catch(reject)
+      then: <TResult>(resolve?: (value: number) => TResult | PromiseLike<TResult>) => Promise.resolve(deleteResult).then(resolve),
+      catch: <TResult>(reject?: (error: unknown) => TResult | PromiseLike<TResult>) => Promise.resolve(deleteResult).catch(reject)
     };
   });
 
@@ -264,11 +351,10 @@ export function createMockDb() {
   /**
    * Mock for transactions
    */
-  mock.transaction = jest.fn().mockImplementation(async (callback) => {
+  mock.transaction = jest.fn().mockImplementation(async <T>(callback: (trx: MockDbInterface & jest.Mock) => Promise<T>): Promise<T> => {
     // Create a transaction mock that behaves like the main mock
     const trx = createMockDb();
-    await callback(trx);
-    return trx;
+    return await callback(trx);
   });
 
   // Helper methods for tests to configure what data the mock returns
@@ -277,7 +363,7 @@ export function createMockDb() {
    * Set the data that will be returned by query operations (select, etc.)
    * @param data Array of records to return
    */
-  mock._setQueryResult = (data: any[]) => {
+  mock._setQueryResult = (data: DbRecord[]) => {
     queryResult = data;
   };
 
@@ -285,7 +371,7 @@ export function createMockDb() {
    * Set the data that will be returned by .first()
    * @param data Single record to return, or null
    */
-  mock._setFirstResult = (data: any) => {
+  mock._setFirstResult = (data: DbRecord | null) => {
     firstResult = data;
   };
 
@@ -301,7 +387,7 @@ export function createMockDb() {
    * Set the data that will be returned by .insert()
    * @param data Array of inserted records to return
    */
-  mock._setInsertResult = (data: any[]) => {
+  mock._setInsertResult = (data: DbRecord[]) => {
     insertResult = data;
   };
 
@@ -309,7 +395,7 @@ export function createMockDb() {
    * Set the data that will be returned by .update()
    * @param data Array of updated records to return
    */
-  mock._setUpdateResult = (data: any[]) => {
+  mock._setUpdateResult = (data: DbRecord[]) => {
     updateResult = data;
   };
 
@@ -328,7 +414,7 @@ export function createMockDb() {
    * Use this when you need different results for sequential queries
    * @param data Array of records to return for the next query
    */
-  mock._queueQueryResult = (data: any[]) => {
+  mock._queueQueryResult = (data: DbRecord[]) => {
     queryResultQueue.push(data);
   };
 
@@ -337,7 +423,7 @@ export function createMockDb() {
    * Use this when you need different results for sequential .first() calls
    * @param data Single record to return for the next .first() call
    */
-  mock._queueFirstResult = (data: any) => {
+  mock._queueFirstResult = (data: DbRecord | null) => {
     firstResultQueue.push(data);
     if (process.env.DEBUG_MOCK) {
       console.log(`[mockDb._queueFirstResult] Queued:`, data, `Queue length now: ${firstResultQueue.length}`);
@@ -348,7 +434,7 @@ export function createMockDb() {
    * Queue data to be returned by the next .insert() call
    * @param data Array of inserted records to return
    */
-  mock._queueInsertResult = (data: any[]) => {
+  mock._queueInsertResult = (data: DbRecord[]) => {
     insertResultQueue.push(data);
   };
 
@@ -356,7 +442,7 @@ export function createMockDb() {
    * Queue data to be returned by the next .update() call
    * @param data Array of updated records to return
    */
-  mock._queueUpdateResult = (data: any[]) => {
+  mock._queueUpdateResult = (data: DbRecord[]) => {
     updateResultQueue.push(data);
   };
 
@@ -374,7 +460,7 @@ export function createMockDb() {
    * Returns an array of argument arrays
    * @returns Array of where clause call arguments
    */
-  mock._getWhereCalls = () => {
+  mock._getWhereCalls = (): unknown[][] => {
     return whereCalls;
   };
 

@@ -3,6 +3,103 @@ import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import ExcelJS from 'exceljs';
 
+// Report filter interface
+interface ReportFilters {
+  startDate?: string;
+  endDate?: string;
+  projectTypeId?: string;
+  locationId?: string;
+}
+
+// Role capacity data
+interface RoleCapacityData {
+  role: string;
+  capacity: number;
+  utilized: number;
+  gap_fte: number;
+}
+
+// Capacity report data
+interface CapacityReportData {
+  totalCapacity: number;
+  utilizedCapacity: number;
+  availableCapacity: number;
+  byRole: RoleCapacityData[];
+  capacityGaps: CapacityGapRecord[];
+  personUtilization: PersonUtilizationRecord[];
+}
+
+// Person utilization data
+interface PersonUtilizationData {
+  id: string;
+  name: string;
+  role: string;
+  utilization: number;
+}
+
+// Utilization report data
+interface UtilizationReportData {
+  peopleUtilization: PersonUtilizationData[];
+  averageUtilization: number;
+}
+
+// Project type demand data
+interface ProjectTypeDemandData {
+  type: string;
+  demand: number;
+}
+
+// Demand report data
+interface DemandReportData {
+  totalDemand: number;
+  byProjectType: ProjectTypeDemandData[];
+}
+
+// Role gap data
+interface RoleGapData {
+  roleId: string;
+  roleName: string;
+  demand: number;
+  capacity: number;
+  gap: number;
+}
+
+// Gaps report data
+interface GapsReportData {
+  totalGap: number;
+  gapsByRole: RoleGapData[];
+}
+
+// Database record types
+interface CapacityGapRecord {
+  role_id: string;
+  role_name: string;
+  total_capacity_fte: number;
+  total_demand_fte: number;
+  gap_fte: number;
+}
+
+interface PersonUtilizationRecord {
+  person_id: string;
+  person_name: string;
+  primary_role: string;
+  total_allocation: number;
+}
+
+interface DemandRecord {
+  role_id: string;
+  role_name: string;
+  project_id: string;
+  project_name: string;
+  project_priority: number;
+  demand_hours: number;
+  start_date: string;
+  end_date: string;
+}
+
+// CSV cell type
+type CSVCell = string | number | boolean | null | undefined;
+
 export class ExportController extends BaseController {
   constructor(container?: ServiceContainer) {
     super({}, { container });
@@ -10,22 +107,22 @@ export class ExportController extends BaseController {
 
   async exportReportAsExcel(req: Request, res: Response) {
     try {
-      const { reportType, filters = {} } = req.body;
-      
+      const { reportType, filters = {} } = req.body as { reportType?: string; filters?: ReportFilters };
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
+
       const workbook = new ExcelJS.Workbook();
-      
+
       // Set workbook properties
       workbook.creator = 'Capacinator';
       workbook.lastModifiedBy = 'Capacinator';
       workbook.created = new Date();
       workbook.modified = new Date();
-      
+
       let filename = '';
-      
+
       switch (reportType) {
         case 'capacity':
           await this.generateCapacityExcel(workbook, filters);
@@ -46,33 +143,33 @@ export class ExportController extends BaseController {
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
-      
+
       // Generate Excel buffer
       const buffer = await workbook.xlsx.writeBuffer();
-      
+
       // Set response headers
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
+
       // Send the file
       res.send(buffer);
-      
+
     } catch (error) {
       this.handleError(error, res, 'Export failed');
     }
   }
-  
+
   async exportReportAsCSV(req: Request, res: Response) {
     try {
-      const { reportType, filters = {} } = req.body;
-      
+      const { reportType, filters = {} } = req.body as { reportType?: string; filters?: ReportFilters };
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
+
       let csvContent = '';
       let filename = '';
-      
+
       switch (reportType) {
         case 'capacity':
           const capacityData = await this.getCapacityData(filters);
@@ -97,33 +194,33 @@ export class ExportController extends BaseController {
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
-      
+
       // Set response headers
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
+
       // Send the CSV content
       res.send(csvContent);
-      
+
     } catch (error) {
       this.handleError(error, res, 'CSV export failed');
     }
   }
-  
+
   async exportReportAsPDF(req: Request, res: Response) {
     try {
-      const { reportType, filters = {} } = req.body;
-      
+      const { reportType, filters = {} } = req.body as { reportType?: string; filters?: ReportFilters };
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
+
       const puppeteer = await import('puppeteer-core');
-      
+
       // Generate HTML content for the report
       let htmlContent = '';
       let filename = '';
-      
+
       switch (reportType) {
         case 'capacity':
           const capacityData = await this.getCapacityData(filters);
@@ -148,17 +245,17 @@ export class ExportController extends BaseController {
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
-      
+
       // Launch browser and generate PDF
-      const browser = await puppeteer.launch({ 
+      const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
-      
+
       try {
         const page = await browser.newPage();
         await page.setContent(htmlContent);
-        
+
         const pdfBuffer = await page.pdf({
           format: 'A4',
           printBackground: true,
@@ -169,27 +266,27 @@ export class ExportController extends BaseController {
             left: '20px'
           }
         });
-        
+
         // Set response headers
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-        
+
         // Send the PDF
         res.send(pdfBuffer);
-        
+
       } finally {
         await browser.close();
       }
-      
+
     } catch (error) {
       this.handleError(error, res, 'PDF export failed');
     }
   }
-  
-  private async generateCapacityExcel(workbook: any, filters: any) {
+
+  private async generateCapacityExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
     const data = await this.getCapacityData(filters);
     const sheet = workbook.addWorksheet('Capacity Report');
-    
+
     // Add headers
     sheet.columns = [
       { header: 'Role', key: 'role', width: 20 },
@@ -198,7 +295,7 @@ export class ExportController extends BaseController {
       { header: 'Available (Hours)', key: 'available', width: 20 },
       { header: 'Utilization %', key: 'utilization', width: 15 }
     ];
-    
+
     // Style header
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).fill = {
@@ -206,9 +303,9 @@ export class ExportController extends BaseController {
       pattern: 'solid',
       fgColor: { argb: 'FFE6E6FA' }
     };
-    
+
     // Add data rows
-    data.byRole?.forEach((role: any) => {
+    data.byRole?.forEach((role) => {
       sheet.addRow({
         role: role.role,
         capacity: role.capacity,
@@ -218,11 +315,11 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
-  private async generateUtilizationExcel(workbook: any, filters: any) {
+
+  private async generateUtilizationExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
     const data = await this.getUtilizationData(filters);
     const sheet = workbook.addWorksheet('Utilization Report');
-    
+
     // Add headers
     sheet.columns = [
       { header: 'Name', key: 'name', width: 25 },
@@ -230,7 +327,7 @@ export class ExportController extends BaseController {
       { header: 'Utilization %', key: 'utilization', width: 15 },
       { header: 'Status', key: 'status', width: 15 }
     ];
-    
+
     // Style header
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).fill = {
@@ -238,9 +335,9 @@ export class ExportController extends BaseController {
       pattern: 'solid',
       fgColor: { argb: 'FFE6E6FA' }
     };
-    
+
     // Add data rows
-    data.peopleUtilization?.forEach((person: any) => {
+    data.peopleUtilization?.forEach((person) => {
       sheet.addRow({
         name: person.name,
         role: person.role,
@@ -250,17 +347,17 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
-  private async generateDemandExcel(workbook: any, filters: any) {
+
+  private async generateDemandExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
     const data = await this.getDemandData(filters);
     const sheet = workbook.addWorksheet('Demand Report');
-    
+
     // Add headers
     sheet.columns = [
       { header: 'Project Type', key: 'type', width: 20 },
       { header: 'Demand (Hours)', key: 'demand', width: 20 }
     ];
-    
+
     // Style header
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).fill = {
@@ -268,20 +365,20 @@ export class ExportController extends BaseController {
       pattern: 'solid',
       fgColor: { argb: 'FFE6E6FA' }
     };
-    
+
     // Add data rows
-    data.byProjectType?.forEach((type: any) => {
+    data.byProjectType?.forEach((type) => {
       sheet.addRow({
         type: type.type,
         demand: type.demand
       });
     });
   }
-  
-  private async generateGapsExcel(workbook: any, filters: any) {
+
+  private async generateGapsExcel(workbook: ExcelJS.Workbook, filters: ReportFilters) {
     const data = await this.getGapsData(filters);
     const sheet = workbook.addWorksheet('Capacity Gaps');
-    
+
     // Add headers
     sheet.columns = [
       { header: 'Role', key: 'role', width: 20 },
@@ -290,7 +387,7 @@ export class ExportController extends BaseController {
       { header: 'Gap (Hours)', key: 'gap', width: 20 },
       { header: 'Status', key: 'status', width: 15 }
     ];
-    
+
     // Style header
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).fill = {
@@ -298,9 +395,9 @@ export class ExportController extends BaseController {
       pattern: 'solid',
       fgColor: { argb: 'FFE6E6FA' }
     };
-    
+
     // Add data rows
-    data.gapsByRole?.forEach((gap: any) => {
+    data.gapsByRole?.forEach((gap) => {
       sheet.addRow({
         role: gap.roleName,
         demand: gap.demand,
@@ -310,65 +407,65 @@ export class ExportController extends BaseController {
       });
     });
   }
-  
-  private generateCapacityCSV(data: any): string {
-    const headers = ['Role', 'Total Capacity (Hours)', 'Utilized (Hours)', 'Available (Hours)', 'Utilization %'];
-    const rows = data.byRole?.map((role: any) => [
+
+  private generateCapacityCSV(data: CapacityReportData): string {
+    const headers: CSVCell[] = ['Role', 'Total Capacity (Hours)', 'Utilized (Hours)', 'Available (Hours)', 'Utilization %'];
+    const rows: CSVCell[][] = data.byRole?.map((role) => [
       role.role,
       role.capacity,
       role.utilized,
       role.capacity - role.utilized,
       Math.round((role.utilized / role.capacity) * 100)
     ]) || [];
-    
+
     return this.arrayToCSV([headers, ...rows]);
   }
-  
-  private generateUtilizationCSV(data: any): string {
-    const headers = ['Name', 'Role', 'Utilization %', 'Status'];
-    const rows = data.peopleUtilization?.map((person: any) => [
+
+  private generateUtilizationCSV(data: UtilizationReportData): string {
+    const headers: CSVCell[] = ['Name', 'Role', 'Utilization %', 'Status'];
+    const rows: CSVCell[][] = data.peopleUtilization?.map((person) => [
       person.name,
       person.role,
       person.utilization,
       person.utilization > 100 ? 'Over-allocated' :
       person.utilization < 70 ? 'Under-utilized' : 'Optimal'
     ]) || [];
-    
+
     return this.arrayToCSV([headers, ...rows]);
   }
-  
-  private generateDemandCSV(data: any): string {
-    const headers = ['Project Type', 'Demand (Hours)'];
-    const rows = data.byProjectType?.map((type: any) => [
+
+  private generateDemandCSV(data: DemandReportData): string {
+    const headers: CSVCell[] = ['Project Type', 'Demand (Hours)'];
+    const rows: CSVCell[][] = data.byProjectType?.map((type) => [
       type.type,
       type.demand
     ]) || [];
-    
+
     return this.arrayToCSV([headers, ...rows]);
   }
-  
-  private generateGapsCSV(data: any): string {
-    const headers = ['Role', 'Demand (Hours)', 'Capacity (Hours)', 'Gap (Hours)', 'Status'];
-    const rows = data.gapsByRole?.map((gap: any) => [
+
+  private generateGapsCSV(data: GapsReportData): string {
+    const headers: CSVCell[] = ['Role', 'Demand (Hours)', 'Capacity (Hours)', 'Gap (Hours)', 'Status'];
+    const rows: CSVCell[][] = data.gapsByRole?.map((gap) => [
       gap.roleName,
       gap.demand,
       gap.capacity,
       gap.gap,
       gap.gap < 0 ? 'Gap' : 'Sufficient'
     ]) || [];
-    
+
     return this.arrayToCSV([headers, ...rows]);
   }
-  
-  private arrayToCSV(data: any[][]): string {
-    return data.map(row => 
-      row.map(cell => 
+
+  private arrayToCSV(data: CSVCell[][]): string {
+    return data.map(row =>
+      row.map(cell =>
         typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
       ).join(',')
     ).join('\n');
   }
-  
-  private generateCapacityHTML(data: any): string {
+
+  private generateCapacityHTML(data: CapacityReportData): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -411,7 +508,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.byRole?.map((role: any) => `
+            ${data.byRole?.map((role) => `
               <tr>
                 <td>${role.role}</td>
                 <td>${role.capacity} hours</td>
@@ -426,8 +523,8 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
-  private generateUtilizationHTML(data: any): string {
+
+  private generateUtilizationHTML(data: UtilizationReportData): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -456,7 +553,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.peopleUtilization?.map((person: any) => {
+            ${data.peopleUtilization?.map((person) => {
               const status = person.utilization > 100 ? 'Over-allocated' :
                            person.utilization < 70 ? 'Under-utilized' : 'Optimal';
               const rowClass = person.utilization > 100 ? 'over-allocated' :
@@ -476,8 +573,8 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
-  private generateDemandHTML(data: any): string {
+
+  private generateDemandHTML(data: DemandReportData): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -501,7 +598,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.byProjectType?.map((type: any) => `
+            ${data.byProjectType?.map((type) => `
               <tr>
                 <td>${type.type}</td>
                 <td>${type.demand} hours</td>
@@ -513,8 +610,8 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
-  private generateGapsHTML(data: any): string {
+
+  private generateGapsHTML(data: GapsReportData): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -543,7 +640,7 @@ export class ExportController extends BaseController {
             </tr>
           </thead>
           <tbody>
-            ${data.gapsByRole?.map((gap: any) => {
+            ${data.gapsByRole?.map((gap) => {
               const rowClass = gap.gap < 0 ? 'gap' : 'sufficient';
               return `
                 <tr class="${rowClass}">
@@ -561,29 +658,29 @@ export class ExportController extends BaseController {
       </html>
     `;
   }
-  
-  private async getCapacityData(filters: any) {
+
+  private async getCapacityData(filters: ReportFilters): Promise<CapacityReportData> {
     // Use the same logic as ReportingController.getCapacityReport
-    const { startDate, endDate } = filters;
-    
+    const { startDate: _startDate, endDate: _endDate } = filters;
+
     // Get capacity gaps
-    const capacityGaps = await this.db('capacity_gaps_view').select('*');
-    
+    const capacityGaps = await this.db('capacity_gaps_view').select('*') as CapacityGapRecord[];
+
     // Get person utilization
-    const personUtilization = await this.db('person_utilization_view').select('*');
-    
+    const personUtilization = await this.db('person_utilization_view').select('*') as PersonUtilizationRecord[];
+
     // Transform capacity gaps to role-based data
-    const byRole = capacityGaps.map(gap => ({
+    const byRole: RoleCapacityData[] = capacityGaps.map(gap => ({
       role: gap.role_name,
       capacity: Math.round(gap.total_capacity_fte * 160), // Convert FTE to hours
       utilized: Math.round((gap.total_capacity_fte - Math.abs(gap.gap_fte || 0)) * 160),
       gap_fte: gap.gap_fte
     }));
-    
+
     // Calculate totals
     const totalCapacity = byRole.reduce((sum, r) => sum + r.capacity, 0);
     const utilizedCapacity = byRole.reduce((sum, r) => sum + r.utilized, 0);
-    
+
     return {
       totalCapacity,
       utilizedCapacity,
@@ -593,38 +690,38 @@ export class ExportController extends BaseController {
       personUtilization
     };
   }
-  
-  private async getUtilizationData(filters: any) {
+
+  private async getUtilizationData(filters: ReportFilters): Promise<UtilizationReportData> {
     // Use the same logic as ReportingController.getCapacityReport
     const capacityReport = await this.getCapacityData(filters);
-    
+
     // Transform person utilization data
-    const peopleUtilization = capacityReport.personUtilization.map(person => ({
+    const peopleUtilization: PersonUtilizationData[] = capacityReport.personUtilization.map(person => ({
       id: person.person_id,
       name: person.person_name,
       role: person.primary_role,
       utilization: Math.round(person.total_allocation || 0)
     }));
-    
+
     return {
       peopleUtilization,
       averageUtilization: Math.round(
-        peopleUtilization.reduce((sum, p) => sum + p.utilization, 0) / 
+        peopleUtilization.reduce((sum, p) => sum + p.utilization, 0) /
         (peopleUtilization.length || 1)
       )
     };
   }
-  
-  private async getDemandData(filters: any) {
+
+  private async getDemandData(filters: ReportFilters): Promise<DemandReportData> {
     // Use the same logic as DemandController.getDemandSummary
     const { startDate, endDate, projectTypeId, locationId } = filters;
-    
+
     // Build base query
     let query = this.db('project_demands_view')
       .join('projects', 'project_demands_view.project_id', 'projects.id')
       .join('roles', 'project_demands_view.role_id', 'roles.id')
       .where('projects.include_in_demand', true);
-    
+
     // Apply filters
     if (startDate) {
       query = query.where('project_demands_view.end_date', '>=', startDate);
@@ -638,17 +735,25 @@ export class ExportController extends BaseController {
     if (projectTypeId) {
       query = query.where('projects.project_type_id', projectTypeId);
     }
-    
+
     // Get demands
     const demands = await query.select(
       'project_demands_view.*',
       'projects.name as project_name',
       'projects.priority as project_priority',
       'roles.name as role_name'
-    );
-    
+    ) as DemandRecord[];
+
     // Calculate summary by role (used as project type in export)
-    const roleMap = new Map();
+    const roleMap = new Map<string, {
+      role_id: string;
+      role_name: string;
+      total_hours: number;
+      total_fte: number;
+      project_count: Set<string>;
+      demands: DemandRecord[];
+    }>();
+
     demands.forEach(demand => {
       if (!roleMap.has(demand.role_id)) {
         roleMap.set(demand.role_id, {
@@ -660,29 +765,29 @@ export class ExportController extends BaseController {
           demands: []
         });
       }
-      
-      const role = roleMap.get(demand.role_id);
+
+      const role = roleMap.get(demand.role_id)!;
       role.total_hours += demand.demand_hours;
       role.total_fte += this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date);
       role.project_count.add(demand.project_id);
       role.demands.push(demand);
     });
-    
-    const byProjectType = Array.from(roleMap.values()).map(role => ({
+
+    const byProjectType: ProjectTypeDemandData[] = Array.from(roleMap.values()).map(role => ({
       type: role.role_name,
       demand: role.total_hours
     }));
-    
+
     return {
       totalDemand: demands.reduce((sum, d) => sum + d.demand_hours, 0),
       byProjectType
     };
   }
-  
-  private async getGapsData(filters: any) {
+
+  private async getGapsData(_filters: ReportFilters): Promise<GapsReportData> {
     // Use the same logic as DemandController.getDemandGaps - calculate gaps based on demand vs capacity
-    const gapsData = await this.db('capacity_gaps_view').select('*');
-    
+    const gapsData = await this.db('capacity_gaps_view').select('*') as CapacityGapRecord[];
+
     // Filter for actual gaps where demand exceeds capacity
     const gaps = gapsData.map(role => {
       const gapFte = role.total_demand_fte - role.total_capacity_fte;
@@ -691,7 +796,7 @@ export class ExportController extends BaseController {
         gap_fte: gapFte
       };
     }).filter(role => role.gap_fte > 0); // Only include roles with actual gaps
-    
+
     // Get detailed demand vs capacity for each gap
     const detailedGaps = await Promise.all(gaps.map(async (gap) => {
       // Get current demand
@@ -707,7 +812,7 @@ export class ExportController extends BaseController {
           'projects.priority',
           'project_demands_view.demand_hours'
         );
-      
+
       return {
         ...gap,
         current_demands: currentDemand,
@@ -719,24 +824,24 @@ export class ExportController extends BaseController {
         }
       };
     }));
-    
+
     // Sort by shortage
     detailedGaps.sort((a, b) => a.gap_fte - b.gap_fte);
-    
-    const gapsByRole = detailedGaps.map(gap => ({
+
+    const gapsByRole: RoleGapData[] = detailedGaps.map(gap => ({
       roleId: gap.role_id,
       roleName: gap.role_name,
       demand: Math.round(gap.total_demand_fte * 160), // Convert FTE to hours
       capacity: Math.round(gap.total_capacity_fte * 160),
       gap: Math.round(gap.gap_fte * 160)
     }));
-    
+
     return {
       totalGap: detailedGaps.reduce((sum, g) => sum + Math.abs(g.gap_fte), 0) * 160,
       gapsByRole
     };
   }
-  
+
   private calculateFte(hours: number, startDate: string, endDate: string): number {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -744,7 +849,7 @@ export class ExportController extends BaseController {
     const workingDaysInPeriod = Math.ceil(daysInPeriod * (5/7)); // Approximate working days
     const hoursPerDay = 8;
     const totalWorkingHours = workingDaysInPeriod * hoursPerDay;
-    
+
     return totalWorkingHours > 0 ? hours / totalWorkingHours : 0;
   }
 }
