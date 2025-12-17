@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { UserPermissionsController } from '../api/controllers/UserPermissionsController.js';
 import { authService, AuthError } from '../services/auth/index.js';
+import { logger } from '../services/logging/config.js';
 
 // Extend Request interface to include user info
 declare global {
@@ -31,7 +32,7 @@ function getUserIdFromRequest(req: Request): string | null {
     } catch (error) {
       if (error instanceof AuthError) {
         // Token invalid or expired, try fallback
-        console.warn('JWT token validation failed:', error.message);
+        logger.warn('JWT token validation failed', { errorMessage: error.message });
       }
     }
   }
@@ -71,7 +72,7 @@ export function requirePermission(permissionName: string) {
 
       next();
     } catch (error) {
-      console.error('Permission check error:', error);
+      logger.error('Permission check error', error instanceof Error ? error : undefined, { context: 'requirePermission' });
       return res.status(500).json({
         error: 'Permission check failed',
         code: 'PERMISSION_ERROR',
@@ -108,7 +109,7 @@ export function requireSystemAdmin() {
       req.user = userInfo;
       next();
     } catch (error) {
-      console.error('System admin check error:', error);
+      logger.error('System admin check error', error instanceof Error ? error : undefined, { context: 'requireSystemAdmin' });
       return res.status(500).json({
         error: 'Authorization check failed',
         code: 'AUTH_ERROR',
@@ -155,7 +156,7 @@ export function requireAnyPermission(...permissionNames: string[]) {
 
       next();
     } catch (error) {
-      console.error('Permission check error:', error);
+      logger.error('Permission check error', error instanceof Error ? error : undefined, { context: 'requireAnyPermission' });
       return res.status(500).json({
         error: 'Permission check failed',
         code: 'PERMISSION_ERROR',
@@ -196,7 +197,7 @@ export function requireAllPermissions(...permissionNames: string[]) {
 
       next();
     } catch (error) {
-      console.error('Permission check error:', error);
+      logger.error('Permission check error', error instanceof Error ? error : undefined, { context: 'requireAllPermissions' });
       return res.status(500).json({
         error: 'Permission check failed',
         code: 'PERMISSION_ERROR',
@@ -247,7 +248,7 @@ export function optionalPermission(permissionName: string) {
 
       next();
     } catch (error) {
-      console.error('Optional permission check error:', error);
+      logger.warn('Optional permission check error', { error: error instanceof Error ? error.message : String(error), context: 'optionalPermission' });
       // Continue anyway for optional permissions
       next();
     }
@@ -305,7 +306,7 @@ export function requireResourceAccess(resourceType: 'project' | 'person' | 'role
       req.user = userInfo;
       next();
     } catch (error) {
-      console.error('Resource access check error:', error);
+      logger.error('Resource access check error', error instanceof Error ? error : undefined, { context: 'requireResourceAccess', resourceType });
       return res.status(500).json({
         error: 'Access check failed',
         code: 'ACCESS_ERROR',

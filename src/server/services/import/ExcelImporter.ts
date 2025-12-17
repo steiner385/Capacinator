@@ -1,4 +1,5 @@
 import { getAuditedDb } from '../../database/index.js';
+import { logger } from '../logging/config.js';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -406,7 +407,7 @@ export class ExcelImporter {
       }
 
     } catch (error) {
-      console.error('Error validating duplicates:', error);
+      logger.error('Error validating duplicates', error instanceof Error ? error : undefined);
     }
 
     return { duplicatesFound: duplicates };
@@ -886,7 +887,7 @@ export class ExcelImporter {
         return date.toISOString().split('T')[0];
       }
     } catch (error) {
-      console.warn('Failed to parse date:', value);
+      logger.warn('Failed to parse date', { value });
     }
     
     return null;
@@ -1033,7 +1034,7 @@ export class ExcelImporter {
   }
 
   async analyzeImport(filePath: string, options: ImportOptions = {}): Promise<any> {
-    console.log('Starting dry-run import analysis...');
+    logger.info('Starting dry-run import analysis', { filePath });
     
     const analysis = {
       summary: {
@@ -1111,7 +1112,7 @@ export class ExcelImporter {
         Object.values(analysis.summary.wouldUpdate).reduce((sum, count) => sum + count, 0) +
         Object.values(analysis.summary.wouldDelete).reduce((sum, count) => sum + count, 0);
 
-      console.log('Dry-run analysis completed:', analysis.summary);
+      logger.info('Dry-run analysis completed', { summary: analysis.summary });
       return analysis;
 
     } catch (error) {

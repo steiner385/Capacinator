@@ -100,7 +100,7 @@ export function setupGlobalErrorHandlers() {
     
     // In E2E mode, don't exit the process - just log the error
     if (process.env.NODE_ENV === 'e2e') {
-      console.error('❌ Unhandled Promise Rejection -', reason?.message || reason || 'Unknown reason');
+      logger.error('Unhandled Promise Rejection in E2E mode', undefined, { reason: reason?.message || reason || 'Unknown reason' });
       return;
     }
     

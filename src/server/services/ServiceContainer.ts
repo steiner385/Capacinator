@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { AuditService } from './audit/AuditService.js';
+import { logger } from './logging/config.js';
 
 /**
  * Service Container for Dependency Injection
@@ -49,7 +50,7 @@ export class ServiceContainer {
    */
   static initialize(deps: ServiceDependencies): ServiceContainer {
     if (ServiceContainer.instance) {
-      console.warn('ServiceContainer already initialized. Use reset() first if re-initialization is needed.');
+      logger.warn('ServiceContainer already initialized. Use reset() first if re-initialization is needed.');
       return ServiceContainer.instance;
     }
 

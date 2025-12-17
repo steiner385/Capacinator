@@ -540,7 +540,6 @@ describe('Enhanced Error Handler Middleware', () => {
 
     it('should handle unhandled rejections in E2E mode without exiting', () => {
       process.env.NODE_ENV = 'e2e';
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
       setupGlobalErrorHandlers();
 
@@ -550,10 +549,8 @@ describe('Enhanced Error Handler Middleware', () => {
 
       handler?.(testError, testPromise);
 
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
       expect(mockProcessExit).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should not exit on unhandled rejection in production', () => {

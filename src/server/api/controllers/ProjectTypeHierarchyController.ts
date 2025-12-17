@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
+import { logger } from '../../services/logging/config.js';
 
 interface ProjectTypeWithHierarchy {
   id: string;
@@ -46,7 +47,7 @@ export class ProjectTypeHierarchyController extends BaseController {
         data: hierarchy
       });
     } catch (error) {
-      console.error('Hierarchy error:', error);
+      logger.error('Hierarchy error', error instanceof Error ? error : undefined);
       res.status(500).json({ 
         success: false, 
         error: 'Failed to get hierarchy',

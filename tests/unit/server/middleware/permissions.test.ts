@@ -32,6 +32,19 @@ jest.mock('../../../../src/server/database/index.js', () => ({
   db: mockDb
 }));
 
+// Mock logger
+const mockLogger = {
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  http: jest.fn()
+};
+
+jest.mock('../../../../src/server/services/logging/config.js', () => ({
+  logger: mockLogger
+}));
+
 import {
   requirePermission,
   requireSystemAdmin,
@@ -162,8 +175,7 @@ describe('Permissions Middleware', () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockHasPermission.mockResolvedValue(true);
       mockDbQuery.first.mockRejectedValue(new Error('Database connection failed'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requirePermission('project:edit');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
@@ -175,16 +187,17 @@ describe('Permissions Middleware', () => {
         message: 'Could not verify user permissions'
       });
       expect(mockNext).not.toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('Permission check error:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Permission check error',
+        expect.any(Error),
+        expect.objectContaining({ context: 'requirePermission' })
+      );
     });
 
     it('should return 500 when hasPermission throws error', async () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockHasPermission.mockRejectedValue(new Error('Permission service unavailable'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requirePermission('project:edit');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
@@ -195,25 +208,24 @@ describe('Permissions Middleware', () => {
         code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should return 500 when user not found in database', async () => {
       mockRequest.headers!['x-user-id'] = 'nonexistent-user';
       mockHasPermission.mockResolvedValue(true);
       mockDbQuery.first.mockResolvedValue(null);
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requirePermission('project:edit');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(statusMock).toHaveBeenCalledWith(500);
-      expect(consoleSpy).toHaveBeenCalledWith('Permission check error:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Permission check error',
+        expect.any(Error),
+        expect.objectContaining({ context: 'requirePermission' })
+      );
     });
   });
 
@@ -277,8 +289,7 @@ describe('Permissions Middleware', () => {
     it('should return 500 when database query fails', async () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockDbQuery.first.mockRejectedValue(new Error('Database error'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requireSystemAdmin();
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
@@ -289,9 +300,11 @@ describe('Permissions Middleware', () => {
         code: 'AUTH_ERROR',
         message: 'Could not verify system admin status'
       });
-      expect(consoleSpy).toHaveBeenCalledWith('System admin check error:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'System admin check error',
+        expect.any(Error),
+        expect.objectContaining({ context: 'requireSystemAdmin' })
+      );
     });
 
     it('should get user ID from query parameter', async () => {
@@ -398,8 +411,7 @@ describe('Permissions Middleware', () => {
     it('should return 500 when permission check throws error', async () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockHasPermission.mockRejectedValue(new Error('Service error'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requireAnyPermission('project:edit', 'project:view');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
@@ -410,9 +422,7 @@ describe('Permissions Middleware', () => {
         code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should handle single permission correctly', async () => {
@@ -524,8 +534,7 @@ describe('Permissions Middleware', () => {
     it('should return 500 when permission check throws error', async () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockHasPermission.mockRejectedValue(new Error('Permission service down'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requireAllPermissions('project:view', 'project:edit');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
@@ -536,9 +545,7 @@ describe('Permissions Middleware', () => {
         code: 'PERMISSION_ERROR',
         message: 'Could not verify user permissions'
       });
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should handle single permission correctly', async () => {
@@ -616,17 +623,17 @@ describe('Permissions Middleware', () => {
     it('should call next() even when getUserInfo throws error', async () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockDbQuery.first.mockRejectedValue(new Error('Database error'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.warn.mockClear();
 
       const middleware = optionalPermission('project:edit');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
       expect(statusMock).not.toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith('Optional permission check error:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Optional permission check error',
+        expect.objectContaining({ context: 'optionalPermission' })
+      );
     });
 
     it('should call next() even when hasPermission throws error', async () => {
@@ -640,17 +647,14 @@ describe('Permissions Middleware', () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockDbQuery.first.mockResolvedValue(mockUser);
       mockHasPermission.mockRejectedValue(new Error('Permission service error'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.warn.mockClear();
 
       const middleware = optionalPermission('project:edit');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
       expect(statusMock).not.toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 
@@ -798,8 +802,7 @@ describe('Permissions Middleware', () => {
     it('should return 500 when database query fails', async () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockDbQuery.first.mockRejectedValue(new Error('Database connection failed'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requireResourceAccess('project');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
@@ -810,9 +813,11 @@ describe('Permissions Middleware', () => {
         code: 'ACCESS_ERROR',
         message: 'Could not verify resource access'
       });
-      expect(consoleSpy).toHaveBeenCalledWith('Resource access check error:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Resource access check error',
+        expect.any(Error),
+        expect.objectContaining({ context: 'requireResourceAccess', resourceType: 'project' })
+      );
     });
 
     it('should return 500 when permission check throws error', async () => {
@@ -826,16 +831,17 @@ describe('Permissions Middleware', () => {
       mockRequest.headers!['x-user-id'] = 'user-123';
       mockDbQuery.first.mockResolvedValue(mockUser);
       mockHasPermission.mockRejectedValue(new Error('Permission service unavailable'));
-
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockLogger.error.mockClear();
 
       const middleware = requireResourceAccess('person');
       await middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(statusMock).toHaveBeenCalledWith(500);
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Resource access check error',
+        expect.any(Error),
+        expect.objectContaining({ context: 'requireResourceAccess', resourceType: 'person' })
+      );
     });
 
     it('should prioritize header over query for user ID', async () => {

@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { AuditService } from '../services/audit/AuditService.js';
 import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
+import { logger } from '../services/logging/config.js';
 
 // Table name mapping for audit configuration
 const AUDIT_TABLE_MAPPING: Record<string, string> = {
@@ -162,7 +163,7 @@ export class AuditedDatabase {
         });
       }
     } catch (error) {
-      console.error('Failed to log audit for insert operation:', error);
+      logger.error('Failed to log audit for insert operation', error instanceof Error ? error : undefined);
       // Don't throw - audit failure shouldn't break the operation
     }
   }
@@ -188,7 +189,7 @@ export class AuditedDatabase {
         comment: context.comment || `Record updated in ${tableName}`
       });
     } catch (error) {
-      console.error('Failed to log audit for update operation:', error);
+      logger.error('Failed to log audit for update operation', error instanceof Error ? error : undefined);
       // Don't throw - audit failure shouldn't break the operation
     }
   }
@@ -210,7 +211,7 @@ export class AuditedDatabase {
         comment: context.comment || `Record deleted from ${tableName}`
       });
     } catch (error) {
-      console.error('Failed to log audit for delete operation:', error);
+      logger.error('Failed to log audit for delete operation', error instanceof Error ? error : undefined);
       // Don't throw - audit failure shouldn't break the operation
     }
   }

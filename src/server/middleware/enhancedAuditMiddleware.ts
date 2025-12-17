@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from '../services/audit/AuditService.js';
 import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
 import { RequestWithLogging } from './requestLogger.js';
+import { logger } from '../services/logging/config.js';
 
 /**
  * Unified Audit Middleware
@@ -448,7 +449,7 @@ export async function auditModelChanges(
   const auditService = req.audit?.auditService || (req as RequestWithAudit).auditService;
 
   if (!auditService) {
-    console.warn('Audit context not available - audit middleware may not be configured');
+    logger.warn('Audit context not available - audit middleware may not be configured');
     return null;
   }
 
@@ -474,7 +475,7 @@ export async function auditModelChanges(
 
     return auditId;
   } catch (error) {
-    console.error('Failed to log audit entry:', error);
+    logger.error('Failed to log audit entry', error instanceof Error ? error : undefined, { tableName, recordId: finalRecordId });
     return null;
   }
 }

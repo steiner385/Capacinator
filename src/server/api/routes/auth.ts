@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { authService, AuthError } from '../../services/auth/index.js';
 import { requireAuth } from '../../middleware/authMiddleware.js';
+import { logger } from '../../services/logging/config.js';
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Login error:', error);
+    logger.error('Login error', error instanceof Error ? error : undefined);
     res.status(500).json({
       error: 'Login failed',
       code: 'SERVER_ERROR',
@@ -81,7 +82,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Token refresh error:', error);
+    logger.error('Token refresh error', error instanceof Error ? error : undefined);
     res.status(500).json({
       error: 'Token refresh failed',
       code: 'SERVER_ERROR',
@@ -135,7 +136,7 @@ router.get('/me', requireAuth(), async (req: Request, res: Response) => {
       user
     });
   } catch (error) {
-    console.error('Get current user error:', error);
+    logger.error('Get current user error', error instanceof Error ? error : undefined);
     res.status(500).json({
       error: 'Failed to get user',
       code: 'SERVER_ERROR',

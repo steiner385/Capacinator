@@ -4,6 +4,7 @@ import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { notificationScheduler } from '../../services/NotificationScheduler.js';
 import { PhaseTemplateValidationService, type PhaseUpdateRequest } from '../../services/PhaseTemplateValidationService.js';
 import { CustomPhaseManagementService, type CustomPhaseData, type PhaseUpdateData } from '../../services/CustomPhaseManagementService.js';
+import { logger } from '../../services/logging/config.js';
 
 // Alias for backward compatibility
 type RequestWithLogging = RequestWithContext;
@@ -108,11 +109,11 @@ export class ProjectsController extends BaseController {
       }
 
       // Log successful template inheritance for audit
-      console.log(`Successfully inherited ${timelineEntries.length} template phases for project ${projectId} from project type ${projectTypeId}`);
+      logger.info('Successfully inherited template phases for project', { count: timelineEntries.length, projectId, projectTypeId });
       
     } catch (error) {
       // Log the error but don't fail project creation
-      console.error(`Failed to inherit template phases for project ${projectId}:`, error);
+      logger.error('Failed to inherit template phases for project', error instanceof Error ? error : undefined, { projectId });
       throw error; // Re-throw to ensure project creation fails if template inheritance fails
     }
   }

@@ -183,11 +183,11 @@ export abstract class BaseController {
         sqlError: error.code === 'SQLITE_ERROR' ? error.message : undefined
       });
     } else {
-      // Fallback to console for backwards compatibility
-      console.error('Controller error:', error);
-      if (error.code === 'SQLITE_ERROR') {
-        console.error('SQL Error details:', error.message);
-      }
+      // Fallback to logger for backwards compatibility
+      logger.error('Controller error', error instanceof Error ? error : undefined, {
+        controller: this.constructor.name,
+        sqlError: error.code === 'SQLITE_ERROR' ? error.message : undefined
+      });
     }
 
     // Handle operational errors (safe to show to users)

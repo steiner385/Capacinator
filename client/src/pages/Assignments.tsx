@@ -12,6 +12,7 @@ import { ErrorMessage } from '../components/ui/ErrorMessage';
 import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
 import { InlineEdit } from '../components/ui/InlineEdit';
 import { useScenario } from '../contexts/ScenarioContext';
+import { logger } from '../services/logger';
 import type { ProjectAssignment, Role } from '../types';
 import './Assignments.css';
 
@@ -153,7 +154,7 @@ export default function Assignments() {
       queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     },
     onError: (error) => {
-      console.error('Failed to update assignment:', error);
+      logger.error('Failed to update assignment', { error });
       alert('Failed to update assignment. Please try again.');
     }
   });
@@ -762,7 +763,7 @@ export default function Assignments() {
                                   queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
                                   refetchRecommendations();
                                 } catch (error) {
-                                  console.error('Failed to execute recommendation:', error);
+                                  logger.error('Failed to execute recommendation', { error });
                                   alert('Failed to execute recommendation. Please try again.');
                                 }
                               }

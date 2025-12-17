@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { getAuditedDb } from '../database/index.js';
+import { logger } from './logging/config.js';
 
 export interface AssignmentRecalculationResult {
   updated_assignments: Array<{
@@ -81,7 +82,7 @@ export class AssignmentRecalculationService {
         // Get new dates from pre-fetched phase timeline
         const phaseTimeline = phaseTimelineMap.get(assignment.phase_id);
         if (!phaseTimeline) {
-          console.warn(`No timeline found for phase ${assignment.phase_id}`);
+          logger.warn('No timeline found for phase', { phaseId: assignment.phase_id });
           continue;
         }
 
