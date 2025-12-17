@@ -165,12 +165,12 @@ export interface ImportErrorData {
   column?: string;
   columnIndex?: number;
   field?: string;
-  currentValue?: any;
+  currentValue?: unknown;
   expectedValue?: string;
   expectedType?: string;
   message: string;
   suggestion?: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 export class ImportError extends Error {
@@ -183,11 +183,11 @@ export class ImportError extends Error {
   public readonly column?: string;
   public readonly columnIndex?: number;
   public readonly field?: string;
-  public readonly currentValue?: any;
+  public readonly currentValue?: unknown;
   public readonly expectedValue?: string;
   public readonly expectedType?: string;
   public readonly suggestion?: string;
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
   public readonly timestamp: Date;
 
   constructor(data: ImportErrorData) {
@@ -249,7 +249,7 @@ export class ImportError extends Error {
   /**
    * Convert to plain object for API responses
    */
-  toJSON(): Record<string, any> {
+  toJSON(): Record<string, unknown> {
     return {
       type: this.type,
       severity: this.severity,
@@ -404,7 +404,7 @@ export class ImportErrorCollector {
     row: number,
     column: string,
     field: string,
-    currentValue: any,
+    currentValue: unknown,
     expectedType: string,
     message: string,
     suggestion?: string
@@ -577,10 +577,10 @@ export class ImportErrorCollector {
    * Convert all errors to JSON for API response with deduplication info
    */
   toJSON(): {
-    errors: any[];
-    warnings: any[];
-    summary: any;
-    analysis: any;
+    errors: Array<Record<string, unknown>>;
+    warnings: Array<Record<string, unknown>>;
+    summary: ReturnType<typeof this.getSummary>;
+    analysis: ReturnType<typeof this.getErrorAnalysis>;
   } {
     const errorsWithCounts = this.errors.map(e => {
       const key = this.getErrorKey(e);
@@ -751,7 +751,7 @@ export class ImportErrorUtils {
     row: number,
     column: string,
     field: string,
-    currentValue: any,
+    currentValue: unknown,
     expectedType: string
   ): ImportErrorData {
     return {
@@ -801,7 +801,7 @@ export class ImportErrorUtils {
     row: number,
     column: string,
     field: string,
-    currentValue: any,
+    currentValue: unknown,
     expectedFormat: string
   ): ImportErrorData {
     return {
@@ -855,12 +855,12 @@ export class ImportErrorUtils {
   /**
    * Validate percentage value (0-100)
    */
-  static validatePercentage(value: any): { isValid: boolean; numericValue?: number } {
+  static validatePercentage(value: unknown): { isValid: boolean; numericValue?: number } {
     if (value === null || value === undefined || value === '') {
       return { isValid: false };
     }
-    
-    const numericValue = parseFloat(value.toString().replace('%', ''));
+
+    const numericValue = parseFloat(String(value).replace('%', ''));
     if (isNaN(numericValue)) {
       return { isValid: false };
     }
@@ -874,12 +874,12 @@ export class ImportErrorUtils {
   /**
    * Validate positive number
    */
-  static validatePositiveNumber(value: any): { isValid: boolean; numericValue?: number } {
+  static validatePositiveNumber(value: unknown): { isValid: boolean; numericValue?: number } {
     if (value === null || value === undefined || value === '') {
       return { isValid: false };
     }
-    
-    const numericValue = parseFloat(value.toString());
+
+    const numericValue = parseFloat(String(value));
     if (isNaN(numericValue)) {
       return { isValid: false };
     }
@@ -893,7 +893,7 @@ export class ImportErrorUtils {
   /**
    * Validate date format and parse with multiple format support
    */
-  static validateDate(value: any, expectedFormat?: string): { isValid: boolean; parsedDate?: Date; format?: string } {
+  static validateDate(value: unknown, expectedFormat?: string): { isValid: boolean; parsedDate?: Date; format?: string } {
     if (value === null || value === undefined || value === '') {
       return { isValid: false };
     }
@@ -916,7 +916,7 @@ export class ImportErrorUtils {
     }
 
     // Handle string dates with multiple formats
-    const dateString = value.toString().trim();
+    const dateString = String(value).trim();
     const formats = [
       { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, name: 'MM/DD/YYYY' },
       { regex: /^\d{1,2}-\d{1,2}-\d{4}$/, name: 'MM-DD-YYYY' },
@@ -943,19 +943,19 @@ export class ImportErrorUtils {
   /**
    * Validate required field
    */
-  static validateRequired(value: any): boolean {
+  static validateRequired(value: unknown): boolean {
     if (value === null || value === undefined) {
       return false;
     }
-    
-    const stringValue = value.toString().trim();
+
+    const stringValue = String(value).trim();
     return stringValue.length > 0;
   }
 
   /**
    * Validate date range (start < end)
    */
-  static validateDateRange(startDate: any, endDate: any): { isValid: boolean; message?: string } {
+  static validateDateRange(startDate: unknown, endDate: unknown): { isValid: boolean; message?: string } {
     const startValidation = ImportErrorUtils.validateDate(startDate);
     const endValidation = ImportErrorUtils.validateDate(endDate);
 
