@@ -5,10 +5,45 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { ReportSummaryCard, ReportEmptyState, ReportStatusBadge } from './index';
 import { getChartColor, CHART_AXIS_CONFIG } from './chartConfig';
 
+interface ProjectHealth {
+  project_id: string;
+  project_name: string;
+  allocation_health: 'UNDER_ALLOCATED' | 'FULLY_ALLOCATED' | 'OVER_ALLOCATED';
+  total_allocation_percentage: number;
+}
+
+interface RoleGap {
+  role_id: string;
+  roleName: string;
+  gap: number;
+}
+
+interface GapTrendData {
+  period: string;
+  gap: number;
+}
+
+interface GapsReportData {
+  summary?: { projectsWithGaps?: number; unutilizedHours?: number };
+  projectHealth?: ProjectHealth[];
+  gapsByRole?: RoleGap[];
+  gapTrend?: GapTrendData[];
+  totalGap: number;
+  criticalRolesCount: number;
+}
+
+interface ReportFilters {
+  startDate?: string;
+  endDate?: string;
+  projectTypeId?: string;
+  locationId?: string;
+  roleId?: string;
+}
+
 interface GapsReportProps {
-  data: any;
-  filters: any;
-  CustomTooltip: React.FC<any>;
+  data: GapsReportData | null;
+  filters: ReportFilters;
+  CustomTooltip: React.FC<{ active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }>;
 }
 
 export const GapsReport: React.FC<GapsReportProps> = ({ 
@@ -123,8 +158,8 @@ export const GapsReport: React.FC<GapsReportProps> = ({
               <h4>Projects with Critical Gaps</h4>
               <div className="actionable-items-grid">
                 {(data.projectHealth || [])
-                  .filter((project: any) => project.allocation_health === 'UNDER_ALLOCATED')
-                  .map((project: any) => (
+                  .filter((project: ProjectHealth) => project.allocation_health === 'UNDER_ALLOCATED')
+                  .map((project: ProjectHealth) => (
                   <div key={project.project_id} className="actionable-item danger">
                     <div className="item-info">
                       <strong>{project.project_name}</strong>
@@ -147,9 +182,9 @@ export const GapsReport: React.FC<GapsReportProps> = ({
               <h4>Projects with Adequate Coverage</h4>
               <div className="actionable-items-grid">
                 {(data.projectHealth || [])
-                  .filter((project: any) => project.allocation_health === 'FULLY_ALLOCATED' || project.allocation_health === 'OVER_ALLOCATED')
+                  .filter((project: ProjectHealth) => project.allocation_health === 'FULLY_ALLOCATED' || project.allocation_health === 'OVER_ALLOCATED')
                   .slice(0, 3)
-                  .map((project: any) => (
+                  .map((project: ProjectHealth) => (
                   <div key={project.project_id} className="actionable-item success">
                     <div className="item-info">
                       <strong>{project.project_name}</strong>
@@ -181,8 +216,8 @@ export const GapsReport: React.FC<GapsReportProps> = ({
               <h4>Roles with Critical Shortages</h4>
               <div className="actionable-items-grid">
                 {(data.gapsByRole || [])
-                  .filter((role: any) => role.gap > 0)
-                  .map((role: any) => (
+                  .filter((role: RoleGap) => role.gap > 0)
+                  .map((role: RoleGap) => (
                   <div key={role.roleId} className="actionable-item danger">
                     <div className="item-info">
                       <strong>{role.roleName}</strong>
@@ -205,9 +240,9 @@ export const GapsReport: React.FC<GapsReportProps> = ({
               <h4>Roles with Adequate Capacity</h4>
               <div className="actionable-items-grid">
                 {(data.gapsByRole || [])
-                  .filter((role: any) => role.gap <= 0)
+                  .filter((role: RoleGap) => role.gap <= 0)
                   .slice(0, 3)
-                  .map((role: any) => (
+                  .map((role: RoleGap) => (
                   <div key={role.roleId} className="actionable-item success">
                     <div className="item-info">
                       <strong>{role.roleName}</strong>

@@ -6,11 +6,44 @@ import { ReportSummaryCard, ReportEmptyState, ReportTable, ReportProgressBar } f
 import { getChartColor, CHART_AXIS_CONFIG } from './chartConfig';
 import type { Column, ActionButton } from './ReportTable';
 
+interface PersonUtilizationData {
+  id: string;
+  name: string;
+  role: string;
+  utilization: number;
+  availableHours: number;
+  projectCount: number;
+  projects: string;
+}
+
+interface RoleUtilizationData {
+  role: string;
+  avgUtilization: number;
+}
+
+interface UtilizationReportData {
+  summary?: { averageUtilization: number };
+  peopleUtilization: PersonUtilizationData[];
+  roleUtilization: RoleUtilizationData[];
+  averageUtilization: number;
+  overAllocatedCount: number;
+  underUtilizedCount: number;
+  optimalCount: number;
+}
+
+interface ReportFilters {
+  startDate?: string;
+  endDate?: string;
+  projectTypeId?: string;
+  locationId?: string;
+  roleId?: string;
+}
+
 interface UtilizationReportProps {
-  data: any;
-  filters: any;
-  onPersonAction: (person: any, action: 'reduce' | 'add') => void;
-  CustomTooltip: React.FC<any>;
+  data: UtilizationReportData | null;
+  filters: ReportFilters;
+  onPersonAction: (person: PersonUtilizationData, action: 'reduce' | 'add') => void;
+  CustomTooltip: React.FC<{ active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }>;
 }
 
 export const UtilizationReport: React.FC<UtilizationReportProps> = ({ 
@@ -56,9 +89,9 @@ export const UtilizationReport: React.FC<UtilizationReportProps> = ({
     }
   ];
 
-  const utilizationActions = (row: any): ActionButton[] => {
+  const utilizationActions = (row: PersonUtilizationData): ActionButton[] => {
     const actions: ActionButton[] = [];
-    
+
     if (row.utilization > 100) {
       actions.push({
         onClick: () => onPersonAction(row, 'reduce'),
@@ -74,7 +107,7 @@ export const UtilizationReport: React.FC<UtilizationReportProps> = ({
         variant: 'primary'
       });
     }
-    
+
     return actions;
   };
 
@@ -82,24 +115,24 @@ export const UtilizationReport: React.FC<UtilizationReportProps> = ({
   const utilizationDistribution = [
     {
       range: '0-50%',
-      count: data.peopleUtilization?.filter((p: any) => p.utilization <= 50).length || 0
+      count: data.peopleUtilization?.filter((p: PersonUtilizationData) => p.utilization <= 50).length || 0
     },
     {
       range: '51-79%',
-      count: data.peopleUtilization?.filter((p: any) => p.utilization > 50 && p.utilization <= 79).length || 0
+      count: data.peopleUtilization?.filter((p: PersonUtilizationData) => p.utilization > 50 && p.utilization <= 79).length || 0
     },
     {
       range: '80-100%',
-      count: data.peopleUtilization?.filter((p: any) => p.utilization >= 80 && p.utilization <= 100).length || 0
+      count: data.peopleUtilization?.filter((p: PersonUtilizationData) => p.utilization >= 80 && p.utilization <= 100).length || 0
     },
     {
       range: '> 100%',
-      count: data.peopleUtilization?.filter((p: any) => p.utilization > 100).length || 0
+      count: data.peopleUtilization?.filter((p: PersonUtilizationData) => p.utilization > 100).length || 0
     }
   ];
 
   // Prepare role utilization data
-  const roleUtilization = data.roleUtilization?.map((role: any) => ({
+  const roleUtilization = data.roleUtilization?.map((role: RoleUtilizationData) => ({
     ...role,
     avgUtilization: Math.round(role.avgUtilization || 0)
   })) || [];
