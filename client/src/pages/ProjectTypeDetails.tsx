@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import type { ProjectType, Role, ProjectPhase } from '../types';
 import PhaseTemplateDesigner from '../components/PhaseTemplateDesigner';
 import ProjectsTable from '../components/ProjectsTable';
@@ -25,7 +26,7 @@ export default function ProjectTypeDetails() {
 
   // Fetch project type details
   const { data: projectType, isLoading: projectTypeLoading, error: projectTypeError } = useQuery({
-    queryKey: ['projectType', id],
+    queryKey: queryKeys.projectTypes.detail(id!),
     queryFn: async () => {
       if (!id) throw new Error('Project Type ID is required');
       const response = await api.projectTypes.get(id);
@@ -38,7 +39,7 @@ export default function ProjectTypeDetails() {
 
   // Fetch roles for resource templates
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       return response.data as Role[];
@@ -47,17 +48,17 @@ export default function ProjectTypeDetails() {
 
   // Fetch phases for resource templates
   const { data: phases } = useQuery({
-    queryKey: ['phases'],
+    queryKey: queryKeys.phases.list(),
     queryFn: async () => {
       const response = await api.phases.list();
       // Handle the case where the response might be wrapped in a data property
       const phasesArray = response.data?.data || response.data;
-      
+
       if (!Array.isArray(phasesArray)) {
         console.error('Phases response is not an array:', phasesArray);
         return [];
       }
-      
+
       const sortedPhases = (phasesArray as ProjectPhase[]).sort((a, b) => a.order_index - b.order_index);
       return sortedPhases;
     },
@@ -67,7 +68,7 @@ export default function ProjectTypeDetails() {
 
   // Fetch resource templates for this project type
   const { data: resourceTemplates, isLoading: resourceTemplatesLoading } = useQuery({
-    queryKey: ['resourceTemplates', 'byProjectType', id],
+    queryKey: queryKeys.resourceTemplates.byProjectType(id!),
     queryFn: async () => {
       if (!id) return [];
       const response = await api.resourceTemplates.list({ project_type_id: id });
@@ -79,7 +80,7 @@ export default function ProjectTypeDetails() {
 
   // Fetch project type phases (including inherited)
   const { data: projectTypePhases } = useQuery({
-    queryKey: ['projectTypePhases', id],
+    queryKey: queryKeys.projectTypes.phases(id!),
     queryFn: async () => {
       if (!id) return [];
       const response = await api.projectTypes.getPhases(id);
@@ -90,12 +91,12 @@ export default function ProjectTypeDetails() {
 
   // Fetch projects of this type
   const { data: projectsOfType } = useQuery({
-    queryKey: ['projects', 'byProjectType', id],
+    queryKey: queryKeys.projectTypes.projects(id!),
     queryFn: async () => {
       if (!id) return [];
-      const response = await api.projects.list({ 
+      const response = await api.projects.list({
         project_type_id: id,
-        limit: 15 
+        limit: 15
       });
       return response.data.data;
     },
@@ -120,7 +121,7 @@ export default function ProjectTypeDetails() {
       return api.projectTypes.update(id, { [field]: value });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projectType', id] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectTypes.detail(id!) });
     }
   });
 

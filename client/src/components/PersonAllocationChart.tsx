@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, Brush, ReferenceLine } from 'recharts';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 
 interface PersonAllocationChartProps {
@@ -24,7 +25,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
   const [brushStart, setBrushStart] = React.useState<number>(0);
   const [brushEnd, setBrushEnd] = React.useState<number>(0);
   const { data: timelineData, isLoading, error } = useQuery({
-    queryKey: ['person-timeline', personId],
+    queryKey: queryKeys.people.timeline(personId),
     queryFn: async () => {
       const response = await api.assignments.getTimeline(personId);
       return response.data;
@@ -33,7 +34,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
 
   // Fetch utilization timeline to get consistent date range
   const { data: utilizationData } = useQuery({
-    queryKey: ['person-utilization-timeline', personId, startDate, endDate],
+    queryKey: queryKeys.people.utilizationTimeline(personId, startDate, endDate),
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import './PersonDetails.css'; // Reuse existing styles
 
 interface ProjectFormData {
@@ -37,7 +38,7 @@ export function ProjectNew() {
 
   // Fetch project types for dropdown
   const { data: projectTypes } = useQuery({
-    queryKey: ['project-types'],
+    queryKey: queryKeys.projectTypes.list(),
     queryFn: async () => {
       const response = await api.projectTypes.list();
       return response.data;
@@ -46,7 +47,7 @@ export function ProjectNew() {
 
   // Fetch locations for dropdown
   const { data: locations } = useQuery({
-    queryKey: ['locations'],
+    queryKey: queryKeys.locations.list(),
     queryFn: async () => {
       const response = await api.locations.list();
       return response.data;
@@ -55,7 +56,7 @@ export function ProjectNew() {
 
   // Fetch people for owner dropdown
   const { data: people } = useQuery({
-    queryKey: ['people-list'],
+    queryKey: queryKeys.people.list(),
     queryFn: async () => {
       const response = await api.people.list();
       return response.data.data;
@@ -77,7 +78,7 @@ export function ProjectNew() {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
       navigate(`/projects/${data.id}`);
     },
     onError: (error: any) => {

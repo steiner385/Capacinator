@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { 
-  Calendar, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
-  Lock, 
-  Edit2, 
-  Save, 
-  X, 
+import {
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  Lock,
+  Edit2,
+  Save,
+  X,
   Plus,
   Trash2,
   Info,
   Settings
 } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 
 interface ProjectPhaseTimeline {
   id: string;
@@ -60,7 +61,7 @@ export default function EnhancedProjectTimeline({ projectId }: EnhancedProjectTi
 
   // Fetch project timeline
   const { data: timeline, refetch: refetchTimeline } = useQuery({
-    queryKey: ['projectTimeline', projectId],
+    queryKey: queryKeys.projects.timeline(projectId),
     queryFn: async () => {
       const response = await fetch(`/api/projects/${projectId}/timeline`);
       if (!response.ok) throw new Error('Failed to fetch timeline');
@@ -81,7 +82,7 @@ export default function EnhancedProjectTimeline({ projectId }: EnhancedProjectTi
 
   // Fetch template compliance
   const { data: compliance } = useQuery({
-    queryKey: ['templateCompliance', projectId],
+    queryKey: queryKeys.projects.templateCompliance(projectId),
     queryFn: async () => {
       const response = await api.projects.getTemplateCompliance(projectId);
       return response.data;
@@ -98,7 +99,7 @@ export default function EnhancedProjectTimeline({ projectId }: EnhancedProjectTi
     onSuccess: () => {
       refetchTimeline();
       setEditingPhase(null);
-      queryClient.invalidateQueries({ queryKey: ['templateCompliance', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.templateCompliance(projectId) });
     }
   });
 
@@ -111,7 +112,7 @@ export default function EnhancedProjectTimeline({ projectId }: EnhancedProjectTi
     onSuccess: () => {
       refetchTimeline();
       setShowAddCustomPhase(false);
-      queryClient.invalidateQueries({ queryKey: ['templateCompliance', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.templateCompliance(projectId) });
     }
   });
 
@@ -123,7 +124,7 @@ export default function EnhancedProjectTimeline({ projectId }: EnhancedProjectTi
     },
     onSuccess: () => {
       refetchTimeline();
-      queryClient.invalidateQueries({ queryKey: ['templateCompliance', projectId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.templateCompliance(projectId) });
     }
   });
 

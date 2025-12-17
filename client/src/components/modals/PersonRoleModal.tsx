@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
+import { queryKeys } from '../../lib/queryKeys';
 import {
   Dialog,
   DialogContent,
@@ -68,7 +69,7 @@ export default function PersonRoleModal({
 
   // Fetch available roles
   const { data: roles, isLoading: rolesLoading } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.all,
     queryFn: async () => {
       const response = await api.roles.list();
       const rolesData = response.data?.data || response.data || [];

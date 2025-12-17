@@ -9,12 +9,10 @@ import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
-import { AssignmentModalNew } from '../components/modals/AssignmentModalNew';
-import { TestModal } from '../components/modals/TestModal';
+import { AssignmentModal } from '../components/modals/AssignmentModal';
 import { InlineEdit } from '../components/ui/InlineEdit';
-import { useModal } from '../hooks/useModal';
 import { useScenario } from '../contexts/ScenarioContext';
-import type { ProjectAssignment, Project, Person, Role } from '../types';
+import type { ProjectAssignment, Role } from '../types';
 import './Assignments.css';
 
 
@@ -192,17 +190,6 @@ export default function Assignments() {
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString();
-  };
-
-  const getUtilizationColor = (percentage: number) => {
-    if (percentage > 100) return 'text-danger';
-    if (percentage >= 80) return 'text-warning';
-    return 'text-success';
-  };
-
-  const getUtilizationIcon = (percentage: number) => {
-    if (percentage > 100) return <AlertTriangle size={14} className="text-danger" />;
-    return null;
   };
 
   const columns: Column<ProjectAssignment>[] = [
@@ -893,7 +880,7 @@ export default function Assignments() {
       {activeTab === 'assignments' ? renderAssignmentsTab() : renderRecommendationsTab()}
 
       {/* Add Assignment Modal */}
-      <AssignmentModalNew
+      <AssignmentModal
         isOpen={isAddModalOpen}
         onClose={() => {
           // console.log('Modal close called');
@@ -903,7 +890,7 @@ export default function Assignments() {
       />
 
       {/* Edit Assignment Modal */}
-      <AssignmentModalNew
+      <AssignmentModal
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);

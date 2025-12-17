@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Copy, Calendar, Trash2, GripVertical, ArrowUp, ArrowDown, Edit2, Save, X } from 'lucide-react';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import type { ProjectPhaseTimeline, ProjectPhase } from '../types';
 import './ProjectPhaseManager.css';
 
@@ -61,7 +62,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
 
   // Fetch project phases
   const { data: projectPhases, isLoading: phasesLoading } = useQuery({
-    queryKey: ['project-phases', projectId],
+    queryKey: queryKeys.projectPhases.byProject(projectId),
     queryFn: async () => {
       const response = await api.projectPhases.list({ project_id: projectId });
       return response.data.data as ProjectPhaseWithCustom[];
@@ -70,7 +71,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
 
   // Fetch available phases
   const { data: availablePhases } = useQuery({
-    queryKey: ['phases'],
+    queryKey: queryKeys.phases.list(),
     queryFn: async () => {
       const response = await api.phases.list();
       // Handle both possible response structures
@@ -88,8 +89,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
       setShowAddPhase(false);
     }
   });
@@ -102,9 +103,9 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['phases'] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.phases.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
       setShowAddPhase(false);
       setAddPhaseMode('existing');
     },
@@ -122,8 +123,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
       setShowAddPhase(false);
       setSelectedSourcePhase('');
       setPlacementMode('after_phase');
@@ -142,8 +143,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       return await api.projectPhases.delete(phaseTimelineId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
     }
   });
 
@@ -152,8 +153,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       return await api.projectPhases.bulkUpdate({ updates });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
     }
   });
 
@@ -162,8 +163,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       return await api.projectPhases.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['demands'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
     }
   });
 
@@ -324,8 +325,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
           // After creating the custom phase, we need to copy allocations
           // This would require a new endpoint or manual copying
           // For now, we'll just show success
-          queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-          queryClient.invalidateQueries({ queryKey: ['demands'] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.projectPhases.byProject(projectId) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
           setShowAddPhase(false);
           setSelectedSourcePhase('');
           setPlacementMode('after_phase');
