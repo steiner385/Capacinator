@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
 import { queryKeys } from '../../lib/queryKeys';
 import { useModalForm } from '../../hooks/useModalForm';
+import { validateDateRange } from '../../lib/validation';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -86,6 +87,9 @@ const validateProject = (values: ProjectFormData): Partial<Record<keyof ProjectF
   if (!values.project_type_id) errors.project_type_id = 'Project type is required';
   if (!values.location_id) errors.location_id = 'Location is required';
   if (!values.owner_id) errors.owner_id = 'Project owner is required';
+
+  // Note: ProjectModal currently doesn't have date range fields
+  // but this validation function is extensible for future date fields
 
   return errors;
 };

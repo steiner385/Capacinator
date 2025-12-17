@@ -4,6 +4,10 @@ import { AlertTriangle } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { useModalForm } from '../../hooks/useModalForm';
 import {
+  validateDateRange,
+  validateAllocationPercentage,
+} from '../../lib/validation';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -90,10 +94,23 @@ const validateAssignment = (values: AssignmentFormData): Partial<Record<keyof As
   if (!values.project_id) errors.project_id = 'Project is required';
   if (!values.person_id) errors.person_id = 'Person is required';
   if (!values.role_id) errors.role_id = 'Role is required';
+
+  // Required date fields
   if (!values.start_date) errors.start_date = 'Start date is required';
   if (!values.end_date) errors.end_date = 'End date is required';
-  if (values.allocation_percentage <= 0 || values.allocation_percentage > 100) {
-    errors.allocation_percentage = 'Allocation must be between 1 and 100';
+
+  // Date range validation using utility
+  if (values.start_date && values.end_date) {
+    const dateValidation = validateDateRange(values.start_date, values.end_date, false);
+    if (dateValidation !== true) {
+      errors.end_date = dateValidation;
+    }
+  }
+
+  // Allocation percentage validation using utility
+  const allocValidation = validateAllocationPercentage(values.allocation_percentage);
+  if (allocValidation !== true) {
+    errors.allocation_percentage = allocValidation;
   }
 
   return errors;

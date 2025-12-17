@@ -4,6 +4,12 @@ import { api } from '../../lib/api-client';
 import { queryKeys } from '../../lib/queryKeys';
 import { useModalForm } from '../../hooks/useModalForm';
 import {
+  validateEmail,
+  validateDateRange,
+  validateAvailabilityPercentage,
+  validateHoursPerDay,
+} from '../../lib/validation';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -94,9 +100,32 @@ const validatePerson = (values: PersonFormData): Partial<Record<keyof PersonForm
   const errors: Partial<Record<keyof PersonFormData, string>> = {};
 
   if (!values.name.trim()) errors.name = 'Name is required';
-  if (!values.email.trim()) errors.email = 'Email is required';
-  if (values.email && !values.email.includes('@')) errors.email = 'Valid email is required';
+
+  // Email validation using utility
+  const emailValidation = validateEmail(values.email);
+  if (emailValidation !== true) errors.email = emailValidation;
+
   if (!values.primary_person_role_id) errors.primary_person_role_id = 'Primary role is required';
+
+  // Availability percentage validation
+  if (values.default_availability_percentage) {
+    const availValidation = validateAvailabilityPercentage(values.default_availability_percentage);
+    if (availValidation !== true) errors.default_availability_percentage = availValidation;
+  }
+
+  // Hours per day validation
+  if (values.default_hours_per_day) {
+    const hoursValidation = validateHoursPerDay(values.default_hours_per_day);
+    if (hoursValidation !== true) errors.default_hours_per_day = hoursValidation;
+  }
+
+  // Date range validation (optional but must be consistent if provided)
+  if (values.start_date || values.end_date) {
+    const dateValidation = validateDateRange(values.start_date, values.end_date);
+    if (dateValidation !== true) {
+      errors.end_date = dateValidation;
+    }
+  }
 
   return errors;
 };
