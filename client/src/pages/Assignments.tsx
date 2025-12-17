@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, AlertTriangle, Lightbulb, Play, Users, TrendingUp } from 'lucide-react';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import { api } from '../lib/api-client';
+import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { FilterBar } from '../components/ui/FilterBar';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -81,7 +82,7 @@ export default function Assignments() {
 
   // Fetch assignments - will refetch when scenario changes
   const { data: assignments, isLoading: assignmentsLoading, error: assignmentsError } = useQuery({
-    queryKey: ['assignments', filters, currentScenario?.id],
+    queryKey: queryKeys.assignments.list(filters, currentScenario?.id),
     queryFn: async () => {
       const params = Object.entries(filters)
         .filter(([_, value]) => value)
@@ -94,7 +95,7 @@ export default function Assignments() {
 
   // Fetch projects for filter - will refetch when scenario changes
   const { data: projects } = useQuery({
-    queryKey: ['projects', currentScenario?.id],
+    queryKey: queryKeys.projects.list(undefined, currentScenario?.id),
     queryFn: async () => {
       const response = await api.projects.list();
       return response.data;
@@ -104,7 +105,7 @@ export default function Assignments() {
 
   // Fetch people for filter
   const { data: people } = useQuery({
-    queryKey: ['people'],
+    queryKey: queryKeys.people.list(),
     queryFn: async () => {
       const response = await api.people.list();
       return response.data;
@@ -113,7 +114,7 @@ export default function Assignments() {
 
   // Fetch roles for filter
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
+    queryKey: queryKeys.roles.list(),
     queryFn: async () => {
       const response = await api.roles.list();
       return response.data as Role[];
@@ -122,7 +123,7 @@ export default function Assignments() {
 
   // Fetch recommendations
   const { data: recommendationsData, isLoading: recommendationsLoading, refetch: refetchRecommendations } = useQuery({
-    queryKey: ['recommendations', filters],
+    queryKey: queryKeys.assignments.recommendations(filters),
     queryFn: async () => {
       const params = {
         startDate: filters.date_range ? filters.date_range.split('_')[0] : undefined,
@@ -141,7 +142,7 @@ export default function Assignments() {
       await api.assignments.delete(assignmentId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     }
   });
 
@@ -151,7 +152,7 @@ export default function Assignments() {
       await api.assignments.update(id, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
     },
     onError: (error) => {
       console.error('Failed to update assignment:', error);
@@ -771,7 +772,7 @@ export default function Assignments() {
                               if (confirmed) {
                                 try {
                                   await api.recommendations.execute(rec.id, rec.actions);
-                                  queryClient.invalidateQueries({ queryKey: ['assignments'] });
+                                  queryClient.invalidateQueries({ queryKey: queryKeys.assignments.all });
                                   refetchRecommendations();
                                 } catch (error) {
                                   console.error('Failed to execute recommendation:', error);
