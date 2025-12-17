@@ -26,8 +26,8 @@ export interface AuditContext {
   tableName?: string;
   recordId?: string;
   action?: 'CREATE' | 'UPDATE' | 'DELETE';
-  oldValues?: Record<string, any>;
-  newValues?: Record<string, any>;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
 }
 
 /**
@@ -60,23 +60,23 @@ export interface RequestWithAudit extends RequestWithLogging {
     tableName: string,
     recordId: string,
     action: string,
-    oldValues?: Record<string, any>,
-    newValues?: Record<string, any>,
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>,
     comment?: string
   ) => Promise<string | undefined>;
   logBulkAuditEvents?: (events: Array<{
     tableName: string;
     recordId: string;
     action: 'CREATE' | 'UPDATE' | 'DELETE';
-    oldValues?: Record<string, any>;
-    newValues?: Record<string, any>;
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
     comment?: string;
   }>) => Promise<(string | undefined)[]>;
   trackEntityChange?: (
     tableName: string,
     recordId: string,
-    oldValues?: Record<string, any>,
-    newValues?: Record<string, any>
+    oldValues?: Record<string, unknown>,
+    newValues?: Record<string, unknown>
   ) => void;
 }
 
@@ -95,7 +95,7 @@ export function createAutoAuditMiddleware(database: Knex, tableName: string) {
 
     // Set up the logging function if not already available
     if (!req.logAuditEvent) {
-      req.logAuditEvent = async (tableName: string, recordId: string, action: string, oldValues?: Record<string, any>, newValues?: Record<string, any>, comment?: string): Promise<string | undefined> => {
+      req.logAuditEvent = async (tableName: string, recordId: string, action: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>, comment?: string): Promise<string | undefined> => {
         if (!req.auditService) {
           return undefined;
         }
@@ -117,14 +117,14 @@ export function createAutoAuditMiddleware(database: Knex, tableName: string) {
     const originalSend = res.send;
     let auditLogged = false;
 
-    res.send = function(body: any) {
+    res.send = function(body: string | Buffer | object) {
       if (!auditLogged && res.statusCode >= 200 && res.statusCode < 300) {
         (async () => {
           try {
             const recordId = req.params.id || extractRecordIdFromResponse(body);
-            if (recordId) {
+            if (recordId && req.logAuditEvent) {
               let action: 'CREATE' | 'UPDATE' | 'DELETE';
-              
+
               if (req.method === 'POST') {
                 action = 'CREATE';
               } else if (req.method === 'PUT' || req.method === 'PATCH') {
@@ -135,7 +135,7 @@ export function createAutoAuditMiddleware(database: Knex, tableName: string) {
                 return; // Don't audit GET requests
               }
 
-              await (req as any).logAuditEvent(
+              await req.logAuditEvent(
                 tableName,
                 recordId,
                 action,
@@ -158,6 +158,16 @@ export function createAutoAuditMiddleware(database: Knex, tableName: string) {
   };
 }
 
+/**
+ * Extended Request with user information
+ */
+interface RequestWithUser extends Request {
+  user?: {
+    id: string;
+    [key: string]: unknown;
+  };
+}
+
 // Factory function to create enhanced audit middleware with dependency injection
 export function createEnhancedAuditMiddleware(database: Knex) {
   return (req: RequestWithAudit, res: Response, next: NextFunction) => {
@@ -169,12 +179,12 @@ export function createEnhancedAuditMiddleware(database: Knex) {
     req.auditContext = {};
 
     // Helper function to log audit events
-    (req as any).logAuditEvent = async (
+    req.logAuditEvent = async (
       tableName: string,
       recordId: string,
       action: 'CREATE' | 'UPDATE' | 'DELETE',
-      oldValues?: Record<string, any>,
-      newValues?: Record<string, any>,
+      oldValues?: Record<string, unknown>,
+      newValues?: Record<string, unknown>,
       comment?: string
     ) => {
       if (!isTableAudited(tableName)) {
@@ -182,12 +192,14 @@ export function createEnhancedAuditMiddleware(database: Knex) {
         return;
       }
 
+      const reqWithUser = req as RequestWithAudit & RequestWithUser;
+
       try {
         const auditId = await req.auditService!.logChange({
           tableName,
           recordId,
           action,
-          changedBy: (req as any).user?.id,
+          changedBy: reqWithUser.user?.id,
           oldValues,
           newValues,
           requestId: req.requestId,
@@ -201,12 +213,12 @@ export function createEnhancedAuditMiddleware(database: Knex) {
           tableName,
           recordId,
           action,
-          userId: (req as any).user?.id
+          userId: reqWithUser.user?.id
         });
 
         return auditId;
       } catch (error) {
-        req.logger.error('Failed to log audit event', error, {
+        req.logger.error('Failed to log audit event', error instanceof Error ? error : new Error(String(error)), {
           tableName,
           recordId,
           action
@@ -216,29 +228,29 @@ export function createEnhancedAuditMiddleware(database: Knex) {
     };
 
     // Helper function for bulk audit logging
-    (req as any).logBulkAuditEvents = async (events: Array<{
+    req.logBulkAuditEvents = async (events: Array<{
       tableName: string;
       recordId: string;
       action: 'CREATE' | 'UPDATE' | 'DELETE';
-      oldValues?: Record<string, any>;
-      newValues?: Record<string, any>;
+      oldValues?: Record<string, unknown>;
+      newValues?: Record<string, unknown>;
       comment?: string;
     }>) => {
-      const auditIds = [];
-      
+      const auditIds: (string | undefined)[] = [];
+
       for (const event of events) {
         try {
-          const auditId = await (req as any).logAuditEvent(
+          const auditId = req.logAuditEvent ? await req.logAuditEvent(
             event.tableName,
             event.recordId,
             event.action,
             event.oldValues,
             event.newValues,
             event.comment
-          );
+          ) : undefined;
           auditIds.push(auditId);
         } catch (error) {
-          req.logger.error('Failed to log bulk audit event', error, event);
+          req.logger.error('Failed to log bulk audit event', error instanceof Error ? error : new Error(String(error)), event);
           // Continue with other events
         }
       }
@@ -252,11 +264,11 @@ export function createEnhancedAuditMiddleware(database: Knex) {
     };
 
     // Helper function to track entity changes
-    (req as any).trackEntityChange = (
+    req.trackEntityChange = (
       tableName: string,
       recordId: string,
-      oldValues?: Record<string, any>,
-      newValues?: Record<string, any>
+      oldValues?: Record<string, unknown>,
+      newValues?: Record<string, unknown>
     ) => {
       req.auditContext = {
         tableName,
@@ -290,16 +302,16 @@ export function autoAuditMiddleware(tableName: string) {
     const originalSend = res.send;
     let auditLogged = false;
 
-    res.send = function(body: any) {
+    res.send = function(body: string | Buffer | object) {
       // Only log audit for successful responses and if not already logged
       if (!auditLogged && res.statusCode >= 200 && res.statusCode < 300) {
         (async () => {
           try {
             const recordId = req.params.id || extractRecordIdFromResponse(body);
-            
-            if (recordId) {
+
+            if (recordId && req.logAuditEvent) {
               let action: 'CREATE' | 'UPDATE' | 'DELETE';
-              
+
               if (req.method === 'POST') {
                 action = 'CREATE';
               } else if (req.method === 'PUT' || req.method === 'PATCH') {
@@ -310,7 +322,7 @@ export function autoAuditMiddleware(tableName: string) {
                 return; // Don't audit GET requests
               }
 
-              await (req as any).logAuditEvent(
+              await req.logAuditEvent(
                 tableName,
                 recordId,
                 action,
@@ -320,7 +332,7 @@ export function autoAuditMiddleware(tableName: string) {
               );
             }
           } catch (error) {
-            req.logger.error('Auto-audit failed', error);
+            req.logger.error('Auto-audit failed', error instanceof Error ? error : new Error(String(error)));
           }
         })();
       }
@@ -333,16 +345,21 @@ export function autoAuditMiddleware(tableName: string) {
   };
 }
 
-function extractRecordIdFromResponse(body: any): string | undefined {
+interface ApiResponseBody {
+  data?: { id?: string };
+  id?: string;
+}
+
+function extractRecordIdFromResponse(body: string | Buffer | object): string | undefined {
   try {
-    const parsed = typeof body === 'string' ? JSON.parse(body) : body;
+    const parsed: ApiResponseBody = typeof body === 'string' ? JSON.parse(body) : body as ApiResponseBody;
     return parsed?.data?.id || parsed?.id;
   } catch {
     return undefined;
   }
 }
 
-function extractNewValuesFromRequest(req: Request): Record<string, any> | undefined {
+function extractNewValuesFromRequest(req: Request): Record<string, unknown> | undefined {
   // Return request body as new values for CREATE/UPDATE operations
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     return req.body;
@@ -368,10 +385,12 @@ export function createAuditMiddleware(auditService: AuditService) {
     const requestId = uuidv4();
 
     // Extract user info (assumes JWT middleware has run)
-    const userId = (req as any).user?.id;
+    const reqWithUser = req as RequestWithUser;
+    const userId = reqWithUser.user?.id;
 
-    // Get client info
-    const ipAddress = req.ip || (req as any).connection?.remoteAddress || 'unknown';
+    // Get client info - use connection.remoteAddress as fallback
+    const reqWithSocket = req as Request & { connection?: { remoteAddress?: string } };
+    const ipAddress = req.ip || reqWithSocket.connection?.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
 
     // Attach audit context to request
@@ -407,22 +426,22 @@ export async function auditModelChanges(
     tableName: string;
     recordId: string;
     action: 'CREATE' | 'UPDATE' | 'DELETE' | 'INSERT';
-    oldValues?: Record<string, any> | null;
-    newValues?: Record<string, any> | null;
+    oldValues?: Record<string, unknown> | null;
+    newValues?: Record<string, unknown> | null;
     comment?: string;
   },
   recordId?: string,
   action?: 'CREATE' | 'UPDATE' | 'DELETE',
-  oldValues?: Record<string, any>,
-  newValues?: Record<string, any>,
+  oldValues?: Record<string, unknown>,
+  newValues?: Record<string, unknown>,
   comment?: string
 ): Promise<string | null> {
   // Normalize arguments - support both old positional and new object-based signatures
   let tableName: string;
   let finalRecordId: string;
   let finalAction: 'CREATE' | 'UPDATE' | 'DELETE';
-  let finalOldValues: Record<string, any> | undefined;
-  let finalNewValues: Record<string, any> | undefined;
+  let finalOldValues: Record<string, unknown> | undefined;
+  let finalNewValues: Record<string, unknown> | undefined;
   let finalComment: string | undefined;
 
   if (typeof tableNameOrOptions === 'object') {
@@ -453,8 +472,9 @@ export async function auditModelChanges(
   }
 
   // Get request context from either legacy or enhanced middleware
+  const reqWithUser = req as RequestWithUser;
   const requestId = req.audit?.requestId || (req as RequestWithAudit).requestId;
-  const userId = req.audit?.userId || (req as any).user?.id;
+  const userId = req.audit?.userId || reqWithUser.user?.id;
   const ipAddress = req.audit?.ipAddress || req.ip;
   const userAgent = req.audit?.userAgent || req.headers['user-agent'];
 
@@ -486,7 +506,7 @@ export async function auditModelChanges(
  * @param controllerFn - The controller function to wrap
  * @returns Wrapped controller function with error logging
  */
-export function auditableController<T = any>(
+export function auditableController<T = unknown>(
   controllerFn: (req: Request, res: Response, next: NextFunction) => Promise<T>
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -497,22 +517,24 @@ export function auditableController<T = any>(
       // Log error in audit trail (fire-and-forget)
       const auditService = req.audit?.auditService || (req as RequestWithAudit).auditService;
       const requestId = req.audit?.requestId || (req as RequestWithAudit).requestId;
-      const userId = req.audit?.userId || (req as any).user?.id;
+      const reqWithUser = req as RequestWithUser;
+      const userId = req.audit?.userId || reqWithUser.user?.id;
       const ipAddress = req.audit?.ipAddress || req.ip;
       const userAgent = req.audit?.userAgent || req.headers['user-agent'];
 
       if (auditService) {
+        const errorObj = error instanceof Error ? error : new Error(String(error));
         auditService.logChange({
           tableName: 'system_errors',
           recordId: requestId || uuidv4(),
           action: 'CREATE',
           changedBy: userId,
           newValues: {
-            error: (error as Error).message,
-            stack: (error as Error).stack,
+            error: errorObj.message,
+            stack: errorObj.stack,
             url: req.url,
             method: req.method,
-            body: req.body,
+            body: req.body as Record<string, unknown>,
             query: req.query,
             params: req.params
           },
