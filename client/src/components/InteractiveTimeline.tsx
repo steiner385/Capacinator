@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter } from 'date-fns';
-import { formatDateSafe, parseDateSafe, addDaysSafe } from '../utils/date';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
+import { format, startOfWeek, startOfMonth } from 'date-fns';
+import { useTimelineEvents } from '../hooks/useTimelineEvents';
 import './InteractiveTimeline.css';
 
 export interface TimelineItem {
@@ -77,15 +77,6 @@ const calculateItemPosition = (item: TimelineItem, viewport: TimelineViewport) =
   };
 };
 
-const dateFromPixelPosition = (pixelX: number, viewport: TimelineViewport): Date => {
-  const days = Math.round(pixelX / viewport.pixelsPerDay);
-  // Snap to day boundaries since phases are stored with day precision
-  const result = new Date(viewport.startDate);
-  result.setDate(result.getDate() + days);
-  result.setHours(0, 0, 0, 0);
-  return result;
-};
-
 // Calculate dependency line connection points based on dependency type
 const calculateDependencyPoints = (
   predecessor: TimelineItem,
@@ -105,9 +96,7 @@ const calculateDependencyPoints = (
   
   const verticalOffset = 8; // Distance from phase bars
   const predTop = verticalOffset;
-  const predBottom = predTop + itemHeight - 16;
-  const succTop = verticalOffset; 
-  const succBottom = succTop + itemHeight - 16;
+  const succTop = verticalOffset;
   
   switch (dependency.dependencyType) {
     case 'FS': // Finish-to-Start
@@ -151,7 +140,7 @@ export function InteractiveTimeline({
   onItemMove,
   onItemResize,
   dependencies = [],
-  onDependencyCreate,
+  onDependencyCreate: _onDependencyCreate, // Reserved for future dependency creation feature
   showGrid = true,
   showToday = true,
   allowOverlap = false,
@@ -160,49 +149,8 @@ export function InteractiveTimeline({
   className = '',
   style = {}
 }: InteractiveTimelineProps) {
-  
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const [dragState, setDragState] = useState<{
-    type: 'move' | 'resize-start' | 'resize-end' | 'brush' | 'boundary' | null;
-    itemId?: string;
-    startX?: number;
-    currentX?: number;
-    originalStart?: Date;
-    originalEnd?: Date;
-    previewStart?: Date;
-    previewEnd?: Date;
-    adjacentPhases?: {
-      previous?: {
-        id: string;
-        newEndDate: Date;
-      };
-      next?: {
-        id: string;
-        newStartDate: Date;
-      };
-    };
-    boundaryData?: {
-      leftPhaseId: string;
-      rightPhaseId: string;
-      originalLeftEnd: Date;
-      originalRightStart: Date;
-    };
-  }>({ type: null });
-  
-  const [hoverItemId, setHoverItemId] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    content: React.ReactNode;
-  }>({ visible: false, x: 0, y: 0, content: null });
 
-  // Phase boundary handle state - new approach with visual handles
-  const [hoveredHandle, setHoveredHandle] = useState<{
-    phaseId: string;
-    handleType: 'resize-left' | 'resize-right' | 'extend-left' | 'extend-right' | 'adjust-both';
-    position: number;
-  } | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   // Note: Scroll detection logic removed - now using z-index layering for proper handle positioning
 
@@ -495,6 +443,35 @@ export function InteractiveTimeline({
 
   const phaseHandles = generatePhaseHandles();
 
+  // Use the extracted event handlers hook
+  const {
+    dragState,
+    hoverItemId,
+    tooltip,
+    hoveredHandle,
+    setHoverItemId,
+    setTooltip,
+    handleMouseDown,
+    handleDoubleClick,
+    handleRightClick,
+    handlePhaseAction,
+    handlePhaseHandleMouseDown,
+  } = useTimelineEvents({
+    timelineRef,
+    items,
+    viewport,
+    mode,
+    phaseHandles,
+    minItemDuration,
+    allowOverlap,
+    onBrushChange,
+    onItemAdd,
+    onItemEdit,
+    onItemDelete,
+    onItemMove,
+    onItemResize
+  });
+
   // Calculate dependency lines for visual rendering
   const dependencyLines = React.useMemo(() => {
     if (!dependencies || dependencies.length === 0) return [];
@@ -512,510 +489,6 @@ export function InteractiveTimeline({
     
     return lines;
   }, [dependencies, items, viewport, height]);
-
-  // Handle mouse events
-  const handleMouseDown = useCallback((e: React.MouseEvent, itemId?: string, action?: 'move' | 'resize-start' | 'resize-end') => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!timelineRef.current) return;
-    
-    const rect = timelineRef.current.getBoundingClientRect();
-    const startX = e.clientX - rect.left;
-    
-    if (mode === 'brush' && !itemId) {
-      // Start brush selection
-      setDragState({
-        type: 'brush',
-        startX
-      });
-    } else if (itemId && (mode === 'phase-manager' || mode === 'roadmap')) {
-      // Start item manipulation
-      const item = items.find(i => i.id === itemId);
-      if (item) {
-        // Initialize adjacent phases for gap maintenance
-        const adjacentPhases: any = {};
-        if (action === 'resize-start' || action === 'resize-end') {
-          const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-          const currentIndex = sortedItems.findIndex(i => i.id === itemId);
-          
-          if (action === 'resize-start' && currentIndex > 0) {
-            const prevPhase = sortedItems[currentIndex - 1];
-            adjacentPhases.previousPhase = {
-              id: prevPhase.id,
-              originalEndDate: new Date(prevPhase.endDate),
-              gap: Math.round((item.startDate.getTime() - prevPhase.endDate.getTime()) / (1000 * 60 * 60 * 24))
-            };
-          }
-          
-          if (action === 'resize-end' && currentIndex < sortedItems.length - 1) {
-            const nextPhase = sortedItems[currentIndex + 1];
-            adjacentPhases.nextPhase = {
-              id: nextPhase.id,
-              originalStartDate: new Date(nextPhase.startDate),
-              gap: Math.round((nextPhase.startDate.getTime() - item.endDate.getTime()) / (1000 * 60 * 60 * 24))
-            };
-          }
-        }
-        
-        setDragState({
-          type: action || 'move',
-          itemId,
-          startX,
-          originalStart: new Date(item.startDate),
-          originalEnd: new Date(item.endDate),
-          adjacentPhases
-        });
-      }
-    }
-  }, [mode, items]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!timelineRef.current) return;
-    
-    // Check for handle hover when not dragging
-    if (!dragState.type && (mode === 'phase-manager' || mode === 'roadmap')) {
-      const rect = timelineRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      // Check if mouse is over a phase handle (±12px horizontal, and in handle vertical area)
-      const hoveredHandle = phaseHandles.find(handle => {
-        const horizontalMatch = Math.abs(mouseX - handle.x) <= 12;
-        const verticalMatch = mouseY >= 5 && mouseY <= 25; // Handle area: top 5 to 25 (within padding)
-        return horizontalMatch && verticalMatch;
-      });
-      
-      if (hoveredHandle) {
-        setHoveredHandle({
-          phaseId: hoveredHandle.phaseId,
-          handleType: hoveredHandle.handleType,
-          position: hoveredHandle.x
-        });
-      } else {
-        setHoveredHandle(null);
-      }
-    }
-    
-    if (!dragState.type) return;
-    
-    const rect = timelineRef.current.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const deltaX = currentX - (dragState.startX || 0);
-    const deltaDays = deltaX / viewport.pixelsPerDay;
-    
-    if (dragState.type === 'brush' && onBrushChange) {
-      // Update brush selection
-      const startDate = dateFromPixelPosition(Math.min(dragState.startX || 0, currentX), viewport);
-      const endDate = dateFromPixelPosition(Math.max(dragState.startX || 0, currentX), viewport);
-      
-      // Convert to indices if needed
-      const startIndex = Math.max(0, Math.floor((startDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24)));
-      const endIndex = Math.min(
-        Math.floor((viewport.endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24)),
-        Math.floor((endDate.getTime() - viewport.startDate.getTime()) / (1000 * 60 * 60 * 24))
-      );
-      
-      onBrushChange(startIndex, endIndex);
-    } else if (dragState.itemId && dragState.originalStart && dragState.originalEnd) {
-      // Update item position/size
-      let newStartDate = new Date(dragState.originalStart);
-      let newEndDate = new Date(dragState.originalEnd);
-      
-      if (dragState.type === 'move') {
-        // For move, calculate based on pixel position to maintain exact visual position
-        newStartDate = dateFromPixelPosition(currentX - (dragState.startX || 0) + 
-          calculateItemPosition({ ...items.find(i => i.id === dragState.itemId)!, startDate: dragState.originalStart, endDate: dragState.originalEnd }, viewport).left, viewport);
-        const duration = dragState.originalEnd.getTime() - dragState.originalStart.getTime();
-        newEndDate = new Date(newStartDate.getTime() + duration);
-      } else if (dragState.type === 'resize-start') {
-        // For resize start, calculate new start date
-        const deltaDaysRounded = Math.round(deltaDays);
-        newStartDate = new Date(dragState.originalStart);
-        newStartDate.setDate(newStartDate.getDate() + deltaDaysRounded);
-        newStartDate.setHours(0, 0, 0, 0);
-        newEndDate = new Date(dragState.originalEnd);
-        newEndDate.setHours(0, 0, 0, 0);
-        
-        // Ensure minimum duration
-        const durationDays = Math.round((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (durationDays < minItemDuration) {
-          newStartDate = new Date(newEndDate);
-          newStartDate.setDate(newStartDate.getDate() - minItemDuration);
-          newStartDate.setHours(0, 0, 0, 0);
-        }
-        
-        // When dragging start edge, shift all previous phases by the same amount
-        const shiftAmount = deltaDaysRounded;
-        if (shiftAmount !== 0) {
-          const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-          const currentIndex = sortedItems.findIndex(item => item.id === dragState.itemId);
-          
-          if (!dragState.adjacentPhases.updates) {
-            dragState.adjacentPhases.updates = {};
-          }
-          dragState.adjacentPhases.shiftedPhases = [];
-          
-          // Shift all phases to the left of the current phase
-          for (let i = 0; i < currentIndex; i++) {
-            const phase = sortedItems[i];
-            const newPhaseStartDate = new Date(phase.startDate);
-            newPhaseStartDate.setDate(newPhaseStartDate.getDate() + shiftAmount);
-            newPhaseStartDate.setHours(0, 0, 0, 0);
-            
-            const newPhaseEndDate = new Date(phase.endDate);
-            newPhaseEndDate.setDate(newPhaseEndDate.getDate() + shiftAmount);
-            newPhaseEndDate.setHours(0, 0, 0, 0);
-            
-            dragState.adjacentPhases.shiftedPhases.push({
-              id: phase.id,
-              newStartDate: newPhaseStartDate,
-              newEndDate: newPhaseEndDate
-            });
-          }
-        }
-      } else if (dragState.type === 'resize-end') {
-        // For resize end, calculate new end date
-        const deltaDaysRounded = Math.round(deltaDays);
-        newStartDate = new Date(dragState.originalStart);
-        newStartDate.setHours(0, 0, 0, 0);
-        newEndDate = new Date(dragState.originalEnd);
-        newEndDate.setDate(newEndDate.getDate() + deltaDaysRounded);
-        newEndDate.setHours(0, 0, 0, 0);
-        
-        // Ensure minimum duration
-        const durationDays = Math.round((newEndDate.getTime() - newStartDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (durationDays < minItemDuration) {
-          newEndDate = new Date(newStartDate);
-          newEndDate.setDate(newEndDate.getDate() + minItemDuration);
-          newEndDate.setHours(0, 0, 0, 0);
-        }
-        
-        // When dragging end edge, shift all subsequent phases by the same amount
-        const shiftAmount = deltaDaysRounded;
-        if (shiftAmount !== 0) {
-          const sortedItems = [...items].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-          const currentIndex = sortedItems.findIndex(item => item.id === dragState.itemId);
-          
-          if (!dragState.adjacentPhases.updates) {
-            dragState.adjacentPhases.updates = {};
-          }
-          dragState.adjacentPhases.shiftedPhases = [];
-          
-          // Shift all phases to the right of the current phase
-          for (let i = currentIndex + 1; i < sortedItems.length; i++) {
-            const phase = sortedItems[i];
-            const newPhaseStartDate = new Date(phase.startDate);
-            newPhaseStartDate.setDate(newPhaseStartDate.getDate() + shiftAmount);
-            newPhaseStartDate.setHours(0, 0, 0, 0);
-            
-            const newPhaseEndDate = new Date(phase.endDate);
-            newPhaseEndDate.setDate(newPhaseEndDate.getDate() + shiftAmount);
-            newPhaseEndDate.setHours(0, 0, 0, 0);
-            
-            dragState.adjacentPhases.shiftedPhases.push({
-              id: phase.id,
-              newStartDate: newPhaseStartDate,
-              newEndDate: newPhaseEndDate
-            });
-          }
-        }
-      }
-      
-      // Update preview dates for visual feedback
-      setDragState(prev => ({
-        ...prev,
-        currentX: currentX,
-        previewStart: newStartDate,
-        previewEnd: newEndDate
-      }));
-      
-      // Check for overlaps if not allowed
-      if (!allowOverlap) {
-        // TODO: Implement overlap prevention logic
-      }
-      
-      // Don't trigger callbacks during drag - wait for mouse up
-    } else if (dragState.type === 'boundary' && dragState.boundaryData) {
-      // Handle boundary drag - just update the drag state for visual feedback
-      setDragState(prev => ({
-        ...prev,
-        currentX: currentX
-      }));
-    }
-  }, [dragState, viewport, onBrushChange, onItemMove, onItemResize, minItemDuration, allowOverlap, mode, phaseHandles, items]);
-
-  const handleMouseUp = useCallback(() => {
-    // Trigger callbacks with final positions before clearing drag state
-    if (dragState.type && dragState.itemId && dragState.previewStart && dragState.previewEnd) {
-      if (dragState.type === 'move' && onItemMove) {
-        onItemMove(dragState.itemId, dragState.previewStart, dragState.previewEnd);
-      } else if ((dragState.type === 'resize-start' || dragState.type === 'resize-end') && onItemResize) {
-        // Update the main phase
-        onItemResize(dragState.itemId, dragState.previewStart, dragState.previewEnd);
-        
-        // Update adjacent phases to maintain gaps
-        if (dragState.adjacentPhases?.updates) {
-          if (dragState.adjacentPhases.updates.previous) {
-            const { id, newEndDate } = dragState.adjacentPhases.updates.previous;
-            const prevPhase = items.find(item => item.id === id);
-            if (prevPhase) {
-              onItemResize(id, prevPhase.startDate, newEndDate);
-            }
-          }
-          if (dragState.adjacentPhases.updates.next) {
-            const { id, newStartDate } = dragState.adjacentPhases.updates.next;
-            const nextPhase = items.find(item => item.id === id);
-            if (nextPhase) {
-              // Calculate new end date maintaining duration
-              const duration = nextPhase.endDate.getTime() - nextPhase.startDate.getTime();
-              const newEndDate = new Date(newStartDate.getTime() + duration);
-              onItemResize(id, newStartDate, newEndDate);
-            }
-          }
-        }
-        
-        // Apply cascading updates to all shifted phases
-        if (dragState.adjacentPhases?.shiftedPhases) {
-          // console.log('🔄 Applying cascading updates to', dragState.adjacentPhases.shiftedPhases.length, 'phases');
-          
-          // Sort phases by their position to apply updates in order
-          const sortedShiftedPhases = [...dragState.adjacentPhases.shiftedPhases].sort((a, b) => {
-            const phaseA = items.find(item => item.id === a.id);
-            const phaseB = items.find(item => item.id === b.id);
-            if (!phaseA || !phaseB) return 0;
-            return phaseA.startDate.getTime() - phaseB.startDate.getTime();
-          });
-          
-          // Apply updates to all shifted phases
-          sortedShiftedPhases.forEach(shiftedPhase => {
-            // console.log(`📅 Updating phase ${shiftedPhase.id}:`, {
-            //   newStart: shiftedPhase.newStartDate.toISOString().split('T')[0],
-            //   newEnd: shiftedPhase.newEndDate.toISOString().split('T')[0]
-            // });
-            onItemResize(shiftedPhase.id, shiftedPhase.newStartDate, shiftedPhase.newEndDate);
-          });
-        }
-      }
-    } else if (dragState.type === 'boundary' && dragState.boundaryData && onItemResize) {
-      // For boundary drag, trigger the final resize callbacks
-      const currentX = dragState.currentX || dragState.startX || 0;
-      const newBoundaryDate = dateFromPixelPosition(currentX, viewport);
-      
-      const { leftPhaseId, rightPhaseId } = dragState.boundaryData;
-      const leftPhase = items.find(item => item.id === leftPhaseId);
-      const rightPhase = items.find(item => item.id === rightPhaseId);
-      
-      if (leftPhase) {
-        onItemResize(leftPhaseId, leftPhase.startDate, newBoundaryDate);
-      }
-      if (rightPhase) {
-        onItemResize(rightPhaseId, newBoundaryDate, rightPhase.endDate);
-      }
-    }
-    
-    setDragState({ type: null });
-  }, [dragState, onItemMove, onItemResize, viewport, items]);
-
-  const handleDoubleClick = useCallback((e: React.MouseEvent, itemId?: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (itemId && onItemEdit) {
-      onItemEdit(itemId);
-    } else if (!itemId && onItemAdd) {
-      const rect = timelineRef.current?.getBoundingClientRect();
-      if (rect) {
-        const clickX = e.clientX - rect.left;
-        const clickDate = dateFromPixelPosition(clickX, viewport);
-        onItemAdd(undefined, { x: clickX, date: clickDate });
-      }
-    }
-  }, [onItemEdit, onItemAdd, viewport]);
-
-  const handleRightClick = useCallback((e: React.MouseEvent, itemId: string) => {
-    e.preventDefault();
-    if (onItemDelete) {
-      onItemDelete(itemId);
-    }
-  }, [onItemDelete]);
-
-  // Handle direct phase boundary actions with visual handles
-  const handlePhaseAction = useCallback((handle: { phaseId: string; handleType: string; adjacentPhaseId?: string }) => {
-    // console.log('🎯 Direct phase action triggered:', handle);
-    
-    const phase = items.find(item => item.id === handle.phaseId);
-    const adjacentPhase = handle.adjacentPhaseId ? items.find(item => item.id === handle.adjacentPhaseId) : null;
-    
-    if (!phase) {
-      // console.log('⚠️ Could not find phase');
-      return;
-    }
-    
-    switch (handle.handleType) {
-      case 'extend-left':
-        if (adjacentPhase) {
-          // Extend current phase left to meet the adjacent phase
-          const newStartDate = adjacentPhase.endDate;
-          // console.log('🔸 Extending phase left to adjacent phase end');
-          if (onItemResize) {
-            onItemResize(phase.id, newStartDate, phase.endDate);
-          }
-        }
-        break;
-        
-      case 'extend-right':
-        if (adjacentPhase) {
-          // Extend current phase right to meet the adjacent phase
-          const newEndDate = adjacentPhase.startDate;
-          // console.log('🔸 Extending phase right to adjacent phase start');
-          if (onItemResize) {
-            onItemResize(phase.id, phase.startDate, newEndDate);
-          }
-        }
-        break;
-        
-      case 'adjust-both':
-        if (adjacentPhase) {
-          // Calculate midpoint using timezone-safe date arithmetic
-          const phaseEndStr = formatDateSafe(phase.endDate);
-          const adjacentStartStr = formatDateSafe(adjacentPhase.startDate);
-          
-          // Calculate days between the phases  
-          const daysBetween = Math.round((adjacentPhase.startDate.getTime() - phase.endDate.getTime()) / (1000 * 60 * 60 * 24));
-          
-          // Handle edge case: if phases are already adjacent or overlapping
-          if (daysBetween <= 0) {
-            // console.log('🔗 Phases are already adjacent, no adjustment needed');
-            return;
-          }
-          
-          const midpointOffset = Math.floor(daysBetween / 2);
-          
-          // Calculate new boundary date (timezone-safe)
-          const newBoundaryStr = addDaysSafe(phaseEndStr, midpointOffset);
-          const newBoundaryDate = parseDateSafe(newBoundaryStr);
-          
-          // console.log('🔗 Adjusting both phases with dependency-safe midpoint:', {
-          //   phaseEnds: phaseEndStr,
-          //   adjacentStarts: adjacentStartStr,
-          //   daysBetween,
-          //   midpointOffset,
-          //   newBoundary: newBoundaryStr,
-          //   maintainsFSDependency: true
-          // });
-          
-          if (onItemResize) {
-            // Validate that the new arrangement maintains FS dependency constraints
-            const predecessorEndsStr = formatDateSafe(newBoundaryDate);
-            const successorStartsStr = formatDateSafe(newBoundaryDate);
-            
-            // For FS dependency, successor must start on the same day or after predecessor ends
-            // This should always be true since we use the same date, but let's validate
-            if (predecessorEndsStr <= successorStartsStr) {
-              // console.log('✅ FS dependency maintained - applying adjustment');
-              onItemResize(phase.id, phase.startDate, newBoundaryDate);
-              onItemResize(adjacentPhase.id, newBoundaryDate, adjacentPhase.endDate);
-            } else {
-              console.error('❌ FS dependency violation prevented:', {
-                predecessorEnds: predecessorEndsStr,
-                successorStarts: successorStartsStr
-              });
-              // Fallback: don't adjust if it would violate dependencies
-            }
-          }
-        }
-        break;
-    }
-    
-    // Clear hover state after action
-    setHoveredHandle(null);
-    // console.log('✅ Phase action completed:', handle.handleType);
-  }, [items, onItemResize]);
-
-  // Handle drag start for phase boundary adjustments
-  const handlePhaseHandleMouseDown = useCallback((e: React.MouseEvent, handle: { phaseId: string; handleType: string; adjacentPhaseId?: string }) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!timelineRef.current) return;
-    
-    const phase = items.find(item => item.id === handle.phaseId);
-    const adjacentPhase = handle.adjacentPhaseId ? items.find(item => item.id === handle.adjacentPhaseId) : null;
-    
-    if (!phase) return;
-    
-    const rect = timelineRef.current.getBoundingClientRect();
-    const startX = e.clientX - rect.left;
-    
-    if (handle.handleType === 'adjust-both' && adjacentPhase) {
-      setDragState({
-        type: 'boundary',
-        startX,
-        boundaryData: {
-          leftPhaseId: handle.phaseId,
-          rightPhaseId: adjacentPhase.id,
-          originalLeftEnd: new Date(phase.endDate),
-          originalRightStart: new Date(adjacentPhase.startDate)
-        }
-      });
-    } else {
-      // For extend handles, use regular resize behavior
-      const resizeType = handle.handleType === 'extend-left' ? 'resize-start' : 'resize-end';
-      setDragState({
-        type: resizeType,
-        itemId: phase.id,
-        startX,
-        originalStart: new Date(phase.startDate),
-        originalEnd: new Date(phase.endDate)
-      });
-    }
-  }, [items]);
-
-  // Handle keyboard shortcuts for quick actions
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (hoveredHandle && (e.key === 'Enter' || e.key === ' ')) {
-      e.preventDefault();
-      const phase = items.find(item => item.id === hoveredHandle.phaseId);
-      if (phase) {
-        const handle = phaseHandles.find(h => 
-          h.phaseId === hoveredHandle.phaseId && 
-          h.handleType === hoveredHandle.handleType
-        );
-        if (handle) {
-          handlePhaseAction(handle);
-        }
-      }
-    }
-  }, [hoveredHandle, items, phaseHandles, handlePhaseAction]);
-
-  // Add keyboard event listeners for shortcuts
-  useEffect(() => {
-    if (hoveredHandle) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [hoveredHandle, handleKeyDown]);
-
-  // Add global mouse events
-  useEffect(() => {
-    if (dragState.type) {
-      const handleGlobalMouseMove = (e: MouseEvent) => {
-        handleMouseMove(e as any);
-      };
-      const handleGlobalMouseUp = () => {
-        handleMouseUp();
-      };
-
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-
-      return () => {
-        document.removeEventListener('mousemove', handleGlobalMouseMove);
-        document.removeEventListener('mouseup', handleGlobalMouseUp);
-      };
-    }
-  }, [dragState.type, handleMouseMove, handleMouseUp]);
 
   return (
     <div 
