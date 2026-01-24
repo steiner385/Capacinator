@@ -1,0 +1,411 @@
+openapi: 3.0.3
+info:
+  title: Capacinator Git Sync API
+  version: 1.0.0
+  description: API endpoints for Git-based multi-user collaboration
+
+servers:
+  - url: http://localhost:3110/api
+    description: Development server
+  - url: http://localhost:3456/api
+    description: Production (Electron)
+
+paths:
+  /sync/status:
+    get:
+      summary: Get current sync status
+      description: Returns sync state, pending changes count, and last sync timestamp
+      tags:
+        - Sync
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sync status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [synced, pending, syncing, conflict, offline]
+                        description: Current sync state
+                      pendingChangesCount:
+                        type: integer
+                        description: Number of local changes not yet synced
+                      lastSyncAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      conflictsCount:
+                        type: integer
+                        description: Number of unresolved conflicts
+                      repositoryUrl:
+                        type: string
+                        format: uri
+                        nullable: true
+
+  /sync/pull:
+    post:
+      summary: Pull updates from remote repository
+      description: Fetches latest changes from GitHub Enterprise and rebuilds local cache
+      tags:
+        - Sync
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pull completed successfully (may include conflicts)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      filesChanged:
+                        type: integer
+                      conflictsDetected:
+                        type: integer
+                      conflicts:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Conflict'
+        '401':
+          description: GitHub authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Repository unavailable (offline)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sync/push:
+    post:
+      summary: Push local changes to remote repository
+      description: Exports local changes to JSON, commits, and pushes to GitHub Enterprise
+      tags:
+        - Sync
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commitMessage:
+                  type: string
+                  description: Custom commit message (optional, auto-generated if omitted)
+                  maxLength: 500
+      responses:
+        '200':
+          description: Push completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      commitSha:
+                        type: string
+                        description: Git commit hash
+                      filesChanged:
+                        type: integer
+                      commitMessage:
+                        type: string
+        '409':
+          description: Push rejected (remote has new commits, must pull first)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: GitHub authentication required
+        '503':
+          description: Repository unavailable (offline)
+
+  /sync/conflicts:
+    get:
+      summary: List unresolved conflicts
+      description: Returns all conflicts detected during last pull operation
+      tags:
+        - Conflict Resolution
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Conflicts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conflict'
+
+  /sync/conflicts/{conflictId}/resolve:
+    post:
+      summary: Resolve a specific conflict
+      description: Apply user's chosen resolution for a merge conflict
+      tags:
+        - Conflict Resolution
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conflictId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resolution
+              properties:
+                resolution:
+                  type: string
+                  enum: [accept_local, accept_remote, custom]
+                customValue:
+                  type: any
+                  description: Required if resolution is 'custom'
+      responses:
+        '200':
+          description: Conflict resolved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      conflictId:
+                        type: string
+                      resolvedValue:
+                        type: any
+                      warnings:
+                        type: array
+                        items:
+                          type: string
+                        description: Domain validation warnings (e.g., over-allocation)
+        '400':
+          description: Invalid resolution data
+        '404':
+          description: Conflict not found
+
+  /sync/history:
+    get:
+      summary: Get change history
+      description: Returns Git commit history with parsed change summaries
+      tags:
+        - Sync
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum: [project, person, assignment, project_phase]
+        - name: entityId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChangeHistoryEntry'
+
+  /git/authenticate:
+    post:
+      summary: Authenticate with GitHub Enterprise
+      description: Store GitHub credentials for repository access
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - credentialType
+                - token
+                - repositoryUrl
+              properties:
+                credentialType:
+                  type: string
+                  enum: [personal-access-token, oauth]
+                token:
+                  type: string
+                  description: GitHub PAT or OAuth token
+                repositoryUrl:
+                  type: string
+                  format: uri
+                  example: https://github.enterprise.com/yourorg/capacinator-data
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      repositoryUrl:
+                        type: string
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '401':
+          description: Invalid token
+        '403':
+          description: Insufficient repository permissions
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Conflict:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum: [project, person, assignment, project_phase]
+        entityId:
+          type: string
+          format: uuid
+        entityName:
+          type: string
+          description: Human-readable entity name (e.g., project title, person name)
+        field:
+          type: string
+          description: Conflicting field name
+        baseValue:
+          type: any
+          description: Common ancestor value
+        localValue:
+          type: any
+          description: User's current value
+        remoteValue:
+          type: any
+          description: Remote repository value
+        resolutionStatus:
+          type: string
+          enum: [pending, resolved, deferred]
+
+    ChangeHistoryEntry:
+      type: object
+      properties:
+        commitSha:
+          type: string
+          description: Git commit hash
+        author:
+          type: string
+          description: Author email
+        authorName:
+          type: string
+          description: Author name
+        timestamp:
+          type: string
+          format: date-time
+        message:
+          type: string
+          description: Commit message
+        filesChanged:
+          type: array
+          items:
+            type: string
+          description: List of JSON files modified
+        entitiesAffected:
+          type: array
+          items:
+            type: object
+            properties:
+              entityType:
+                type: string
+              entityId:
+                type: string
+              action:
+                type: string
+                enum: [created, updated, deleted]
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: GIT_AUTH_REQUIRED
+            message:
+              type: string
+              example: GitHub authentication required. Please provide credentials.
+            details:
+              type: object

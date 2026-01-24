@@ -29,7 +29,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Cache operations
   clearCache: () => ipcRenderer.invoke('clear-cache'),
-  
+
+  // Git Sync operations (Feature: 001-git-sync-integration)
+  gitBranchSwitched: (branchName) => ipcRenderer.invoke('git-branch-switched', branchName),
+
   // Settings operations
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
   

@@ -1,7 +1,7 @@
 const { ipcRenderer } = require('electron');
 
 let currentStep = 0;
-const steps = ['welcome', 'database', 'server', 'advanced', 'review'];
+const steps = ['welcome', 'database', 'server', 'git', 'advanced', 'review'];
 
 // Configuration object to store user settings
 let config = {
@@ -16,6 +16,14 @@ let config = {
         port: 3456,
         host: 'localhost',
         requireAuth: true
+    },
+    git: {
+        enabled: false,
+        githubEnterpriseUrl: '',
+        repositoryUrl: '',
+        token: '',
+        autoPull: true,
+        shallowClone: true
     },
     advanced: {
         logLevel: 'info',
@@ -32,6 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('autoBackup').addEventListener('change', (e) => {
         document.getElementById('backupOptions').style.display = e.target.checked ? 'block' : 'none';
     });
+
+    // Git sync checkbox toggle
+    document.getElementById('enableGitSync').addEventListener('change', (e) => {
+        document.getElementById('gitSyncOptions').style.display = e.target.checked ? 'block' : 'none';
+    });
+
+    // Validate token button
+    const validateTokenBtn = document.getElementById('validateTokenBtn');
+    if (validateTokenBtn) {
+        validateTokenBtn.addEventListener('click', validateGitToken);
+    }
 
     // Navigation button listeners
     document.querySelectorAll('[data-action="next"]').forEach(btn => {
@@ -111,7 +130,7 @@ function previousStep() {
 
 function validateCurrentStep() {
     const step = steps[currentStep];
-    
+
     switch(step) {
         case 'database':
             const dbName = document.getElementById('dbName').value.trim();
@@ -124,7 +143,7 @@ function validateCurrentStep() {
                 return false;
             }
             break;
-            
+
         case 'server':
             const port = parseInt(document.getElementById('serverPort').value);
             if (isNaN(port) || port < 1024 || port > 65535) {
@@ -132,14 +151,44 @@ function validateCurrentStep() {
                 return false;
             }
             break;
+
+        case 'git':
+            const gitEnabled = document.getElementById('enableGitSync').checked;
+            if (gitEnabled) {
+                const githubUrl = document.getElementById('githubEnterpriseUrl').value.trim();
+                const repoUrl = document.getElementById('gitRepositoryUrl').value.trim();
+                const token = document.getElementById('gitToken').value.trim();
+
+                if (!githubUrl) {
+                    showError('Please enter GitHub Enterprise URL');
+                    return false;
+                }
+                if (!/^https?:\/\/.+/.test(githubUrl)) {
+                    showError('GitHub Enterprise URL must start with http:// or https://');
+                    return false;
+                }
+                if (!repoUrl) {
+                    showError('Please enter repository URL');
+                    return false;
+                }
+                if (!/^https?:\/\/.+/.test(repoUrl)) {
+                    showError('Repository URL must start with http:// or https://');
+                    return false;
+                }
+                if (!token) {
+                    showError('Please enter a personal access token');
+                    return false;
+                }
+            }
+            break;
     }
-    
+
     return true;
 }
 
 function saveCurrentStep() {
     const step = steps[currentStep];
-    
+
     switch(step) {
         case 'database':
             config.database.location = document.getElementById('dbLocation').value.trim();
@@ -148,13 +197,24 @@ function saveCurrentStep() {
             config.database.backupInterval = document.getElementById('backupInterval').value;
             config.database.backupRetention = parseInt(document.getElementById('backupRetention').value);
             break;
-            
+
         case 'server':
             config.server.port = parseInt(document.getElementById('serverPort').value);
             config.server.host = document.getElementById('serverHost').value;
             config.server.requireAuth = document.getElementById('requireAuth').checked;
             break;
-            
+
+        case 'git':
+            config.git.enabled = document.getElementById('enableGitSync').checked;
+            if (config.git.enabled) {
+                config.git.githubEnterpriseUrl = document.getElementById('githubEnterpriseUrl').value.trim();
+                config.git.repositoryUrl = document.getElementById('gitRepositoryUrl').value.trim();
+                config.git.token = document.getElementById('gitToken').value.trim();
+                config.git.autoPull = document.getElementById('gitAutoPull').checked;
+                config.git.shallowClone = document.getElementById('gitShallowClone').checked;
+            }
+            break;
+
         case 'advanced':
             config.advanced.logLevel = document.getElementById('logLevel').value;
             config.advanced.maxConnections = parseInt(document.getElementById('maxConnections').value);
@@ -183,11 +243,33 @@ function showSuccess(message) {
 function updateConfigPreview() {
     const preview = document.getElementById('configPreview');
     const dbPath = config.database.location || '[User Data Directory]';
-    
+
+    // Build Git section
+    let gitSection = '';
+    if (config.git.enabled) {
+        // Sanitize URLs for display (all inputs are validated)
+        const sanitizedGithubUrl = String(config.git.githubEnterpriseUrl).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const sanitizedRepoUrl = String(config.git.repositoryUrl).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        gitSection = `
+<strong>Git Sync Configuration:</strong>
+  GitHub Enterprise: ${sanitizedGithubUrl}
+  Repository: ${sanitizedRepoUrl}
+  Token: ${'*'.repeat(20)}
+  Auto-pull on startup: ${config.git.autoPull ? 'Yes' : 'No'}
+  Shallow clone: ${config.git.shallowClone ? 'Yes' : 'No'}
+`;
+    } else {
+        gitSection = `
+<strong>Git Sync:</strong>
+  Status: Disabled
+`;
+    }
+
+    // Safe to use innerHTML here - all values are from validated form inputs in controlled Electron context
     preview.innerHTML = `
 <strong>Database Configuration:</strong>
-  Location: ${dbPath}
-  Filename: ${config.database.filename}
+  Location: ${String(dbPath).replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+  Filename: ${String(config.database.filename).replace(/</g, '&lt;').replace(/>/g, '&gt;')}
   Auto Backup: ${config.database.autoBackup ? 'Enabled' : 'Disabled'}
   ${config.database.autoBackup ? `Backup Interval: ${config.database.backupInterval}
   Backup Retention: ${config.database.backupRetention} days` : ''}
@@ -196,7 +278,7 @@ function updateConfigPreview() {
   Port: ${config.server.port}
   Host: ${config.server.host}
   Authentication: ${config.server.requireAuth ? 'Required' : 'Disabled'}
-
+${gitSection}
 <strong>Advanced Settings:</strong>
   Log Level: ${config.advanced.logLevel}
   Max Connections: ${config.advanced.maxConnections}
@@ -258,3 +340,39 @@ document.querySelectorAll('.step').forEach((stepEl, index) => {
         }
     });
 });
+
+// Validate Git token
+async function validateGitToken() {
+    const validateBtn = document.getElementById('validateTokenBtn');
+    const statusEl = document.getElementById('tokenValidationStatus');
+    const token = document.getElementById('gitToken').value.trim();
+    const repoUrl = document.getElementById('gitRepositoryUrl').value.trim();
+
+    if (!token || !repoUrl) {
+        statusEl.textContent = '❌ Please enter both repository URL and token';
+        statusEl.style.color = '#e74c3c';
+        return;
+    }
+
+    validateBtn.disabled = true;
+    validateBtn.innerHTML = 'Validating... <span class="spinner"></span>';
+    statusEl.textContent = '';
+
+    try {
+        const result = await ipcRenderer.invoke('validate-git-token', { token, repositoryUrl: repoUrl });
+
+        if (result.valid) {
+            statusEl.textContent = '✅ Token validated successfully';
+            statusEl.style.color = '#27ae60';
+        } else {
+            statusEl.textContent = `❌ Validation failed: ${result.error || 'Invalid token or repository'}`;
+            statusEl.style.color = '#e74c3c';
+        }
+    } catch (error) {
+        statusEl.textContent = `❌ Error: ${error.message}`;
+        statusEl.style.color = '#e74c3c';
+    } finally {
+        validateBtn.disabled = false;
+        validateBtn.innerHTML = 'Validate Token';
+    }
+}

@@ -18,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
+import { SyncStatusIndicator } from './sync/SyncStatusIndicator';
 import './AppHeader.css';
 
 export const AppHeader: React.FC = () => {
@@ -179,6 +180,9 @@ export const AppHeader: React.FC = () => {
           </button>
 
           <div className="status-indicators">
+            {/* Git Sync Status (Feature: 001-git-sync-integration) */}
+            {process.env.ENABLE_GIT_SYNC === 'true' && <SyncStatusIndicator />}
+
             <div className={`status-indicator ${isOnline ? 'online' : 'offline'}`} title={isOnline ? 'Online' : 'Offline'}>
               {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
             </div>
