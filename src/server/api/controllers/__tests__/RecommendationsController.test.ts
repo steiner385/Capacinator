@@ -1,5 +1,6 @@
 import { RecommendationsController } from '../RecommendationsController.js';
 import type { Request, Response } from 'express';
+import { logger } from '../../../services/logging/config.js';
 
 describe('RecommendationsController', () => {
   let controller: RecommendationsController;
@@ -48,7 +49,7 @@ describe('RecommendationsController', () => {
     });
 
     it('handles errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const loggerErrorSpy = jest.spyOn(logger, 'error').mockImplementation();
 
       // Mock res.json to track if error handler was called
       let errorHandlerCalled = false;
@@ -65,14 +66,14 @@ describe('RecommendationsController', () => {
 
       await controller.getRecommendations(mockReq as Request, mockRes as Response);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error generating recommendations:',
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Error generating recommendations',
         expect.any(Error)
       );
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(errorHandlerCalled).toBe(true);
 
-      consoleErrorSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
   });
 });

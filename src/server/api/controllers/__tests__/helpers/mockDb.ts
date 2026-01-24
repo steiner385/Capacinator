@@ -276,6 +276,16 @@ export function createMockDb() {
     return trx;
   });
 
+  /**
+   * Mock for schema operations
+   */
+  mock.schema = {
+    hasTable: jest.fn().mockResolvedValue(true),
+    createTable: jest.fn().mockReturnThis(),
+    dropTable: jest.fn().mockReturnThis(),
+    table: jest.fn().mockReturnThis()
+  };
+
   // Helper methods for tests to configure what data the mock returns
 
   /**
