@@ -10,6 +10,7 @@ import { BaseController } from './BaseController.js';
 import { GitRepositoryService } from '../../services/git/GitRepositoryService.js';
 import { ScenarioExporter } from '../../services/git/ScenarioExporter.js';
 import { GitAuthService } from '../../services/git/GitAuthService.js';
+import { logger } from '../../services/logging/config.js';
 import {
   GitError,
   GitNetworkError,
@@ -53,7 +54,7 @@ export class GitSyncController extends BaseController {
       const exists = await this.gitService.repositoryExists();
 
       if (!exists) {
-        return res.json({
+        res.json({
           success: true,
           data: {
             status: 'not-initialized',
@@ -99,7 +100,7 @@ export class GitSyncController extends BaseController {
       // Check if repository exists
       const exists = await this.gitService.repositoryExists();
       if (!exists) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: {
             code: 'REPOSITORY_NOT_INITIALIZED',
@@ -153,7 +154,7 @@ export class GitSyncController extends BaseController {
               });
 
             // Return conflicts for user resolution (T053)
-            return res.json({
+            res.json({
               success: false,
               data: {
                 filesChanged: result.filesChanged,
@@ -179,7 +180,7 @@ export class GitSyncController extends BaseController {
             console.warn('Import completed with warnings:', importResult.errors);
           }
 
-          return res.json({
+          res.json({
             success: result.success,
             data: {
               filesChanged: result.filesChanged,
@@ -228,7 +229,7 @@ export class GitSyncController extends BaseController {
       // Check if repository exists
       const exists = await this.gitService.repositoryExists();
       if (!exists) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: {
             code: 'REPOSITORY_NOT_INITIALIZED',
@@ -239,7 +240,7 @@ export class GitSyncController extends BaseController {
 
       // Check for Git credentials
       if (!req.gitCredentials) {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: {
             code: 'GIT_AUTH_REQUIRED',
@@ -255,7 +256,7 @@ export class GitSyncController extends BaseController {
         .first();
 
       if (unresolvedConflicts && unresolvedConflicts.count > 0) {
-        return res.status(409).json({
+        res.status(409).json({
           success: false,
           error: {
             code: 'UNRESOLVED_CONFLICTS',
@@ -361,7 +362,7 @@ export class GitSyncController extends BaseController {
 
       // Validate resolution type (T054)
       if (!['accept_local', 'accept_remote', 'custom'].includes(resolution)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: {
             code: 'INVALID_RESOLUTION',
@@ -371,7 +372,7 @@ export class GitSyncController extends BaseController {
       }
 
       if (resolution === 'custom' && customValue === undefined) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: {
             code: 'CUSTOM_VALUE_REQUIRED',
@@ -596,7 +597,7 @@ export class GitSyncController extends BaseController {
           });
         }
 
-        return res.json({
+        res.json({
           success: false,
           data: {
             conflicts,
@@ -646,7 +647,7 @@ export class GitSyncController extends BaseController {
           commits
         );
 
-        return res.json({
+        res.json({
           success: true,
           data: entityHistory,
         });
@@ -716,16 +717,14 @@ export class GitSyncController extends BaseController {
 
       // Log for debugging
       if (error instanceof GitNetworkError || error instanceof GitAuthenticationError) {
-        this.logger?.warn(`Git operation failed: ${error.code}`, {
+        logger?.warn(`Git operation failed: ${error.code}`, error, {
           userId: req.user?.id,
           operation: defaultMessage,
-          error: error.message,
         });
       } else {
-        this.logger?.error(`Git operation failed: ${error.code}`, {
+        logger?.error(`Git operation failed: ${error.code}`, error, {
           userId: req.user?.id,
           operation: defaultMessage,
-          error: error.message,
         });
       }
 

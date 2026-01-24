@@ -1,32 +1,46 @@
+// Mock the logger
+jest.mock('../../services/logging/config.js', () => ({
+  logger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    http: jest.fn(),
+    debug: jest.fn()
+  }
+}));
+
 import { errorHandler } from '../errorHandler';
+import { logger } from '../../services/logging/config.js';
 import type { Request, Response, NextFunction } from 'express';
 
 describe('errorHandler', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
   let mockNext: NextFunction;
-  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    mockReq = {};
+    jest.clearAllMocks();
+    mockReq = {
+      url: '/test',
+      method: 'GET'
+    };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
     };
     mockNext = jest.fn();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
   });
 
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
-  });
-
-  it('should log error to console', () => {
+  it('should log error to logger', () => {
     const error = new Error('Test error');
 
     errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', error);
+    expect(logger.error).toHaveBeenCalledWith(
+      'Unhandled error',
+      error,
+      { url: '/test', method: 'GET' }
+    );
   });
 
   it('should return 500 status code', () => {

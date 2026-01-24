@@ -5,13 +5,13 @@ const router = Router();
 const controller = new ReportingController();
 
 // Dashboard and reporting endpoints
-router.get('/dashboard', (req, res) => controller.getDashboard(req, res));
-router.get('/test', (req, res) => controller.getTest(req, res));
-router.get('/capacity', (req, res) => controller.getCapacityReport(req, res));
-router.get('/demand', (req, res) => controller.getDemandReport(req, res));
-router.get('/utilization', (req, res) => controller.getUtilizationReport(req, res));
-router.get('/gaps', (req, res) => controller.getGapsAnalysis(req, res));
-router.get('/projects', (req, res) => controller.getProjectReport(req, res));
-router.get('/timeline', (req, res) => controller.getTimelineReport(req, res));
+router.get('/dashboard', controller.getDashboard);
+router.get('/test', controller.getTest);
+router.get('/capacity', controller.getCapacityReport);
+router.get('/demand', controller.getDemandReport);
+router.get('/utilization', controller.getUtilizationReport);
+router.get('/gaps', controller.getGapsAnalysis);
+router.get('/projects', controller.getProjectReport);
+router.get('/timeline', controller.getTimelineReport);
 
 export default router;

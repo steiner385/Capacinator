@@ -4,6 +4,7 @@ import { ImportError, ImportErrorCollector, ImportErrorUtils } from '../../../..
 import ExcelJS from 'exceljs';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 // Mock ImportErrorUtils with missing methods
 jest.mock('../../../../../src/server/services/import/ImportError.js', () => {
@@ -122,7 +123,7 @@ const createTestExcelFile = async (fileName: string, worksheetData: any): Promis
     }
   });
   
-  const tempDir = '/tmp';
+  const tempDir = os.tmpdir();
   const filePath = path.join(tempDir, fileName);
   
   // Add timeout to prevent hanging
@@ -482,7 +483,7 @@ describe('ExcelImporter', () => {
 
     it('should handle corrupted Excel file', async () => {
       // Create a non-Excel file
-      testFilePath = '/tmp/corrupted.xlsx';
+      testFilePath = path.join(os.tmpdir(), 'corrupted.xlsx');
       await fs.writeFile(testFilePath, 'This is not an Excel file');
 
       const result = await importer.validateExcelStructure(testFilePath);

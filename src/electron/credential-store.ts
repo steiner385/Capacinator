@@ -15,7 +15,7 @@ const credentialStore = new Store<{ credentials: GitCredential | null }>({
   defaults: {
     credentials: null,
   },
-});
+}) as any; // Type assertion to work around electron-store type inference issues
 
 /**
  * Store GitHub Enterprise credentials securely

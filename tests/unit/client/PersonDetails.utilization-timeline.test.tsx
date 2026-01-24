@@ -103,11 +103,16 @@ const mockUtilizationTimelineData = {
   ]
 };
 
+// Calculate expected date range (matches PersonDetails component logic)
+const currentDate = new Date();
+const expectedStartDate = new Date(currentDate.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+const expectedEndDate = new Date(currentDate.getFullYear() + 1, 11, 31).toISOString().split('T')[0];
+
 const renderPersonDetails = (personId = 'test-person-id') => {
   // Create a new QueryClient for each test to avoid state contamination
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { 
+      queries: {
         retry: false,
         staleTime: 0,
         gcTime: 0,
@@ -159,7 +164,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -169,7 +174,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/different-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/different-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -185,7 +190,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // The component should still render without crashing
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -202,7 +207,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // Should still make the API call
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -228,7 +233,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -249,7 +254,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -262,7 +267,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // Verify that the utilization timeline query is made
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
 
@@ -284,7 +289,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       // Verify query includes correct date range parameters
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('startDate=2024-01-01&endDate=2026-12-31')
+        expect.stringContaining(`startDate=${expectedStartDate}&endDate=${expectedEndDate}`)
       );
     });
   });

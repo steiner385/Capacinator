@@ -4,16 +4,16 @@ import { ProjectPhasesController } from '../controllers/ProjectPhasesController.
 const router = Router();
 const controller = new ProjectPhasesController();
 
-router.get('/', (req, res) => controller.getAll(req, res));
-router.get('/:id', (req, res) => controller.getById(req, res));
-router.post('/', (req, res) => controller.create(req, res));
-router.put('/:id', (req, res) => controller.update(req, res));
-router.delete('/:id', (req, res) => controller.delete(req, res));
-router.post('/bulk', (req, res) => controller.bulkUpdate(req, res));
+router.get('/', controller.getAll);
+router.get('/:id', controller.getById);
+router.post('/', controller.create);
+router.put('/:id', controller.update);
+router.delete('/:id', controller.delete);
+router.post('/bulk', controller.bulkUpdate);
 
 // Custom phase management endpoints
-router.post('/duplicate', (req, res) => controller.duplicatePhase(req, res));
-router.post('/create-custom', (req, res) => controller.createCustomPhase(req, res));
+router.post('/duplicate', controller.duplicatePhase);
+router.post('/create-custom', controller.createCustomPhase);
 
 // Bulk corrections endpoint for Fix All functionality
 // router.post('/bulk-corrections', (req, res) => controller.applyBulkCorrections(req, res));

@@ -217,7 +217,9 @@ describe('LocationModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Save Location/i }));
 
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Saving...')).toBeInTheDocument();
+      });
     });
 
     it('disables submit button during save', async () => {

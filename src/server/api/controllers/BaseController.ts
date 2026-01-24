@@ -13,8 +13,10 @@ export interface RequestWithContext extends Request {
   logger?: any;
   user?: {
     id: string;
-    role?: string;
-    [key: string]: any;
+    name: string;
+    email: string;
+    is_system_admin: boolean;
+    user_role_id?: string;
   };
 }
 
