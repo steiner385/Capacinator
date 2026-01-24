@@ -223,12 +223,15 @@ describe('UserPermissionsController', () => {
       const mockIndividualQuery = createMockQuery(mockIndividualPermissions);
       
       let callCount = 0;
-      (controller as any).db = jest.fn(() => {
+      const dbMock: any = jest.fn(() => {
         callCount++;
         if (callCount === 1) return mockUserQuery;
         if (callCount === 2) return mockRoleQuery;
         return mockIndividualQuery;
       });
+      // Add raw method for SQL literals
+      dbMock.raw = jest.fn((sql: string) => ({ sql, bindings: [] }));
+      (controller as any).db = dbMock;
 
       await controller.getUserPermissions(mockReq as Request, mockRes as Response);
 

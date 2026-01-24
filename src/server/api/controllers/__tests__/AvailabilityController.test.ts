@@ -30,7 +30,7 @@ describe('AvailabilityController', () => {
     // Create mock database
     mockDb = createMockDb();
     (controller as any).db = mockDb;
-    (controller as any).auditedDb = mockDb;
+    (controller as any)._auditedDb = mockDb;
 
     // Mock getDb to return our mockDb (needed for executeAuditedQuery)
     (controller as any).getDb = jest.fn().mockReturnValue(mockDb);
