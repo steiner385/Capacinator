@@ -266,13 +266,18 @@
             <div>Server Settings</div>
         </div>
         
-        <div class="step" data-step="advanced">
+        <div class="step" data-step="git">
             <div class="step-number">4</div>
+            <div>Git Sync (Optional)</div>
+        </div>
+
+        <div class="step" data-step="advanced">
+            <div class="step-number">5</div>
             <div>Advanced</div>
         </div>
-        
+
         <div class="step" data-step="review">
-            <div class="step-number">5</div>
+            <div class="step-number">6</div>
             <div>Review & Install</div>
         </div>
     </div>
@@ -387,6 +392,65 @@
                 <p class="help-text">Recommended for multi-user or network-accessible installations</p>
             </div>
             
+            <div class="button-group">
+                <button class="btn btn-secondary" data-action="previous">← Back</button>
+                <button class="btn btn-primary" data-action="next">Next →</button>
+            </div>
+        </div>
+
+        <!-- Git Sync Step -->
+        <div class="step-content" id="git">
+            <h1>Git Sync Configuration</h1>
+            <p class="subtitle">Enable multi-user collaboration with GitHub Enterprise (Optional)</p>
+
+            <div class="form-group">
+                <label>Enable Git Sync</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="enableGitSync">
+                    <label for="enableGitSync" style="margin: 0;">Enable Git synchronization</label>
+                </div>
+                <p class="help-text">Allows multiple users to collaborate using a shared GitHub Enterprise repository</p>
+            </div>
+
+            <div id="gitSyncOptions" style="display: none;">
+                <div class="form-group">
+                    <label for="githubEnterpriseUrl">GitHub Enterprise URL</label>
+                    <input type="text" id="githubEnterpriseUrl" placeholder="https://github.enterprise.com">
+                    <p class="help-text">Your GitHub Enterprise server URL</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="gitRepositoryUrl">Repository URL</label>
+                    <input type="text" id="gitRepositoryUrl" placeholder="https://github.enterprise.com/org/capacinator-data">
+                    <p class="help-text">The Git repository where scenario data will be stored</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="gitToken">Personal Access Token</label>
+                    <input type="password" id="gitToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                    <p class="help-text">Generate a token at: Settings → Developer Settings → Personal Access Tokens</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Additional Settings</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="gitAutoPull" checked>
+                        <label for="gitAutoPull" style="margin: 0;">Auto-pull on startup</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="gitShallowClone" checked>
+                        <label for="gitShallowClone" style="margin: 0;">Use shallow clone (faster)</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-secondary" id="validateTokenBtn" style="margin-top: 10px;">
+                        Validate Token
+                    </button>
+                    <p class="help-text" id="tokenValidationStatus"></p>
+                </div>
+            </div>
+
             <div class="button-group">
                 <button class="btn btn-secondary" data-action="previous">← Back</button>
                 <button class="btn btn-primary" data-action="next">Next →</button>

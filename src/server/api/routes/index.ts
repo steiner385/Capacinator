@@ -25,6 +25,7 @@ import userPermissionsRoutes from './user-permissions.js';
 import notificationsRoutes from './notifications.js';
 import recommendationsRoutes from './recommendations.js';
 import authRoutes from './auth.js';
+import syncRoutes from './sync.js';
 import { createAuditRoutes } from './audit.js';
 import { getAuditService } from '../../services/audit/index.js';
 import { RequestWithLogging } from '../../middleware/requestLogger.js';
@@ -33,6 +34,9 @@ const router = Router();
 
 // Auth routes (no auth required for login/refresh)
 router.use('/auth', authRoutes);
+
+// Git Sync routes (Feature: 001-git-sync-integration)
+router.use('/sync', syncRoutes);
 
 // Mount all route modules
 router.use('/projects', projectRoutes);

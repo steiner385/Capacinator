@@ -232,3 +232,9 @@ npm run dist:linux       # Linux package (.AppImage)
 - E2E tests require the E2E database to be initialized
 - Modal state should reset when closed (useEffect on isOpen)
 - Always handle loading and error states in components
+
+## Active Technologies
+- TypeScript 5.8 (ES2022 target), Node.js 20+ (001-git-sync-integration)
+
+## Recent Changes
+- 001-git-sync-integration: Added TypeScript 5.8 (ES2022 target), Node.js 20+

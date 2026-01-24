@@ -127,6 +127,19 @@ ipcMain.handle('save-configuration', async (event, config) => {
         const dbPath = config.database.location || app.getPath('userData');
         await fs.mkdir(dbPath, { recursive: true });
 
+        // Save Git credentials if enabled
+        if (config.git && config.git.enabled) {
+            const { storeGitCredential } = await import('./credential-store.ts');
+            storeGitCredential({
+                userId: 'setup-wizard',
+                provider: 'github-enterprise',
+                credentialType: 'personal-access-token',
+                token: config.git.token,
+                repositoryUrl: config.git.repositoryUrl,
+                createdAt: new Date(),
+            });
+        }
+
         // Save configuration
         appStore.set('config', config);
         appStore.set('isFirstRun', false);
@@ -147,9 +160,24 @@ ipcMain.on('setup-complete', () => {
     if (setupWindow) {
         setupWindow.close();
     }
-    
+
     // Emit event to main process to start the application
     app.emit('setup-complete');
+});
+
+ipcMain.handle('validate-git-token', async (event, { token, repositoryUrl }) => {
+    try {
+        // Import GitAuthService for token validation
+        const { GitAuthService } = await import('../server/services/git/GitAuthService.js');
+        const authService = new GitAuthService();
+
+        const isValid = await authService.validateToken(token, repositoryUrl);
+
+        return { valid: isValid };
+    } catch (error) {
+        console.error('Token validation error:', error);
+        return { valid: false, error: error.message };
+    }
 });
 
 function validateConfig(config) {
@@ -199,7 +227,30 @@ function generateEnvFile(config) {
         '',
         '# Security',
         `REQUIRE_AUTH=${config.server.requireAuth}`,
-        '',
+        ''
+    ];
+
+    // Add Git sync configuration if enabled
+    if (config.git && config.git.enabled) {
+        lines.push(
+            '# Git Sync Feature',
+            `ENABLE_GIT_SYNC=true`,
+            `GITHUB_ENTERPRISE_URL=${config.git.githubEnterpriseUrl}`,
+            `GIT_REPOSITORY_URL=${config.git.repositoryUrl}`,
+            `GIT_SYNC_AUTO_PULL_ON_STARTUP=${config.git.autoPull}`,
+            `GIT_SYNC_SHALLOW_CLONE=${config.git.shallowClone}`,
+            `GIT_SYNC_CONFLICT_AUTO_MERGE=true`,
+            ''
+        );
+    } else {
+        lines.push(
+            '# Git Sync Feature',
+            'ENABLE_GIT_SYNC=false',
+            ''
+        );
+    }
+
+    lines.push(
         '# Advanced Settings',
         `LOG_LEVEL=${config.advanced.logLevel}`,
         `MAX_DB_CONNECTIONS=${config.advanced.maxConnections}`,
@@ -210,7 +261,7 @@ function generateEnvFile(config) {
         '# Application Settings',
         'NODE_ENV=production',
         'CORS_ORIGIN=false'
-    ];
+    );
 
     return lines.join('\n');
 }

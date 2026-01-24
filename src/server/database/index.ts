@@ -1,10 +1,12 @@
 import knex, { Knex } from 'knex';
 import knexConfig from './knexfile.js';
 import path from 'path';
+import os from 'os';
 import fs from 'fs';
 import { initializeAuditService, getAuditService } from '../services/audit/index.js';
 import { createAuditedDatabase } from './AuditedDatabase.js';
 import { logger } from '../services/logging/config.js';
+import { ScenarioExporter } from '../services/git/ScenarioExporter.js';
 
 // Store database instance
 let _db: Knex | null = null;
@@ -124,17 +126,59 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // Initialize database (run migrations)
+/**
+ * Rebuild SQLite cache from Git repository JSON files
+ * Task: T039
+ * Feature: 001-git-sync-integration
+ */
+async function rebuildCacheFromGit(database: Knex): Promise<void> {
+  // Check if Git sync is enabled
+  if (process.env.ENABLE_GIT_SYNC !== 'true') {
+    return;
+  }
+
+  // Check if auto-pull on startup is enabled
+  if (process.env.GIT_SYNC_AUTO_PULL_ON_STARTUP !== 'true') {
+    logger.info('Git sync auto-pull disabled, skipping cache rebuild');
+    return;
+  }
+
+  try {
+    const repoPath = process.env.GIT_REPO_PATH || path.join(os.homedir(), '.capacinator', 'git-repo');
+    const exporter = new ScenarioExporter(database, repoPath);
+
+    // Check if repository exists
+    const scenarioExists = await exporter.scenarioExists('working');
+    if (!scenarioExists) {
+      logger.info('Git repository not found, skipping cache rebuild');
+      return;
+    }
+
+    // Import scenario data from JSON
+    logger.info('Rebuilding SQLite cache from Git repository...');
+    await exporter.importFromJSON('working');
+    logger.info('✅ SQLite cache rebuilt from Git repository');
+  } catch (error) {
+    logger.error('⚠️  Failed to rebuild cache from Git:', error instanceof Error ? error : undefined);
+    // Don't fail database initialization if Git rebuild fails
+    // Continue with existing database
+  }
+}
+
 export async function initializeDatabase(): Promise<void> {
   try {
     const database = getDb();
-    
+
     // Run migrations
     await database.migrate.latest();
     logger.info('Database migrations completed');
-    
+
     // Initialize audit service after migrations
     initializeAuditService(database);
-    
+
+    // Rebuild cache from Git repository if enabled
+    await rebuildCacheFromGit(database);
+
     // Seed initial data if needed (skip for E2E)
     if (process.env.NODE_ENV !== 'e2e') {
       const hasData = await database('roles').count('* as count').first();

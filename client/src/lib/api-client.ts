@@ -545,4 +545,22 @@ export const api = {
     me: () => apiClient.get<{ data: Person }>('/auth/me'),
     verify: () => apiClient.get<{ verified: boolean }>('/auth/verify'),
   },
+
+  // Git Sync (Feature: 001-git-sync-integration)
+  sync: {
+    getStatus: () => apiClient.get<any>('/sync/status'),
+    pull: () => apiClient.post<any>('/sync/pull'),
+    push: (data?: { commitMessage?: string }) => apiClient.post<any>('/sync/push', data),
+    getConflicts: () => apiClient.get<any>('/sync/conflicts'),
+    resolveConflict: (conflictId: string, resolution: 'accept_local' | 'accept_remote' | 'custom', customValue?: any) =>
+      apiClient.post<any>(`/sync/conflicts/${conflictId}/resolve`, { resolution, customValue }),
+    getHistory: (params?: { limit?: number; entityType?: string; entityId?: string }) =>
+      apiClient.get<any>('/sync/history', { params }),
+    // Branch operations (User Story 3)
+    listBranches: () => apiClient.get<any>('/sync/branches'),
+    createBranch: (data: { name: string; description: string }) => apiClient.post<any>('/sync/branches', data),
+    checkoutBranch: (branchName: string) => apiClient.post<any>(`/sync/branches/${branchName}/checkout`),
+    mergeBranch: (branchName: string) => apiClient.post<any>(`/sync/branches/${branchName}/merge`),
+    compareBranches: (base: string, target: string) => apiClient.get<any>(`/sync/compare?base=${base}&target=${target}`),
+  },
 };
