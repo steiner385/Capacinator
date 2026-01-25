@@ -113,9 +113,25 @@ export async function up(knex: Knex): Promise<void> {
   });
 
   // Copy data from old table to new table
+  // Use explicit column list to handle cases where computed_start_date, computed_end_date, or notes
+  // might not exist in the old table
+  const oldColumns = await knex('project_assignments').columnInfo();
+  const hasComputedStart = 'computed_start_date' in oldColumns;
+  const hasComputedEnd = 'computed_end_date' in oldColumns;
+  const hasNotes = 'notes' in oldColumns;
+
   await knex.raw(`
-    INSERT INTO project_assignments_new 
-    SELECT * FROM project_assignments
+    INSERT INTO project_assignments_new
+    (id, project_id, person_id, role_id, phase_id, start_date, end_date,
+     allocation_percentage, created_at, updated_at, assignment_date_mode,
+     computed_start_date, computed_end_date, notes)
+    SELECT
+      id, project_id, person_id, role_id, phase_id, start_date, end_date,
+      allocation_percentage, created_at, updated_at, assignment_date_mode,
+      ${hasComputedStart ? 'computed_start_date' : 'NULL'},
+      ${hasComputedEnd ? 'computed_end_date' : 'NULL'},
+      ${hasNotes ? 'notes' : 'NULL'}
+    FROM project_assignments
   `);
 
   // Drop the old table
@@ -158,10 +174,15 @@ export async function up(knex: Knex): Promise<void> {
         table.index(['name']);
       });
 
-      // Copy data
+      // Copy data with explicit column list
       await knex.raw(`
-        INSERT INTO resource_templates_new 
-        SELECT * FROM resource_templates
+        INSERT INTO resource_templates_new
+        (id, name, description, is_active, phases_config, roles_allocation,
+         assignment_date_mode, created_at, updated_at)
+        SELECT
+          id, name, description, is_active, phases_config, roles_allocation,
+          assignment_date_mode, created_at, updated_at
+        FROM resource_templates
       `);
 
       await knex.schema.dropTable('resource_templates');
@@ -239,10 +260,17 @@ export async function down(knex: Knex): Promise<void> {
     table.index(['computed_end_date']);
   });
 
-  // Copy data back
+  // Copy data back with explicit column list
   await knex.raw(`
-    INSERT INTO project_assignments_old 
-    SELECT * FROM project_assignments
+    INSERT INTO project_assignments_old
+    (id, project_id, person_id, role_id, phase_id, start_date, end_date,
+     allocation_percentage, created_at, updated_at, assignment_date_mode,
+     computed_start_date, computed_end_date, notes)
+    SELECT
+      id, project_id, person_id, role_id, phase_id, start_date, end_date,
+      allocation_percentage, created_at, updated_at, assignment_date_mode,
+      computed_start_date, computed_end_date, notes
+    FROM project_assignments
   `);
 
   await knex.schema.dropTable('project_assignments');
@@ -276,8 +304,13 @@ export async function down(knex: Knex): Promise<void> {
       });
 
       await knex.raw(`
-        INSERT INTO resource_templates_old 
-        SELECT * FROM resource_templates
+        INSERT INTO resource_templates_old
+        (id, name, description, is_active, phases_config, roles_allocation,
+         assignment_date_mode, created_at, updated_at)
+        SELECT
+          id, name, description, is_active, phases_config, roles_allocation,
+          assignment_date_mode, created_at, updated_at
+        FROM resource_templates
       `);
 
       await knex.schema.dropTable('resource_templates');

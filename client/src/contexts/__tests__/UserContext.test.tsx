@@ -5,8 +5,23 @@ import '@testing-library/jest-dom';
 // Unmock UserContext to test the real implementation
 jest.unmock('../UserContext');
 
+// Mock the API client before importing UserContext
+jest.mock('../../lib/api-client', () => ({
+  api: {
+    auth: {
+      me: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn()
+    }
+  },
+  isAuthenticated: jest.fn(() => false),
+  clearAuthTokens: jest.fn(),
+  saveAuthTokens: jest.fn()
+}));
+
 import { UserProvider, useUser } from '../UserContext';
 import { Person } from '../../types';
+import { api, isAuthenticated } from '../../lib/api-client';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -50,6 +65,18 @@ describe('UserContext', () => {
 
     // Reset localStorage mock to return null by default
     localStorageMock.getItem.mockReturnValue(null);
+
+    // Mock isAuthenticated to return false by default
+    (isAuthenticated as jest.Mock).mockReturnValue(false);
+
+    // Mock login to reject by default (so setCurrentUser falls back to legacy behavior)
+    (api.auth.login as jest.Mock).mockRejectedValue(new Error('Login not configured'));
+
+    // Mock me() to reject by default
+    (api.auth.me as jest.Mock).mockRejectedValue(new Error('Not authenticated'));
+
+    // Mock logout to resolve
+    (api.auth.logout as jest.Mock).mockResolvedValue({});
   });
 
   afterAll(() => {
@@ -90,7 +117,21 @@ describe('UserContext', () => {
     });
 
     it('loads user from localStorage on mount', async () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
+      // Setup: user in localStorage but no auth token
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === 'capacinator_current_user') return JSON.stringify(mockUser);
+        return null; // No auth token
+      });
+      (isAuthenticated as jest.Mock).mockReturnValue(false);
+
+      // Mock login to succeed
+      (api.auth.login as jest.Mock).mockResolvedValue({
+        data: {
+          user: mockUser,
+          token: 'test-token',
+          refreshToken: 'test-refresh-token'
+        }
+      });
 
       renderWithProvider(<TestComponent />);
 
@@ -124,15 +165,19 @@ describe('UserContext', () => {
   });
 
   describe('Setting Current User', () => {
-    it('sets current user and stores in localStorage', () => {
+    it('sets current user and stores in localStorage', async () => {
       renderWithProvider(<TestComponent />);
 
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
+        // Wait for the login promise to reject and fall back to legacy behavior
+        await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      });
       expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'capacinator_current_user',
