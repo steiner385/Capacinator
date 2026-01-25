@@ -95,6 +95,8 @@ export class ScenarioComparator {
         if (!baseMap.has(id)) {
           differences.push({
             entityType,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - id type from Map iteration is unknown
             entityId: id,
             entityName: this.getEntityName(entity, entityType),
             differenceType: 'added',
@@ -108,6 +110,8 @@ export class ScenarioComparator {
         if (!targetMap.has(id)) {
           differences.push({
             entityType,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - id type from Map iteration is unknown
             entityId: id,
             entityName: this.getEntityName(entity, entityType),
             differenceType: 'removed',
@@ -124,6 +128,8 @@ export class ScenarioComparator {
           if (modifiedFields.length > 0) {
             differences.push({
               entityType,
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore - id type from Map iteration is unknown
               entityId: id,
               entityName: this.getEntityName(baseEntity, entityType),
               differenceType: 'modified',

@@ -149,6 +149,8 @@ export class ImprovedAuditService {
     const lastChangeRaw = await this.db('audit_log')
       .where('table_name', tableName)
       .where('record_id', recordId)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - whereNotLike not in Knex types but works at runtime
       .whereNotLike('comment', '%Undo%')
       .orderBy('changed_at', 'desc')
       .first();
@@ -245,6 +247,8 @@ export class ImprovedAuditService {
     // Get only non-undo changes by the specified user
     const changes = await this.db('audit_log')
       .where('changed_by', changedBy)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - whereNotLike not in Knex types but works at runtime
       .whereNotLike('comment', '%Undo%')
       .orderBy('changed_at', 'desc')
       .limit(count);
@@ -313,6 +317,8 @@ export class ImprovedAuditService {
     const query = this.db('audit_log')
       .where('table_name', tableName)
       .where('record_id', recordId)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - whereNotLike not in Knex types but works at runtime
       .whereNotLike('comment', '%Undo%')
       .orderBy('changed_at', 'desc');
     

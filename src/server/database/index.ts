@@ -109,7 +109,6 @@ export const auditedDb = new Proxy(() => getAuditedDb(), {
 // Function to reinitialize db (useful for E2E tests)
 export function reinitializeDb(): void {
   _db = null;
-  _dbProxy = null;
   _auditedDb = null;
 }
 

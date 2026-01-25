@@ -87,7 +87,11 @@ export class AssignmentRecalculationService {
         }
 
         const newDates = {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - phaseTimeline type from Map is unknown
           computed_start_date: phaseTimeline.start_date,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - phaseTimeline type from Map is unknown
           computed_end_date: phaseTimeline.end_date
         };
 

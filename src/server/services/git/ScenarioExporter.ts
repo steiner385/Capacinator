@@ -565,13 +565,13 @@ export class ScenarioExporter {
   async detectConflictsAfterPull(
     scenarioId: string,
     syncOperationId: string
-  ): Promise<import('../../../shared/types/git-entities').Conflict[]> {
+  ): Promise<import('../../../../shared/types/git-entities').Conflict[]> {
     // Import GitConflictResolver
     const { GitConflictResolver } = await import('./GitConflictResolver.js');
     const resolver = new GitConflictResolver();
 
     const scenarioDir = this.getScenarioDir(scenarioId);
-    const allConflicts: import('../../../shared/types/git-entities').Conflict[] = [];
+    const allConflicts: import('../../../../shared/types/git-entities').Conflict[] = [];
 
     try {
       // For now, we'll detect conflicts by comparing JSON to database

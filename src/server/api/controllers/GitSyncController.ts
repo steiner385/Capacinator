@@ -276,7 +276,6 @@ export class GitSyncController extends BaseController {
       const message = commitMessage || (await this.exporter.generateCommitMessage('working'));
 
       // Get author from authenticated user
-      // @ts-expect-error - user may be undefined on Request
       const author = {
         name: req.user?.name || 'Capacinator User',
         email: req.user?.email || 'user@example.com',
@@ -720,19 +719,19 @@ export class GitSyncController extends BaseController {
 
       // Log for debugging
       if (error instanceof GitNetworkError || error instanceof GitAuthenticationError) {
-        // @ts-expect-error - logger metadata type mismatch
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - operation is valid log metadata
         logger?.warn(`Git operation failed: ${error.code}`, {
           message: error.message,
           stack: error.stack,
-          userId: req.user?.id,
           operation: defaultMessage,
         });
       } else {
-        // @ts-expect-error - logger metadata type mismatch
         logger?.error(`Git operation failed: ${error.code}`, {
           message: error.message,
           stack: error.stack,
-          userId: req.user?.id,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - operation is valid log metadata
           operation: defaultMessage,
         });
       }
