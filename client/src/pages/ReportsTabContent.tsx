@@ -145,7 +145,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
         <p className="recharts-tooltip-label" style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
           {label}
         </p>
-        {payload.map((entry: TooltipPayloadEntry, _index: number) => (
+        {payload.map((entry: TooltipPayloadEntry, index: number) => (
           <p key={index} style={{ color: entry.color, margin: '0.25rem 0' }}>
             {entry.name}: {entry.value}
           </p>

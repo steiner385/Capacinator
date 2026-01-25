@@ -641,7 +641,7 @@ export function SmartAssignmentModal({
                   
                   {utilizationData.activeAssignments && utilizationData.activeAssignments.length > 0 ? (
                     <div className="assignments-list">
-                      {utilizationData.activeAssignments.map((assignment: ActiveAssignment, _index: number) => (
+                      {utilizationData.activeAssignments.map((assignment: ActiveAssignment, index: number) => (
                         <div key={assignment.id || `assignment-${index}`} className="assignment-item" style={{
                           padding: '1rem',
                           marginBottom: '0.5rem',
