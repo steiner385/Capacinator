@@ -24,7 +24,11 @@ jest.mock('../../lib/api-client', () => ({
     assignments: {
       delete: jest.fn()
     }
-  }
+  },
+  isAuthenticated: jest.fn(() => true),
+  clearAuthTokens: jest.fn(),
+  saveAuthTokens: jest.fn(),
+  getAccessToken: jest.fn(() => 'mock-token')
 }));
 
 // Mock the chart library

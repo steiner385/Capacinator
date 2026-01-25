@@ -15,7 +15,11 @@ jest.mock('../../../lib/api-client', () => ({
       addRole: jest.fn(),
       updateRole: jest.fn()
     }
-  }
+  },
+  isAuthenticated: jest.fn(() => true),
+  clearAuthTokens: jest.fn(),
+  saveAuthTokens: jest.fn(),
+  getAccessToken: jest.fn(() => 'mock-token')
 }));
 
 describe('PersonRoleModal', () => {
