@@ -59,16 +59,19 @@ const mockProjectPhases = [
 
 describe('ProjectPhaseManager - Consolidated Add Phase UI', () => {
   let queryClient: QueryClient;
-  const user = userEvent.setup();
+  let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    
+
+    // Setup user-event fresh for each test to avoid state pollution
+    user = userEvent.setup();
+
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Default mock implementations
     (api.projectPhases.list as jest.Mock).mockResolvedValue({
       data: { data: mockProjectPhases },
@@ -318,43 +321,43 @@ describe('ProjectPhaseManager - Consolidated Add Phase UI', () => {
     it('should duplicate phase correctly', async () => {
       renderComponent();
       await waitForComponentToLoad();
-      
+
       const addPhaseButton = screen.getByRole('button', { name: /add phase/i });
       await user.click(addPhaseButton);
-      
+
       // Select duplicate mode
       const duplicateCard = screen.getByText('Duplicate Existing Phase').closest('.selection-card');
       expect(duplicateCard).not.toBeNull();
       await user.click(duplicateCard!);
-      
+
       // Select source phase
       const sourcePhaseSelect = screen.getByLabelText('Select Phase to Duplicate *');
       await user.selectOptions(sourcePhaseSelect, '1');
-      
+
       // Update name
       const nameField = screen.getByDisplayValue('Planning (Copy)');
       await user.clear(nameField);
       await user.type(nameField, 'Planning - Sprint 2');
-      
+
       // Select custom dates placement
       const customDatesCard = screen.getByText('Custom dates').closest('.selection-card-inline');
       expect(customDatesCard).not.toBeNull();
       await user.click(customDatesCard!);
-      
+
       // Fill dates (use name attribute since label might not be properly associated)
       const startDate = screen.getByRole('dialog').querySelector('input[name="start_date"]') as HTMLInputElement;
       const endDate = screen.getByRole('dialog').querySelector('input[name="end_date"]') as HTMLInputElement;
       await user.type(startDate, '2024-03-01');
       await user.type(endDate, '2024-03-31');
-      
+
       // Submit
       (api.projectPhases.createCustomPhase as jest.Mock).mockResolvedValue({ data: { success: true } });
-      
+
       // Submit button is in the modal footer
       const modalFooter = screen.getByRole('dialog').querySelector('.modal-footer') as HTMLElement;
       const submitButton = within(modalFooter).getByRole('button', { name: /duplicate phase/i });
       await user.click(submitButton);
-      
+
       await waitFor(() => {
         expect(api.projectPhases.createCustomPhase).toHaveBeenCalledWith({
           project_id: 'proj1',
@@ -365,27 +368,35 @@ describe('ProjectPhaseManager - Consolidated Add Phase UI', () => {
           order_index: 99
         });
       });
-    });
+    }, 10000); // Increase timeout for CI environment
 
     it('should create custom phase correctly', async () => {
       renderComponent();
       await waitForComponentToLoad();
-      
+
       const addPhaseButton = screen.getByRole('button', { name: /add phase/i });
       await user.click(addPhaseButton);
-      
+
       // Select custom mode
       const customCard = screen.getByText('Create Custom Phase').closest('.selection-card');
       expect(customCard).not.toBeNull();
       await user.click(customCard!);
-      
-      // Fill form
+
+      // Fill phase name
       const phaseName = screen.getByPlaceholderText('e.g., Additional Testing Round');
+      await user.click(phaseName); // Ensure field is focused
+      await user.clear(phaseName); // Clear any existing value
       await user.type(phaseName, 'Custom Sprint');
-      
+
+      // Tab out of phase name to ensure it's committed before moving to dates
+      await user.tab();
+
+      // Fill dates
       const startDate = screen.getByLabelText(/start date/i);
       const endDate = screen.getByLabelText(/end date/i);
+      await user.clear(startDate);
       await user.type(startDate, '2024-04-01');
+      await user.clear(endDate);
       await user.type(endDate, '2024-04-30');
       
       // Submit
