@@ -205,9 +205,13 @@ describe('LocationModal', () => {
     });
 
     it('shows saving state during submission', async () => {
-      (api.locations.create as jest.Mock).mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 100))
-      );
+      // Create a promise that we control manually
+      let resolveCreate: () => void;
+      const createPromise = new Promise<void>(resolve => {
+        resolveCreate = resolve;
+      });
+
+      (api.locations.create as jest.Mock).mockReturnValue(createPromise);
 
       renderComponent();
 
@@ -217,9 +221,13 @@ describe('LocationModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Save Location/i }));
 
+      // Wait for loading state to appear (FormActions shows "Creating..." for create mode)
       await waitFor(() => {
-        expect(screen.getByText('Saving...')).toBeInTheDocument();
+        expect(screen.getByText('Creating...')).toBeInTheDocument();
       });
+
+      // Clean up: resolve the promise
+      resolveCreate!();
     });
 
     it('disables submit button during save', async () => {
