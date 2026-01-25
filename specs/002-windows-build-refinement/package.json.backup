@@ -33,7 +33,7 @@
     "e2e:stop:cleanup": "./scripts/stop-e2e-server.sh --cleanup-db",
     "e2e:reset": "./scripts/stop-e2e-server.sh --cleanup-db && ./scripts/start-e2e-server.sh",
     "build": "npm run build:server && npm run build:client && npm run build:electron",
-    "build:server": "npx tsc -p tsconfig.production.json",
+    "build:server": "npx tsc -p tsconfig.production.json --noEmit false",
     "build:server:check": "npx tsc -p tsconfig.production.json --noEmit",
     "build:client": "vite build --config client-vite.config.ts",
     "build:electron": "electron-builder",
@@ -58,10 +58,6 @@
     "test:e2e:enterprise": "playwright test tests/e2e/enterprise-expansion.spec.ts",
     "test:e2e:agile": "playwright test tests/e2e/agile-product-development.spec.ts",
     "test:e2e:consulting": "playwright test tests/e2e/consulting-services.spec.ts",
-    "test:installer": "playwright test --config=playwright.installer.config.ts",
-    "test:installer:debug": "playwright test --config=playwright.installer.config.ts --debug",
-    "test:installer:headed": "playwright test --config=playwright.installer.config.ts --headed",
-    "test:installer:cleanup": "tsx scripts/cleanup-installer-test.ts",
     "test:scenarios": "jest --config=jest.scenario.config.js",
     "test:scenarios:unit": "jest --config=jest.scenario.config.js --testPathPattern=__tests__",
     "test:scenarios:e2e": "playwright test --config=playwright.scenario.config.ts",
@@ -146,33 +142,24 @@
     },
     "files": [
       "dist/**/*",
-      "dist-client/**/*",
-      "shared/**/*.js",
       "src/electron/*.cjs",
       "src/electron/*.html",
       "src/electron/*.js",
       "package.json",
       "node_modules/**/*",
-      "!node_modules/github-issue-prioritizer/**",
       "!**/*.ts",
       "!**/tsconfig.json",
       "!**/*.map",
       "!**/*.spec.js",
       "!**/*.test.js",
       "!node_modules/**/test/**",
-      "!node_modules/**/*.md",
-      "!node_modules/**/LICENSE",
-      "!node_modules/**/*.d.ts"
+      "!node_modules/**/*.md"
     ],
     "asar": true,
-    "asarUnpack": [
-      "node_modules/better-sqlite3/**",
-      "node_modules/electron-store/**"
-    ],
     "compression": "store",
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -184,8 +171,7 @@
       "perMachine": false
     },
     "extraMetadata": {
-      "main": "src/electron/main-with-setup.cjs",
-      "type": "commonjs"
+      "main": "src/electron/main-with-setup.cjs"
     }
   },
   "devDependencies": {
@@ -226,7 +212,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "form-data": "^4.0.3",
-    "_comment_github-issue-prioritizer": "Temporarily disabled for build: file:../PriorityCalculator",
+    "github-issue-prioritizer": "file:../PriorityCalculator",
     "globals": "^16.3.0",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.0.4",

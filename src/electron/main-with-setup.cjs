@@ -3,7 +3,7 @@ const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
 const { createSetupWindow, isFirstRun, getConfig } = require('./setup-wizard-main.cjs');
-const { getGitCredential, hasGitCredential } = require('./credential-store.ts');
+const { getGitCredential, hasGitCredential } = require('./credential-store.cjs');
 
 let mainWindow;
 let serverProcess;
@@ -30,8 +30,10 @@ async function checkAndRunSetup() {
 
 // Create the main window
 async function createMainWindow() {
+  console.log('createMainWindow called');
   const config = getConfig();
-  
+
+  console.log('Creating BrowserWindow...');
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -45,19 +47,32 @@ async function createMainWindow() {
     icon: path.join(__dirname, '../../assets/icon.png'),
     show: false
   });
+  console.log('BrowserWindow created');
 
   // Load the app
   const serverPort = config.server.port || 3456;
+  console.log('Loading URL: http://localhost:' + serverPort);
   mainWindow.loadURL(`http://localhost:${serverPort}`);
 
-  // Show dev tools if enabled in config
-  if (config.advanced.enableDevTools) {
-    mainWindow.webContents.openDevTools();
-  }
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorCode, errorDescription);
+  });
 
-  // Show window when ready
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Page loaded successfully');
+  });
+
+  // Show dev tools for debugging
+  console.log('Opening dev tools for debugging');
+  mainWindow.webContents.openDevTools();
+
+  // Show window immediately for debugging
+  console.log('Showing window immediately for debugging');
+  mainWindow.show();
+
+  // Also listen to ready-to-show
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+    console.log('Window ready-to-show event fired');
   });
 
   // Handle window closed
@@ -72,8 +87,40 @@ async function createMainWindow() {
 // Start the Express server with configuration
 function startServer() {
   const config = getConfig();
+  const fs = require('fs');
+  const debugLog = path.join(app.getPath('userData'), 'startup-debug.log');
+
+  function log(msg) {
+    const timestamp = new Date().toISOString();
+    const logMsg = `[${timestamp}] ${msg}\n`;
+    fs.appendFileSync(debugLog, logMsg);
+    // Don't call console.log here - causes infinite recursion
+  }
+
+  log('=== SERVER STARTUP DEBUG ===');
+  log('__dirname: ' + __dirname);
+  log('app.getPath(userData): ' + app.getPath('userData'));
+  log('Config: ' + JSON.stringify(config, null, 2));
+
+  // Server code stays in ASAR for proper module resolution
   const serverPath = path.join(__dirname, '../../dist/server/index.js');
-  
+
+  log('Calculated server path: ' + serverPath);
+  log('Server file exists: ' + require('fs').existsSync(serverPath));
+
+  if (!require('fs').existsSync(serverPath)) {
+    log('ERROR: Server file does not exist!');
+    log('Checking alternative paths...');
+    const alt1 = path.join(__dirname, '../../dist/server/index.js');
+    const alt2 = path.join(process.resourcesPath, 'app.asar.unpacked/dist/server/index.js');
+    log('Alt 1: ' + alt1 + ' exists: ' + require('fs').existsSync(alt1));
+    log('Alt 2: ' + alt2 + ' exists: ' + require('fs').existsSync(alt2));
+
+    dialog.showErrorBox('Server Error', 'Server file not found!\n\nDebug log: ' + debugLog);
+    app.quit();
+    return;
+  }
+
   // Set environment variables based on configuration
   const env = {
     ...process.env,
@@ -85,30 +132,143 @@ function startServer() {
     DB_BACKUP_ENABLED: config.database.autoBackup,
     DB_BACKUP_INTERVAL: config.database.backupInterval,
     DB_BACKUP_RETENTION: config.database.backupRetention,
-    LOG_LEVEL: config.advanced.logLevel,
+    LOG_LEVEL: config.advanced.logLevel || 'debug',
+    LOG_DIRECTORY: app.getPath('userData'),  // Write logs to userData directory
+    ENABLE_TEST_LOGS: 'true',  // Force console logging even in production
     MAX_DB_CONNECTIONS: config.advanced.maxConnections,
     ENABLE_CACHE: config.advanced.enableCache,
     COMPRESS_RESPONSES: config.advanced.compressResponses,
     REQUIRE_AUTH: config.server.requireAuth
   };
 
-  serverProcess = spawn('node', [serverPath], {
-    env: env,
-    stdio: 'inherit'
-  });
+  log('Starting server with node: ' + process.execPath);
+  log('Debug log location: ' + debugLog);
 
-  serverProcess.on('error', (err) => {
-    console.error('Failed to start server:', err);
-    dialog.showErrorBox('Server Error', 'Failed to start the application server.\n\n' + err.message);
-    app.quit();
-  });
+  log('Starting server in same process instead of spawning...');
 
-  serverProcess.on('exit', (code) => {
-    if (code !== 0) {
-      dialog.showErrorBox('Server Error', `Server exited with code ${code}`);
-      app.quit();
+  // Set environment variables for the server
+  log('Setting environment variables...');
+  Object.keys(env).forEach(key => {
+    process.env[key] = env[key];
+  });
+  log('Environment variables set');
+
+  // Intercept process.exit to prevent server from killing Electron
+  log('Setting up process.exit intercept...');
+  const originalExit = process.exit;
+  const originalConsoleError = console.error;
+  const originalConsoleLog = console.log;
+  let exitIntercepted = false;
+  let lastErrors = [];
+
+  // Capture console.error calls to log them
+  console.error = function(...args) {
+    const errorMsg = args.map(a => String(a)).join(' ');
+    log('[CONSOLE.ERROR] ' + errorMsg);
+    lastErrors.push(errorMsg);
+    if (lastErrors.length > 20) lastErrors.shift();
+    originalConsoleError.apply(console, args);
+  };
+
+  // Capture console.log calls too (Winston logger uses console.log for all levels!)
+  let captureAllLogs = true;  // Capture everything for first 5 seconds
+  setTimeout(() => { captureAllLogs = false; }, 5000);
+
+  console.log = function(...args) {
+    const logMsg = args.map(a => String(a)).join(' ');
+
+    // During startup, capture everything
+    if (captureAllLogs) {
+      log('[CONSOLE.LOG] ' + logMsg);
+      // Store error-related logs for the dialog
+      if (logMsg.includes('❌') || logMsg.includes('ERROR') || logMsg.includes('Failed') || logMsg.includes('error')) {
+        lastErrors.push(logMsg);
+        if (lastErrors.length > 20) lastErrors.shift();
+      }
     }
+    originalConsoleLog.apply(console, args);
+  };
+
+  process.exit = function(code) {
+    if (!exitIntercepted) {
+      exitIntercepted = true;
+
+      // Capture stack trace to see where exit was called from
+      const stack = new Error().stack;
+      log('Server attempted to call process.exit(' + code + ') - intercepted!');
+      log('Call stack:');
+      log(stack);
+      log('');
+      log('Recent errors before exit:');
+      lastErrors.forEach(err => log('  ' + err));
+      log('Check debug log for details: ' + debugLog);
+
+      // Restore original console.error
+      console.error = originalConsoleError;
+      console.log = originalConsoleLog;
+
+      // Show error dialog with captured errors
+      const errorMsg = lastErrors.length > 0
+        ? 'Server startup failed with errors:\n\n' + lastErrors.join('\n\n')
+        : 'Server startup failed with exit code: ' + code + '\n\nNo console errors captured.\n\nCheck debug log:\n' + debugLog;
+
+      dialog.showErrorBox('Server Startup Failed', errorMsg);
+
+      // Restore original process.exit but DON'T call it - keep app running for debugging
+      process.exit = originalExit;
+      // Don't quit - let the app stay open so we can inspect
+      // app.quit();
+      return;
+    }
+    originalExit.call(process, code);
+  };
+  // Capture unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    log('[UNHANDLED REJECTION] ' + String(reason));
+    if (reason && typeof reason === 'object' && reason.stack) {
+      log('[UNHANDLED REJECTION STACK] ' + reason.stack);
+    }
+    lastErrors.push('Unhandled Promise Rejection: ' + String(reason));
   });
+
+  // Capture uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    log('[UNCAUGHT EXCEPTION] ' + error.message);
+    log('[UNCAUGHT EXCEPTION STACK] ' + error.stack);
+    lastErrors.push('Uncaught Exception: ' + error.message);
+  });
+
+  log('process.exit intercept configured');
+
+  try {
+    // Import and start the server in the same process
+    log('About to require server module from: ' + serverPath);
+    log('Calling require() now...');
+    require(serverPath);
+    log('require() returned successfully');
+    log('Server module loaded successfully');
+
+    // Restore original process.exit after server starts
+    setTimeout(() => {
+      if (!exitIntercepted) {
+        process.exit = originalExit;
+        log('Server started successfully, process.exit restored');
+      }
+    }, 3000);
+  } catch (error) {
+    log('Error loading server module: ' + error.message);
+    log('Error stack: ' + error.stack);
+    process.exit = originalExit;
+    dialog.showErrorBox('Server Error', 'Failed to load server module.\n\n' + error.message + '\n\nDebug log: ' + debugLog);
+    app.quit();
+    return;
+  }
+
+  // Note: We're not using spawn anymore, so serverProcess is not needed
+  serverProcess = null;
+  log('Server module require completed');
+
+  // Server is now running in the same process, no need for process event handlers
 }
 
 // Create application menu
@@ -300,9 +460,18 @@ app.whenReady().then(async () => {
     // Start server with configuration
     startServer();
 
+    console.log('Server startup completed, waiting 2 seconds before creating main window...');
+
     // Wait a moment for server to start
     setTimeout(() => {
-      createMainWindow();
+      console.log('Creating main window now...');
+      try {
+        createMainWindow();
+        console.log('Main window creation initiated');
+      } catch (error) {
+        console.error('Error creating main window:', error);
+        dialog.showErrorBox('Window Error', 'Failed to create main window:\n\n' + error.message);
+      }
     }, 2000);
   }
 });
@@ -320,9 +489,8 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-  if (serverProcess) {
-    serverProcess.kill();
-  }
+  // Server runs in the same process now, so no cleanup needed
+  console.log('Application quitting...');
 });
 
 // IPC handlers

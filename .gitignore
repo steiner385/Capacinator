@@ -62,7 +62,8 @@ uploads/
 .parcel-cache/
 
 # Production builds
-build/
+# Note: build/ directory contains NSIS installer scripts - do NOT ignore
+# client/build/ is ignored above (line 13)
 
 # Electron builds
 dist-electron/

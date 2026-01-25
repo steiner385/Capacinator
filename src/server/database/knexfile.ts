@@ -42,10 +42,14 @@ if (!process.env.DATABASE_URL && !fs.existsSync(dataPath)) {
     useNullAsDefault: true,
     acquireConnectionTimeout: 30000, // Increased to 30 seconds for bulk operations
     migrations: {
-      directory: path.resolve(process.cwd(), 'src/server/database/migrations')
+      directory: process.env.NODE_ENV === 'development'
+        ? path.resolve(process.cwd(), 'src/server/database/migrations')
+        : path.join(__dirname, 'migrations')
     },
     seeds: {
-      directory: path.resolve(process.cwd(), 'src/server/database/seeds')
+      directory: process.env.NODE_ENV === 'development'
+        ? path.resolve(process.cwd(), 'src/server/database/seeds')
+        : path.join(__dirname, 'seeds')
     },
     // SQLite configuration for stability
     pool: {
