@@ -3,10 +3,15 @@ import knexConfig from './knexfile.js';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { createRequire } from 'module';
 import { initializeAuditService, getAuditService } from '../services/audit/index.js';
 import { createAuditedDatabase } from './AuditedDatabase.js';
 import { logger } from '../services/logging/config.js';
 import { ScenarioExporter } from '../services/git/ScenarioExporter.js';
+
+// Create a require function that works in both CJS and ESM environments
+// Uses createRequire with process.cwd() which is always available
+const safeRequire = createRequire(path.join(process.cwd(), 'package.json'));
 
 // Store database instance
 let _db: Knex | null = null;
@@ -230,8 +235,7 @@ function getDataPath(): string {
   }
   // In production, try to get electron path, fallback to current directory
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('electron').app.getPath('userData');
+    return safeRequire('electron').app.getPath('userData');
   } catch {
     return path.join(process.cwd(), 'data');
   }

@@ -1,7 +1,12 @@
 import { Knex } from 'knex';
 import path from 'path';
 import fs from 'fs';
+import { createRequire } from 'module';
 import e2eConfig from './knexfile.e2e.js';
+
+// Create a require function that works in both CJS and ESM environments
+// Uses createRequire with process.cwd() which is always available
+const safeRequire = createRequire(path.join(process.cwd(), 'package.json'));
 
 // Determine which config to use based on environment
 const getConfig = (): Knex.Config => {
@@ -17,11 +22,10 @@ const getConfig = (): Knex.Config => {
     return path.join(process.cwd(), 'data');
   }
   
-  // In production, try to get electron path, fallback to current directory
+  // In production (Electron), try to get electron userData path, fallback to cwd
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('electron');
-    return app.getPath('userData');
+    const electron = safeRequire('electron');
+    return electron.app.getPath('userData');
   } catch {
     return path.join(process.cwd(), 'data');
   }
