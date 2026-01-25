@@ -65,8 +65,13 @@ export class ProjectPhaseCascadeService {
    */
   private addDaysSafe(dateString: string, days: number): string {
     const date = this.parseDateSafe(dateString);
-    date.setDate(date.getDate() + days);
-    return this.formatDateSafe(date);
+    // Use UTC components to avoid timezone-dependent bugs
+    // Create a new UTC date with the day incremented
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    const newDate = new Date(Date.UTC(year, month, day + days));
+    return this.formatDateSafe(newDate);
   }
 
   /**

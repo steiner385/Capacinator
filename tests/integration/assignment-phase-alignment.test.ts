@@ -363,10 +363,11 @@ describe('Assignment Phase Alignment Integration Tests', () => {
       
       if (cascadeResult.affected_phases.length > 0) {
         const devCascade = cascadeResult.affected_phases.find(p => p.phase_name === 'Development');
-        // The cascade preserves duration, so Development maintains its 61-day duration
+        // The cascade preserves duration (60 days: March 1 00:00 to April 30 00:00)
         // Since Analysis ends on Feb 15, Development starts on Feb 15 (FS with 0 lag)
+        // Feb 15 + 60 days = April 15 (60 complete 24-hour periods)
         expect(devCascade?.new_start_date).toBe('2024-02-15');
-        expect(devCascade?.new_end_date).toBe('2024-04-14');
+        expect(devCascade?.new_end_date).toBe('2024-04-15');
       }
 
       // Recalculate assignments for all affected phases
