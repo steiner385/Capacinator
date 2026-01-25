@@ -3,12 +3,14 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import PersonDetails from '../../../client/src/pages/PersonDetails';
-import '@testing-library/jest-dom';
+
+// Calculate expected date range dynamically based on current date
+const currentYear = new Date().getFullYear();
+const expectedStartDate = `${currentYear - 1}-01-01`;
+const expectedEndDate = `${currentYear + 1}-12-31`;
 
 // Mock the chart library
 jest.mock('recharts', () => ({
@@ -159,7 +161,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -169,7 +171,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/different-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/different-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -185,7 +187,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // The component should still render without crashing
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -202,7 +204,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // Should still make the API call
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -228,7 +230,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -249,7 +251,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
     });
@@ -262,7 +264,7 @@ describe('PersonDetails Utilization Timeline', () => {
       // Verify that the utilization timeline query is made
       await waitFor(() => {
         expect(fetch).toHaveBeenCalledWith(
-          '/api/people/test-person-id/utilization-timeline?startDate=2024-01-01&endDate=2026-12-31'
+          `/api/people/test-person-id/utilization-timeline?startDate=${expectedStartDate}&endDate=${expectedEndDate}`
         );
       });
 
@@ -284,7 +286,7 @@ describe('PersonDetails Utilization Timeline', () => {
 
       // Verify query includes correct date range parameters
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('startDate=2024-01-01&endDate=2026-12-31')
+        expect.stringContaining(`startDate=${expectedStartDate}&endDate=${expectedEndDate}`)
       );
     });
   });
