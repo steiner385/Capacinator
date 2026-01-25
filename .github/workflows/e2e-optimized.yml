@@ -118,6 +118,9 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: npx playwright install chromium
 
+      - name: Rebuild native modules for Node.js
+        run: npm rebuild better-sqlite3
+
       - name: Start application
         run: |
           # Build server and client only - skip electron-builder to avoid native module ABI conflicts
@@ -176,6 +179,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install chromium
+
+      - name: Rebuild native modules for Node.js
+        run: npm rebuild better-sqlite3
 
       - name: Start application
         run: |
