@@ -3,7 +3,7 @@
  * Cross-platform script to start development environment
  * Replaces: start-dev.sh
  */
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import {
@@ -39,7 +39,6 @@ async function main() {
   console.log('Running cleanup...');
   const cleanupScript = path.join(process.cwd(), 'scripts', 'cleanup-processes.ts');
   if (fs.existsSync(cleanupScript)) {
-    const { execSync } = require('child_process');
     try {
       execSync(`npx tsx "${cleanupScript}"`, { stdio: 'inherit' });
       console.log('');
