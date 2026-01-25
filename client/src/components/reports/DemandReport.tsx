@@ -1,16 +1,29 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { ExternalLink, Users, AlertTriangle, GitBranch } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ReportSummaryCard, ReportEmptyState, ReportTable } from './index';
-import { getChartColor, CHART_AXIS_CONFIG } from './chartConfig';
+import { getChartColor } from './chartConfig';
 import { useScenario } from '../../contexts/ScenarioContext';
 import type { Column, ActionButton } from './ReportTable';
 
+interface DemandData {
+  summary?: { total_hours: number; total_projects: number; roles_with_demand: number };
+  byProject?: Array<{ id: string; name: string; demand: number }>;
+  by_role?: Array<{ role_name: string; total_hours: number }>;
+  timeline?: unknown;
+  trendOverTime?: Array<{ month: string; total_hours: number }>;
+  peakMonth?: string;
+}
+
+interface ReportFilters {
+  startDate?: string;
+  endDate?: string;
+}
+
 interface DemandReportProps {
-  data: any;
-  filters: any;
-  CustomTooltip: React.FC<any>;
+  data: DemandData | null;
+  filters: ReportFilters;
+  CustomTooltip: React.FC<{ active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }>;
 }
 
 export const DemandReport: React.FC<DemandReportProps> = ({ 
@@ -34,7 +47,7 @@ export const DemandReport: React.FC<DemandReportProps> = ({
     { header: 'Demand', accessor: 'demand', render: (value) => `${value} hrs` }
   ];
 
-  const projectDemandActions = (row: any): ActionButton[] => [{
+  const projectDemandActions = (row: { id: string; name: string; demand: number }): ActionButton[] => [{
     to: `/projects/${row.id}?from=demand-report&demand=${row.demand}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`,
     icon: ExternalLink,
     text: 'View Details',
@@ -47,7 +60,7 @@ export const DemandReport: React.FC<DemandReportProps> = ({
     { header: 'Demand', accessor: 'total_hours', render: (value) => `${value} hrs` }
   ];
 
-  const roleDemandActions = (row: any): ActionButton[] => [{
+  const roleDemandActions = (row: { role_name: string; total_hours: number }): ActionButton[] => [{
     to: `/people?role=${encodeURIComponent(row.role_name)}&from=demand-report&demand=${row.total_hours}&startDate=${filters.startDate || ''}&endDate=${filters.endDate || ''}`,
     icon: Users,
     text: 'Find People',

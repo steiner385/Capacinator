@@ -783,7 +783,20 @@ export class ScenariosController extends BaseController {
         .where('scenario_id', parentScenarioId);
 
       for (const assignment of parentAssignments) {
-        const { id, scenario_id, created_at, updated_at, ...assignmentData } = assignment;
+        // Omit id, scenario_id, created_at, updated_at from the source assignment
+        const assignmentData = {
+          project_id: assignment.project_id,
+          person_id: assignment.person_id,
+          role_id: assignment.role_id,
+          phase_id: assignment.phase_id,
+          allocation_percentage: assignment.allocation_percentage,
+          assignment_date_mode: assignment.assignment_date_mode,
+          start_date: assignment.start_date,
+          end_date: assignment.end_date,
+          notes: assignment.notes,
+          change_type: assignment.change_type,
+          base_assignment_id: assignment.base_assignment_id
+        };
         await this.db('scenario_project_assignments').insert({
           ...assignmentData,
           id: randomUUID(),
@@ -797,7 +810,16 @@ export class ScenariosController extends BaseController {
         .where('scenario_id', parentScenarioId);
 
       for (const phase of parentPhases) {
-        const { id, scenario_id, created_at, updated_at, ...phaseData } = phase;
+        // Omit id, scenario_id, created_at, updated_at from the source phase
+        const phaseData = {
+          project_id: phase.project_id,
+          phase_id: phase.phase_id,
+          start_date: phase.start_date,
+          end_date: phase.end_date,
+          notes: phase.notes,
+          change_type: phase.change_type,
+          base_phase_timeline_id: phase.base_phase_timeline_id
+        };
         await this.db('scenario_project_phases').insert({
           ...phaseData,
           id: randomUUID(),
@@ -903,7 +925,7 @@ export class ScenariosController extends BaseController {
     return conflicts;
   }
 
-  private async performMerge(sourceScenarioId: string, targetScenarioId: string, conflictResolution: string = 'use_source') {
+  private async performMerge(sourceScenarioId: string, targetScenarioId: string, _conflictResolution: string = 'use_source') {
     // Start a transaction to ensure atomicity
     await this.db.transaction(async (trx) => {
       // Get all conflicts that need resolution

@@ -4,10 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Edit2, Save, X, Calendar, Briefcase, Users, Clock,
   Shield, Mail, Phone, MapPin, Award, AlertCircle, History,
-  Plus, Trash2, ChevronDown, ChevronUp, UserPlus, UserMinus,
-  Search, TrendingUp, TrendingDown, Target, Zap
+  Plus, ChevronDown, ChevronUp, UserPlus, UserMinus,
+  Search, TrendingUp, Target, Zap
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+// recharts imports removed - not directly used in this component
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
@@ -102,8 +102,8 @@ export default function PersonDetails() {
   const [editingRole, setEditingRole] = useState<any>(null);
 
   // Time off editing state
-  const [editingTimeOff, setEditingTimeOff] = useState<string | null>(null);
-  const [editingTimeOffData, setEditingTimeOffData] = useState<any>(null);
+  const [, setEditingTimeOff] = useState<string | null>(null);
+  const [, setEditingTimeOffData] = useState<any>(null);
   
   // New time off creation state
   const [isCreatingTimeOff, setIsCreatingTimeOff] = useState<boolean>(false);
@@ -117,7 +117,6 @@ export default function PersonDetails() {
   // TODO: Replace with proper auth context when authentication is implemented
   // For now, check localStorage or default to allowing edits
   const canEdit = localStorage.getItem('userRole') !== 'viewer';
-  const canDelete = localStorage.getItem('userRole') === 'admin';
 
   // Define table columns for each section
   const timeOffColumns: DetailTableColumn<any>[] = [
@@ -277,8 +276,8 @@ export default function PersonDetails() {
   const standardStartDate = startDate.toISOString().split('T')[0];
   const standardEndDate = endDate.toISOString().split('T')[0];
 
-  // Utilization timeline query
-  const { data: utilizationTimeline } = useQuery({
+  // Utilization timeline query - data used internally by PersonAllocationChart
+  useQuery({
     queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate),
     queryFn: async () => {
       const response = await fetch(`/api/people/${id}/utilization-timeline?startDate=${standardStartDate}&endDate=${standardEndDate}`);
@@ -324,26 +323,6 @@ export default function PersonDetails() {
       queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
-    }
-  });
-
-  // Availability override mutations
-  const updateOverrideMutation = useMutation({
-    mutationFn: async (override: any) => {
-      const response = await fetch(`/api/availability/${override.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(override)
-      });
-      if (!response.ok) throw new Error('Failed to update availability override');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.people.detail(id!) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.people.timeline(id!) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate) });
-      setEditingTimeOff(null);
-      setEditingTimeOffData(null);
     }
   });
 
@@ -511,21 +490,6 @@ export default function PersonDetails() {
       start_date: new Date(override.start_date).toISOString().split('T')[0],
       end_date: new Date(override.end_date).toISOString().split('T')[0]
     });
-  };
-
-  const handleSaveTimeOff = () => {
-    if (editingTimeOffData) {
-      updateOverrideMutation.mutate({
-        ...editingTimeOffData,
-        start_date: new Date(editingTimeOffData.start_date).getTime(),
-        end_date: new Date(editingTimeOffData.end_date).getTime()
-      });
-    }
-  };
-
-  const handleCancelTimeOffEdit = () => {
-    setEditingTimeOff(null);
-    setEditingTimeOffData(null);
   };
 
   const handleDeleteTimeOff = (overrideId: string) => {
@@ -1189,14 +1153,4 @@ export default function PersonDetails() {
       />
     </div>
   );
-}
-
-function getOverrideTypeColor(type: string): string {
-  switch (type.toLowerCase()) {
-    case 'vacation': return 'blue';
-    case 'sick': return 'orange';
-    case 'training': return 'purple';
-    case 'conference': return 'green';
-    default: return 'gray';
-  }
 }

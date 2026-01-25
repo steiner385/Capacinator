@@ -128,7 +128,6 @@ export function SmartAssignmentModal({
   const isDarkMode = document.documentElement.classList.contains('dark');
   const [activeTab, setActiveTab] = useState(triggerContext === 'manual_add' ? 'manual' : 'recommended');
   const [selectedRecommendation, setSelectedRecommendation] = useState<ProjectRecommendation | null>(null);
-  const [showImpactPreview, setShowImpactPreview] = useState(false);
   
   // Form state for manual assignment
   const [formData, setFormData] = useState({
@@ -183,7 +182,7 @@ export function SmartAssignmentModal({
             projectId: project.id,
             allocations: response.data.data?.allocations || []
           };
-        } catch (error) {
+        } catch {
           // If project has no allocations, return empty array
           return {
             projectId: project.id,
@@ -206,13 +205,6 @@ export function SmartAssignmentModal({
     }
   });
 
-  const { data: phases } = useQuery({
-    queryKey: queryKeys.phases.list(),
-    queryFn: async () => {
-      const response = await api.phases.list();
-      return response.data;
-    }
-  });
 
   // Fetch project phases with dates
   const { data: projectPhases, refetch: refetchPhases } = useQuery({
@@ -269,11 +261,6 @@ export function SmartAssignmentModal({
     }
   }, [utilizationData.remainingCapacity, formData.allocation_percentage]);
 
-  // Get selected project details
-  const selectedProject = useMemo(() => {
-    const projectId = selectedRecommendation?.project.id || formData.project_id;
-    return (projects?.data as Project[] | undefined)?.find((p) => p.id === projectId);
-  }, [projects, formData.project_id, selectedRecommendation]);
 
   // Get roles that have demand in the selected project
   const projectRoles = useMemo(() => {
@@ -346,7 +333,7 @@ export function SmartAssignmentModal({
       console.log('Creating assignment with data:', data);
       return api.assignments.create(data);
     },
-    onSuccess: (response) => {
+    onSuccess: (_response) => {
       // Invalidate all queries that might be affected by the new assignment
       const projectId = selectedRecommendation?.project.id || formData.project_id;
 
@@ -579,7 +566,7 @@ export function SmartAssignmentModal({
             <TabsContent value="recommended" className="recommendations-tab">
               {projectRecommendations.length > 0 ? (
                 <div className="recommendations-list">
-                  {projectRecommendations.map((rec, index) => (
+                  {projectRecommendations.map((rec) => (
                     <div
                       key={rec.project.id}
                       className={cn(
@@ -654,7 +641,7 @@ export function SmartAssignmentModal({
                   
                   {utilizationData.activeAssignments && utilizationData.activeAssignments.length > 0 ? (
                     <div className="assignments-list">
-                      {utilizationData.activeAssignments.map((assignment: ActiveAssignment, index: number) => (
+                      {utilizationData.activeAssignments.map((assignment: ActiveAssignment, _index: number) => (
                         <div key={assignment.id || `assignment-${index}`} className="assignment-item" style={{
                           padding: '1rem',
                           marginBottom: '0.5rem',

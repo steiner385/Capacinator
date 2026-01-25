@@ -47,7 +47,7 @@ export async function up(knex: Knex): Promise<void> {
   console.log('✅ Fixed missing IDs');
 }
 
-export async function down(knex: Knex): Promise<void> {
+export async function down(_knex: Knex): Promise<void> {
   // This migration cannot be reversed as we can't remove generated IDs
   console.log('⚠️  This migration cannot be reversed');
 }

@@ -87,7 +87,7 @@ export const ScenarioComparison: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Use bookmarkable tabs for scenario comparison
-  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+  const { setActiveTab, isActiveTab } = useBookmarkableTabs({
     tabs: comparisonTabs,
     defaultTab: 'summary'
   });

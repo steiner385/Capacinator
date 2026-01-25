@@ -1,22 +1,6 @@
 import type { Request, Response } from 'express';
-import { BaseController, RequestWithContext } from './BaseController.js';
+import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
-
-// ============================================================================
-// Availability Types
-// ============================================================================
-
-/**
- * Person row from database
- */
-interface AvailabilityPersonRow {
-  id: string;
-  name: string;
-  email?: string;
-  primary_role_id?: string;
-  default_availability_percentage: number;
-  default_hours_per_day: number;
-}
 
 /**
  * Availability override row from database
@@ -426,7 +410,7 @@ export class AvailabilityController extends BaseController {
 
     const result = await this.executeQuery(async () => {
       // Get people based on filters
-      let peopleQuery = this.db('people');
+      const peopleQuery = this.db('people');
       
       if (team_id) {
         // TODO: Add team filtering when team table exists

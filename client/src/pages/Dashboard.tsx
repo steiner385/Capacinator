@@ -56,7 +56,7 @@ export function Dashboard() {
     enabled: !!currentScenario
   });
 
-  const { alerts, isLoading: alertsLoading, hasAlerts } = useCriticalAlerts();
+  const { alerts, hasAlerts } = useCriticalAlerts();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message="Failed to load dashboard data" />;
@@ -242,7 +242,7 @@ export function Dashboard() {
             role="list"
             aria-label="Capacity status breakdown by role type"
           >
-            {capacityData.map((item, index) => (
+            {capacityData.map((item) => (
               <div 
                 key={item.name} 
                 className="capacity-item capacity-item-clickable"

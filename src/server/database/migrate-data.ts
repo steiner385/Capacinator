@@ -1,19 +1,4 @@
 import { db } from './index.js';
-import type { Knex } from 'knex';
-
-interface ProjectType {
-  id: string;
-  name: string;
-  description: string;
-  color_code: string;
-  created_at: string;
-  updated_at: string;
-  // New hierarchy fields
-  parent_id?: string;
-  is_parent?: boolean;
-  level?: number;
-  sort_order?: number;
-}
 
 async function migrateProjectTypeData() {
   

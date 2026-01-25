@@ -15,7 +15,7 @@ interface PhaseTimelineProps {
   projectName: string;
 }
 
-export function PhaseTimeline({ projectId }: PhaseTimelineProps) {
+export function PhaseTimeline({ projectId, projectName: _projectName }: PhaseTimelineProps) {
   // Modal states
   const [showAddPhaseModal, setShowAddPhaseModal] = useState(false);
   const [showAddDependencyModal, setShowAddDependencyModal] = useState(false);
@@ -45,8 +45,7 @@ export function PhaseTimeline({ projectId }: PhaseTimelineProps) {
     deletePhaseMutation,
     createDependencyMutation,
     deleteDependencyMutation,
-    applyBulkCorrectionsMutation,
-    queryClient
+    applyBulkCorrectionsMutation
   } = usePhaseTimelineData({
     projectId,
     onPhaseUpdateError: (errors) => {

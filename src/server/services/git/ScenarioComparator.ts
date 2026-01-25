@@ -148,7 +148,7 @@ export class ScenarioComparator {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(content);
-    } catch (error) {
+    } catch {
       return { data: [] };
     }
   }

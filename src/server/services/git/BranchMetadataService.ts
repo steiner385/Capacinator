@@ -37,7 +37,7 @@ export class BranchMetadataService {
     try {
       const content = await fs.readFile(this.branchesFilePath, 'utf-8');
       return JSON.parse(content);
-    } catch (error) {
+    } catch {
       // File doesn't exist yet, return empty structure
       return {
         version: '1.0.0',

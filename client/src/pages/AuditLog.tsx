@@ -119,15 +119,6 @@ export function AuditLog() {
     return date.toLocaleString();
   };
 
-  const getActionColor = (action: string): string => {
-    switch (action) {
-      case 'CREATE': return 'green';
-      case 'UPDATE': return 'blue';
-      case 'DELETE': return 'red';
-      default: return 'gray';
-    }
-  };
-
   const columns = [
     {
       key: 'changed_at',
@@ -140,7 +131,7 @@ export function AuditLog() {
     {
       key: 'table_name',
       header: 'Table',
-      render: (value: any, entry: AuditEntry) => {
+      render: (value: any, _entry: AuditEntry) => {
         if (!value) return 'N/A';
         return value;
       }
@@ -148,7 +139,7 @@ export function AuditLog() {
     {
       key: 'action',
       header: 'Action',
-      render: (value: any, entry: AuditEntry) => {
+      render: (value: any, _entry: AuditEntry) => {
         if (!value) return 'UNKNOWN';
         return (
           <span className={`audit-action audit-action--${value.toLowerCase()}`}>
@@ -160,14 +151,14 @@ export function AuditLog() {
     {
       key: 'changed_by',
       header: 'Changed By',
-      render: (value: any, entry: AuditEntry) => {
+      render: (value: any, _entry: AuditEntry) => {
         return value || 'System';
       }
     },
     {
       key: 'changed_fields',
       header: 'Fields Changed',
-      render: (value: any, entry: AuditEntry) => {
+      render: (value: any, _entry: AuditEntry) => {
         if (!value || value.length === 0) return 'N/A';
         return value.join(', ');
       }

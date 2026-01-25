@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import type { ProjectType, Role, ProjectPhase } from '../types';
@@ -116,7 +116,7 @@ export default function ProjectTypeDetails() {
 
   // Individual field update mutations
   const updateProjectTypeFieldMutation = useMutation({
-    mutationFn: async ({ field, value }: { field: string; value: any }) => {
+    mutationFn: async ({ field, value }: { field: string; value: unknown }) => {
       if (!id) throw new Error('Project Type ID is required');
       return api.projectTypes.update(id, { [field]: value });
     },
@@ -127,7 +127,7 @@ export default function ProjectTypeDetails() {
 
 
   // Handle individual field updates
-  const handleFieldUpdate = (field: string, value: any) => {
+  const handleFieldUpdate = (field: string, value: unknown) => {
     updateProjectTypeFieldMutation.mutate({ field, value });
   };
 
@@ -139,7 +139,7 @@ export default function ProjectTypeDetails() {
     placeholder = ''
   }: {
     field: string;
-    value: any;
+    value: string | null | undefined;
     type?: 'text' | 'textarea' | 'color';
     placeholder?: string;
   }) => {

@@ -51,7 +51,7 @@ export function getAuditedDb(): any {
 
 // Export db as a getter for backward compatibility
 // For ESM modules, we need a different approach
-let _dbProxy: Knex | null = null;
+// Note: _dbProxy was previously used but is no longer needed; kept for reference
 
 // Create a function that returns the current database instance
 // This allows controllers to use this.db() or this.db('table')
@@ -231,6 +231,7 @@ function getDataPath(): string {
   }
   // In production, try to get electron path, fallback to current directory
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('electron').app.getPath('userData');
   } catch {
     return path.join(process.cwd(), 'data');

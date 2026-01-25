@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Eye, Users, UserPlus, Search, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Eye, Users, UserPlus, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
@@ -16,7 +16,6 @@ import './People.css';
 
 export default function People() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     search: '',
     primary_role_id: '', // API filter name still uses this for backwards compatibility
@@ -72,22 +71,6 @@ export default function People() {
       return response.data.data as Location[];
     }
   });
-
-  // Delete person mutation
-  const deletePersonMutation = useMutation({
-    mutationFn: async (personId: string) => {
-      await api.people.delete(personId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.people.all });
-    }
-  });
-
-  const handleDeletePerson = (personId: string, personName: string) => {
-    if (confirm(`Are you sure you want to delete "${personName}"? This action cannot be undone.`)) {
-      deletePersonMutation.mutate(personId);
-    }
-  };
 
   const handleEditPerson = (person: Person) => {
     setEditingPerson(person);

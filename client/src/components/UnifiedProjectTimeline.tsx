@@ -5,13 +5,11 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  Lock,
   Edit2,
   Save,
   X,
   Plus,
   Trash2,
-  Info,
   Settings,
   ZoomIn,
   ZoomOut
@@ -19,7 +17,6 @@ import {
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from './InteractiveTimeline';
-import { parseDate, toISODateString } from '../utils/dateUtils';
 import './EnhancedProjectTimeline.css';
 
 interface ProjectPhaseTimeline {
@@ -489,7 +486,6 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
   };
 
   const timelineItems = timeline ? convertPhasesToTimelineItems(timeline) : [];
-  const editingPhaseData = editingPhase ? timeline?.find(p => p.id === editingPhase) : null;
 
   return (
     <div className="unified-project-timeline">
@@ -595,7 +591,7 @@ export default function UnifiedProjectTimeline({ projectId, hideHeader = false }
         <div className="phase-details-panel">
           <h4>Phase Details</h4>
           <div className="phase-list">
-            {timeline.map((phase, index) => (
+            {timeline.map((phase) => (
               <div key={phase.id} className={`phase-item ${editingPhase === phase.id ? 'editing' : ''}`}>
                 <div className="phase-header">
                   <div className="phase-info">

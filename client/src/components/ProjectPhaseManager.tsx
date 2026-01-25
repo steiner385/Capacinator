@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Copy, Calendar, Trash2, GripVertical, ArrowUp, ArrowDown, Edit2, Save, X } from 'lucide-react';
+import { Plus, Calendar, Trash2, ArrowUp, ArrowDown, Edit2, Save, X } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import type { ProjectPhaseTimeline, ProjectPhase } from '../types';
@@ -41,7 +41,7 @@ interface DuplicatePhaseFormData {
 
 export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
   projectId,
-  projectName
+  projectName: _projectName
 }) => {
   const queryClient = useQueryClient();
   const [showAddPhase, setShowAddPhase] = useState(false);
@@ -233,7 +233,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
       const customName = formData.get('custom_name') as string || `${sourcePhase.phase_name} (Copy)`;
       
       // Check for overlapping phases if adjustment is enabled
-      let phasesToAdjust: Array<{id: string, start_date: string, end_date: string}> = [];
+      const phasesToAdjust: Array<{id: string, start_date: string, end_date: string}> = [];
       
       if (adjustOverlapping && projectPhases) {
         // Find phases that need to be shifted based on placement mode
@@ -250,9 +250,8 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
               .forEach(phase => {
                 const phaseStart = new Date(phase.start_date).getTime();
                 const phaseEnd = new Date(phase.end_date).getTime();
-                const duration = phaseEnd - phaseStart;
                 const shiftAmount = (newEnd - newStart) + (24 * 60 * 60 * 1000); // New phase duration + 1 day gap
-                
+
                 phasesToAdjust.push({
                   id: phase.id,
                   start_date: new Date(phaseStart + shiftAmount).toISOString().split('T')[0],
@@ -266,7 +265,6 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
             .forEach(phase => {
               const phaseStart = new Date(phase.start_date).getTime();
               const phaseEnd = new Date(phase.end_date).getTime();
-              const duration = phaseEnd - phaseStart;
               const shiftAmount = (newEnd - newStart) + (24 * 60 * 60 * 1000); // New phase duration + 1 day gap
               
               phasesToAdjust.push({
@@ -305,7 +303,7 @@ export const ProjectPhaseManager: React.FC<ProjectPhaseManagerProps> = ({
         end_date: endDate.toISOString().split('T')[0],
         order_index: 99,
       }, {
-        onSuccess: async (response) => {
+        onSuccess: async (_response) => {
           try {
             // Adjust overlapping phases if needed
             if (phasesToAdjust.length > 0 && adjustOverlapping) {

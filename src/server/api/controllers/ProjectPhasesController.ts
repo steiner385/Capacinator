@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
@@ -231,7 +231,7 @@ export class ProjectPhasesController extends BaseController {
       const isCustomPhase = currentPhase.is_custom_phase === 1;
       
       // Filter allowed fields based on phase type
-      let allowedFields = ['start_date', 'end_date'];
+      const allowedFields = ['start_date', 'end_date'];
       if (isCustomPhase) {
         allowedFields.push('phase_name');
       }

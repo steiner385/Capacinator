@@ -205,7 +205,7 @@ export function formatDateDisplaySafe(dateString: string): string {
       month: 'short',
       day: 'numeric'
     });
-  } catch (error) {
+  } catch {
     return 'Invalid date';
   }
 }

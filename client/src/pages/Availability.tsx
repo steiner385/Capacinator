@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Plus, Edit2, Trash2, Check, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
@@ -78,7 +78,7 @@ export default function Availability() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<OverrideForm> }) => {
+    mutationFn: ({ id: _id, data }: { id: string; data: Partial<OverrideForm> }) => {
       // For now, we'll use create as update is not available
       return api.availability.create(data);
     },
@@ -89,7 +89,7 @@ export default function Availability() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
+    mutationFn: (_id: string) => {
       // Delete functionality would need to be implemented in the API
       console.warn('Delete availability override not yet implemented');
       return Promise.resolve();

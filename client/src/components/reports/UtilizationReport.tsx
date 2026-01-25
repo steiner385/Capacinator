@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { AlertTriangle, ClipboardList } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ReportSummaryCard, ReportEmptyState, ReportTable, ReportProgressBar } from './index';
@@ -64,12 +63,12 @@ export const UtilizationReport: React.FC<UtilizationReportProps> = ({
   const utilizationColumns: Column[] = [
     { header: 'Name', accessor: 'name' },
     { header: 'Role', accessor: (row) => row.role || 'No Role' },
-    { 
-      header: 'Utilization (%)', 
+    {
+      header: 'Utilization (%)',
       accessor: 'utilization',
-      render: (value, row) => (
-        <ReportProgressBar 
-          value={value} 
+      render: (value, _row) => (
+        <ReportProgressBar
+          value={value}
           variant={value > 100 ? 'danger' : value >= 80 ? 'success' : 'warning'}
         />
       )

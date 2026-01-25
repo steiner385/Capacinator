@@ -1,26 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  GitBranch, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Merge, 
+import {
+  GitBranch,
+  Plus,
+  Edit3,
+  Trash2,
+  Merge,
   ArrowRightLeft,
-  Users,
-  Calendar,
   AlertTriangle,
   List,
   Search,
   Filter,
   X,
-  ChevronDown,
-  ArrowRight
+  ChevronDown
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { Scenario } from '../types';
-import { useUser } from '../contexts/UserContext';
+// useUser import removed - not currently used
 import { CreateScenarioModal, EditScenarioModal, DeleteConfirmationModal } from '../components/modals/ScenarioModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
@@ -31,212 +28,6 @@ import './Scenarios.css';
 // Tree node type for hierarchical display
 interface ScenarioTreeNode extends Scenario {
   children: ScenarioTreeNode[];
-}
-
-interface ScenarioCardProps {
-  scenario: Scenario;
-  onEdit: (scenario: Scenario) => void;
-  onDelete: (scenario: Scenario) => void;
-  onBranch: (scenario: Scenario) => void;
-  onMerge: (scenario: Scenario) => void;
-  onCompare: (scenario: Scenario) => void;
-}
-
-// Enhanced timeline utility functions
-const getTimelineDetails = (createdAt: string) => {
-  const created = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now.getTime() - created.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  
-  let timeAgo = '';
-  let urgencyLevel = 'fresh';
-  
-  if (diffMinutes < 60) {
-    timeAgo = diffMinutes <= 1 ? 'Just now' : `${diffMinutes}m ago`;
-    urgencyLevel = 'fresh';
-  } else if (diffHours < 24) {
-    timeAgo = `${diffHours}h ago`;
-    urgencyLevel = 'recent';
-  } else if (diffDays < 7) {
-    timeAgo = diffDays === 1 ? 'Yesterday' : `${diffDays}d ago`;
-    urgencyLevel = 'recent';
-  } else if (diffDays < 30) {
-    const weeks = Math.floor(diffDays / 7);
-    timeAgo = weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-    urgencyLevel = 'aging';
-  } else if (diffDays < 90) {
-    const months = Math.floor(diffDays / 30);
-    timeAgo = months === 1 ? '1 month ago' : `${months} months ago`;
-    urgencyLevel = 'aging';
-  } else {
-    const months = Math.floor(diffDays / 30);
-    timeAgo = `${months} months ago`;
-    urgencyLevel = 'old';
-  }
-  
-  return {
-    timeAgo,
-    urgencyLevel,
-    daysSinceCreated: diffDays,
-    absoluteDate: created.toLocaleDateString(),
-    relativeDate: created.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: diffDays > 365 ? 'numeric' : undefined
-    })
-  };
-};
-
-const ScenarioCard: React.FC<ScenarioCardProps> = ({
-  scenario,
-  onEdit,
-  onDelete,
-  onBranch,
-  onMerge,
-  onCompare
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  const isBaseline = scenario.scenario_type === 'baseline';
-  const canMerge = scenario.parent_scenario_id && scenario.status === 'active';
-  const timelineInfo = getTimelineDetails(scenario.created_at);
-
-  return (
-    <div className={`scenario-card ${scenario.scenario_type} ${isExpanded ? 'expanded' : ''}`}>
-      <div className="scenario-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="scenario-icon">
-          <GitBranch size={20} />
-        </div>
-        <div className="scenario-info">
-          <h3 className="scenario-name">{scenario.name}</h3>
-          <div className="scenario-meta">
-            <span className={`scenario-type ${scenario.scenario_type}`}>
-              {scenario.scenario_type}
-            </span>
-            <span className={`scenario-status ${scenario.status}`}>
-              {scenario.status}
-            </span>
-            <span className={`timeline-age ${timelineInfo.urgencyLevel}`}>
-              {timelineInfo.timeAgo}
-            </span>
-          </div>
-        </div>
-        <div className="expand-toggle">
-          {isExpanded ? <ChevronDown size={20} /> : <ArrowRight size={20} />}
-        </div>
-      </div>
-
-      {isExpanded && (
-        <div className="scenario-expandable-content">
-          {scenario.description && (
-            <p className="scenario-description">{scenario.description}</p>
-          )}
-
-          <div className="scenario-details">
-            <div className="scenario-detail">
-              <Users size={14} />
-              <span>Created by {scenario.created_by_name}</span>
-            </div>
-            <div className="scenario-detail timeline-info">
-              <Calendar size={14} />
-              <span className="timeline-date">{timelineInfo.relativeDate}</span>
-            </div>
-            {scenario.branch_point && (
-              <div className="scenario-detail">
-                <GitBranch size={14} />
-                <span>Branched {new Date(scenario.branch_point).toLocaleDateString()}</span>
-              </div>
-            )}
-            {scenario.parent_scenario_name && (
-              <div className="scenario-detail parent-connection">
-                <div className="parent-indicator">
-                  <GitBranch size={14} />
-                  <span className="connection-label">Branched from</span>
-                </div>
-                <div className="parent-name">
-                  <span className="parent-scenario-name">{scenario.parent_scenario_name}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="scenario-actions" 
-           onMouseEnter={() => setShowActions(true)}
-           onMouseLeave={() => setShowActions(false)}>
-        <div className={`actions-content ${showActions || isExpanded ? 'visible' : ''}`}>
-        <button
-          onClick={() => onBranch(scenario)}
-          className="action-button branch"
-          title="Create Branch"
-        >
-          <GitBranch size={16} />
-          Branch
-        </button>
-        
-        <button
-          onClick={() => onCompare(scenario)}
-          className="action-button compare"
-          title="Compare Scenarios"
-        >
-          <ArrowRightLeft size={16} />
-          Compare
-        </button>
-
-        {canMerge && (
-          <button
-            onClick={() => onMerge(scenario)}
-            className="action-button merge"
-            title="Merge to Parent"
-          >
-            <Merge size={16} />
-            Merge
-          </button>
-        )}
-
-        <button
-          onClick={() => onEdit(scenario)}
-          className="action-button edit"
-          title="Edit Scenario"
-        >
-          <Edit3 size={16} />
-        </button>
-
-        {!isBaseline && (
-          <button
-            onClick={() => onDelete(scenario)}
-            className="action-button delete"
-            title="Delete Scenario"
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface CreateScenarioModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  parentScenario?: Scenario;
-}
-
-interface EditScenarioModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  scenario: Scenario;
-}
-
-interface DeleteConfirmationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  scenario: Scenario;
 }
 
 interface MergeModalProps {
@@ -769,8 +560,8 @@ export const Scenarios: React.FC = () => {
   });
   
   // List view state
-  const [showAllScenarios, setShowAllScenarios] = useState(false);
-  const [displayLimit, setDisplayLimit] = useState(10);
+  const [showAllScenarios] = useState(false);
+  const [displayLimit] = useState(10);
   const [hideMergedScenarios, setHideMergedScenarios] = useState(false);
   
   // Accessibility and keyboard navigation state
@@ -921,7 +712,7 @@ export const Scenarios: React.FC = () => {
   const filteredScenarios = React.useMemo(() => {
     if (!scenarios) return [];
     
-    let filtered = scenarios.filter(scenario => {
+    const filtered = scenarios.filter(scenario => {
       // Search filter
       const searchMatch = !searchTerm || 
         scenario.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1025,13 +816,11 @@ export const Scenarios: React.FC = () => {
   };
 
 
-  const hasActiveFilters = searchTerm || 
-    activeFilters.types.length > 0 || 
-    activeFilters.statuses.length > 0 || 
+  const hasActiveFilters = searchTerm ||
+    activeFilters.types.length > 0 ||
+    activeFilters.statuses.length > 0 ||
     activeFilters.creators.length > 0;
-    
-  const totalScenariosCount = scenarios?.length || 0;
-  
+
   // Apply display limit based on view mode and filters
   const displayedScenarios = React.useMemo(() => {
     if (!filteredScenarios) return [];
@@ -1044,8 +833,6 @@ export const Scenarios: React.FC = () => {
     return filteredScenarios;
   }, [filteredScenarios, showAllScenarios, hasActiveFilters, displayLimit]);
   
-  const isLimitedView = !showAllScenarios && !hasActiveFilters && displayedScenarios.length < totalScenariosCount;
-
   // Click outside handler for filter dropdown
   const filterDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -1164,12 +951,11 @@ export const Scenarios: React.FC = () => {
       return roots;
     };
 
-    const renderScenarioNode = (scenario: ScenarioTreeNode, level: number = 0, isLast: boolean = true, parentLines: boolean[] = []): React.ReactNode => {
+    const renderScenarioNode = (scenario: ScenarioTreeNode, level: number = 0, _isLast: boolean = true, parentLines: boolean[] = []): React.ReactNode => {
       const indent = level * 24;
       const hasChildren = scenario.children && scenario.children.length > 0;
       const isExpanded = expandedNodes.has(scenario.id);
       const isFocused = focusedNodeId === scenario.id;
-      const isBaseline = scenario.scenario_type === 'baseline';
       
       return (
         <div key={scenario.id}>
@@ -1372,7 +1158,8 @@ export const Scenarios: React.FC = () => {
       );
     };
 
-    const scenarioTree = buildScenarioTree();
+    // Build tree structure (used in renderScenarioNode via treeNodes)
+    buildScenarioTree();
 
     return (
       <div className="scenarios-hierarchy">

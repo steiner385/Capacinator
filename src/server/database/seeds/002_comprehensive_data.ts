@@ -929,9 +929,7 @@ export async function seed(knex: Knex): Promise<void> {
   
   const activeProjects = createdProjects.slice(0, 4); // Reduce to 4 projects to avoid over-allocation
   const pmRole = createdRoles.find(r => r.name === 'Project Manager');
-  const devRole = createdRoles.find(r => r.name === 'Senior Developer');
   const qaRole = createdRoles.find(r => r.name === 'QA Engineer');
-  const baRole = createdRoles.find(r => r.name === 'Business Analyst');
   
   // Assign each person to 1-2 projects max with appropriate allocations
   for (let i = 0; i < activeProjects.length; i++) {

@@ -66,7 +66,7 @@ export class GitSyncController extends BaseController {
         });
       }
 
-      const status = await this.gitService.getStatus();
+      await this.gitService.getStatus();
       const isClean = await this.gitService.isClean();
       const commitsAhead = await this.gitService.getCommitsAhead();
       const commitsBehind = await this.gitService.getCommitsBehind();
@@ -276,7 +276,7 @@ export class GitSyncController extends BaseController {
       const message = commitMessage || (await this.exporter.generateCommitMessage('working'));
 
       // Get author from authenticated user
-      // @ts-ignore
+      // @ts-expect-error - user may be undefined on Request
       const author = {
         name: req.user?.name || 'Capacinator User',
         email: req.user?.email || 'user@example.com',
@@ -634,7 +634,7 @@ export class GitSyncController extends BaseController {
       const { limit, entityType, entityId } = req.query;
 
       const options = {
-        maxCount: limit ? parseInt(limit as string) : 50,
+        maxCount: limit ? parseInt(limit as string, 10) : 50,
       };
 
       const commits = await this.gitService.getHistory(options);
@@ -720,7 +720,7 @@ export class GitSyncController extends BaseController {
 
       // Log for debugging
       if (error instanceof GitNetworkError || error instanceof GitAuthenticationError) {
-        // @ts-ignore - logger metadata type mismatch
+        // @ts-expect-error - logger metadata type mismatch
         logger?.warn(`Git operation failed: ${error.code}`, {
           message: error.message,
           stack: error.stack,
@@ -728,7 +728,7 @@ export class GitSyncController extends BaseController {
           operation: defaultMessage,
         });
       } else {
-        // @ts-ignore - logger metadata type mismatch
+        // @ts-expect-error - logger metadata type mismatch
         logger?.error(`Git operation failed: ${error.code}`, {
           message: error.message,
           stack: error.stack,

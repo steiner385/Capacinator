@@ -1,6 +1,4 @@
 import { db, initializeDatabase, testConnection } from './index.js';
-import fs from 'fs';
-import path from 'path';
 
 async function initDb() {
   try {
@@ -28,7 +26,7 @@ async function initDb() {
       try {
         const count = await db(table).count('* as count').first();
         console.log(`   ${table}: ${count?.count || 0} records`);
-      } catch (error) {
+      } catch {
         console.log(`   ${table}: table not found`);
       }
     }

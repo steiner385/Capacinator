@@ -22,17 +22,6 @@ export async function seed(knex: Knex): Promise<void> {
     return shuffled.slice(0, count);
   };
 
-  // Helper to generate date ranges
-  const generateDateRange = (startDate: string, durationDays: number): { start: string; end: string } => {
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setDate(end.getDate() + durationDays);
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0]
-    };
-  };
-
   // Create comprehensive project portfolio spanning 2023-2027
   const comprehensiveProjects = [
     // 2023 Projects

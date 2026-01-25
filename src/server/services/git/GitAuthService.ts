@@ -84,7 +84,7 @@ export class GitAuthService {
       urlObj.username = 'x-access-token';
       urlObj.password = token;
       return urlObj.toString();
-    } catch (error) {
+    } catch {
       throw new Error(`Invalid URL format: ${url}`);
     }
   }
@@ -113,7 +113,7 @@ export class GitAuthService {
    * @param refreshToken - OAuth refresh token
    * @returns New access token
    */
-  async refreshOAuthToken(refreshToken: string): Promise<string> {
+  async refreshOAuthToken(_refreshToken: string): Promise<string> {
     // TODO: Implement OAuth refresh flow when OAuth support is added
     // For now, this is a placeholder for PAT-based authentication
     throw new Error('OAuth refresh not yet implemented. Please use Personal Access Tokens.');

@@ -1,6 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
-import type { Worksheet, Workbook, Cell, Row } from 'exceljs';
+import type { Worksheet } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -11,16 +11,15 @@ async function initializeExcelJS() {
   }
   return ExcelJS;
 }
-import { 
-  fiscalWeekToDate, 
-  extractFiscalWeekColumns, 
-  getPhaseFullName,
+import {
+  fiscalWeekToDate,
+  extractFiscalWeekColumns,
   parseProjectSite,
   PHASE_ABBREVIATIONS
 } from '../../utils/fiscalWeek.js';
 import { v4 as uuidv4 } from 'uuid';
 import { ImportOptions, ValidationResult, ValidationError, WorksheetValidation } from './ExcelImporter.js';
-import { ImportError, ImportErrorCollector, ImportErrorUtils } from './ImportError.js';
+import { ImportErrorCollector } from './ImportError.js';
 
 export interface ImportResultV2 {
   success: boolean;
@@ -493,7 +492,7 @@ export class ExcelImporterV2 {
     return { duplicatesFound: duplicates };
   }
 
-  private async importProjectTypes(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectTypes(worksheet: Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -526,7 +525,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectPhases(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectPhases(worksheet: Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -583,7 +582,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoles(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoles(worksheet: Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -592,15 +591,12 @@ export class ExcelImporterV2 {
       return { count, errors };
     }
 
-    const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as string[];
-
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
         const roleName = row.getCell(1).value?.toString(); // Role
         const planOwner = row.getCell(2).value?.toString(); // Plan Owner
-        const cwOption = row.getCell(3).value?.toString(); // CW Option
+        // const cwOption = row.getCell(3).value?.toString(); // CW Option (unused)
         const dataAccess = row.getCell(4).value?.toString(); // Required Data Access
 
         if (!roleName) continue;
@@ -632,7 +628,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoster(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoster(worksheet: Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -928,15 +924,14 @@ export class ExcelImporterV2 {
       return { count, errors };
     }
 
-    const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as any[];
+    const headers = worksheet.getRow(1).values as any[];
     const fiscalWeeks = extractFiscalWeekColumns(headers);
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
         const projectSite = row.getCell(1).value?.toString();
-        const planOwner = row.getCell(2).value?.toString();
+        // const planOwner = row.getCell(2).value?.toString(); // Plan Owner (unused)
         const roleName = row.getCell(3).value?.toString();
 
         if (!projectSite || !roleName) continue;
@@ -1084,8 +1079,6 @@ export class ExcelImporterV2 {
       return { count, errors };
     }
 
-    const headerRow = worksheet.getRow(1);
-    
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);

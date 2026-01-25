@@ -129,7 +129,7 @@ export const ChangeHistoryPanel: React.FC<ChangeHistoryPanelProps> = ({
 
         {/* Timeline items */}
         <div className="space-y-6">
-          {commits.map((commit, index) => (
+          {commits.map((commit) => (
             <div key={commit.hash} className="relative flex gap-4">
               {/* Timeline dot */}
               <div className="relative z-10 flex-shrink-0">

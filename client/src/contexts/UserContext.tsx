@@ -69,8 +69,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearUserState]);
 
   // Listen for auth:logout events (triggered by 401 responses)
   useEffect(() => {

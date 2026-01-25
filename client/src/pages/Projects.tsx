@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, Users } from 'lucide-react';
@@ -123,17 +123,6 @@ export function Projects() {
       project_type_id: '',
       status: ''
     });
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'planned': return 'badge badge-primary';
-      case 'active': return 'badge badge-success';
-      case 'on_hold': return 'badge badge-warning';
-      case 'completed': return 'badge badge-secondary';
-      case 'cancelled': return 'badge badge-danger';
-      default: return 'badge';
-    }
   };
 
   const formatDate = (date: string | null) => {

@@ -27,6 +27,7 @@ describe('requestLoggerMiddleware', () => {
     jest.clearAllMocks();
 
     // Get the mocked logger
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mockLogger = require('../../services/logging/config.js').logger;
 
     mockReq = {

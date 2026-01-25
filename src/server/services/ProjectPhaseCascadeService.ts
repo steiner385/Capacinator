@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getAuditedDb } from '../database/index.js';
-import { DependencyType, ProjectPhaseTimeline, ProjectPhaseDependency } from '../types/project-phases.js';
+import { DependencyType } from '../types/project-phases.js';
 
 export interface CascadeCalculation {
   phase_timeline_id: string;
@@ -368,32 +368,40 @@ export class ProjectPhaseCascadeService {
     const predecessorEndStr = this.formatDateSafe(predecessorEndDate);
 
     switch (dependencyType) {
-      case 'FS': // Finish-to-Start: successor starts on or after predecessor finishes (allow same-day)
+      case 'FS': {
+        // Finish-to-Start: successor starts on or after predecessor finishes (allow same-day)
         const newStartStr = this.addDaysSafe(predecessorEndStr, lagDays);
         newStart = this.parseDateSafe(newStartStr);
         break;
-      
-      case 'SS': // Start-to-Start: successor starts when predecessor starts
+      }
+
+      case 'SS': {
+        // Start-to-Start: successor starts when predecessor starts
         const predecessorStartStr = this.formatDateSafe(predecessorStartDate);
         const newStartStrSS = this.addDaysSafe(predecessorStartStr, lagDays);
         newStart = this.parseDateSafe(newStartStrSS);
         break;
-      
-      case 'FF': // Finish-to-Finish: successor finishes when predecessor finishes
+      }
+
+      case 'FF': {
+        // Finish-to-Finish: successor finishes when predecessor finishes
         const newEndStrFF = this.addDaysSafe(predecessorEndStr, lagDays);
         const newEndFF = this.parseDateSafe(newEndStrFF);
-        const newStartStrFF = this.addDaysSafe(newEndStrFF, -durationDays);
+        const newStartStrFF = this.addDaysSafe(this.formatDateSafe(newEndFF), -durationDays);
         newStart = this.parseDateSafe(newStartStrFF);
         return { start: newStart, end: newEndFF };
-      
-      case 'SF': // Start-to-Finish: successor finishes when predecessor starts
+      }
+
+      case 'SF': {
+        // Start-to-Finish: successor finishes when predecessor starts
         const predecessorStartStrSF = this.formatDateSafe(predecessorStartDate);
         const newEndStrSF = this.addDaysSafe(predecessorStartStrSF, lagDays);
         const newEndSF = this.parseDateSafe(newEndStrSF);
-        const newStartStrSF = this.addDaysSafe(newEndStrSF, -durationDays);
+        const newStartStrSF = this.addDaysSafe(this.formatDateSafe(newEndSF), -durationDays);
         newStart = this.parseDateSafe(newStartStrSF);
         return { start: newStart, end: newEndSF };
-      
+      }
+
       default:
         newStart = this.parseDateSafe(dependentPhase.start_date);
     }

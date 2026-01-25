@@ -11,8 +11,7 @@ import {
   X,
   Plus,
   Trash2,
-  Info,
-  Settings
+  Info
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
@@ -142,10 +141,6 @@ export default function EnhancedProjectTimeline({ projectId }: EnhancedProjectTi
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();
-  };
-
-  const calculateDuration = (startDate: number, endDate: number) => {
-    return Math.round((endDate - startDate) / (24 * 60 * 60 * 1000));
   };
 
   const getConstraintStatus = (phase: ProjectPhaseTimeline) => {

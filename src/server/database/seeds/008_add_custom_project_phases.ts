@@ -269,12 +269,9 @@ export async function seed(knex: Knex): Promise<void> {
   // Also add resource templates for these custom phases
   const roles = await knex('roles').select('*');
   const pmRole = roles.find(r => r.name === 'Project Manager');
-  const devRole = roles.find(r => r.name === 'Backend Developer');
-  const qaRole = roles.find(r => r.name === 'QA Engineer');
   const baRole = roles.find(r => r.name === 'Business Analyst');
   const mlRole = roles.find(r => r.name === 'ML Engineer');
   const securityRole = roles.find(r => r.name === 'Security Engineer');
-  const devOpsRole = roles.find(r => r.name === 'DevOps Engineer');
 
   const customAllocations = [];
 

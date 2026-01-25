@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit2, Save, X, Plus } from 'lucide-react';
+import { ArrowLeft, Edit2 } from 'lucide-react';
 import { api } from '../lib/api-client';
-import type { Role, ProjectType, ProjectPhase } from '../types';
+import type { Role, ProjectPhase } from '../types';
 
 interface ResourceTemplate {
   id?: string;
@@ -73,7 +73,7 @@ export default function RoleDetails() {
 
   // Individual field update mutations
   const updateRoleFieldMutation = useMutation({
-    mutationFn: async ({ field, value }: { field: string; value: any }) => {
+    mutationFn: async ({ field, value }: { field: string; value: unknown }) => {
       if (!id) throw new Error('Role ID is required');
       return api.roles.update(id, { [field]: value });
     },
@@ -83,7 +83,7 @@ export default function RoleDetails() {
   });
 
   // Handle individual field updates
-  const handleFieldUpdate = (field: string, value: any) => {
+  const handleFieldUpdate = (field: string, value: unknown) => {
     updateRoleFieldMutation.mutate({ field, value });
   };
 
@@ -95,7 +95,7 @@ export default function RoleDetails() {
     placeholder = ''
   }: {
     field: string;
-    value: any;
+    value: string | null | undefined;
     type?: 'text' | 'textarea';
     placeholder?: string;
   }) => {
@@ -159,25 +159,6 @@ export default function RoleDetails() {
       </div>
     );
   };
-
-  // Create resource template matrix for display
-  const templateMatrix = React.useMemo(() => {
-    if (!projectTypes || !phases || !localTemplates) return [];
-    if (!Array.isArray(projectTypes) || !Array.isArray(phases)) return [];
-
-    return projectTypes.map(projectType => ({
-      projectType,
-      allocations: phases.map(phase => {
-        const template = localTemplates.find(
-          t => t.project_type_id === String(projectType.id) && t.phase_id === String(phase.id)
-        );
-        return {
-          phase,
-          allocation: template?.allocation_percentage || 0
-        };
-      })
-    }));
-  }, [projectTypes, phases, localTemplates]);
 
   // Handler for allocation changes - FINAL TEST
   const handleAllocationChange = (projectTypeId: string, phaseId: string, newValue: number) => {

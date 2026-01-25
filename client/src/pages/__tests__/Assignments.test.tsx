@@ -599,7 +599,8 @@ describe('Assignments Page', () => {
   describe('Context Messages', () => {
     test('displays context message from URL parameters', async () => {
       // Update the mock to return the right search params
-      const useSearchParams = require('react-router-dom').useSearchParams as jest.Mock;
+      const reactRouterDom = await import('react-router-dom');
+      const useSearchParams = reactRouterDom.useSearchParams as jest.Mock;
       useSearchParams.mockReturnValue([
         new URLSearchParams('action=assign&from=reports&personName=John%20Doe&status=underutilized'),
         jest.fn(),
@@ -616,9 +617,10 @@ describe('Assignments Page', () => {
 
     test('auto-clears context message after timeout', async () => {
       jest.useFakeTimers();
-      
+
       // Update the mock to return the right search params
-      const useSearchParams = require('react-router-dom').useSearchParams as jest.Mock;
+      const reactRouterDom = await import('react-router-dom');
+      const useSearchParams = reactRouterDom.useSearchParams as jest.Mock;
       useSearchParams.mockReturnValue([
         new URLSearchParams('action=hire&from=reports&roleName=Developer'),
         jest.fn(),

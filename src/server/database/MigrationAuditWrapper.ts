@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getAuditService } from '../services/audit/index.js';
-import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
+import { isTableAudited } from '../config/auditConfig.js';
 import { logger } from '../services/logging/config.js';
 
 export interface MigrationAuditContext {
@@ -21,7 +21,7 @@ export class MigrationAuditWrapper {
     // Initialize audit service if available
     try {
       this.auditService = getAuditService();
-    } catch (error) {
+    } catch {
       // Audit service might not be available during early migrations
       logger.warn('Audit service not available during migration', { migrationName: this.context.migrationName });
       this.auditService = null;

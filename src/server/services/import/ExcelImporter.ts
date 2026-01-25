@@ -1,6 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
-import type { Worksheet, Workbook, Cell, Row } from 'exceljs';
+import type { Worksheet } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -11,7 +11,7 @@ async function initializeExcelJS() {
   }
   return ExcelJS;
 }
-import { ImportError, ImportErrorCollector, ImportErrorUtils, ProgressCallback, ImportProgressTracker, ImportPhase } from './ImportError.js';
+import { ImportErrorCollector, ImportErrorUtils, ProgressCallback, ImportProgressTracker, ImportPhase } from './ImportError.js';
 
 export interface ImportOptions {
   clearExisting?: boolean;
@@ -887,7 +887,7 @@ export class ExcelImporter {
         const date = new Date((value - 25569) * 86400 * 1000);
         return date.toISOString().split('T')[0];
       }
-    } catch (error) {
+    } catch {
       logger.warn('Failed to parse date', { value });
     }
     
@@ -1241,7 +1241,7 @@ export class ExcelImporter {
     });
   }
 
-  private async analyzeStandardAllocationsWorksheet(workbook: any, options: ImportOptions, analysis: any, errorCollector: ImportErrorCollector) {
+  private async analyzeStandardAllocationsWorksheet(workbook: any, options: ImportOptions, analysis: any, _errorCollector: ImportErrorCollector) {
     const allocationsSheet = workbook.getWorksheet('Standard Allocations');
     if (!allocationsSheet) {
       return; // Optional worksheet

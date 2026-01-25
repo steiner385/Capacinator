@@ -42,7 +42,7 @@ interface AssignmentTableProps {
 
 export function AssignmentTable({
   assignments,
-  variant = 'simple',
+  variant: _variant = 'simple',
   onRowClick,
   onEdit,
   onDelete,

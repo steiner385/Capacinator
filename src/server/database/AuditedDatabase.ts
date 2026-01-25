@@ -56,8 +56,9 @@ export class AuditedDatabase {
   // Get a table query builder with audit capabilities
   table(tableName: string): AuditableQueryBuilder {
     const queryBuilder = this.db(tableName) as any;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const auditedDbInstance = this;
-    
+
     // Add audit context storage
     let auditContext: AuditContext = { ...this.defaultContext };
     let skipAuditFlag = false;

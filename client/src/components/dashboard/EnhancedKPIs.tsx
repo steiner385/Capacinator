@@ -74,6 +74,7 @@ function calculateResourceEfficiency(dashboard: DashboardSummary): number {
 
   const fullyAllocated = dashboard.utilization?.FULLY_ALLOCATED || 0;
   const overAllocated = dashboard.utilization?.OVER_ALLOCATED || 0;
+  // fullyAllocated used in efficiency calculation below
   const allocated = fullyAllocated + overAllocated;
 
   // If no allocations yet, return 0 (not 100, as nothing is allocated)
@@ -117,8 +118,8 @@ function calculateCapacityBurnRate(dashboard: DashboardSummary): number {
 function calculateAllocationAccuracy(dashboard: DashboardSummary): number {
   const totalPeople = dashboard.summary?.people || 1;
   const overAllocated = dashboard.utilization?.OVER_ALLOCATED || 0;
-  const fullyAllocated = dashboard.utilization?.FULLY_ALLOCATED || 0;
-  
+  // fullyAllocated not needed for this calculation, removed to fix unused var
+
   // Accuracy = people allocated correctly / total people
   const accuracy = ((totalPeople - overAllocated) / totalPeople) * 100;
   return Math.max(0, Math.min(100, Math.round(accuracy)));

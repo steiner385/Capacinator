@@ -141,7 +141,6 @@ export const UnifiedTabComponent: React.FC<UnifiedTabComponentProps> = ({
   const ActiveComponent = renderContent ? tabs.find(tab => tab.id === activeTab)?.component : null;
 
   // Generate unique IDs for ARIA relationships
-  const tabListId = `tablist-${paramName}`;
   const getTabId = (tabId: string) => `tab-${paramName}-${tabId}`;
   const getPanelId = (tabId: string) => `tabpanel-${paramName}-${tabId}`;
 
@@ -156,7 +155,7 @@ export const UnifiedTabComponent: React.FC<UnifiedTabComponentProps> = ({
         aria-orientation={orientation}
         onKeyDown={handleKeyDown}
       >
-        {tabs.map((tab, index) => {
+        {tabs.map((tab, _index) => {
           const Icon = tab.icon;
           const isActive = isActiveTab(tab.id);
           const isFocused = focusedTabId === tab.id;

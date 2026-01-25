@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, GitMerge, AlertTriangle, CheckCircle, ArrowRight, RefreshCw, Eye } from 'lucide-react';
+import { GitMerge, AlertTriangle, CheckCircle, ArrowRight, RefreshCw, Eye } from 'lucide-react';
 import { api } from '../../lib/api-client';
 import { Scenario } from '../../types';
 import {

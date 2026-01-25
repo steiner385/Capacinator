@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Palette, ChevronRight, ChevronDown, List, GitBranch, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, List, GitBranch, Eye } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
@@ -195,7 +195,7 @@ export default function ProjectTypes() {
     }
   ];
 
-  const ProjectTypeNode = ({ projectType, level = 0 }: { projectType: any; level?: number }) => {
+  const ProjectTypeNode = ({ projectType, level = 0 }: { projectType: ProjectType & { children?: ProjectType[]; is_parent?: boolean }; level?: number }) => {
     const hasChildren = projectType.children && projectType.children.length > 0;
     const isExpanded = expandedNodes.has(projectType.id);
     const indent = level * 20;
@@ -273,7 +273,7 @@ export default function ProjectTypes() {
         
         {hasChildren && isExpanded && (
           <div className="project-type-children">
-            {projectType.children.map((child: any) => (
+            {projectType.children.map((child: ProjectType & { children?: ProjectType[]; is_parent?: boolean }) => (
               <ProjectTypeNode
                 key={child.id}
                 projectType={child}
@@ -336,7 +336,7 @@ export default function ProjectTypes() {
         <div className="hierarchy-view">
           {projectTypes && projectTypes.length > 0 ? (
             <div className="project-types-hierarchy">
-              {projectTypes.map((projectType: any) => (
+              {projectTypes.map((projectType: ProjectType & { children?: ProjectType[]; is_parent?: boolean }) => (
                 <ProjectTypeNode key={projectType.id} projectType={projectType} />
               ))}
             </div>

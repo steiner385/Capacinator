@@ -79,7 +79,7 @@ export async function up(knex: Knex): Promise<void> {
   console.log('✅ Updated assignments_view with computed dates');
 }
 
-export async function down(knex: Knex): Promise<void> {
+export async function down(_knex: Knex): Promise<void> {
   // Note: We don't remove the columns in down migration as they may contain data
   console.log('Note: Computed date columns are not removed to preserve data');
 }

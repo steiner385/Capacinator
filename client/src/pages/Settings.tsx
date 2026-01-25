@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Settings as SettingsIcon, Save, Database,
-  Users, X, Palette
+  Users, Palette
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
@@ -28,6 +28,32 @@ interface ImportSettings {
   dateFormat: string;
 }
 
+interface UserRole {
+  id: string;
+  name: string;
+  description: string;
+  priority: number;
+  is_system_admin: boolean;
+}
+
+interface Permission {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+  role_name?: string;
+  primary_role_name?: string;
+  is_system_admin: boolean;
+  permission_overrides: number;
+  last_login?: string;
+  is_active: boolean;
+}
+
 // Define settings tabs configuration
 const settingsTabs = [
   { id: 'system', label: 'System', icon: SettingsIcon },
@@ -41,7 +67,7 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   
   // Use bookmarkable tabs for settings
-  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+  const { activeTab, setActiveTab } = useBookmarkableTabs({
     tabs: settingsTabs,
     defaultTab: 'system'
   });
@@ -141,9 +167,11 @@ export default function Settings() {
 
       // Invalidate and refetch settings
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.system() });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving system settings:', error);
-      setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error saving settings. Please try again.';
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      setSaveMessage(axiosError?.response?.data?.error || errorMessage);
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 3000);
@@ -160,9 +188,11 @@ export default function Settings() {
 
       // Invalidate and refetch settings
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.import() });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving import settings:', error);
-      setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error saving settings. Please try again.';
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      setSaveMessage(axiosError?.response?.data?.error || errorMessage);
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 3000);
@@ -420,7 +450,7 @@ export default function Settings() {
           <h3>👥 User Roles</h3>
           {userRoles && userRoles.length > 0 ? (
             <div className="roles-grid">
-              {userRoles.map((role: any) => (
+              {userRoles.map((role: UserRole) => (
                 <div key={role.id} className="role-card">
                   <h4>🎭 {role.name}</h4>
                   <p>{role.description}</p>
@@ -442,11 +472,11 @@ export default function Settings() {
           <h3>🔑 System Permissions</h3>
           {systemPermissions?.permissionsByCategory && Object.keys(systemPermissions.permissionsByCategory).length > 0 ? (
             <div className="permissions-grid">
-              {Object.entries(systemPermissions.permissionsByCategory).map(([category, permissions]: [string, any]) => (
+              {Object.entries(systemPermissions.permissionsByCategory).map(([category, permissions]: [string, Permission[]]) => (
                 <div key={category} className="permission-category">
                   <h4>📋 {category.charAt(0).toUpperCase() + category.slice(1)}</h4>
                   <div className="permissions-list">
-                    {permissions.map((permission: any) => (
+                    {permissions.map((permission: Permission) => (
                       <div key={permission.id} className="permission-item">
                         <strong>{permission.name}</strong>
                         <span>{permission.description}</span>
@@ -482,7 +512,7 @@ export default function Settings() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user: any) => (
+                {users.map((user: UserInfo) => (
                   <tr key={user.id}>
                     <td>
                       <div className="person-name">

@@ -14,8 +14,6 @@ import './Projects.css';
 import './ProjectRoadmap.css';
 import './ProjectTypes.css';
 
-type ProjectsTab = 'list' | 'roadmap' | 'types';
-
 const tabs: UnifiedTabConfig[] = [
   {
     id: 'list',

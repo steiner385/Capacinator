@@ -8,7 +8,7 @@ export interface ErrorWithStatus extends Error {
   isOperational?: boolean;
 }
 
-export function enhancedErrorHandler(err: ErrorWithStatus, req: Request, res: Response, next: NextFunction) {
+export function enhancedErrorHandler(err: ErrorWithStatus, req: Request, res: Response, _next: NextFunction) {
   // Determine error status
   const status = err.status || err.statusCode || 500;
   const isOperational = err.isOperational || status < 500;

@@ -747,7 +747,6 @@ describe('ProjectsController', () => {
         errors: []
       };
 
-      const PhaseTemplateValidationService = require('../../../services/PhaseTemplateValidationService').PhaseTemplateValidationService;
       mockPhaseValidationService.validatePhaseUpdates.mockResolvedValue(mockValidationResult);
 
       await controller.validatePhaseUpdates(mockReq, mockRes);
@@ -789,7 +788,6 @@ describe('ProjectsController', () => {
         canAdd: true
       };
 
-      const PhaseTemplateValidationService = require('../../../services/PhaseTemplateValidationService').PhaseTemplateValidationService;
       mockPhaseValidationService.validateCustomPhaseAddition.mockResolvedValue(mockValidationResult);
 
       await controller.validateCustomPhase(mockReq, mockRes);
@@ -829,7 +827,6 @@ describe('ProjectsController', () => {
         compliancePercentage: 100
       };
 
-      const PhaseTemplateValidationService = require('../../../services/PhaseTemplateValidationService').PhaseTemplateValidationService;
       mockPhaseValidationService.getProjectTemplateCompliance.mockResolvedValue(mockCompliance);
 
       await controller.getTemplateCompliance(mockReq, mockRes);

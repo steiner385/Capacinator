@@ -38,7 +38,7 @@ export class CapacityCalculator {
 
     for (const role of roles) {
       // Get people with this role
-      let peopleQuery = this.db('person_roles')
+      const peopleQuery = this.db('person_roles')
         .join('people', 'person_roles.person_id', 'people.id')
         .where('person_roles.role_id', role.id)
         .select(

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Edit2, Save, Users, Briefcase, Clock,
@@ -28,11 +28,11 @@ import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
-import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
+// getProjectTypeIndicatorStyle not used in this component
 import { InlineEdit } from '../components/ui/InlineEdit';
 import { CollapsibleSection } from '../components/ui/CollapsibleSection';
 import { AssignmentTable } from '../components/ui/AssignmentTable';
-import type { Project } from '../types';
+// Project type not directly used - ProjectDetail interface used instead
 import './ProjectDetail.css';
 
 interface ProjectDetail {
@@ -223,16 +223,6 @@ export function ProjectDetail() {
     }
   };
 
-
-  const getPriorityColor = (priority: number) => {
-    switch (priority) {
-      case 1: return 'red';
-      case 2: return 'orange';
-      case 3: return 'yellow';
-      case 4: return 'green';
-      default: return 'gray';
-    }
-  };
 
   const getPriorityLabel = (priority: number) => {
     switch (priority) {

@@ -120,9 +120,9 @@ export class ChangeHistoryParser {
    * @returns Detailed field-level changes
    */
   async getCommitEntityDiff(
-    commitHash: string,
-    entityType: string,
-    entityId: string
+    _commitHash: string,
+    _entityType: string,
+    _entityId: string
   ): Promise<EntityChange[]> {
     // In production, this would:
     // 1. Get the commit diff for the entity's JSON file

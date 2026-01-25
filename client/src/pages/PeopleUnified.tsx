@@ -13,8 +13,6 @@ import { UnifiedTabComponent, type UnifiedTabConfig } from '../components/ui/Uni
 import './People.css';
 import './Roles.css';
 
-type PeopleTab = 'people' | 'roles' | 'availability';
-
 const tabs: UnifiedTabConfig[] = [
   {
     id: 'people',

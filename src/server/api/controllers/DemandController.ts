@@ -3,20 +3,6 @@ import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { logger } from '../../services/logging/config.js';
 
-interface DemandCalculation {
-  project_id: string;
-  project_name: string;
-  phase_id: string;
-  phase_name: string;
-  role_id: string;
-  role_name: string;
-  start_date: string;
-  end_date: string;
-  demand_hours: number;
-  demand_fte: number;
-  is_override: boolean;
-}
-
 export class DemandController extends BaseController {
   constructor(container?: ServiceContainer) {
     super({}, { container });
@@ -526,7 +512,7 @@ export class DemandController extends BaseController {
       const durationMonths = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
       const hoursPerMonth = demandHours / durationMonths;
       
-      let currentDate = new Date(startDate);
+      const currentDate = new Date(startDate);
       currentDate.setDate(1); // Set to first day of month
       
       while (currentDate <= endDate) {
@@ -581,7 +567,7 @@ export class DemandController extends BaseController {
       const durationMonths = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
       const hoursPerMonth = demandHours / durationMonths;
       
-      let currentDate = new Date(startDate);
+      const currentDate = new Date(startDate);
       currentDate.setDate(1); // Set to first day of month
       
       while (currentDate <= endDate) {
@@ -645,12 +631,12 @@ export class DemandController extends BaseController {
     return summary;
   }
 
-  private compareRoleDemands(baseline: any, scenario: any): any[] {
+  private compareRoleDemands(_baseline: any, _scenario: any): any[] {
     // Implementation would compare role demands
     return [];
   }
 
-  private identifyNewGaps(scenarioSummary: any): any[] {
+  private identifyNewGaps(_scenarioSummary: any): any[] {
     // Implementation would identify capacity gaps
     return [];
   }
