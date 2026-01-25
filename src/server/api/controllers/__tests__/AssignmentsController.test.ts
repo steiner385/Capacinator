@@ -1,5 +1,5 @@
-import { AssignmentsController } from '../AssignmentsController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { AssignmentsController } from '../AssignmentsController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock the NotificationScheduler to prevent real database access
 jest.mock('../../../services/NotificationScheduler', () => ({

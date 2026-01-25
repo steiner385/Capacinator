@@ -1,5 +1,5 @@
-import { ProjectsController } from '../ProjectsController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectsController } from '../ProjectsController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock the notification scheduler
 jest.mock('../../../services/NotificationScheduler', () => ({

@@ -12,7 +12,7 @@ jest.mock('../../../services/logging/config.js', () => ({
   }
 }));
 
-import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController';
+import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController.js';
 import type { Response, NextFunction } from 'express';
 import { logger } from '../../../services/logging/config.js';
 

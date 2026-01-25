@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import exportRouter from '../export';
+import exportRouter from '../export.js';
 
 // Mock the ExportController
 jest.mock('../../controllers/ExportController', () => {

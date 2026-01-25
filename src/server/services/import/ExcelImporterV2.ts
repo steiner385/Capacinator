@@ -1,5 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
+import type { Worksheet, Workbook, Cell, Row } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -492,7 +493,7 @@ export class ExcelImporterV2 {
     return { duplicatesFound: duplicates };
   }
 
-  private async importProjectTypes(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectTypes(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -525,7 +526,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectPhases(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectPhases(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -582,7 +583,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoles(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoles(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -631,7 +632,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoster(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoster(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -732,7 +733,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjects(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjects(worksheet: Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -822,7 +823,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectRoadmap(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectRoadmap(worksheet: Worksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -918,7 +919,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectDemand(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectDemand(worksheet: Worksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -985,7 +986,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectAssignments(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectAssignments(worksheet: Worksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -1074,7 +1075,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importStandardAllocations(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importStandardAllocations(worksheet: Worksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 

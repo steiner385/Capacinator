@@ -1,5 +1,5 @@
-import { ProjectPhasesController } from '../ProjectPhasesController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectPhasesController } from '../ProjectPhasesController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock date validation utilities
 jest.mock('../../../utils/dateValidation', () => ({

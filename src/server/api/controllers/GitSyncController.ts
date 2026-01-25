@@ -236,6 +236,7 @@ export class GitSyncController extends BaseController {
             message: 'Repository not initialized. Initialize first.',
           },
         });
+        return;
       }
 
       // Check for Git credentials
@@ -247,6 +248,7 @@ export class GitSyncController extends BaseController {
             message: 'GitHub authentication required',
           },
         });
+        return;
       }
 
       // Check for unresolved conflicts (Task: T062)
@@ -264,6 +266,7 @@ export class GitSyncController extends BaseController {
             conflictCount: unresolvedConflicts.count,
           },
         });
+        return;
       }
 
       // Export SQLite to JSON
@@ -717,12 +720,18 @@ export class GitSyncController extends BaseController {
 
       // Log for debugging
       if (error instanceof GitNetworkError || error instanceof GitAuthenticationError) {
-        logger?.warn(`Git operation failed: ${error.code}`, error, {
+        // @ts-ignore - logger metadata type mismatch
+        logger?.warn(`Git operation failed: ${error.code}`, {
+          message: error.message,
+          stack: error.stack,
           userId: req.user?.id,
           operation: defaultMessage,
         });
       } else {
-        logger?.error(`Git operation failed: ${error.code}`, error, {
+        // @ts-ignore - logger metadata type mismatch
+        logger?.error(`Git operation failed: ${error.code}`, {
+          message: error.message,
+          stack: error.stack,
           userId: req.user?.id,
           operation: defaultMessage,
         });

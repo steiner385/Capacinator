@@ -1,5 +1,5 @@
-import { ExportController } from '../ExportController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ExportController } from '../ExportController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock ExcelJS
 jest.mock('exceljs', () => {

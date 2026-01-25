@@ -1,5 +1,5 @@
-import { ScenariosController } from '../ScenariosController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ScenariosController } from '../ScenariosController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 import { randomUUID } from 'crypto';
 
 // Mock the crypto module

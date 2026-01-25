@@ -1,5 +1,5 @@
-import { ImportController } from '../ImportController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ImportController } from '../ImportController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock the ExcelImporter services
 jest.mock('../../../services/import/ExcelImporter', () => ({

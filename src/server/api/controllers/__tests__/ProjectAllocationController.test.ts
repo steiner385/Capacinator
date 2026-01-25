@@ -1,5 +1,5 @@
-import { ProjectAllocationController } from '../ProjectAllocationController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectAllocationController } from '../ProjectAllocationController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('ProjectAllocationController', () => {
   let controller: ProjectAllocationController;

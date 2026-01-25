@@ -1,6 +1,6 @@
-import { requestLoggerMiddleware, userContextMiddleware } from '../requestLogger';
+import { requestLoggerMiddleware, userContextMiddleware } from '../requestLogger.js';
 import type { Response, NextFunction } from 'express';
-import type { RequestWithLogging } from '../requestLogger';
+import type { RequestWithLogging } from '../requestLogger.js';
 
 // Mock uuid
 jest.mock('uuid', () => ({

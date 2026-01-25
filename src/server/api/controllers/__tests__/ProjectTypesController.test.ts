@@ -1,5 +1,5 @@
-import { ProjectTypesController } from '../ProjectTypesController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectTypesController } from '../ProjectTypesController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('ProjectTypesController', () => {
   let controller: ProjectTypesController;

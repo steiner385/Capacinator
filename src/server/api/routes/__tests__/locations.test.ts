@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import locationsRouter from '../locations';
+import locationsRouter from '../locations.js';
 
 // Mock the SimpleController
 jest.mock('../../controllers/SimpleController', () => {

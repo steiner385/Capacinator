@@ -1,4 +1,4 @@
-import { AuditConfig } from '../services/audit/AuditService';
+import { AuditConfig } from '../services/audit/AuditService.js';
 
 export function getAuditConfig(): AuditConfig {
   const maxHistoryEntriesStr = process.env.AUDIT_MAX_HISTORY_ENTRIES;

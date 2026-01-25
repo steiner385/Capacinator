@@ -1,5 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
+import type { Worksheet, Workbook, Cell, Row } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -536,7 +537,7 @@ export class ExcelImporter {
     return phase.id;
   }
 
-  private async importProjects(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
+  private async importProjects(worksheet: Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -633,7 +634,7 @@ export class ExcelImporter {
     return { count, errors };
   }
 
-  private async importPeople(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
+  private async importPeople(worksheet: Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -764,7 +765,7 @@ export class ExcelImporter {
     return { count, errors };
   }
 
-  private async importStandardAllocations(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
+  private async importStandardAllocations(worksheet: Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 

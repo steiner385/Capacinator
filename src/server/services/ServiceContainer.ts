@@ -120,14 +120,19 @@ export class ServiceContainer {
     } else {
       // Create a minimal mock for Knex
       // Note: The transaction callback receives a mock transaction object
+      // @ts-ignore - jest is only available in test environment
       const mockDbInstance: Record<string, unknown> = {
+        // @ts-ignore - jest is only available in test environment
         raw: jest.fn().mockResolvedValue({ rows: [] }),
         schema: {
+          // @ts-ignore - jest is only available in test environment
           hasTable: jest.fn().mockResolvedValue(true),
+          // @ts-ignore - jest is only available in test environment
           hasColumn: jest.fn().mockResolvedValue(true)
         }
       };
       // Add transaction method separately to avoid circular reference in type inference
+      // @ts-ignore - jest is only available in test environment
       mockDbInstance.transaction = jest.fn((cb: (trx: Knex) => Promise<unknown>) =>
         cb(mockDbInstance as unknown as Knex)
       );

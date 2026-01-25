@@ -9,7 +9,7 @@ jest.mock('../../logging/config.js', () => ({
   }
 }));
 
-import { initializeAutomaticBackups } from '../scheduler';
+import { initializeAutomaticBackups } from '../scheduler.js';
 import { logger } from '../../logging/config.js';
 
 describe('backup scheduler', () => {

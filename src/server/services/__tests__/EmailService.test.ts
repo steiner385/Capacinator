@@ -1,5 +1,5 @@
-import { EmailService } from '../EmailService';
-import { getAuditedDb } from '../../database/index';
+import { EmailService } from '../EmailService.js';
+import { getAuditedDb } from '../../database/index.js';
 import nodemailer from 'nodemailer';
 
 // Mock dependencies
