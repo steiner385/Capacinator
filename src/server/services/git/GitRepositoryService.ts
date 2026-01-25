@@ -5,7 +5,7 @@
  * Uses simple-git library for Git operations
  */
 
-import simpleGit, { SimpleGit, CleanOptions } from 'simple-git';
+import simpleGit, { SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
 import type { GitCredential, PullResult, GitAuthor } from '../../../../shared/types/git-entities.js';
@@ -14,7 +14,6 @@ import {
   categorizeGitError,
   GitCloneError,
   GitPushError,
-  GitConflictError,
   GitBranchError,
   GitRepositoryStateError,
 } from './GitErrors.js';
@@ -532,7 +531,7 @@ export class GitRepositoryService {
         );
       }
 
-      const result = await this.git.merge([branchName]);
+      await this.git.merge([branchName]);
 
       // Check for conflicts
       const status = await this.git.status();

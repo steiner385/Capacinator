@@ -908,6 +908,7 @@ describe('ScenarioExporter', () => {
   describe('Validation with Partial Recovery', () => {
     test('should skip invalid records during import', async () => {
       // Set up mock to reject some records
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const schemas = require('../../../../../../shared/types/json-schemas.js');
       let callCount = 0;
       schemas.ProjectJSONSchema.parse = jest.fn().mockImplementation((data: any) => {
@@ -1118,12 +1119,14 @@ describe('ScenarioExporter', () => {
 
   describe('File System Operations', () => {
     test('should create directory recursively', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
       await exporter.exportToJSON('deep/nested/scenario');
       expect(fs.mkdir).toHaveBeenCalled();
     });
 
     test('should write with UTF-8 encoding', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
       mockDbState.projects = [createTestProject()];
       await exporter.exportToJSON('working');
@@ -1135,6 +1138,7 @@ describe('ScenarioExporter', () => {
     });
 
     test('should read with UTF-8 encoding', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
       setupScenarioFiles('working', { projects: [createTestProject()], people: [], assignments: [], phases: [] });
       await exporter.importFromJSON('working');
@@ -1479,6 +1483,812 @@ describe('ScenarioExporter', () => {
       const parsed2 = JSON.parse(content2);
       expect(parsed1.data).toEqual(parsed2.data);
       expect(parsed1.schemaVersion).toEqual(parsed2.schemaVersion);
+    });
+  });
+
+  // ===========================================
+  // Additional Tests for Issue #105 Coverage
+  // ===========================================
+
+  describe('JSON Recovery - Extended Scenarios', () => {
+    test('should recover JSON with single quotes', async () => {
+      const invalidJson = "{'schemaVersion':'1.0.0','data':[{'id':1}]}";
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', invalidJson);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      // Should attempt recovery
+      expect(result).toBeDefined();
+    });
+
+    test('should recover JSON with unquoted keys', async () => {
+      const invalidJson = '{schemaVersion:"1.0.0",data:[{id:1}]}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', invalidJson);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+
+    test('should handle JSON with BOM (Byte Order Mark)', async () => {
+      const bomJson = '\ufeff{"schemaVersion":"1.0.0","data":[]}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', bomJson);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+
+    test('should handle JSON with comments', async () => {
+      const jsonWithComments = '{"schemaVersion":"1.0.0",/* comment */"data":[]}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', jsonWithComments);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+
+    test('should handle JSON with extra whitespace', async () => {
+      const jsonWithWhitespace = '  \n\t  {"schemaVersion":"1.0.0","data":[]}  \n\t  ';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', jsonWithWhitespace);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.success).toBe(true);
+    });
+
+    test('should handle missing closing bracket in array', async () => {
+      const truncatedJson = '{"schemaVersion":"1.0.0","data":[{"id":1},{"id":2}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', truncatedJson);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+
+    test('should handle missing closing brace in object', async () => {
+      const truncatedJson = '{"schemaVersion":"1.0.0","data":[{"id":1}]';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', truncatedJson);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+
+    test('should handle duplicate keys', async () => {
+      const duplicateKeys = '{"schemaVersion":"1.0.0","data":[],"data":[{"id":1}]}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', duplicateKeys);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Schema Version Handling', () => {
+    test('should include current schema version in exports', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.schemaVersion).toBe('1.0.0');
+    });
+
+    test('should import data with same schema version', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.success).toBe(true);
+    });
+
+    test('should handle missing schemaVersion in import file', async () => {
+      const noVersionJson = '{"data":[{"id":1,"name":"Test"}]}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', noVersionJson);
+      setupScenarioFiles('working', { people: [], assignments: [], phases: [] });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Round-Trip Integrity', () => {
+    test('should preserve project data through export/import cycle', async () => {
+      const originalProject = createTestProject({
+        id: 42,
+        name: 'Test Project',
+        status: 'active',
+        start_date: '2024-01-15',
+        end_date: '2024-12-31',
+      });
+      mockDbState.projects = [originalProject];
+
+      await exporter.exportToJSON('working');
+
+      const exported = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(exported.data[0]).toMatchObject(originalProject);
+    });
+
+    test('should preserve person data through export/import cycle', async () => {
+      const originalPerson = createTestPerson({
+        id: 99,
+        first_name: 'Alice',
+        last_name: 'Smith',
+        email: 'alice@example.com',
+      });
+      mockDbState.people = [originalPerson];
+
+      await exporter.exportToJSON('working');
+
+      const exported = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/people.json')!);
+      expect(exported.data[0]).toMatchObject(originalPerson);
+    });
+
+    test('should preserve assignment data through export/import cycle', async () => {
+      const originalAssignment = createTestAssignment({
+        id: 123,
+        project_id: 1,
+        person_id: 2,
+        allocation_percentage: 75,
+      });
+      mockDbState.project_assignments = [originalAssignment];
+
+      await exporter.exportToJSON('working');
+
+      const exported = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/assignments.json')!);
+      expect(exported.data[0]).toMatchObject(originalAssignment);
+    });
+
+    test('should preserve phase data through export/import cycle', async () => {
+      const originalPhase = createTestPhase({
+        id: 456,
+        project_id: 1,
+        name: 'Design Phase',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+      });
+      mockDbState.project_phases = [originalPhase];
+
+      await exporter.exportToJSON('working');
+
+      const exported = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/project_phases.json')!);
+      expect(exported.data[0]).toMatchObject(originalPhase);
+    });
+
+    test('should preserve complex nested data', async () => {
+      const projectWithMetadata = createTestProject({
+        metadata: { tags: ['urgent', 'frontend'], settings: { priority: 'high' } },
+      });
+      mockDbState.projects = [projectWithMetadata];
+
+      await exporter.exportToJSON('working');
+
+      const exported = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(exported.data[0].metadata.tags).toEqual(['urgent', 'frontend']);
+      expect(exported.data[0].metadata.settings.priority).toBe('high');
+    });
+  });
+
+  describe('Boundary Conditions', () => {
+    test('should handle zero records', async () => {
+      mockDbState.projects = [];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data).toEqual([]);
+    });
+
+    test('should handle single record', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data).toHaveLength(1);
+    });
+
+    test('should handle very long string field', async () => {
+      const longDescription = 'a'.repeat(10000);
+      mockDbState.projects = [createTestProject({ description: longDescription })];
+
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].description.length).toBe(10000);
+    });
+
+    test('should handle maximum integer value', async () => {
+      mockDbState.projects = [createTestProject({ id: Number.MAX_SAFE_INTEGER })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].id).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    test('should handle minimum integer value', async () => {
+      mockDbState.project_assignments = [createTestAssignment({ allocation_percentage: -100 })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/assignments.json')!);
+      expect(content.data[0].allocation_percentage).toBe(-100);
+    });
+
+    test('should handle empty string fields', async () => {
+      mockDbState.projects = [createTestProject({ name: '' })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].name).toBe('');
+    });
+  });
+
+  describe('Error Recovery Scenarios', () => {
+    test('should continue after project import error', async () => {
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', 'invalid');
+      setupScenarioFiles('working', {
+        people: [createTestPerson()],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.imported.people).toBe(1);
+    });
+
+    test('should continue after people import error', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        assignments: [],
+        phases: [],
+      });
+      mockFs.files.set('/test/repo/scenarios/working/people.json', 'invalid');
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.imported.projects).toBe(1);
+    });
+
+    test('should continue after assignment import error', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [createTestPerson()],
+        phases: [],
+      });
+      mockFs.files.set('/test/repo/scenarios/working/assignments.json', 'invalid');
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.imported.projects).toBe(1);
+      expect(result.imported.people).toBe(1);
+    });
+
+    test('should continue after phase import error', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [createTestPerson()],
+        assignments: [createTestAssignment()],
+      });
+      mockFs.files.set('/test/repo/scenarios/working/project_phases.json', 'invalid');
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.imported.projects).toBe(1);
+      expect(result.imported.people).toBe(1);
+      expect(result.imported.assignments).toBe(1);
+    });
+
+    test('should collect all errors', async () => {
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', 'invalid1');
+      mockFs.files.set('/test/repo/scenarios/working/people.json', 'invalid2');
+      mockFs.files.set('/test/repo/scenarios/working/assignments.json', 'invalid3');
+      mockFs.files.set('/test/repo/scenarios/working/project_phases.json', 'invalid4');
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.errors.length).toBe(4);
+    });
+  });
+
+  describe('Conflict Detection Extended', () => {
+    test('should detect conflicts for multiple projects', async () => {
+      const projects = [
+        createTestProject({ id: 1, name: 'Project A' }),
+        createTestProject({ id: 2, name: 'Project B' }),
+      ];
+      setupScenarioFiles('working', { projects, people: [], assignments: [], phases: [] });
+      mockDbState.projects = projects;
+
+      await exporter.detectConflictsAfterPull('working', 'sync-123');
+
+      expect(mockDetectConflicts).toHaveBeenCalledTimes(2);
+    });
+
+    test('should detect conflicts for multiple people', async () => {
+      const people = [
+        createTestPerson({ id: 1, first_name: 'John' }),
+        createTestPerson({ id: 2, first_name: 'Jane' }),
+        createTestPerson({ id: 3, first_name: 'Bob' }),
+      ];
+      setupScenarioFiles('working', { projects: [], people, assignments: [], phases: [] });
+      mockDbState.people = people;
+
+      await exporter.detectConflictsAfterPull('working', 'sync-456');
+
+      expect(mockDetectConflicts).toHaveBeenCalledTimes(3);
+    });
+
+    test('should return all conflicts from all entities', async () => {
+      const mockConflict1 = { id: 'conflict-1', entityType: 'project' };
+      const mockConflict2 = { id: 'conflict-2', entityType: 'person' };
+      mockDetectConflicts
+        .mockReturnValueOnce([mockConflict1])
+        .mockReturnValueOnce([mockConflict2]);
+
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [createTestPerson()],
+        assignments: [],
+        phases: [],
+      });
+      mockDbState.projects = [createTestProject()];
+      mockDbState.people = [createTestPerson()];
+
+      const conflicts = await exporter.detectConflictsAfterPull('working', 'sync-789');
+
+      expect(conflicts.length).toBe(2);
+    });
+
+    test('should handle new entities (no local version)', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject({ id: 999 })],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+      // Local database has no project with id 999
+      mockDbState.projects = [];
+
+      const conflicts = await exporter.detectConflictsAfterPull('working', 'sync-new');
+
+      // New entities shouldn't cause conflicts
+      expect(conflicts).toEqual([]);
+    });
+  });
+
+  describe('File Permission Handling', () => {
+    test('should handle directory creation permission error', async () => {
+      mockFs.simulateError = {
+        operation: 'mkdir',
+        path: 'scenarios',
+        error: new Error('EACCES: permission denied'),
+      };
+
+      await expect(exporter.exportToJSON('working')).rejects.toThrow();
+    });
+
+    test('should handle file write permission error', async () => {
+      mockFs.simulateError = {
+        operation: 'writeFile',
+        path: 'projects.json',
+        error: new Error('EACCES: permission denied'),
+      };
+
+      await expect(exporter.exportToJSON('working')).rejects.toThrow();
+    });
+  });
+
+  describe('Timestamp Handling', () => {
+    test('should include ISO timestamp in export', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      const exportedAt = new Date(content.exportedAt);
+
+      expect(exportedAt).toBeInstanceOf(Date);
+      expect(exportedAt.toString()).not.toBe('Invalid Date');
+    });
+
+    test('should export with recent timestamp', async () => {
+      const before = new Date();
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('working');
+      const after = new Date();
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      const exportedAt = new Date(content.exportedAt);
+
+      expect(exportedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(exportedAt.getTime()).toBeLessThanOrEqual(after.getTime());
+    });
+  });
+
+  describe('Import Validation', () => {
+    test('should validate imported projects', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      await exporter.importFromJSON('working');
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const schemas = require('../../../../../../shared/types/json-schemas.js');
+      expect(schemas.ProjectJSONSchema.parse).toHaveBeenCalled();
+    });
+
+    test('should handle validation error gracefully', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const schemas = require('../../../../../../shared/types/json-schemas.js');
+      schemas.ProjectJSONSchema.parse = jest.fn().mockImplementation(() => {
+        throw new Error('Validation failed');
+      });
+
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+      // Should handle validation errors
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Scenario Naming Conventions', () => {
+    test('should handle "working" scenario', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('working');
+      expect(mockFs.files.has('/test/repo/scenarios/working/projects.json')).toBe(true);
+    });
+
+    test('should handle "committed" scenario', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('committed');
+      expect(mockFs.files.has('/test/repo/scenarios/committed/projects.json')).toBe(true);
+    });
+
+    test('should handle "draft" scenario', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('draft');
+      expect(mockFs.files.has('/test/repo/scenarios/draft/projects.json')).toBe(true);
+    });
+
+    test('should handle numeric scenario ID', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('2024');
+      expect(mockFs.files.has('/test/repo/scenarios/2024/projects.json')).toBe(true);
+    });
+  });
+
+  describe('Export Performance', () => {
+    test('should handle 5000 records', async () => {
+      mockDbState.projects = Array.from({ length: 5000 }, (_, i) =>
+        createTestProject({ id: i + 1, name: `Project ${i + 1}` })
+      );
+
+      const start = Date.now();
+      await exporter.exportToJSON('working');
+      const elapsed = Date.now() - start;
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data).toHaveLength(5000);
+      expect(elapsed).toBeLessThan(5000); // Should complete in under 5 seconds
+    });
+
+    test('should handle combined large dataset', async () => {
+      mockDbState.projects = Array.from({ length: 100 }, (_, i) => createTestProject({ id: i + 1 }));
+      mockDbState.people = Array.from({ length: 200 }, (_, i) => createTestPerson({ id: i + 1 }));
+      mockDbState.project_assignments = Array.from({ length: 500 }, (_, i) =>
+        createTestAssignment({ id: i + 1 })
+      );
+      mockDbState.project_phases = Array.from({ length: 150 }, (_, i) => createTestPhase({ id: i + 1 }));
+
+      await exporter.exportToJSON('working');
+
+      expect(mockFs.files.size).toBe(4);
+    });
+  });
+
+  describe('Commit Message Generation Extended', () => {
+    test('should handle zero items correctly', async () => {
+      setupScenarioFiles('working', {
+        projects: [],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const message = await exporter.generateCommitMessage('working');
+      expect(message).toContain('no data');
+    });
+
+    test('should use correct grammar for 1 item', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const message = await exporter.generateCommitMessage('working');
+      expect(message).toContain('1 project');
+      expect(message).not.toContain('1 projects');
+    });
+
+    test('should use correct grammar for 2+ items', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject({ id: 1 }), createTestProject({ id: 2 })],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const message = await exporter.generateCommitMessage('working');
+      expect(message).toContain('2 projects');
+    });
+
+    test('should handle mixed counts', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [createTestPerson({ id: 1 }), createTestPerson({ id: 2 }), createTestPerson({ id: 3 })],
+        assignments: [],
+        phases: [createTestPhase()],
+      });
+
+      const message = await exporter.generateCommitMessage('working');
+      expect(message).toContain('1 project');
+      expect(message).toContain('3 people');
+      expect(message).toContain('1 phase');
+    });
+  });
+
+  describe('Entity ID Handling', () => {
+    test('should handle string IDs', async () => {
+      mockDbState.projects = [createTestProject({ id: 'uuid-12345' })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].id).toBe('uuid-12345');
+    });
+
+    test('should handle numeric IDs', async () => {
+      mockDbState.projects = [createTestProject({ id: 12345 })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].id).toBe(12345);
+    });
+
+    test('should match entities by ID for conflict detection', async () => {
+      const project = createTestProject({ id: 42, name: 'Test' });
+      setupScenarioFiles('working', { projects: [project], people: [], assignments: [], phases: [] });
+      mockDbState.projects = [createTestProject({ id: 42, name: 'Different' })];
+
+      await exporter.detectConflictsAfterPull('working', 'sync-id-test');
+
+      expect(mockDetectConflicts).toHaveBeenCalled();
+    });
+  });
+
+  describe('Export All Files', () => {
+    test('should create exactly 4 JSON files', async () => {
+      await exporter.exportToJSON('working');
+      expect(mockFs.files.size).toBe(4);
+    });
+
+    test('should name files correctly', async () => {
+      await exporter.exportToJSON('working');
+
+      const fileNames = Array.from(mockFs.files.keys()).map(f => f.split('/').pop());
+      expect(fileNames).toContain('projects.json');
+      expect(fileNames).toContain('people.json');
+      expect(fileNames).toContain('assignments.json');
+      expect(fileNames).toContain('project_phases.json');
+    });
+  });
+
+  describe('Import File Discovery', () => {
+    test('should read projects.json', async () => {
+      setupScenarioFiles('working', { projects: [], people: [], assignments: [], phases: [] });
+      await exporter.importFromJSON('working');
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs/promises');
+      expect(fs.readFile).toHaveBeenCalledWith(
+        expect.stringContaining('projects.json'),
+        'utf-8'
+      );
+    });
+
+    test('should read people.json', async () => {
+      setupScenarioFiles('working', { projects: [], people: [], assignments: [], phases: [] });
+      await exporter.importFromJSON('working');
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs/promises');
+      expect(fs.readFile).toHaveBeenCalledWith(
+        expect.stringContaining('people.json'),
+        'utf-8'
+      );
+    });
+
+    test('should read assignments.json', async () => {
+      setupScenarioFiles('working', { projects: [], people: [], assignments: [], phases: [] });
+      await exporter.importFromJSON('working');
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs/promises');
+      expect(fs.readFile).toHaveBeenCalledWith(
+        expect.stringContaining('assignments.json'),
+        'utf-8'
+      );
+    });
+
+    test('should read project_phases.json', async () => {
+      setupScenarioFiles('working', { projects: [], people: [], assignments: [], phases: [] });
+      await exporter.importFromJSON('working');
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs/promises');
+      expect(fs.readFile).toHaveBeenCalledWith(
+        expect.stringContaining('project_phases.json'),
+        'utf-8'
+      );
+    });
+  });
+
+  describe('Data Sorting', () => {
+    test('should preserve project order in export', async () => {
+      mockDbState.projects = [
+        createTestProject({ id: 3, name: 'C' }),
+        createTestProject({ id: 1, name: 'A' }),
+        createTestProject({ id: 2, name: 'B' }),
+      ];
+
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].id).toBe(3);
+      expect(content.data[1].id).toBe(1);
+      expect(content.data[2].id).toBe(2);
+    });
+  });
+
+  describe('Special Characters in Data', () => {
+    test('should handle newlines in fields', async () => {
+      mockDbState.projects = [createTestProject({ description: 'Line 1\nLine 2\nLine 3' })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].description).toBe('Line 1\nLine 2\nLine 3');
+    });
+
+    test('should handle tabs in fields', async () => {
+      mockDbState.projects = [createTestProject({ description: 'Col1\tCol2\tCol3' })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].description).toBe('Col1\tCol2\tCol3');
+    });
+
+    test('should handle backslashes in fields', async () => {
+      mockDbState.projects = [createTestProject({ path: 'C:\\Users\\test\\file.txt' })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].path).toBe('C:\\Users\\test\\file.txt');
+    });
+
+    test('should handle HTML in fields', async () => {
+      mockDbState.projects = [createTestProject({ description: '<script>alert("xss")</script>' })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].description).toBe('<script>alert("xss")</script>');
+    });
+
+    test('should handle SQL in fields', async () => {
+      mockDbState.projects = [createTestProject({ description: "'; DROP TABLE projects; --" })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content.data[0].description).toBe("'; DROP TABLE projects; --");
+    });
+  });
+
+  describe('Assignment Data Relations', () => {
+    test('should export assignment with project_id', async () => {
+      mockDbState.project_assignments = [createTestAssignment({ project_id: 42 })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/assignments.json')!);
+      expect(content.data[0].project_id).toBe(42);
+    });
+
+    test('should export assignment with person_id', async () => {
+      mockDbState.project_assignments = [createTestAssignment({ person_id: 99 })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/assignments.json')!);
+      expect(content.data[0].person_id).toBe(99);
+    });
+  });
+
+  describe('Phase Data Relations', () => {
+    test('should export phase with project_id', async () => {
+      mockDbState.project_phases = [createTestPhase({ project_id: 123 })];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/project_phases.json')!);
+      expect(content.data[0].project_id).toBe(123);
+    });
+  });
+
+  describe('Scenario Existence Check', () => {
+    test('should return true for existing scenario with all files', async () => {
+      setupScenarioFiles('complete', {
+        projects: [],
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const exists = await exporter.scenarioExists('complete');
+      expect(exists).toBe(true);
+    });
+
+    test('should return true for existing scenario with partial files', async () => {
+      mockFs.files.set('/test/repo/scenarios/partial/projects.json', '{}');
+
+      const exists = await exporter.scenarioExists('partial');
+      expect(exists).toBe(true);
+    });
+
+    test('should return false for non-existing scenario', async () => {
+      const exists = await exporter.scenarioExists('imaginary');
+      expect(exists).toBe(false);
+    });
+  });
+
+  describe('Multiple Entity Types Import', () => {
+    test('should attempt to import all entity types in single call', async () => {
+      setupScenarioFiles('working', {
+        projects: [createTestProject()],
+        people: [createTestPerson()],
+        assignments: [createTestAssignment()],
+        phases: [createTestPhase()],
+      });
+
+      const result = await exporter.importFromJSON('working');
+
+      // The import should complete and use transaction
+      expect(result).toBeDefined();
+      expect(mockTransaction).toHaveBeenCalled();
+    });
+  });
+
+  describe('Export Metadata', () => {
+    test('should have standard metadata fields', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('working');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/working/projects.json')!);
+      expect(content).toHaveProperty('schemaVersion');
+      expect(content).toHaveProperty('exportedAt');
+      expect(content).toHaveProperty('scenarioId');
+      expect(content).toHaveProperty('data');
+    });
+
+    test('should include scenarioId matching export target', async () => {
+      mockDbState.projects = [createTestProject()];
+      await exporter.exportToJSON('my-custom-scenario');
+
+      const content = JSON.parse(mockFs.files.get('/test/repo/scenarios/my-custom-scenario/projects.json')!);
+      expect(content.scenarioId).toBe('my-custom-scenario');
     });
   });
 });

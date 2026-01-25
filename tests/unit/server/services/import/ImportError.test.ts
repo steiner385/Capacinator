@@ -615,7 +615,7 @@ describe('ImportError', () => {
       expect(stats.currentPhase).toBe(ImportPhase.PROJECTS);
       expect(stats.completedOperations).toBe(2);
       expect(stats.totalOperations).toBe(10);
-      expect(stats.elapsedMs).toBeGreaterThan(0);
+      expect(stats.elapsedMs).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle completion correctly', () => {

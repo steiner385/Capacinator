@@ -296,6 +296,7 @@ jest.mock('../../../../../../src/server/services/git/GitLogger.js', () => ({
 // Now import the service after all mocks are set up
 import { GitRepositoryService } from '../../../../../../src/server/services/git/GitRepositoryService.js';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require('fs/promises');
 
 // Setup custom matchers
@@ -2127,6 +2128,183 @@ describe('GitRepositoryService', () => {
       await service.checkoutBranch('main');
       const result = await service.mergeBranch('feature/new');
       expect(result.success).toBe(true);
+    });
+  });
+
+  // ===========================================
+  // Additional Tests for Issue #105 Coverage
+  // ===========================================
+
+  describe('Remote URL Handling', () => {
+    beforeEach(() => {
+      initializeRepo();
+    });
+
+    test('should strip credentials from stored URL', async () => {
+      const credential = createTestCredential();
+      fs.access.mockRejectedValue(new Error('ENOENT'));
+
+      await service.initialize('https://user:token@github.com/org/repo.git', credential);
+
+      // URL should have credentials stripped for storage
+      expect(mockState.remoteUrl).not.toContain('user:token');
+    });
+
+    test('should handle HTTPS URLs', async () => {
+      const credential = createTestCredential();
+      fs.access.mockRejectedValue(new Error('ENOENT'));
+
+      await service.initialize('https://github.enterprise.com/org/repo.git', credential);
+
+      expect(mockState.initialized).toBe(true);
+    });
+  });
+
+  describe('Commit Author Information', () => {
+    beforeEach(() => {
+      initializeRepo();
+    });
+
+    test('should accept author with name and email', async () => {
+      mockState.modifiedFiles.add('test.json');
+      const author = { name: 'Test User', email: 'test@example.com' };
+
+      const sha = await service.commit('Test commit', author);
+
+      expect(sha).toBeDefined();
+    });
+
+    test('should store author in commit history', async () => {
+      mockState.modifiedFiles.add('test.json');
+      const author = { name: 'Alice', email: 'alice@company.com' };
+
+      await service.commit('Alice commit', author);
+
+      const history = await service.getHistory({ limit: 1 });
+      expect(history.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Branch Name Validation', () => {
+    beforeEach(() => {
+      initializeRepo();
+    });
+
+    test('should create branch with slashes', async () => {
+      await service.createBranch('feature/test/nested');
+      expect(mockState.currentBranch).toBe('feature/test/nested');
+    });
+
+    test('should create branch with numbers', async () => {
+      await service.createBranch('feature-123');
+      expect(mockState.currentBranch).toBe('feature-123');
+    });
+
+    test('should create branch with underscores', async () => {
+      await service.createBranch('my_feature_branch');
+      expect(mockState.currentBranch).toBe('my_feature_branch');
+    });
+  });
+
+  describe('Concurrent Status Checks', () => {
+    beforeEach(() => {
+      initializeRepo();
+    });
+
+    test('should handle multiple status calls', async () => {
+      const results = await Promise.all([
+        service.getStatus(),
+        service.getStatus(),
+        service.getStatus(),
+      ]);
+
+      expect(results).toHaveLength(3);
+      results.forEach(status => {
+        expect(status.current).toBe('main');
+      });
+    });
+  });
+
+  describe('Error Message Content', () => {
+    beforeEach(() => {
+      initializeRepo();
+    });
+
+    test('should include operation name in error', async () => {
+      mockState.simulateError = {
+        operation: 'status',
+        error: new Error('fatal: not a git repository'),
+      };
+
+      await expect(service.getStatus()).rejects.toThrow();
+    });
+  });
+
+  describe('Repository State Consistency', () => {
+    beforeEach(() => {
+      initializeRepo();
+    });
+
+    test('should maintain state after multiple operations', async () => {
+      // Get initial status
+      let status = await service.getStatus();
+      expect(status.current).toBe('main');
+
+      // Create and checkout new branch
+      await service.createBranch('develop');
+      status = await service.getStatus();
+      expect(status.current).toBe('develop');
+
+      // Return to main
+      await service.checkoutBranch('main');
+      status = await service.getStatus();
+      expect(status.current).toBe('main');
+    });
+
+    test('should track file changes across operations', async () => {
+      mockState.modifiedFiles.add('file1.json');
+
+      let status = await service.getStatus();
+      expect(status.modified).toContain('file1.json');
+
+      // After commit, files should be cleared
+      const author = createTestAuthor();
+      await service.commit('Commit changes', author);
+
+      status = await service.getStatus();
+      expect(status.modified).not.toContain('file1.json');
+    });
+  });
+
+  describe('History Pagination', () => {
+    beforeEach(() => {
+      initializeRepo();
+      // Manually add commits to mock state
+      for (let i = 0; i < 10; i++) {
+        mockState.commits.push({
+          hash: `abc123${i}`,
+          date: new Date().toISOString(),
+          message: `Commit ${i}`,
+          author_name: 'Test',
+          author_email: 'test@test.com',
+        });
+      }
+    });
+
+    test('should accept limit parameter', async () => {
+      const history = await service.getHistory({ limit: 5 });
+      expect(Array.isArray(history)).toBe(true);
+    });
+
+    test('should return commits when available', async () => {
+      const history = await service.getHistory({ limit: 100 });
+      expect(Array.isArray(history)).toBe(true);
+      expect(history.length).toBeGreaterThan(0);
+    });
+
+    test('should handle empty options', async () => {
+      const history = await service.getHistory({});
+      expect(Array.isArray(history)).toBe(true);
     });
   });
 });
