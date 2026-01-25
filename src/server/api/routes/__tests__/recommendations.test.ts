@@ -1,9 +1,19 @@
 import request from 'supertest';
 import express from 'express';
-import recommendationsRouter from '../recommendations.js';
+
+// Mock the database module to prevent heavy initialization during import
+jest.mock('../../../database/index.js', () => ({
+  db: jest.fn(),
+  getDb: jest.fn(),
+  getAuditedDb: jest.fn(),
+  auditedDb: jest.fn(),
+  initializeDatabase: jest.fn(),
+  testConnection: jest.fn(),
+  reinitializeDb: jest.fn()
+}));
 
 // Mock the RecommendationsController
-jest.mock('../../controllers/RecommendationsController', () => {
+jest.mock('../../controllers/RecommendationsController.js', () => {
   return {
     RecommendationsController: jest.fn().mockImplementation(() => ({
       getRecommendations: jest.fn((req, res) =>
@@ -15,6 +25,9 @@ jest.mock('../../controllers/RecommendationsController', () => {
     }))
   };
 });
+
+// Import router after mocks are set up
+import recommendationsRouter from '../recommendations.js';
 
 describe('Recommendations Routes', () => {
   let app: express.Application;
