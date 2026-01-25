@@ -128,7 +128,7 @@ jobs:
 
           # Start servers directly to capture errors
           echo "Starting backend server..."
-          NODE_ENV=development node --experimental-specifier-resolution=node dist/server/index.js > /tmp/server.log 2>&1 &
+          NODE_ENV=development node --experimental-specifier-resolution=node dist/src/server/index.js > /tmp/server.log 2>&1 &
           SERVER_PID=$!
           echo "Server PID: $SERVER_PID"
 
@@ -205,7 +205,7 @@ jobs:
 
           # Start servers directly to capture errors
           echo "Starting backend server..."
-          NODE_ENV=development node --experimental-specifier-resolution=node dist/server/index.js > /tmp/server.log 2>&1 &
+          NODE_ENV=development node --experimental-specifier-resolution=node dist/src/server/index.js > /tmp/server.log 2>&1 &
           SERVER_PID=$!
           echo "Server PID: $SERVER_PID"
 
