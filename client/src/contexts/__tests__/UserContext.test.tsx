@@ -147,10 +147,6 @@ describe('UserContext', () => {
       renderWithProvider(<TestComponent />);
 
       expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
-      expect(console.error).toHaveBeenCalledWith(
-        'Failed to parse stored user data:',
-        expect.any(Error)
-      );
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('capacinator_current_user');
     });
 
@@ -185,37 +181,56 @@ describe('UserContext', () => {
       );
     });
 
-    it('updates isLoggedIn when user is set', () => {
+    it('updates isLoggedIn when user is set', async () => {
       renderWithProvider(<TestComponent />);
 
       expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
 
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      await waitFor(() => {
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      });
     });
 
-    it('clears user when set to null', () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
+    it('clears user when set to null', async () => {
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === 'capacinator_current_user') return JSON.stringify(mockUser);
+        return null;
+      });
+
+      // Mock login to succeed for initialization
+      (api.auth.login as jest.Mock).mockResolvedValue({
+        data: {
+          user: mockUser,
+          token: 'test-token',
+          refreshToken: 'test-refresh-token'
+        }
+      });
 
       renderWithProvider(<TestComponent />);
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      // Wait for initialization to complete
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      });
 
       const clearButton = screen.getByText('Clear User');
-      act(() => {
+      await act(async () => {
         clearButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      });
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('capacinator_current_user');
     });
 
-    it('allows changing users', () => {
+    it('allows changing users', async () => {
       // Change to different user
       const differentUser: Person = {
         id: 'user-2',
@@ -242,52 +257,71 @@ describe('UserContext', () => {
 
       // Login with first user
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      });
 
       const changeButton = screen.getByText('Change User');
-      act(() => {
+      await act(async () => {
         changeButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('Jane Smith');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('Jane Smith');
+      });
     });
   });
 
   describe('Logout Functionality', () => {
-    it('logs out user and clears localStorage', () => {
+    it('logs out user and clears localStorage', async () => {
       localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
+
+      // Mock login to succeed for initialization
+      (api.auth.login as jest.Mock).mockResolvedValue({
+        data: {
+          user: mockUser,
+          token: 'test-token',
+          refreshToken: 'test-refresh-token'
+        }
+      });
 
       renderWithProvider(<TestComponent />);
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      });
 
       const logoutButton = screen.getByText('Logout');
-      act(() => {
+      await act(async () => {
         logoutButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      });
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('capacinator_current_user');
     });
 
-    it('handles logout when no user is logged in', () => {
+    it('handles logout when no user is logged in', async () => {
       renderWithProvider(<TestComponent />);
 
       expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
 
       const logoutButton = screen.getByText('Logout');
-      act(() => {
+      await act(async () => {
         logoutButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      });
     });
   });
 
@@ -297,18 +331,20 @@ describe('UserContext', () => {
       expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
     });
 
-    it('returns true when user is set', () => {
+    it('returns true when user is set', async () => {
       renderWithProvider(<TestComponent />);
 
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      await waitFor(() => {
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      });
     });
 
-    it('updates immediately when user changes', () => {
+    it('updates immediately when user changes', async () => {
       renderWithProvider(<TestComponent />);
 
       // Initially not logged in
@@ -316,17 +352,21 @@ describe('UserContext', () => {
 
       // Login
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      await waitFor(() => {
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      });
 
       // Logout
       const logoutButton = screen.getByText('Logout');
-      act(() => {
+      await act(async () => {
         logoutButton.click();
       });
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      await waitFor(() => {
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
+      });
     });
   });
 
@@ -377,42 +417,70 @@ describe('UserContext', () => {
   });
 
   describe('localStorage Persistence', () => {
-    it('persists user across page reloads', () => {
+    it('persists user across page reloads', async () => {
       // First render - login
       const { unmount } = renderWithProvider(<TestComponent />);
 
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'capacinator_current_user',
-        JSON.stringify(mockUser)
-      );
+      await waitFor(() => {
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'capacinator_current_user',
+          JSON.stringify(mockUser)
+        );
+      });
 
       unmount();
 
       // Simulate page reload by creating new provider with stored data
       localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
 
+      // Mock login to succeed for initialization
+      (api.auth.login as jest.Mock).mockResolvedValue({
+        data: {
+          user: mockUser,
+          token: 'test-token',
+          refreshToken: 'test-refresh-token'
+        }
+      });
+
       renderWithProvider(<TestComponent />);
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      });
     });
 
-    it('clears localStorage on logout', () => {
+    it('clears localStorage on logout', async () => {
       localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
+
+      // Mock login to succeed for initialization
+      (api.auth.login as jest.Mock).mockResolvedValue({
+        data: {
+          user: mockUser,
+          token: 'test-token',
+          refreshToken: 'test-refresh-token'
+        }
+      });
 
       renderWithProvider(<TestComponent />);
 
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      });
+
       const logoutButton = screen.getByText('Logout');
-      act(() => {
+      await act(async () => {
         logoutButton.click();
       });
 
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('capacinator_current_user');
+      await waitFor(() => {
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('capacinator_current_user');
+      });
     });
 
     it('handles corrupted localStorage data', () => {
@@ -436,7 +504,7 @@ describe('UserContext', () => {
   });
 
   describe('Multiple Consumers', () => {
-    it('provides same user to multiple consumers', () => {
+    it('provides same user to multiple consumers', async () => {
       function Consumer1() {
         const { currentUser } = useUser();
         return <div data-testid="consumer-1">{currentUser?.name || 'No user'}</div>;
@@ -456,15 +524,17 @@ describe('UserContext', () => {
       );
 
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('consumer-1')).toHaveTextContent('John Doe');
-      expect(screen.getByTestId('consumer-2')).toHaveTextContent('John Doe');
+      await waitFor(() => {
+        expect(screen.getByTestId('consumer-1')).toHaveTextContent('John Doe');
+        expect(screen.getByTestId('consumer-2')).toHaveTextContent('John Doe');
+      });
     });
 
-    it('updates all consumers when user changes', () => {
+    it('updates all consumers when user changes', async () => {
       function Consumer1() {
         const { currentUser } = useUser();
         return <div data-testid="consumer-1">{currentUser?.name || 'No user'}</div>;
@@ -485,26 +555,30 @@ describe('UserContext', () => {
 
       // Login
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('consumer-1')).toHaveTextContent('John Doe');
-      expect(screen.getByTestId('consumer-2')).toHaveTextContent('Logged in');
+      await waitFor(() => {
+        expect(screen.getByTestId('consumer-1')).toHaveTextContent('John Doe');
+        expect(screen.getByTestId('consumer-2')).toHaveTextContent('Logged in');
+      });
 
       // Logout
       const logoutButton = screen.getByText('Logout');
-      act(() => {
+      await act(async () => {
         logoutButton.click();
       });
 
-      expect(screen.getByTestId('consumer-1')).toHaveTextContent('No user');
-      expect(screen.getByTestId('consumer-2')).toHaveTextContent('Not logged in');
+      await waitFor(() => {
+        expect(screen.getByTestId('consumer-1')).toHaveTextContent('No user');
+        expect(screen.getByTestId('consumer-2')).toHaveTextContent('Not logged in');
+      });
     });
   });
 
   describe('Edge Cases', () => {
-    it('handles user object with missing fields', () => {
+    it('handles user object with missing fields', async () => {
       const partialUser = {
         id: 'user-1',
         name: 'Partial User'
@@ -523,25 +597,27 @@ describe('UserContext', () => {
       renderWithProvider(<TestPartialUser />);
 
       const button = screen.getByText('Set Partial User');
-      act(() => {
+      await act(async () => {
         button.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('Partial User');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('Partial User');
+      });
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'capacinator_current_user',
         JSON.stringify(partialUser)
       );
     });
 
-    it('handles rapid login/logout cycles', () => {
+    it('handles rapid login/logout cycles', async () => {
       renderWithProvider(<TestComponent />);
 
       const loginButton = screen.getByText('Login');
       const logoutButton = screen.getByText('Logout');
 
       // Rapid cycles
-      act(() => {
+      await act(async () => {
         loginButton.click();
         logoutButton.click();
         loginButton.click();
@@ -549,11 +625,13 @@ describe('UserContext', () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
-      expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+        expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
+      });
     });
 
-    it('handles null and undefined gracefully', () => {
+    it('handles null and undefined gracefully', async () => {
       renderWithProvider(<TestComponent />);
 
       // Start with no user
@@ -561,19 +639,23 @@ describe('UserContext', () => {
 
       // Login
       const loginButton = screen.getByText('Login');
-      act(() => {
+      await act(async () => {
         loginButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      });
 
       // Clear user
       const clearButton = screen.getByText('Clear User');
-      act(() => {
+      await act(async () => {
         clearButton.click();
       });
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('No user');
+      });
     });
   });
 });

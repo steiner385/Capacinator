@@ -49,10 +49,10 @@ describe('SmartAssignmentModal', () => {
         project_name: 'Project Alpha',
         role_name: 'Developer',
         allocation_percentage: 40,
-        computed_start_date: '2025-01-01',
-        computed_end_date: '2025-12-31',
-        start_date: '2025-01-01',
-        end_date: '2025-12-31'
+        computed_start_date: '2024-01-01',
+        computed_end_date: '2027-12-31',
+        start_date: '2024-01-01',
+        end_date: '2027-12-31'
       }
     ],
     roles: [
@@ -86,8 +86,8 @@ describe('SmartAssignmentModal', () => {
         {
           phase_id: 'phase-1',
           phase_name: 'Planning',
-          start_date: '2025-03-01',
-          end_date: '2025-03-31'
+          start_date: '2024-03-01',
+          end_date: '2027-03-31'
         }
       ]
     }
@@ -590,10 +590,10 @@ describe('SmartAssignmentModal', () => {
             project_name: 'Project Beta',
             role_name: 'Developer',
             allocation_percentage: 40,
-            computed_start_date: '2025-01-01',
-            computed_end_date: '2025-12-31',
-            start_date: '2025-01-01',
-            end_date: '2025-12-31'
+            computed_start_date: '2024-01-01',
+            computed_end_date: '2027-12-31',
+            start_date: '2024-01-01',
+            end_date: '2027-12-31'
           }
         ]
       };
@@ -620,10 +620,10 @@ describe('SmartAssignmentModal', () => {
             project_name: 'Project Alpha',
             role_name: 'Developer',
             allocation_percentage: 80,
-            computed_start_date: '2025-01-01',
-            computed_end_date: '2025-12-31',
-            start_date: '2025-01-01',
-            end_date: '2025-12-31'
+            computed_start_date: '2024-01-01',
+            computed_end_date: '2027-12-31',
+            start_date: '2024-01-01',
+            end_date: '2027-12-31'
           }
         ]
       };
@@ -716,8 +716,8 @@ describe('SmartAssignmentModal', () => {
             project_name: 'Project Alpha',
             role_name: 'Developer',
             allocation_percentage: 40,
-            computed_start_date: '2025-01-01',
-            computed_end_date: '2025-12-31'
+            computed_start_date: '2024-01-01',
+            computed_end_date: '2027-12-31'
           }
         ]
       };
@@ -774,14 +774,14 @@ describe('SmartAssignmentModal', () => {
             {
               phase_id: 'phase-1',
               phase_name: 'Planning',
-              start_date: '2025-03-01',
-              end_date: '2025-03-31'
+              start_date: '2024-03-01',
+              end_date: '2027-03-31'
             },
             {
               phase_id: 'phase-2',
               phase_name: 'Development',
-              start_date: '2025-04-01',
-              end_date: '2025-06-30'
+              start_date: '2024-04-01',
+              end_date: '2027-06-30'
             }
           ]
         }
@@ -1185,8 +1185,8 @@ describe('SmartAssignmentModal', () => {
         const startDateInput = screen.getByLabelText(/Start Date/i);
         const endDateInput = screen.getByLabelText(/End Date/i);
 
-        fireEvent.change(startDateInput, { target: { value: '2025-11-01' } });
-        fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
+        fireEvent.change(startDateInput, { target: { value: '2026-11-01' } });
+        fireEvent.change(endDateInput, { target: { value: '2027-12-31' } });
 
         await waitFor(() => {
           expect(screen.getByText(/Allocation: 50%/i)).toBeInTheDocument();
@@ -1232,8 +1232,8 @@ describe('SmartAssignmentModal', () => {
         const startDateInput = screen.getByLabelText(/Start Date/i);
         const endDateInput = screen.getByLabelText(/End Date/i);
 
-        fireEvent.change(startDateInput, { target: { value: '2025-11-01' } });
-        fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
+        fireEvent.change(startDateInput, { target: { value: '2026-11-01' } });
+        fireEvent.change(endDateInput, { target: { value: '2027-12-31' } });
 
         // Wait a bit for form state to update
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1272,10 +1272,10 @@ describe('SmartAssignmentModal', () => {
               project_name: 'Project Alpha',
               role_name: 'Developer',
               allocation_percentage: 90,
-              computed_start_date: '2025-01-01',
-              computed_end_date: '2025-12-31',
-              start_date: '2025-01-01',
-              end_date: '2025-12-31'
+              computed_start_date: '2024-01-01',
+              computed_end_date: '2027-12-31',
+              start_date: '2024-01-01',
+              end_date: '2027-12-31'
             }
           ]
         };
@@ -1319,10 +1319,10 @@ describe('SmartAssignmentModal', () => {
               project_name: 'Project Alpha',
               role_name: 'Developer',
               allocation_percentage: 95,
-              computed_start_date: '2025-01-01',
-              computed_end_date: '2025-12-31',
-              start_date: '2025-01-01',
-              end_date: '2025-12-31'
+              computed_start_date: '2024-01-01',
+              computed_end_date: '2027-12-31',
+              start_date: '2024-01-01',
+              end_date: '2027-12-31'
             }
           ]
         };
@@ -1391,14 +1391,14 @@ describe('SmartAssignmentModal', () => {
               {
                 phase_id: 'phase-1',
                 phase_name: 'Development',
-                start_date: '2025-11-01',
-                end_date: '2025-12-31'
+                start_date: '2024-11-01',
+                end_date: '2027-12-31'
               },
               {
                 phase_id: 'phase-2',
                 phase_name: 'Testing',
                 start_date: '2026-01-01',
-                end_date: '2026-02-28'
+                end_date: '2027-02-28'
               }
             ]
           }
