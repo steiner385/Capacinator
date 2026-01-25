@@ -186,7 +186,7 @@ export const PersonModal: React.FC<PersonModalProps> = ({
     queryKey: ['roles'],
     queryFn: async () => {
       const response = await api.roles.list();
-      return response.data.data;
+      return response.data?.data || response.data || [];
     }
   });
 

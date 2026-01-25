@@ -56,13 +56,30 @@ export function calculatePhaseDates(
   startDate?: Date
 ): { startDate: string; endDate: string } {
   const start = startDate || new Date();
-  const end = new Date(start);
+
+  // Use UTC methods throughout to avoid timezone-dependent calculation bugs
+  // Extract UTC components from the input date
+  const startYear = start.getUTCFullYear();
+  const startMonth = start.getUTCMonth();
+  const startDay = start.getUTCDate();
+
+  // Create dates in UTC for consistent calculation across timezones
+  const startUTC = new Date(Date.UTC(startYear, startMonth, startDay));
+  const endUTC = new Date(Date.UTC(startYear, startMonth, startDay));
 
   const durationWeeks = calculatePhaseDurationWeeks(phaseName);
-  end.setDate(end.getDate() + (durationWeeks * 7));
+  endUTC.setUTCDate(endUTC.getUTCDate() + (durationWeeks * 7));
+
+  // Format as YYYY-MM-DD using UTC values
+  const formatDate = (date: Date): string => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   return {
-    startDate: start.toISOString().split('T')[0],
-    endDate: end.toISOString().split('T')[0]
+    startDate: formatDate(startUTC),
+    endDate: formatDate(endUTC)
   };
 }

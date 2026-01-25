@@ -419,13 +419,16 @@ describe('DataTable Component', () => {
       ];
 
       const mixedColumns: Column<any>[] = [
-        { 
-          key: 'value', 
-          header: 'Value', 
+        {
+          key: 'value',
+          header: 'Value',
           render: (value) => {
             if (value === null) return 'N/A';
             if (value === undefined) return '-';
-            if (value instanceof Date) return value.toLocaleDateString();
+            if (value instanceof Date) {
+              // Use UTC to avoid timezone-dependent formatting
+              return value.toLocaleDateString('en-US', { timeZone: 'UTC' });
+            }
             return String(value);
           }
         },
@@ -437,8 +440,8 @@ describe('DataTable Component', () => {
       // Check that all values are rendered correctly
       expect(screen.getByText('100')).toBeInTheDocument();
       expect(screen.getByText('200')).toBeInTheDocument();
-      // Date format varies by locale, so just check it's rendered
-      expect(screen.getByText('12/31/2022')).toBeInTheDocument();
+      // Date in UTC with en-US locale: 2023-01-01 -> 1/1/2023
+      expect(screen.getByText('1/1/2023')).toBeInTheDocument();
       expect(screen.getByText('N/A')).toBeInTheDocument();
       expect(screen.getByText('-')).toBeInTheDocument();
     });

@@ -111,7 +111,7 @@ describe('phaseDurations', () => {
       const result = calculatePhaseDates('Development', startDate); // 8 weeks
 
       expect(result.startDate).toBe('2025-01-20');
-      expect(result.endDate).toBe('2025-03-16'); // 56 days later, crossing into March
+      expect(result.endDate).toBe('2025-03-17'); // 56 days later (8 weeks * 7 days), crossing into March
     });
 
     it('returns dates in ISO format (YYYY-MM-DD)', () => {
