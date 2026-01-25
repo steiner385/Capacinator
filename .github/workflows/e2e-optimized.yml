@@ -118,32 +118,19 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: npx playwright install chromium
 
-      - name: Rebuild native modules for Node.js
-        run: npm rebuild better-sqlite3
+      - name: Clean and reinstall native modules
+        run: |
+          # Remove potentially corrupted electron-rebuilt native modules from cache
+          rm -rf node_modules/better-sqlite3
+          npm install better-sqlite3
 
       - name: Start application
         run: |
-          # Build server and client only - skip electron-builder to avoid native module ABI conflicts
-          npm run build:server && npm run build:client
-
-          # Start servers directly to capture errors
-          echo "Starting backend server..."
-          NODE_ENV=development node --experimental-specifier-resolution=node dist/src/server/index.js > /tmp/server.log 2>&1 &
-          SERVER_PID=$!
-          echo "Server PID: $SERVER_PID"
-
-          echo "Starting frontend..."
-          NODE_ENV=development npx vite --config client-vite.config.ts > /tmp/vite.log 2>&1 &
-          VITE_PID=$!
-          echo "Vite PID: $VITE_PID"
-
-          # Wait for health check
+          # Use tsx to run TypeScript directly (avoids ESM/CJS compilation issues)
+          npm run dev &
           npx wait-on http://localhost:3120/api/health -t 60000 || {
-            echo "=== Server failed to start ==="
-            echo "=== Server log: ==="
-            cat /tmp/server.log 2>/dev/null || echo "No server log"
-            echo "=== Vite log: ==="
-            cat /tmp/vite.log 2>/dev/null || echo "No vite log"
+            echo "=== Dev server failed to start. Server logs: ==="
+            cat /tmp/capacinator/logs/dev.log 2>/dev/null || echo "No log file found"
             exit 1
           }
 
@@ -195,32 +182,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
-      - name: Rebuild native modules for Node.js
-        run: npm rebuild better-sqlite3
-
       - name: Start application
         run: |
-          # Build server and client only - skip electron-builder to avoid native module ABI conflicts
-          npm run build:server && npm run build:client
-
-          # Start servers directly to capture errors
-          echo "Starting backend server..."
-          NODE_ENV=development node --experimental-specifier-resolution=node dist/src/server/index.js > /tmp/server.log 2>&1 &
-          SERVER_PID=$!
-          echo "Server PID: $SERVER_PID"
-
-          echo "Starting frontend..."
-          NODE_ENV=development npx vite --config client-vite.config.ts > /tmp/vite.log 2>&1 &
-          VITE_PID=$!
-          echo "Vite PID: $VITE_PID"
-
-          # Wait for health check
+          # Use tsx to run TypeScript directly (avoids ESM/CJS compilation issues)
+          npm run dev &
           npx wait-on http://localhost:3120/api/health -t 60000 || {
-            echo "=== Server failed to start ==="
-            echo "=== Server log: ==="
-            cat /tmp/server.log 2>/dev/null || echo "No server log"
-            echo "=== Vite log: ==="
-            cat /tmp/vite.log 2>/dev/null || echo "No vite log"
+            echo "=== Dev server failed to start. Server logs: ==="
+            cat /tmp/capacinator/logs/dev.log 2>/dev/null || echo "No log file found"
             exit 1
           }
 
