@@ -39,7 +39,8 @@ jobs:
           path: |
             node_modules
             ~/.cache/ms-playwright
-          key: ${{ runner.os }}-deps-${{ hashFiles('package-lock.json') }}
+          # v2: Invalidate cache to remove electron-rebuilt native modules
+          key: ${{ runner.os }}-deps-v2-${{ hashFiles('package-lock.json') }}
       
       - name: Install dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -108,7 +109,8 @@ jobs:
           path: |
             node_modules
             ~/.cache/ms-playwright
-          key: ${{ runner.os }}-deps-${{ hashFiles('package-lock.json') }}
+          # v2: Invalidate cache to remove electron-rebuilt native modules
+          key: ${{ runner.os }}-deps-v2-${{ hashFiles('package-lock.json') }}
       
       - name: Install dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
