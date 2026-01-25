@@ -120,7 +120,8 @@ jobs:
 
       - name: Start application
         run: |
-          npm run build
+          # Build server and client only - skip electron-builder to avoid native module ABI conflicts
+          npm run build:server && npm run build:client
           npm run dev &
           npx wait-on http://localhost:3120/api/health -t 60000 || {
             echo "=== Dev server failed to start. Server logs: ==="
@@ -178,7 +179,8 @@ jobs:
 
       - name: Start application
         run: |
-          npm run build
+          # Build server and client only - skip electron-builder to avoid native module ABI conflicts
+          npm run build:server && npm run build:client
           npm run dev &
           npx wait-on http://localhost:3120/api/health -t 60000 || {
             echo "=== Dev server failed to start. Server logs: ==="
