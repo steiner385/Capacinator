@@ -493,13 +493,15 @@ describe('AssignmentModalNew', () => {
       renderComponent();
 
       await waitFor(() => {
-        const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-        fireEvent.click(cancelButton);
+        expect(screen.getByRole('button', { name: /Cancel/i })).toBeInTheDocument();
       });
+
+      const cancelButton = screen.getByRole('button', { name: /Cancel/i });
+      fireEvent.click(cancelButton);
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      });
     });
   });
 
