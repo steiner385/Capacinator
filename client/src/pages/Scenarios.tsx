@@ -951,7 +951,7 @@ export const Scenarios: React.FC = () => {
       return roots;
     };
 
-    const renderScenarioNode = (scenario: ScenarioTreeNode, level: number = 0, _isLast: boolean = true, parentLines: boolean[] = []): React.ReactNode => {
+    const renderScenarioNode = (scenario: ScenarioTreeNode, level: number = 0, isLast: boolean = true, parentLines: boolean[] = []): React.ReactNode => {
       const indent = level * 24;
       const hasChildren = scenario.children && scenario.children.length > 0;
       const isExpanded = expandedNodes.has(scenario.id);
