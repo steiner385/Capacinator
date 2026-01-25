@@ -122,8 +122,12 @@ jobs:
         run: |
           npm run build
           npm run dev &
-          npx wait-on http://localhost:3120/api/health -t 60000
-      
+          npx wait-on http://localhost:3120/api/health -t 60000 || {
+            echo "=== Dev server failed to start. Server logs: ==="
+            cat /tmp/capacinator/logs/dev.log 2>/dev/null || echo "No log file found"
+            exit 1
+          }
+
       - name: Run E2E tests (Shard ${{ matrix.shardIndex }})
         run: |
           npm test -- \
@@ -176,7 +180,11 @@ jobs:
         run: |
           npm run build
           npm run dev &
-          npx wait-on http://localhost:3120/api/health -t 60000
+          npx wait-on http://localhost:3120/api/health -t 60000 || {
+            echo "=== Dev server failed to start. Server logs: ==="
+            cat /tmp/capacinator/logs/dev.log 2>/dev/null || echo "No log file found"
+            exit 1
+          }
 
       - name: Run performance tests
         run: npm test -- --project=performance --workers=2
