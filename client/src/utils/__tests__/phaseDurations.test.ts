@@ -107,11 +107,18 @@ describe('phaseDurations', () => {
     });
 
     it('handles date calculations across month boundaries', () => {
-      const startDate = new Date('2025-01-20'); // Late in month
-      const result = calculatePhaseDates('Development', startDate); // 8 weeks
+      // Use a fixed start date and verify the duration is correct (8 weeks = 56 days)
+      const startDate = new Date('2025-01-20T12:00:00Z'); // Noon UTC to avoid timezone edge cases
+      const result = calculatePhaseDates('Development', startDate); // 8 weeks = 56 days
 
+      // Verify start date is correct
       expect(result.startDate).toBe('2025-01-20');
-      expect(result.endDate).toBe('2025-03-16'); // 56 days later, crossing into March
+
+      // Verify the duration is exactly 56 days (8 weeks) regardless of timezone
+      const startMs = new Date(result.startDate + 'T00:00:00Z').getTime();
+      const endMs = new Date(result.endDate + 'T00:00:00Z').getTime();
+      const daysDiff = (endMs - startMs) / (1000 * 60 * 60 * 24);
+      expect(daysDiff).toBe(56);
     });
 
     it('returns dates in ISO format (YYYY-MM-DD)', () => {

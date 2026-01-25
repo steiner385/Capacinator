@@ -217,7 +217,11 @@ describe('LocationModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Save Location/i }));
 
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
+      // Use waitFor to properly await async state change
+      // FormActions renders "Creating..." in create mode, not "Saving..."
+      await waitFor(() => {
+        expect(screen.getByText('Creating...')).toBeInTheDocument();
+      });
     });
 
     it('disables submit button during save', async () => {
