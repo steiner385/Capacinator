@@ -120,19 +120,40 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: npx playwright install chromium
 
-      - name: Clean and reinstall native modules
-        run: |
-          # Remove potentially corrupted electron-rebuilt native modules from cache
-          rm -rf node_modules/better-sqlite3
-          npm install better-sqlite3
-
       - name: Start application
         run: |
-          # Use tsx to run TypeScript directly (avoids ESM/CJS compilation issues)
-          npm run dev &
+          # Start servers in background with proper error capture
+          mkdir -p /tmp/capacinator/logs
+
+          # Start backend server directly with tsx, capturing all output
+          echo "Starting backend server..."
+          NODE_ENV=development npx tsx src/server/index.ts > /tmp/capacinator/logs/server.log 2>&1 &
+          SERVER_PID=$!
+          echo "Server PID: $SERVER_PID"
+
+          # Give server a moment to start or fail
+          sleep 2
+
+          # Check if server is still running
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "=== Server crashed! Logs: ==="
+            cat /tmp/capacinator/logs/server.log
+            exit 1
+          fi
+
+          # Start frontend
+          echo "Starting frontend..."
+          NODE_ENV=development npx vite --config client-vite.config.ts > /tmp/capacinator/logs/vite.log 2>&1 &
+          VITE_PID=$!
+          echo "Vite PID: $VITE_PID"
+
+          # Wait for health check
           npx wait-on http://localhost:3120/api/health -t 60000 || {
-            echo "=== Dev server failed to start. Server logs: ==="
-            cat /tmp/capacinator/logs/dev.log 2>/dev/null || echo "No log file found"
+            echo "=== Server failed to become ready ==="
+            echo "=== Server log: ==="
+            cat /tmp/capacinator/logs/server.log 2>/dev/null || echo "No server log"
+            echo "=== Vite log: ==="
+            cat /tmp/capacinator/logs/vite.log 2>/dev/null || echo "No vite log"
             exit 1
           }
 
@@ -186,11 +207,38 @@ jobs:
 
       - name: Start application
         run: |
-          # Use tsx to run TypeScript directly (avoids ESM/CJS compilation issues)
-          npm run dev &
+          # Start servers in background with proper error capture
+          mkdir -p /tmp/capacinator/logs
+
+          # Start backend server directly with tsx, capturing all output
+          echo "Starting backend server..."
+          NODE_ENV=development npx tsx src/server/index.ts > /tmp/capacinator/logs/server.log 2>&1 &
+          SERVER_PID=$!
+          echo "Server PID: $SERVER_PID"
+
+          # Give server a moment to start or fail
+          sleep 2
+
+          # Check if server is still running
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "=== Server crashed! Logs: ==="
+            cat /tmp/capacinator/logs/server.log
+            exit 1
+          fi
+
+          # Start frontend
+          echo "Starting frontend..."
+          NODE_ENV=development npx vite --config client-vite.config.ts > /tmp/capacinator/logs/vite.log 2>&1 &
+          VITE_PID=$!
+          echo "Vite PID: $VITE_PID"
+
+          # Wait for health check
           npx wait-on http://localhost:3120/api/health -t 60000 || {
-            echo "=== Dev server failed to start. Server logs: ==="
-            cat /tmp/capacinator/logs/dev.log 2>/dev/null || echo "No log file found"
+            echo "=== Server failed to become ready ==="
+            echo "=== Server log: ==="
+            cat /tmp/capacinator/logs/server.log 2>/dev/null || echo "No server log"
+            echo "=== Vite log: ==="
+            cat /tmp/capacinator/logs/vite.log 2>/dev/null || echo "No vite log"
             exit 1
           }
 
