@@ -105,14 +105,14 @@ CREATE TABLE project_assignments_new (
   FOREIGN KEY (phase_id) REFERENCES project_phases(id)
 );
 
--- Copy data from old table (explicitly list columns to handle schema evolution)
+-- Copy data from old table (map columns that exist, use NULL/defaults for new columns)
 INSERT INTO project_assignments_new (
-  id, person_id, project_id, role_id, phase_id, allocation_percentage,
+  id, person_id, project_id, role_id, allocation_percentage,
   start_date, end_date, assignment_date_mode, scenario_id, notes,
   created_at, updated_at
 )
 SELECT
-  id, person_id, project_id, role_id, phase_id, allocation_percentage,
+  id, person_id, project_id, role_id, allocation_percentage,
   start_date, end_date, assignment_date_mode, scenario_id, notes,
   created_at, updated_at
 FROM project_assignments;
