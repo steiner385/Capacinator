@@ -102,7 +102,7 @@ export async function seed(knex: Knex): Promise<void> {
   
   for (const project of criticalProjects) {
     // Double the assignments for each critical project
-    const projectAssignments = await knex('assignments')
+    const projectAssignments = await knex('project_assignments')
       .where('project_id', project.id)
       .select('*');
     
@@ -250,7 +250,7 @@ export async function seed(knex: Knex): Promise<void> {
   const keptProjects = projects.slice(0, 3); // Keep only first 3 projects
   
   for (const project of keptProjects) {
-    const projectAssignments = await knex('assignments')
+    const projectAssignments = await knex('project_assignments')
       .where('project_id', project.id)
       .select('*')
       .limit(2); // Keep only 2 people per project
