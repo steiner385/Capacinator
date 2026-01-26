@@ -291,7 +291,7 @@ export function createAuditedDatabase(db: Knex, auditService?: AuditService): an
     has(target, prop) {
       return (prop in auditedDb) || (prop in auditedDb.raw);
     },
-    apply(target, thisArg, args) {
+    apply(target, thisArg, args: [tableName?: string]) {
       return target.apply(thisArg, args);
     }
   });

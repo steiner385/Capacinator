@@ -1,6 +1,6 @@
-import { requestLoggerMiddleware, userContextMiddleware } from '../requestLogger';
+import { requestLoggerMiddleware, userContextMiddleware } from '../requestLogger.js';
 import type { Response, NextFunction } from 'express';
-import type { RequestWithLogging } from '../requestLogger';
+import type { RequestWithLogging } from '../requestLogger.js';
 
 // Mock uuid
 jest.mock('uuid', () => ({
@@ -37,7 +37,7 @@ describe('requestLoggerMiddleware', () => {
       get: jest.fn((header: string) => {
         if (header === 'User-Agent') return 'Test User Agent';
         return undefined;
-      })
+      }) as unknown as { (name: 'set-cookie'): string[] | undefined; (name: string): string | undefined }
     };
 
     mockRes = {

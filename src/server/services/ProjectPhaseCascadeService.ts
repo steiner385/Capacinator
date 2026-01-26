@@ -240,7 +240,7 @@ export class ProjectPhaseCascadeService {
     const graph = new Map<string, DependencyNode>();
 
     // Initialize nodes
-    phases.forEach(phase => {
+    phases.forEach((phase: { id: string; phase_name: string; start_date: string; end_date: string }) => {
       graph.set(phase.id, {
         id: phase.id,
         phase_name: phase.phase_name,
@@ -252,7 +252,7 @@ export class ProjectPhaseCascadeService {
     });
 
     // Add dependency relationships
-    dependencies.forEach(dep => {
+    dependencies.forEach((dep: { predecessor_phase_timeline_id: string; successor_phase_timeline_id: string; dependency_type: DependencyType; lag_days?: number }) => {
       const predecessor = graph.get(dep.predecessor_phase_timeline_id);
       const successor = graph.get(dep.successor_phase_timeline_id);
 

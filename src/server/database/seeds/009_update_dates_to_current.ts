@@ -89,7 +89,7 @@ export async function seed(knex: Knex): Promise<void> {
   }, {} as Record<string, any[]>);
 
   for (const projectId of Object.keys(projectGroups)) {
-    const phases = projectGroups[projectId].sort((a, b) => a.order_index - b.order_index);
+    const phases = projectGroups[projectId].sort((a: { order_index: number }, b: { order_index: number }) => a.order_index - b.order_index);
     const projectStart = new Date(phases[0].project_start);
     const projectEnd = new Date(phases[0].project_end);
     const projectDuration = (projectEnd.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24);

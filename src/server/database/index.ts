@@ -44,7 +44,7 @@ export function getAuditedDb(): any {
   if (!_auditedDb) {
     const rawDb = getDb();
     const auditService = getAuditService();
-    _auditedDb = createAuditedDatabase(rawDb, auditService);
+    _auditedDb = createAuditedDatabase(rawDb, auditService ?? undefined);
   }
   return _auditedDb;
 }
@@ -76,7 +76,7 @@ export function createDbFunction(): any {
       const actualDb = getDb();
       return (prop in target) || (prop in actualDb);
     },
-    apply(target, thisArg, args) {
+    apply(target, thisArg, args: [tableName?: string]) {
       return target.apply(thisArg, args);
     }
   });

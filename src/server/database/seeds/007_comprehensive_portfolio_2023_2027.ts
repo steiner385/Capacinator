@@ -315,7 +315,14 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('projects').insert(comprehensiveProjects);
 
   // Generate project phases for each project
-  const projectPhases = [];
+  interface ProjectPhase {
+    id: string;
+    project_id: string;
+    phase_id: string;
+    start_date: string;
+    end_date: string;
+  }
+  const projectPhases: ProjectPhase[] = [];
   for (const project of comprehensiveProjects) {
     const relevantPhases = getRandomItems(phases, Math.floor(Math.random() * 4) + 3); // 3-6 phases per project
     let currentDate = new Date(project.aspiration_start);
@@ -352,7 +359,20 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   // Generate comprehensive project assignments
-  const assignments = [];
+  interface Assignment {
+    id: string;
+    project_id: string;
+    person_id: string;
+    role_id: string;
+    phase_id: string;
+    start_date: null;
+    end_date: null;
+    computed_start_date: string;
+    computed_end_date: string;
+    allocation_percentage: number;
+    assignment_date_mode: string;
+  }
+  const assignments: Assignment[] = [];
   const assignmentMap = new Map(); // Track assignments to avoid conflicts
 
   for (const project of comprehensiveProjects) {
@@ -481,7 +501,7 @@ export async function seed(knex: Knex): Promise<void> {
         end_date: endDate.toISOString().split('T')[0],
         availability_percentage: 0, // Not available
         hours_per_day: 0,
-        override_type: reasonTypeMapping[reason],
+        override_type: (reasonTypeMapping as Record<string, string>)[reason],
         reason: reason,
         notes: `${reason.charAt(0).toUpperCase() + reason.slice(1).replace('_', ' ')} - ${year}`,
         is_approved: true

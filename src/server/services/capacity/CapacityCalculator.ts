@@ -136,7 +136,7 @@ export class CapacityCalculator {
       const dateStr = date.toISOString().split('T')[0];
       
       // Check if there's an override for this date
-      const override = overrides.find(o => 
+      const override = overrides.find((o: { start_date: string; end_date: string }) =>
         o.start_date <= dateStr && o.end_date >= dateStr
       );
 
@@ -257,7 +257,7 @@ export class CapacityCalculator {
     const bottlenecks = [];
 
     for (const capacity of capacityByRole) {
-      const demand = demandByRole.find(d => d.role_id === capacity.role_id);
+      const demand = demandByRole.find((d: { role_id: string }) => d.role_id === capacity.role_id);
       
       if (demand && demand.total_demand_hours > capacity.available_hours) {
         bottlenecks.push({

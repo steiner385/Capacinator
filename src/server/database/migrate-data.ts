@@ -23,7 +23,7 @@ async function migrateProjectTypeData() {
     console.log(`📊 Found ${existingProjectTypes.length} existing project types`);
     
     // Check if any project types already have hierarchy data
-    const hierarchyDataExists = existingProjectTypes.some(pt => 
+    const hierarchyDataExists = existingProjectTypes.some((pt: { parent_id: string | null; is_parent: boolean | null; level: number | null }) =>
       pt.parent_id !== null || pt.is_parent !== null || pt.level !== null
     );
     
@@ -33,7 +33,7 @@ async function migrateProjectTypeData() {
     }
     
     // Update all existing project types as root-level items
-    const updates = existingProjectTypes.map((pt, index) => ({
+    const updates = existingProjectTypes.map((pt: { id: string }, index: number) => ({
       id: pt.id,
       parent_id: null,
       is_parent: false,
@@ -42,7 +42,7 @@ async function migrateProjectTypeData() {
     }));
     
     // Apply updates in a transaction
-    await db.transaction(async (trx) => {
+    await db.transaction(async (trx: import('knex').Knex.Transaction) => {
       for (const update of updates) {
         await trx('project_types')
           .where('id', update.id)

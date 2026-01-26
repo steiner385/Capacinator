@@ -61,7 +61,7 @@ export class ProjectAllocationController extends BaseController {
         );
 
       // Create inherited allocations for this project
-      const inheritedAllocations = projectTypeAllocations.map(template => ({
+      const inheritedAllocations = projectTypeAllocations.map((template: Record<string, any>) => ({
         id: randomUUID(),
         project_id: projectId,
         phase_id: template.phase_id,

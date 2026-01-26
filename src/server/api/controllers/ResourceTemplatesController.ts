@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { logger } from '../../services/logging/config.js';
@@ -87,8 +88,8 @@ export class ResourceTemplatesController extends BaseController {
 
       // Group by phase
       const phaseMap = new Map();
-      
-      allocations.forEach(allocation => {
+
+      allocations.forEach((allocation: Record<string, any>) => {
         if (!phaseMap.has(allocation.phase_id)) {
           phaseMap.set(allocation.phase_id, {
             phase_id: allocation.phase_id,
@@ -231,7 +232,7 @@ export class ResourceTemplatesController extends BaseController {
         failed: [] as any[]
       };
 
-      await this.db.transaction(async (trx) => {
+      await this.db.transaction(async (trx: Knex.Transaction) => {
         for (const allocation of allocations) {
           try {
             // Check if allocation exists
@@ -344,7 +345,7 @@ export class ResourceTemplatesController extends BaseController {
         .del();
 
       // Insert copied allocations
-      const newAllocations = sourceAllocations.map(allocation => ({
+      const newAllocations = sourceAllocations.map((allocation: Record<string, any>) => ({
         ...allocation,
         project_type_id: target_project_type_id,
         created_at: new Date(),
@@ -412,8 +413,8 @@ export class ResourceTemplatesController extends BaseController {
         templates,
         summary: {
           total_templates: templates.length,
-          templates_with_allocations: templates.filter(t => t.allocation_count > 0).length,
-          empty_templates: templates.filter(t => t.allocation_count === 0).length
+          templates_with_allocations: templates.filter((t: Record<string, any>) => t.allocation_count > 0).length,
+          empty_templates: templates.filter((t: Record<string, any>) => t.allocation_count === 0).length
         }
       };
     }, res, 'Failed to fetch allocation templates');

@@ -745,7 +745,17 @@ export async function seed(knex: Knex): Promise<void> {
   ]);
 
   // Add project planners for all projects
-  const projectPlanners = [];
+  interface ProjectPlanner {
+    project_id: string;
+    person_id: string;
+    permission_level: string;
+    can_modify_type: boolean;
+    can_modify_roadmap: boolean;
+    can_add_overrides: boolean;
+    can_assign_resources: boolean;
+    is_primary_planner: boolean;
+  }
+  const projectPlanners: ProjectPlanner[] = [];
   Object.values(projectIds).forEach(projectId => {
     // Add owner as primary planner based on the project's owner_id
     const project = [
@@ -880,7 +890,7 @@ export async function seed(knex: Knex): Promise<void> {
   // Generate resource templates ONLY for parent project types
   // The inheritance system will auto-create child templates
   for (const projectType of projectTypes) {
-    const projectTypeAllocations = allocationMatrix[projectType.name] || defaultAllocations;
+    const projectTypeAllocations = (allocationMatrix as Record<string, Record<string, Record<string, number>>>)[projectType.name] || defaultAllocations;
     
     for (const phase of phases) {
       const phaseAllocations = projectTypeAllocations[phase.name] || {};

@@ -5,7 +5,7 @@
  * Uses simple-git library for Git operations
  */
 
-import simpleGit, { SimpleGit } from 'simple-git';
+import { simpleGit, type SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
 import type { GitCredential, PullResult, GitAuthor } from '../../../../shared/types/git-entities.js';

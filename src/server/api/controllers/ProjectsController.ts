@@ -60,7 +60,7 @@ export class ProjectsController extends BaseController {
       let currentDate = new Date(projectStart);
       
       // Create timeline entries for each template phase
-      const timelineEntries = projectTypePhases.map((templatePhase, index) => {
+      const timelineEntries = projectTypePhases.map((templatePhase: Record<string, any>, index: number) => {
         const phaseDurationDays = templatePhase.default_duration_days || 30;
         const phaseStart = new Date(currentDate);
         const phaseEnd = new Date(currentDate.getTime() + (phaseDurationDays * 24 * 60 * 60 * 1000));

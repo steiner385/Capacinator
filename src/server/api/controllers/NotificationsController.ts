@@ -115,7 +115,7 @@ export class NotificationsController {
         .orderBy('type')
         .orderBy('name');
 
-      const templatesWithParsedVariables = templates.map(template => ({
+      const templatesWithParsedVariables = templates.map((template: Record<string, any>) => ({
         ...template,
         variables: JSON.parse(template.variables || '[]')
       }));

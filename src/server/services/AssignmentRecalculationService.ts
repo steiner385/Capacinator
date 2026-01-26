@@ -144,7 +144,7 @@ export class AssignmentRecalculationService {
       // Check conflicts after transaction to avoid holding locks
       // Only check for updated assignments to reduce processing time
       const conflictCheckPromises = updatedAssignments.map(async (ua) => {
-        const assignment = phaseAssignments.find(a => a.id === ua.assignment_id);
+        const assignment = phaseAssignments.find((a: { id: string }) => a.id === ua.assignment_id);
         if (assignment && ua.new_computed_start_date && ua.new_computed_end_date) {
           return this.checkAssignmentConflicts(
             assignment.person_id,
@@ -320,9 +320,9 @@ export class AssignmentRecalculationService {
     let query = this.db('project_assignments')
       .join('people', 'project_assignments.person_id', 'people.id')
       .where('project_assignments.person_id', personId)
-      .where(function() {
+      .where(function(this: any) {
         // Overlapping date logic using computed dates
-        this.where(function() {
+        this.where(function(this: any) {
           this.where('project_assignments.computed_start_date', '<=', endDate)
             .where('project_assignments.computed_end_date', '>=', startDate);
         });
@@ -339,14 +339,14 @@ export class AssignmentRecalculationService {
 
     // Calculate total allocation during overlap period
     const totalAllocation = overlappingAssignments.reduce(
-      (sum, assignment) => sum + assignment.allocation_percentage,
+      (sum: number, assignment: { allocation_percentage: number }) => sum + assignment.allocation_percentage,
       allocationPercentage
     );
 
     // Check availability overrides during this period
     const availabilityOverrides = await this.db('person_availability_overrides')
       .where('person_id', personId)
-      .where(function() {
+      .where(function(this: any) {
         this.where('start_date', '<=', endDate)
           .where('end_date', '>=', startDate);
       });
@@ -356,7 +356,7 @@ export class AssignmentRecalculationService {
       // Use the most restrictive availability override in the period
       effectiveAvailability = Math.min(
         effectiveAvailability,
-        ...availabilityOverrides.map(override => override.availability_percentage || 0)
+        ...availabilityOverrides.map((override: { availability_percentage?: number }) => override.availability_percentage || 0)
       );
     }
 
@@ -376,7 +376,7 @@ export class AssignmentRecalculationService {
         person_id: personId,
         person_name: person.name,
         conflict_type: 'availability_override',
-        details: `Availability override active during ${startDate} to ${endDate}: ${availabilityOverrides.map(o => `${o.override_type} (${o.availability_percentage}%)`).join(', ')}`
+        details: `Availability override active during ${startDate} to ${endDate}: ${availabilityOverrides.map((o: { override_type: string; availability_percentage: number }) => `${o.override_type} (${o.availability_percentage}%)`).join(', ')}`
       });
     }
 
@@ -393,12 +393,17 @@ export class AssignmentRecalculationService {
       .select('id', 'phase_id', 'assignment_date_mode');
 
     // Group by mode
+    interface AssignmentDateMode {
+      id: string;
+      phase_id: string;
+      assignment_date_mode: string;
+    }
     const phaseAssignments = allAssignments
-      .filter(a => a.assignment_date_mode === 'phase')
-      .map(a => a.phase_id)
-      .filter((id, index, arr) => arr.indexOf(id) === index); // unique phase_ids
+      .filter((a: AssignmentDateMode) => a.assignment_date_mode === 'phase')
+      .map((a: AssignmentDateMode) => a.phase_id)
+      .filter((id: string, index: number, arr: string[]) => arr.indexOf(id) === index); // unique phase_ids
 
-    const hasProjectAssignments = allAssignments.some(a => a.assignment_date_mode === 'project');
+    const hasProjectAssignments = allAssignments.some((a: AssignmentDateMode) => a.assignment_date_mode === 'project');
 
     // Recalculate phase assignments
     const phaseResults = phaseAssignments.length > 0 

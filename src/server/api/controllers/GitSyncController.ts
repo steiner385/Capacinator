@@ -247,6 +247,7 @@ export class GitSyncController extends BaseController {
             message: 'GitHub authentication required',
           },
         });
+        return;
       }
 
       // Check for unresolved conflicts (Task: T062)

@@ -151,7 +151,7 @@ export class DemandController extends BaseController {
       // Calculate summary by project type 
       const projectTypeMap = new Map();
       
-      demands.forEach(demand => {
+      demands.forEach((demand: Record<string, any>) => {
         if (!roleMap.has(demand.role_id)) {
           roleMap.set(demand.role_id, {
             role_id: demand.role_id,
@@ -213,7 +213,7 @@ export class DemandController extends BaseController {
         filters: { start_date, end_date, location_id, project_type_id },
         summary: {
           total_demands: demands.length,
-          total_projects: new Set(demands.map(d => d.project_id)).size,
+          total_projects: new Set(demands.map((d: Record<string, any>) => d.project_id)).size,
           total_hours: rolesSummary.reduce((sum, r) => sum + r.total_hours, 0),
           total_fte: rolesSummary.reduce((sum, r) => sum + r.total_fte, 0)
         },
@@ -316,7 +316,7 @@ export class DemandController extends BaseController {
         monthEnd.setMonth(monthEnd.getMonth() + 1);
         monthEnd.setDate(0);
 
-        const monthDemands = demands.filter(d => 
+        const monthDemands = demands.filter((d: Record<string, any>) =>
           d.start_date <= monthEnd.toISOString().split('T')[0] &&
           d.end_date >= monthStart.toISOString().split('T')[0]
         );
@@ -331,7 +331,7 @@ export class DemandController extends BaseController {
           project_count: new Set<string>()
         };
 
-        monthDemands.forEach(demand => {
+        monthDemands.forEach((demand: Record<string, any>) => {
           // Calculate portion of demand in this month
           const demandStart = new Date(Math.max(new Date(demand.start_date).getTime(), monthStart.getTime()));
           const demandEnd = new Date(Math.min(new Date(demand.end_date).getTime(), monthEnd.getTime()));
@@ -384,7 +384,7 @@ export class DemandController extends BaseController {
       const gapsData = await this.db('capacity_gaps_view').select('*');
       
       // Filter for actual gaps where demand exceeds capacity and map to the expected format
-      const gaps = gapsData.map(role => {
+      const gaps = gapsData.map((role: Record<string, any>) => {
         const gapFte = role.total_demand_fte - role.total_capacity_fte;
         return {
           role_id: role.role_id,
@@ -393,14 +393,14 @@ export class DemandController extends BaseController {
           total_capacity_fte: role.total_capacity_fte || 0,
           gap_fte: gapFte
         };
-      }).filter(role => role.gap_fte > 0); // Only include roles with actual gaps
+      }).filter((role: { gap_fte: number }) => role.gap_fte > 0); // Only include roles with actual gaps
 
       return {
         gaps: gaps,
         summary: {
           total_gaps: gaps.length,
-          total_shortage_fte: gaps.reduce((sum, g) => sum + Math.abs(g.gap_fte), 0),
-          critical_gaps: gaps.filter(g => Math.abs(g.gap_fte / (g.total_capacity_fte || 1)) > 0.2).length
+          total_shortage_fte: gaps.reduce((sum: number, g: { gap_fte: number }) => sum + Math.abs(g.gap_fte), 0),
+          critical_gaps: gaps.filter((g: { gap_fte: number; total_capacity_fte: number }) => Math.abs(g.gap_fte / (g.total_capacity_fte || 1)) > 0.2).length
         }
       };
     }, res, 'Failed to fetch demand gaps');
@@ -606,7 +606,7 @@ export class DemandController extends BaseController {
       .select('*');
 
     // Simplified - would need to calculate based on project timeline
-    return allocations.map(allocation => ({
+    return allocations.map((allocation: Record<string, any>) => ({
       project_id: project.id,
       role_id: allocation.role_id,
       phase_id: allocation.phase_id,

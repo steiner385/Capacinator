@@ -1,5 +1,5 @@
-import { AvailabilityController } from '../AvailabilityController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { AvailabilityController } from '../AvailabilityController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('AvailabilityController', () => {
   let controller: AvailabilityController;

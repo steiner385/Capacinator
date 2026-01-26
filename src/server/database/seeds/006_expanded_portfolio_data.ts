@@ -229,7 +229,14 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('projects').insert(expandedProjects);
 
   // Create project phases for each new project
-  const projectPhases = [];
+  interface ProjectPhase {
+    id: string;
+    project_id: string;
+    phase_id: string | undefined;
+    start_date: string;
+    end_date: string;
+  }
+  const projectPhases: ProjectPhase[] = [];
   const phaseNames = phases.map(p => p.name);
   
   for (const project of expandedProjects) {

@@ -139,9 +139,12 @@ export class ServiceContainer {
         }
       };
       // Add transaction method separately to avoid circular reference in type inference
-      mockDbInstance.transaction = mockFn((cb: (trx: Knex) => Promise<unknown>) =>
-        cb(mockDbInstance as unknown as Knex)
+      // Use mockImplementation pattern for transaction mock
+      const transactionMock = mockFn();
+      (transactionMock as unknown as { mockImplementation: (fn: (cb: (trx: Knex) => Promise<unknown>) => Promise<unknown>) => unknown }).mockImplementation(
+        (cb: (trx: Knex) => Promise<unknown>) => cb(mockDbInstance as unknown as Knex)
       );
+      mockDbInstance.transaction = transactionMock;
       mockDb = mockDbInstance as unknown as Knex;
     }
 
