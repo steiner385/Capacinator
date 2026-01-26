@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
@@ -436,7 +437,7 @@ export class ScenariosController extends BaseController {
             );
 
           // Add base assignments to the map
-          baseAssignments.forEach(a => {
+          baseAssignments.forEach((a: Record<string, any>) => {
             const key = `${a.project_id}:${a.person_id}:${a.role_id}:${a.phase_id || 'null'}`;
             effectiveMap.set(key, a);
           });
@@ -456,9 +457,9 @@ export class ScenariosController extends BaseController {
           );
 
         // Apply scenario-specific changes
-        scenarioAssignments.forEach(assignment => {
+        scenarioAssignments.forEach((assignment: Record<string, any>) => {
           const key = `${assignment.project_id}:${assignment.person_id}:${assignment.role_id}:${assignment.phase_id || 'null'}`;
-          
+
           if (assignment.change_type === 'removed' || assignment.allocation_percentage === 0) {
             // Remove assignment
             effectiveMap.delete(key);
@@ -604,9 +605,9 @@ export class ScenariosController extends BaseController {
             removed: []
           },
           projects: {
-            added: projects2.filter(p2 => !projects1.find(p1 => p1.project_id === p2.project_id)),
+            added: projects2.filter((p2: Record<string, any>) => !projects1.find((p1: Record<string, any>) => p1.project_id === p2.project_id)),
             modified: [],
-            removed: projects1.filter(p1 => !projects2.find(p2 => p2.project_id === p1.project_id))
+            removed: projects1.filter((p1: Record<string, any>) => !projects2.find((p2: Record<string, any>) => p2.project_id === p1.project_id))
           }
         },
         metrics
@@ -783,6 +784,7 @@ export class ScenariosController extends BaseController {
         .where('scenario_id', parentScenarioId);
 
       for (const assignment of parentAssignments) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, scenario_id, created_at, updated_at, ...assignmentData } = assignment;
         await this.db('scenario_project_assignments').insert({
           ...assignmentData,
@@ -797,6 +799,7 @@ export class ScenariosController extends BaseController {
         .where('scenario_id', parentScenarioId);
 
       for (const phase of parentPhases) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, scenario_id, created_at, updated_at, ...phaseData } = phase;
         await this.db('scenario_project_phases').insert({
           ...phaseData,
@@ -903,9 +906,9 @@ export class ScenariosController extends BaseController {
     return conflicts;
   }
 
-  private async performMerge(sourceScenarioId: string, targetScenarioId: string, conflictResolution: string = 'use_source') {
+  private async performMerge(sourceScenarioId: string, targetScenarioId: string, _conflictResolution: string = 'use_source') {
     // Start a transaction to ensure atomicity
-    await this.db.transaction(async (trx) => {
+    await this.db.transaction(async (trx: Knex.Transaction) => {
       // Get all conflicts that need resolution
       const conflicts = await trx('scenario_merge_conflicts')
         .where('source_scenario_id', sourceScenarioId)

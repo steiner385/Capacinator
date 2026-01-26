@@ -11,7 +11,7 @@ import {
   validateAllocationPercentage,
   validatePriority,
   toBooleanSafe,
-} from '../validation';
+} from '../validation.js';
 
 describe('Validation Utilities', () => {
   describe('parseIntSafe', () => {

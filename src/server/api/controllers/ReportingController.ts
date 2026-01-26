@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
@@ -58,7 +59,7 @@ export class ReportingController extends BaseController {
       
       // Calculate project health status
       const projectHealthMap = new Map();
-      currentProjects.forEach(project => {
+      currentProjects.forEach((project: Record<string, any>) => {
         if (!projectHealthMap.has(project.id)) {
           // Determine health status based on current phase timing
           let healthStatus = 'ACTIVE';
@@ -89,7 +90,7 @@ export class ReportingController extends BaseController {
       let okRoles = 0;
       let tightRoles = 0;
       
-      capacityGapsData.forEach(role => {
+      capacityGapsData.forEach((role: Record<string, any>) => {
         const demandVsCapacity = role.total_demand_fte - role.total_capacity_fte;
         if (demandVsCapacity > 0.5) {
           gapRoles++;
@@ -119,23 +120,23 @@ export class ReportingController extends BaseController {
       }
       
       // Categorize utilization levels
-      const utilizationStats = personUtilizationData.reduce((acc, person) => {
+      const utilizationStats = personUtilizationData.reduce((acc: Record<string, number>, person: Record<string, any>) => {
         const status = person.utilization_status;
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
-      
-      const utilization = Object.keys(utilizationStats).length > 0 
-        ? utilizationStats 
+
+      const utilization = Object.keys(utilizationStats).length > 0
+        ? utilizationStats
         : { 'NO_DATA': 0 };
-      
+
       req.logger.info('Person utilization from view:', utilization);
 
       // Get availability overview from person utilization view
       req.logger.info('Calculating availability from person_utilization_view...');
-      
-      const availablePeople = personUtilizationData.filter(person => person.utilization_status === 'Available').length;
-      const assignedPeople = personUtilizationData.filter(person => person.utilization_status !== 'Available').length;
+
+      const availablePeople = personUtilizationData.filter((person: Record<string, any>) => person.utilization_status === 'Available').length;
+      const assignedPeople = personUtilizationData.filter((person: Record<string, any>) => person.utilization_status !== 'Available').length;
       
       const availability = { 
         AVAILABLE: availablePeople,
@@ -185,9 +186,9 @@ export class ReportingController extends BaseController {
       const personUtilizationRaw = await this.db('person_utilization_view').select('*');
       
       // Transform the data to match what the frontend expects
-      const utilizationData = personUtilizationRaw.map(person => {
+      const utilizationData = personUtilizationRaw.map((person: Record<string, any>) => {
         const totalAllocHours = person.total_allocation_percentage * person.default_hours_per_day / 100.0;
-        
+
         return {
           ...person,
           // Add the expected field names
@@ -223,7 +224,7 @@ export class ReportingController extends BaseController {
       const projectDemands = await demandsQuery.orderBy('project_demands_view.start_date');
 
       // Calculate status for each gap based on demand vs capacity
-      const capacityGapsWithStatus = capacityGaps.map(role => {
+      const capacityGapsWithStatus = capacityGaps.map((role: Record<string, any>) => {
         const demandVsCapacity = role.total_demand_fte - role.total_capacity_fte;
         let status;
         if (demandVsCapacity > 0.5) {
@@ -240,7 +241,7 @@ export class ReportingController extends BaseController {
       const timeline = await this.calculateCapacityTimeline(startDate as string, endDate as string);
 
       // Transform capacity gaps data to the format expected by frontend
-      const byRole = capacityGapsWithStatus.map(gap => ({
+      const byRole = capacityGapsWithStatus.map((gap: Record<string, any>) => ({
         id: gap.role_id,
         role: gap.role_name,
         capacity: Math.round(gap.total_capacity_hours || 0),
@@ -258,10 +259,10 @@ export class ReportingController extends BaseController {
         projectDemands,
         timeline,
         summary: {
-          totalGaps: capacityGapsWithStatus.filter(gap => gap.status === 'GAP').length,
-          totalTight: capacityGapsWithStatus.filter(gap => gap.status === 'TIGHT').length,
-          overAllocated: utilizationData.filter(person => person.allocation_status === 'OVER_ALLOCATED').length,
-          underAllocated: utilizationData.filter(person => person.allocation_status === 'UNDER_ALLOCATED').length
+          totalGaps: capacityGapsWithStatus.filter((gap: Record<string, any>) => gap.status === 'GAP').length,
+          totalTight: capacityGapsWithStatus.filter((gap: Record<string, any>) => gap.status === 'TIGHT').length,
+          overAllocated: utilizationData.filter((person: Record<string, any>) => person.allocation_status === 'OVER_ALLOCATED').length,
+          underAllocated: utilizationData.filter((person: Record<string, any>) => person.allocation_status === 'UNDER_ALLOCATED').length
         }
       };
     }, res, 'Failed to fetch capacity report');
@@ -308,11 +309,11 @@ export class ReportingController extends BaseController {
       return {
         projects,
         summary: {
-          byStatus: statusSummary.reduce((acc, item) => {
+          byStatus: statusSummary.reduce((acc: Record<string, number>, item: Record<string, any>) => {
             acc[item.health_status] = item.count;
             return acc;
           }, {} as Record<string, number>),
-          byPriority: prioritySummary.reduce((acc, item) => {
+          byPriority: prioritySummary.reduce((acc: Record<string, number>, item: Record<string, any>) => {
             acc[item.priority] = item.count;
             return acc;
           }, {} as Record<string, number>)
@@ -405,7 +406,7 @@ export class ReportingController extends BaseController {
         
         if (scenario?.scenario_type === 'baseline') {
           // Include base assignments (scenario_id is null) AND scenario-specific assignments for this baseline
-          demandQuery = demandQuery.where(function() {
+          demandQuery = demandQuery.where(function(this: Knex.QueryBuilder) {
             this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
           });
         } else {
@@ -416,7 +417,7 @@ export class ReportingController extends BaseController {
 
       // Fix date filtering to include projects that overlap with the date range
       if (startDate && endDate) {
-        demandQuery = demandQuery.where(function() {
+        demandQuery = demandQuery.where(function(this: Knex.QueryBuilder) {
           this.where('start_date', '<=', endDate)
               .andWhere('end_date', '>=', startDate);
         });
@@ -439,18 +440,18 @@ export class ReportingController extends BaseController {
       // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
         const scenario = await this.db('scenarios').where('id', scenarioId).first();
-        
+
         if (scenario?.scenario_type === 'baseline') {
-          projectQuery = projectQuery.where(function() {
+          projectQuery = projectQuery.where(function(this: Knex.QueryBuilder) {
             this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
           });
         } else {
           projectQuery = projectQuery.where('scenario_id', scenarioId);
         }
       }
-      
+
       if (startDate && endDate) {
-        projectQuery = projectQuery.where(function() {
+        projectQuery = projectQuery.where(function(this: Knex.QueryBuilder) {
           this.where('start_date', '<=', endDate)
               .andWhere('end_date', '>=', startDate);
         });
@@ -479,18 +480,18 @@ export class ReportingController extends BaseController {
       // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
         const scenario = await this.db('scenarios').where('id', scenarioId).first();
-        
+
         if (scenario?.scenario_type === 'baseline') {
-          roleQuery = roleQuery.where(function() {
+          roleQuery = roleQuery.where(function(this: Knex.QueryBuilder) {
             this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
           });
         } else {
           roleQuery = roleQuery.where('scenario_id', scenarioId);
         }
       }
-        
+
       if (startDate && endDate) {
-        roleQuery = roleQuery.where(function() {
+        roleQuery = roleQuery.where(function(this: Knex.QueryBuilder) {
           this.where('start_date', '<=', endDate)
               .andWhere('end_date', '>=', startDate);
         });
@@ -518,18 +519,18 @@ export class ReportingController extends BaseController {
       // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
         const scenario = await this.db('scenarios').where('id', scenarioId).first();
-        
+
         if (scenario?.scenario_type === 'baseline') {
-          projectTypeQuery = projectTypeQuery.where(function() {
+          projectTypeQuery = projectTypeQuery.where(function(this: Knex.QueryBuilder) {
             this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
           });
         } else {
           projectTypeQuery = projectTypeQuery.where('scenario_id', scenarioId);
         }
       }
-        
+
       if (startDate && endDate) {
-        projectTypeQuery = projectTypeQuery.where(function() {
+        projectTypeQuery = projectTypeQuery.where(function(this: Knex.QueryBuilder) {
           this.where('start_date', '<=', endDate)
               .andWhere('end_date', '>=', startDate);
         });
@@ -592,9 +593,9 @@ export class ReportingController extends BaseController {
           // Apply unified scenario filter
           if (scenarioId && !includeAllScenarios) {
             const scenario = await this.db('scenarios').where('id', scenarioId).first();
-            
+
             if (scenario?.scenario_type === 'baseline') {
-              monthQuery = monthQuery.where(function() {
+              monthQuery = monthQuery.where(function(this: Knex.QueryBuilder) {
                 this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
               });
             } else {
@@ -622,9 +623,9 @@ export class ReportingController extends BaseController {
         // Apply unified scenario filter
         if (scenarioId && !includeAllScenarios) {
           const scenario = await this.db('scenarios').where('id', scenarioId).first();
-          
+
           if (scenario?.scenario_type === 'baseline') {
-            timelineQuery = timelineQuery.where(function() {
+            timelineQuery = timelineQuery.where(function(this: Knex.QueryBuilder) {
               this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
             });
           } else {
@@ -653,12 +654,12 @@ export class ReportingController extends BaseController {
       // Apply unified scenario filter
       if (scenarioId && !includeAllScenarios) {
         const scenario = await this.db('scenarios').where('id', scenarioId).first();
-        
+
         if (scenario?.scenario_type === 'baseline') {
-          projectCountQuery = projectCountQuery.where(function() {
+          projectCountQuery = projectCountQuery.where(function(this: Knex.QueryBuilder) {
             this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
           });
-          roleCountQuery = roleCountQuery.where(function() {
+          roleCountQuery = roleCountQuery.where(function(this: Knex.QueryBuilder) {
             this.whereNull('scenario_id').orWhere('scenario_id', scenarioId);
           });
         } else {
@@ -767,9 +768,9 @@ export class ReportingController extends BaseController {
         effectiveEndDate, effectiveStartDate, effectiveEndDate, effectiveStartDate
       ]);
       
-      const utilizationData = utilizationRaw.map(person => {
+      const utilizationData = utilizationRaw.map((person: Record<string, any>) => {
         const totalAllocHours = person.total_allocation_percentage * person.default_hours_per_day / 100.0;
-        
+
         // Determine allocation warning level
         let allocationWarning = null;
         let displayAllocationPercentage = person.total_allocation_percentage;
@@ -803,23 +804,23 @@ export class ReportingController extends BaseController {
       }
       
       // Get people by utilization status
-      const overutilized = utilizationData.filter(p => p.allocation_status === 'OVER_ALLOCATED');
-      const underutilized = utilizationData.filter(p => p.allocation_status === 'UNDER_ALLOCATED' || p.allocation_status === 'AVAILABLE');
-      
+      const overutilized = utilizationData.filter((p: Record<string, any>) => p.allocation_status === 'OVER_ALLOCATED');
+      const underutilized = utilizationData.filter((p: Record<string, any>) => p.allocation_status === 'UNDER_ALLOCATED' || p.allocation_status === 'AVAILABLE');
+
       // Calculate average utilization
-      const avgUtilization = utilizationData.reduce((sum, p) => sum + (p.total_allocation_percentage || 0), 0) / utilizationData.length;
-      
+      const avgUtilization = utilizationData.reduce((sum: number, p: Record<string, any>) => sum + (p.total_allocation_percentage || 0), 0) / utilizationData.length;
+
       // Find peak utilization
-      const peakUtilization = Math.max(...utilizationData.map(p => p.total_allocation_percentage || 0));
-      
+      const peakUtilization = Math.max(...utilizationData.map((p: Record<string, any>) => p.total_allocation_percentage || 0));
+
       // Calculate health summary
       const healthSummary = {
         healthy: 0,      // 50-100% allocation
         warning: 0,      // 100-150% allocation
         critical: 0      // <50% or >150% allocation
       };
-      
-      utilizationData.forEach(person => {
+
+      utilizationData.forEach((person: Record<string, any>) => {
         const alloc = person.total_allocation_percentage;
         if (alloc >= 50 && alloc <= 100) {
           healthSummary.healthy++;
@@ -862,12 +863,12 @@ export class ReportingController extends BaseController {
       req.logger.info(`Found ${capacityGapsRaw.length} capacity gap records`);
       
       // Calculate gap percentage and status for each role
-      const capacityGaps = capacityGapsRaw.map(gap => {
+      const capacityGaps = capacityGapsRaw.map((gap: Record<string, any>) => {
         const demandVsCapacity = (gap.total_demand_fte || 0) - (gap.total_capacity_fte || 0);
-        const gapPercentage = gap.total_capacity_fte > 0 
-          ? (demandVsCapacity / gap.total_capacity_fte) * 100 
+        const gapPercentage = gap.total_capacity_fte > 0
+          ? (demandVsCapacity / gap.total_capacity_fte) * 100
           : (gap.total_demand_fte > 0 ? 100 : 0);
-        
+
         let status;
         if (demandVsCapacity > 0.5) {
           status = 'GAP';
@@ -876,14 +877,14 @@ export class ReportingController extends BaseController {
         } else {
           status = 'OK';
         }
-        
+
         return {
           ...gap,
           gap_percentage: Math.round(gapPercentage * 100) / 100,
           demand_vs_capacity: Math.round(demandVsCapacity * 100) / 100,
           status
         };
-      }).sort((a, b) => b.gap_percentage - a.gap_percentage);
+      }).sort((a: Record<string, any>, b: Record<string, any>) => b.gap_percentage - a.gap_percentage);
       
       // Get project health data
       const projectHealth = await this.db('project_health_view')
@@ -904,17 +905,17 @@ export class ReportingController extends BaseController {
       req.logger.info(`Found ${projectsWithUnmetDemands.length} projects with unmet role demands`);
       
       // Identify critical gaps (>50% gap)
-      const criticalRoleGaps = capacityGaps.filter(gap => gap.status === 'GAP' && gap.gap_percentage > 50);
+      const criticalRoleGaps = capacityGaps.filter((gap: Record<string, any>) => gap.status === 'GAP' && gap.gap_percentage > 50);
       const criticalProjectGaps = projectsWithUnmetDemands;
-      
+
       // Calculate summary metrics
-      const totalGapHours = capacityGaps.reduce((sum, gap) => {
+      const totalGapHours = capacityGaps.reduce((sum: number, gap: Record<string, any>) => {
         const demandVsCapacity = (gap.total_demand_fte || 0) - (gap.total_capacity_fte || 0);
         return sum + Math.max(0, demandVsCapacity) * 8 * 5; // Convert FTE to weekly hours
       }, 0);
-      
+
       // Calculate unutilized hours (capacity that's not being used)
-      const unutilizedHours = capacityGaps.reduce((sum, gap) => {
+      const unutilizedHours = capacityGaps.reduce((sum: number, gap: Record<string, any>) => {
         const demandVsCapacity = (gap.total_demand_fte || 0) - (gap.total_capacity_fte || 0);
         return sum + Math.max(0, -demandVsCapacity) * 8 * 5; // Negative demand vs capacity means unused capacity
       }, 0);
@@ -957,7 +958,7 @@ export class ReportingController extends BaseController {
     const filterEnd = endDate ? new Date(endDate) : new Date('2024-12-31');
 
     // Generate months between start and end dates
-    let currentDate = new Date(filterStart);
+    const currentDate = new Date(filterStart);
     currentDate.setDate(1); // First day of month
     
     while (currentDate <= filterEnd) {
@@ -966,12 +967,12 @@ export class ReportingController extends BaseController {
       // Calculate total capacity for this month
       let monthlyCapacity = 0;
       
-      people.forEach(person => {
+      people.forEach((person: Record<string, any>) => {
         // Assume ~22 working days per month
         const workingDaysPerMonth = 22;
         const dailyHours = person.default_hours_per_day || 8;
         const availabilityPercent = (person.default_availability_percentage || 100) / 100;
-        
+
         const monthlyPersonCapacity = workingDaysPerMonth * dailyHours * availabilityPercent;
         monthlyCapacity += monthlyPersonCapacity;
       });
@@ -997,18 +998,18 @@ export class ReportingController extends BaseController {
     const projectsWithGaps: any[] = [];
     
     // Group demands by project_id
-    const demandsByProject = projectDemands.reduce((acc, demand) => {
+    const demandsByProject = projectDemands.reduce((acc: Record<string, any[]>, demand: any) => {
       if (!acc[demand.project_id]) {
         acc[demand.project_id] = [];
       }
       acc[demand.project_id].push(demand);
       return acc;
     }, {} as Record<string, any[]>);
-    
+
     // Check each project for unmet demands
-    Object.entries(demandsByProject).forEach(([projectId, demands]: [string, any[]]) => {
-      const projectHealthRecord = projectHealth.find(p => p.project_id === projectId);
-      
+    for (const [projectId, demands] of Object.entries(demandsByProject)) {
+      const projectHealthRecord = projectHealth.find((p: any) => p.project_id === projectId);
+
       // If project has no assignments at all but has demands, it has gaps
       if (!projectHealthRecord || projectHealthRecord.allocation_health === 'UNASSIGNED') {
         const project = {
@@ -1016,18 +1017,18 @@ export class ReportingController extends BaseController {
           project_name: demands[0]?.project_name || 'Unknown',
           gap_type: 'UNASSIGNED',
           unmet_demands: demands.length,
-          total_demand_percentage: demands.reduce((sum, d) => sum + (d.allocation_percentage || 0), 0)
+          total_demand_percentage: demands.reduce((sum: number, d: any) => sum + (d.allocation_percentage || 0), 0)
         };
         projectsWithGaps.push(project);
-        return;
+        continue;
       }
-      
+
       // For projects with assignments, check if demands are covered
       // This is a simplified check - in reality you'd need to compare role-by-role and time period by time period
       // For now, we'll flag projects that are significantly under-allocated relative to their demands
-      const totalDemandPercentage = demands.reduce((sum, d) => sum + (d.allocation_percentage || 0), 0);
+      const totalDemandPercentage = demands.reduce((sum: number, d: any) => sum + (d.allocation_percentage || 0), 0);
       const actualAllocation = projectHealthRecord.total_allocation_percentage || 0;
-      
+
       // If actual allocation is significantly less than demanded (>20% gap), consider it a gap
       if (totalDemandPercentage > 0 && (actualAllocation / totalDemandPercentage) < 0.8) {
         const project = {
@@ -1041,7 +1042,7 @@ export class ReportingController extends BaseController {
         };
         projectsWithGaps.push(project);
       }
-    });
+    }
     
     return projectsWithGaps;
   }

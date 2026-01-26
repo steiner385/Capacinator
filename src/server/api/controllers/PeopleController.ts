@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
-import { BaseController, RequestWithContext } from './BaseController.js';
+import type { Knex } from 'knex';
+import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class PeopleController extends BaseController {
@@ -298,7 +299,7 @@ export class PeopleController extends BaseController {
       }> = [];
 
       // Generate monthly data points
-      let currentDate = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
+      const currentDate = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
       
       while (currentDate <= timelineEnd) {
         const monthStart = new Date(currentDate);
@@ -307,10 +308,10 @@ export class PeopleController extends BaseController {
         // Calculate utilization for this month
         let monthUtilization = 0;
         
-        assignments.forEach(assignment => {
+        assignments.forEach((assignment: Record<string, any>) => {
           const assignStart = new Date(assignment.start_date);
           const assignEnd = new Date(assignment.end_date);
-          
+
           // Check if assignment overlaps with this month
           if (assignStart <= monthEnd && assignEnd >= monthStart) {
             monthUtilization += assignment.allocation_percentage;
@@ -355,7 +356,7 @@ export class PeopleController extends BaseController {
     }
 
     const result = await this.executeQuery(async () => {
-      return await this.db.transaction(async (trx) => {
+      return await this.db.transaction(async (trx: Knex.Transaction) => {
         // Check if person already has this role
         const existingPersonRole = await trx('person_roles')
           .where('person_id', id)
@@ -466,7 +467,7 @@ export class PeopleController extends BaseController {
         throw new Error('Person role not found');
       }
 
-      return await this.db.transaction(async (trx) => {
+      return await this.db.transaction(async (trx: Knex.Transaction) => {
         // If setting as primary, remove primary flag from other roles
         if (is_primary) {
           await trx('person_roles')

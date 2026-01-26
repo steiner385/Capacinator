@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import projectRoutes from './projects.js';
 import peopleRoutes from './people.js';
 import rolesRoutes from './roles.js';
@@ -26,9 +26,8 @@ import notificationsRoutes from './notifications.js';
 import recommendationsRoutes from './recommendations.js';
 import authRoutes from './auth.js';
 import syncRoutes from './sync.js';
-import { createAuditRoutes } from './audit.js';
-import { getAuditService } from '../../services/audit/index.js';
-import { RequestWithLogging } from '../../middleware/requestLogger.js';
+// Note: createAuditRoutes and getAuditService removed - unused imports
+import type { RequestWithLogging } from '../../middleware/requestLogger.js';
 
 const router = Router();
 
@@ -70,11 +69,12 @@ router.use('/test-data', testDataRoutes);
 router.use('/test-context', testContextRoutes);
 
 // CSP violation reporting endpoint
-router.post('/csp-report', (req: RequestWithLogging, res) => {
+router.post('/csp-report', (req: Request, res: Response) => {
+  const reqWithLogging = req as RequestWithLogging;
   const report = req.body['csp-report'] || req.body;
 
   if (report) {
-    req.logger.warn('CSP Violation Report', {
+    reqWithLogging.logger.warn('CSP Violation Report', {
       documentUri: report['document-uri'],
       violatedDirective: report['violated-directive'],
       effectiveDirective: report['effective-directive'],
@@ -92,18 +92,20 @@ router.post('/csp-report', (req: RequestWithLogging, res) => {
 });
 
 // Client logging endpoint for remote logging
-router.post('/client-logs', (req: RequestWithLogging, res) => {
+router.post('/client-logs', (req: Request, res: Response) => {
+  const reqWithLogging = req as RequestWithLogging;
   const { logs } = req.body;
-  
+
   if (!Array.isArray(logs)) {
-    return res.status(400).json({ error: 'Invalid logs format' });
+    res.status(400).json({ error: 'Invalid logs format' });
+    return;
   }
 
   // Log each client log entry with proper context
-  logs.forEach((logEntry: any) => {
+  logs.forEach((logEntry: { level?: string; message: string; component?: string; sessionId?: string; userId?: string; timestamp?: string; metadata?: Record<string, unknown>; error?: unknown }) => {
     const level = logEntry.level?.toLowerCase() || 'info';
     const message = `[CLIENT] ${logEntry.message}`;
-    const metadata = {
+    const metadata: Record<string, unknown> = {
       component: logEntry.component,
       sessionId: logEntry.sessionId,
       userId: logEntry.userId,
@@ -118,23 +120,23 @@ router.post('/client-logs', (req: RequestWithLogging, res) => {
 
     switch (level) {
       case 'error':
-        req.logger.error(message, undefined, metadata);
+        reqWithLogging.logger.error(message, undefined, metadata);
         break;
       case 'warn':
-        req.logger.warn(message, metadata);
+        reqWithLogging.logger.warn(message, metadata);
         break;
       case 'debug':
-        req.logger.debug(message, metadata);
+        reqWithLogging.logger.debug(message, metadata);
         break;
       default:
-        req.logger.info(message, metadata);
+        reqWithLogging.logger.info(message, metadata);
     }
   });
 
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     processed: logs.length,
-    requestId: req.requestId 
+    requestId: reqWithLogging.requestId
   });
 });
 

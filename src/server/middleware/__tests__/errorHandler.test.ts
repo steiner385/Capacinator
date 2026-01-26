@@ -9,7 +9,7 @@ jest.mock('../../services/logging/config.js', () => ({
   }
 }));
 
-import { errorHandler } from '../errorHandler';
+import { errorHandler } from '../errorHandler.js';
 import { logger } from '../../services/logging/config.js';
 import type { Request, Response, NextFunction } from 'express';
 

@@ -1,5 +1,5 @@
-import { UserPermissionsController } from '../UserPermissionsController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { UserPermissionsController } from '../UserPermissionsController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('UserPermissionsController', () => {
   let controller: UserPermissionsController;

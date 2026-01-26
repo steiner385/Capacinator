@@ -125,7 +125,7 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.renameTable('project_assignments_new', 'project_assignments');
 
   // Recreate views
-  for (const [viewName, viewSql] of Object.entries(viewDefinitions)) {
+  for (const viewSql of Object.values(viewDefinitions)) {
     if (viewSql) {
       await knex.raw(viewSql);
     }
@@ -249,7 +249,7 @@ export async function down(knex: Knex): Promise<void> {
   await knex.schema.renameTable('project_assignments_old', 'project_assignments');
 
   // Recreate views
-  for (const [viewName, viewSql] of Object.entries(viewDefinitions)) {
+  for (const viewSql of Object.values(viewDefinitions)) {
     if (viewSql) {
       await knex.raw(viewSql);
     }

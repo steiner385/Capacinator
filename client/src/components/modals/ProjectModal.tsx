@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api-client';
 import { queryKeys } from '../../lib/queryKeys';
 import { useModalForm } from '../../hooks/useModalForm';
-import { validateDateRange } from '../../lib/validation';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -108,7 +107,6 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     isSubmitting,
     handleChange,
     handleSubmit,
-    handleClose,
     reset,
   } = useModalForm<ProjectFormData>({
     initialValues,

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit2, Save, X, Plus } from 'lucide-react';
+import { ArrowLeft, Edit2 } from 'lucide-react';
 import { api } from '../lib/api-client';
-import type { Role, ProjectType, ProjectPhase } from '../types';
+import type { Role, ProjectPhase } from '../types';
 
 interface ResourceTemplate {
   id?: string;
@@ -161,6 +161,7 @@ export default function RoleDetails() {
   };
 
   // Create resource template matrix for display
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const templateMatrix = React.useMemo(() => {
     if (!projectTypes || !phases || !localTemplates) return [];
     if (!Array.isArray(projectTypes) || !Array.isArray(phases)) return [];

@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Plus,
   Trash2,
-  Edit2,
-  Save,
-  X,
-  Lock,
-  Unlock,
   ArrowUp,
   ArrowDown,
-  AlertTriangle,
   Info
 } from 'lucide-react';
 import { api } from '../lib/api-client';
@@ -41,10 +35,7 @@ interface PhaseTemplateDesignerProps {
 
 export default function PhaseTemplateDesigner({ projectTypeId, phases }: PhaseTemplateDesignerProps) {
   const [localPhases, setLocalPhases] = useState<ProjectTypePhase[]>([]);
-  const [editingPhase, setEditingPhase] = useState<string | null>(null);
   const [showAddPhase, setShowAddPhase] = useState(false);
-  const [editingField, setEditingField] = useState<{phaseId: string, field: string} | null>(null);
-  const queryClient = useQueryClient();
 
   // Fetch current project type phases
   const { data: projectTypePhases, refetch } = useQuery({

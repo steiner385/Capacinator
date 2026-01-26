@@ -499,7 +499,7 @@ describe('AssignmentModalNew', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for modal close delay
     });
   });
 

@@ -1,5 +1,5 @@
-import { DemandController } from '../DemandController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { DemandController } from '../DemandController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 const mockLogger = {
   info: jest.fn(),
@@ -537,7 +537,7 @@ describe('DemandController', () => {
         }
       };
 
-      const mockBaselineDemands = [];
+      const mockBaselineDemands: unknown[] = [];
       const mockAllocations = [
         {
           role_id: 'role-1',

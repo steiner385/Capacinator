@@ -1,9 +1,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, Brush, ReferenceLine } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, Brush } from 'recharts';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
-import { formatDate } from '../utils/date';
 
 interface PersonAllocationChartProps {
   personId: string;
@@ -12,14 +11,6 @@ interface PersonAllocationChartProps {
   endDate?: string;
 }
 
-interface AllocationData {
-  date: string;
-  totalAllocation: number;
-  availability: number;
-  capacity: number;
-  utilization: number;
-  projectBreakdown: { [projectName: string]: number };
-}
 
 export function PersonAllocationChart({ personId, personName, startDate, endDate }: PersonAllocationChartProps) {
   const [brushStart, setBrushStart] = React.useState<number>(0);
@@ -411,7 +402,7 @@ export function PersonAllocationChart({ personId, personName, startDate, endDate
               height={80}
               interval="preserveStartEnd"
               tick={{ fontSize: 12 }}
-              tickFormatter={(value, index) => {
+              tickFormatter={(value, _index) => {
                 // Find the data point by value instead of index for more reliability
                 const dataPoint = displayData.find(d => d.date === value) || displayData[0];
                 if (!dataPoint) return value;

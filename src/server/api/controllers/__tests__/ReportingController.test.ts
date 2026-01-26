@@ -1,5 +1,5 @@
-import { ReportingController } from '../ReportingController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ReportingController } from '../ReportingController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 const mockLogger = {
   info: jest.fn(),

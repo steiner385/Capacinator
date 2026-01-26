@@ -1,5 +1,5 @@
-import { ProjectPhasesController } from '../ProjectPhasesController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectPhasesController } from '../ProjectPhasesController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock date validation utilities
 jest.mock('../../../utils/dateValidation', () => ({
@@ -510,7 +510,7 @@ describe('ProjectPhasesController', () => {
 
     it('updates multiple phases successfully', async () => {
       // Mock transaction callback
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock existing record for phase-1
         mockDb._queueFirstResult({ id: 'phase-1', start_date: '2025-01-01', end_date: '2025-01-31' });
         // Mock update for phase-1 (update().returning() returns array)
@@ -545,7 +545,7 @@ describe('ProjectPhasesController', () => {
         }
       ];
 
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         return await callback(mockDb);
       });
 
@@ -564,7 +564,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('reports failures for non-existent phases', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock existing record lookup (not found)
         mockDb._queueFirstResult(null);
         mockDb._queueFirstResult(null);
@@ -586,7 +586,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('continues processing after individual failures', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock phase-1 (not found - will fail)
         mockDb._queueFirstResult(null);
 
@@ -624,7 +624,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('duplicates phase with allocations successfully', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock source phase lookup
         mockDb._queueFirstResult({ id: 'source-timeline-1', project_id: 'proj-1', phase_id: 'phase-source' });
 
@@ -698,7 +698,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('returns 404 when source phase not found', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock source phase lookup (not found)
         mockDb._setFirstResult(null);
 
@@ -715,7 +715,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('returns 409 when target phase already exists', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock source phase lookup (found)
         mockDb._queueFirstResult({ id: 'source-timeline-1' });
 
@@ -749,7 +749,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('creates custom phase successfully', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock project lookup
         mockDb._queueFirstResult({ id: 'proj-1', name: 'Project Alpha' });
 
@@ -812,7 +812,7 @@ describe('ProjectPhasesController', () => {
     });
 
     it('returns 404 when project not found', async () => {
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock project lookup (not found)
         mockDb._setFirstResult(null);
 
@@ -831,7 +831,7 @@ describe('ProjectPhasesController', () => {
     it('uses default order_index when not provided', async () => {
       delete mockReq.body.order_index;
 
-      mockDb.transaction.mockImplementationOnce(async (callback) => {
+      mockDb.transaction.mockImplementationOnce(async (callback: (db: unknown) => Promise<unknown>) => {
         // Mock project lookup
         mockDb._queueFirstResult({ id: 'proj-1', name: 'Project Alpha' });
 

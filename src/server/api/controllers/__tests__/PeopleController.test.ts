@@ -1,5 +1,5 @@
-import { PeopleController } from '../PeopleController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { PeopleController } from '../PeopleController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('PeopleController', () => {
   let controller: PeopleController;

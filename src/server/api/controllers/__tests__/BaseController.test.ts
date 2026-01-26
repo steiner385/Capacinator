@@ -12,7 +12,7 @@ jest.mock('../../../services/logging/config.js', () => ({
   }
 }));
 
-import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController';
+import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController.js';
 import type { Response, NextFunction } from 'express';
 import { logger } from '../../../services/logging/config.js';
 
@@ -92,7 +92,7 @@ class TestEnhancedController extends BaseController {
     return this.logBusinessOperation(req, operation, entityType, entityId, metadata);
   }
 
-  public testAsyncHandler(fn: (req: RequestWithContext, res: Response, next: NextFunction) => Promise<any>) {
+  public testAsyncHandler(fn: (req: RequestWithContext, res: Response, next?: NextFunction) => Promise<any>) {
     return this.asyncHandler(fn);
   }
 
@@ -758,7 +758,9 @@ describe('BaseController with enableAudit', () => {
       ip: '127.0.0.1',
       user: {
         id: 'user-123',
-        role: 'admin'
+        name: 'Test Admin',
+        email: 'admin@test.com',
+        is_system_admin: true
       },
       get: jest.fn().mockReturnValue('Test User Agent'),
       logger: {

@@ -14,7 +14,7 @@ async function testImportV2() {
   console.log(`Template path: ${templatePath}`);
   
   try {
-    const result = await importer.importFromFile(templatePath, true);
+    const result = await importer.importFromFile(templatePath, { clearExisting: true });
     
     console.log('\n📊 Import Results:');
     console.log('Success:', result.success);

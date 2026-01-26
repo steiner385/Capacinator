@@ -23,6 +23,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { CriticalAlertsPanel } from '../components/dashboard/CriticalAlertsPanel';
 import { DateRangeSelector, DateRangePreset } from '../components/dashboard/DateRangeSelector';
 import { EnhancedKPIs } from '../components/dashboard/EnhancedKPIs';
+ 
 import { useCriticalAlerts } from '../hooks/useCriticalAlerts';
 import './Dashboard.css';
 
@@ -56,7 +57,7 @@ export function Dashboard() {
     enabled: !!currentScenario
   });
 
-  const { alerts, isLoading: alertsLoading, hasAlerts } = useCriticalAlerts();
+  const { alerts, hasAlerts } = useCriticalAlerts();
 
   if (isLoading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message="Failed to load dashboard data" />;
@@ -242,7 +243,7 @@ export function Dashboard() {
             role="list"
             aria-label="Capacity status breakdown by role type"
           >
-            {capacityData.map((item, index) => (
+            {capacityData.map((item, _index) => (
               <div 
                 key={item.name} 
                 className="capacity-item capacity-item-clickable"

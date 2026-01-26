@@ -1,6 +1,6 @@
-import { AuditController } from '../AuditController';
-import { AuditService, AuditLogEntry } from '../../../services/audit/AuditService';
-import { flushPromises } from './helpers/mockDb';
+import { AuditController } from '../AuditController.js';
+import { AuditService, AuditLogEntry } from '../../../services/audit/AuditService.js';
+import { flushPromises } from './helpers/mockDb.js';
 
 // Create mock AuditService
 const createMockAuditService = (): jest.Mocked<AuditService> => {

@@ -599,6 +599,7 @@ describe('Assignments Page', () => {
   describe('Context Messages', () => {
     test('displays context message from URL parameters', async () => {
       // Update the mock to return the right search params
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const useSearchParams = require('react-router-dom').useSearchParams as jest.Mock;
       useSearchParams.mockReturnValue([
         new URLSearchParams('action=assign&from=reports&personName=John%20Doe&status=underutilized'),
@@ -616,8 +617,9 @@ describe('Assignments Page', () => {
 
     test('auto-clears context message after timeout', async () => {
       jest.useFakeTimers();
-      
+
       // Update the mock to return the right search params
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const useSearchParams = require('react-router-dom').useSearchParams as jest.Mock;
       useSearchParams.mockReturnValue([
         new URLSearchParams('action=hire&from=reports&roleName=Developer'),

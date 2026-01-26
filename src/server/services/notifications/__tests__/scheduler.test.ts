@@ -9,7 +9,7 @@ jest.mock('../../logging/config.js', () => ({
   }
 }));
 
-import { initializeNotificationScheduler } from '../scheduler';
+import { initializeNotificationScheduler } from '../scheduler.js';
 import { logger } from '../../logging/config.js';
 
 describe('notification scheduler', () => {

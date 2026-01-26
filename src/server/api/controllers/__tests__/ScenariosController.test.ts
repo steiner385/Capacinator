@@ -1,5 +1,5 @@
-import { ScenariosController } from '../ScenariosController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ScenariosController } from '../ScenariosController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 import { randomUUID } from 'crypto';
 
 // Mock the crypto module
@@ -781,10 +781,10 @@ describe('ScenariosController', () => {
         }
       ];
 
-      const mockProjects1 = [];
-      const mockProjects2 = [];
-      const mockPhases1 = [];
-      const mockPhases2 = [];
+      const mockProjects1: unknown[] = [];
+      const mockProjects2: unknown[] = [];
+      const mockPhases1: unknown[] = [];
+      const mockPhases2: unknown[] = [];
 
       // Queue responses for both scenarios
       mockDb._queueFirstResult(mockScenario1);
@@ -864,10 +864,10 @@ describe('ScenariosController', () => {
         status: 'active'
       };
 
-      const mockConflicts = [];
-      const mockSourceAssignments = [];
-      const mockSourcePhases = [];
-      const mockSourceProjects = [];
+      const mockConflicts: unknown[] = [];
+      const mockSourceAssignments: unknown[] = [];
+      const mockSourcePhases: unknown[] = [];
+      const mockSourceProjects: unknown[] = [];
 
       mockDb._queueFirstResult(mockScenario);
       // detectMergeConflicts queries
@@ -1057,11 +1057,11 @@ describe('ScenariosController', () => {
         }
       ];
 
-      const mockScenarioAssignments = [];
-      const mockProjects1 = [];
-      const mockProjects2 = [];
-      const mockPhases1 = [];
-      const mockPhases2 = [];
+      const mockScenarioAssignments: unknown[] = [];
+      const mockProjects1: unknown[] = [];
+      const mockProjects2: unknown[] = [];
+      const mockPhases1: unknown[] = [];
+      const mockPhases2: unknown[] = [];
 
       // Queue responses
       mockDb._queueFirstResult(mockBaselineScenario);
@@ -1111,7 +1111,7 @@ describe('ScenariosController', () => {
       };
 
       // For branch scenarios, only scenario_project_assignments are used
-      const mockScenarioAssignments1 = [];
+      const mockScenarioAssignments1: unknown[] = [];
       const mockScenarioAssignments2 = [
         {
           id: 'assign-new',
@@ -1182,7 +1182,7 @@ describe('ScenariosController', () => {
           change_type: 'added'
         }
       ];
-      const mockScenarioAssignments2 = [];
+      const mockScenarioAssignments2: unknown[] = [];
 
       mockDb._queueFirstResult(mockScenario1);
       mockDb._queueFirstResult(mockScenario2);
@@ -1297,8 +1297,8 @@ describe('ScenariosController', () => {
         scenario_type: 'branch'
       };
 
-      const mockAssignments1 = [];
-      const mockAssignments2 = [];
+      const mockAssignments1: unknown[] = [];
+      const mockAssignments2: unknown[] = [];
 
       const mockProjects1 = [
         { id: 'proj-1', project_id: 'project-1', scenario_id: 'scenario-1' }
@@ -1307,8 +1307,8 @@ describe('ScenariosController', () => {
         { id: 'proj-2', project_id: 'project-2', scenario_id: 'scenario-2' }
       ];
 
-      const mockPhases1 = [];
-      const mockPhases2 = [];
+      const mockPhases1: unknown[] = [];
+      const mockPhases2: unknown[] = [];
 
       mockDb._queueFirstResult(mockScenario1);
       mockDb._queueFirstResult(mockScenario2);

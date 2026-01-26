@@ -1,6 +1,6 @@
-import { createAutoAuditMiddleware, createEnhancedAuditMiddleware } from '../enhancedAuditMiddleware';
-import { AuditService } from '../../services/audit/AuditService';
-import { getAuditConfig, isTableAudited } from '../../config/auditConfig';
+import { createAutoAuditMiddleware, createEnhancedAuditMiddleware } from '../enhancedAuditMiddleware.js';
+import { AuditService } from '../../services/audit/AuditService.js';
+import { getAuditConfig, isTableAudited } from '../../config/auditConfig.js';
 import type { Knex } from 'knex';
 
 // Mock dependencies

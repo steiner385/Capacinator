@@ -5,7 +5,7 @@
  * Uses simple-git library for Git operations
  */
 
-import simpleGit, { SimpleGit, CleanOptions } from 'simple-git';
+import { simpleGit, type SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
 import type { GitCredential, PullResult, GitAuthor } from '../../../../shared/types/git-entities.js';
@@ -14,7 +14,6 @@ import {
   categorizeGitError,
   GitCloneError,
   GitPushError,
-  GitConflictError,
   GitBranchError,
   GitRepositoryStateError,
 } from './GitErrors.js';
@@ -30,9 +29,9 @@ export class GitRepositoryService {
 
   constructor(repoPath: string) {
     this.repoPath = repoPath;
-    // In test environment, delay git initialization until first use
-    // This prevents errors when the git directory doesn't exist during test imports
-    if (process.env.NODE_ENV === 'test') {
+    // In test/CI environment, delay git initialization until first use
+    // This prevents errors when the git directory doesn't exist during test imports or CI runs
+    if (process.env.NODE_ENV === 'test' || process.env.CI) {
       // Create a stub git instance that will be replaced on first use
       this.git = {} as SimpleGit;
       this.gitInitialized = false;
@@ -260,12 +259,11 @@ export class GitRepositoryService {
         '--no-ff': null, // Always create merge commit
       });
 
-      // Check for Git-level conflicts
-      const hasConflicts = result.summary.conflicts.length > 0;
+      // Check for Git-level conflicts by checking git status
+      const conflictedFiles = await this.getConflictedFiles();
+      const hasConflicts = conflictedFiles.length > 0;
 
       if (hasConflicts) {
-        // Get list of conflicted files
-        const conflictedFiles = await this.getConflictedFiles();
 
         gitLogger.warn('pull', `Conflicts detected (${conflictedFiles.length} files)`, {
           branch: targetBranch,
@@ -522,16 +520,6 @@ export class GitRepositoryService {
   }
 
   /**
-   * Get current branch name
-   *
-   * @returns Current branch name
-   */
-  async getCurrentBranch(): Promise<string> {
-    const status = await this.getStatus();
-    return status.current || 'main';
-  }
-
-  /**
    * Merge a branch into the current branch
    * Task: T068, T093
    *
@@ -565,7 +553,7 @@ export class GitRepositoryService {
         );
       }
 
-      const result = await this.git.merge([branchName]);
+      await this.git.merge([branchName]);
 
       // Check for conflicts
       const status = await this.git.status();

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  BarChart3, PieChart, TrendingUp, Users, Calendar,
-  Download, Filter, RefreshCw, AlertTriangle, ExternalLink, UserPlus, UserMinus, ClipboardList, ChevronDown,
-  Briefcase, User, Plus, X, Minus
+  Users,
+  Download, RefreshCw, AlertTriangle, ChevronDown,
+  User
 } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { useScenario } from '../contexts/ScenarioContext';
@@ -15,18 +15,15 @@ import {
   ReportEmptyState,
   ReportTable,
   ReportStatusBadge,
-  ReportProgressBar,
   UtilizationReport,
   DemandReport,
   GapsReport,
-  CHART_COLORS,
-  CHART_AXIS_CONFIG,
   getChartColor,
   type Column,
   type ActionButton
 } from '../components/reports';
 import '../styles/reports.css';
-import type { Location, ProjectType, Role, Person, ProjectAssignment, Project, AllocationStatus } from '../types';
+import type { Location, ProjectType, Role, ProjectAssignment, Project, AllocationStatus } from '../types';
 
 interface ReportFilters {
   startDate: string;
@@ -64,25 +61,15 @@ interface PersonCapacityData {
   allocation_status: AllocationStatus;
 }
 
-interface LocationCapacityData {
-  location: string;
-  capacity: number;
-}
+// Location capacity data interface (used in capacity report transformation)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type LocationCapacityData = { location: string; capacity: number; };
 
-interface CapacityOverTimeData {
-  period: string;
-  capacity: number;
-}
+// Capacity over time data interface (used in chart generation)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type CapacityOverTimeData = { period: string; capacity: number; };
 
-interface CapacityReportData {
-  totalCapacity: number;
-  utilizedCapacity: number;
-  personUtilization: PersonCapacityData[];
-  byRole: RoleCapacityData[];
-  byLocation: LocationCapacityData[];
-  capacityOverTime: CapacityOverTimeData[];
-  utilizationData?: PersonCapacityData[];
-}
+// CapacityReportData interface reserved for future capacity report feature
 
 interface PersonUtilizationData {
   id: string;
@@ -99,24 +86,7 @@ interface RoleUtilizationData {
   avgUtilization: number;
 }
 
-interface UtilizationReportData {
-  summary?: { averageUtilization: number };
-  utilizationData?: Array<{
-    person_id: string;
-    person_name: string;
-    primary_role_name?: string;
-    total_allocation_percentage?: number;
-    available_hours?: number;
-    project_count?: number;
-    project_names?: string;
-  }>;
-  peopleUtilization: PersonUtilizationData[];
-  roleUtilization: RoleUtilizationData[];
-  averageUtilization: number;
-  overAllocatedCount: number;
-  underUtilizedCount: number;
-  optimalCount: number;
-}
+// UtilizationReportData interface reserved for future utilization report feature
 
 interface DemandByProject {
   project: string;
@@ -128,13 +98,7 @@ interface DemandTrendData {
   total_hours: number;
 }
 
-interface DemandReportData {
-  summary?: { total_hours: number };
-  byProject: DemandByProject[];
-  timeline?: Array<{ month: string; total_hours: number }>;
-  trendOverTime: DemandTrendData[];
-  peakMonth: string;
-}
+// DemandReportData interface reserved for future demand report feature
 
 interface GapsByRole {
   roleId: string;
@@ -150,20 +114,7 @@ interface GapTrendData {
   gap: number;
 }
 
-interface GapsReportData {
-  summary?: { totalGapHours: number };
-  capacityGaps: Array<{
-    role_id: string;
-    role_name: string;
-    total_demand_fte: number;
-    total_capacity_fte: number;
-    capacity_gap_fte: number;
-  }>;
-  gapsByRole: GapsByRole[];
-  gapTrend: GapTrendData[];
-  totalGap: number;
-  criticalRolesCount: number;
-}
+// GapsReportData interface reserved for future gaps report feature
 
 interface FilterOptions {
   projectTypes: ProjectType[];
@@ -223,11 +174,13 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   const [showAddProjectsModal, setShowAddProjectsModal] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<SelectedPerson | null>(null);
   
-  // Modal notification states
+  // Modal notification states (reserved for future notification display)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [modalNotification, setModalNotification] = useState<{
     type: 'success' | 'error' | 'warning' | 'info' | null;
     message: string;
   }>({ type: null, message: '' });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showConfirmation, setShowConfirmation] = useState<{
     show: boolean;
     message: string;
@@ -426,7 +379,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
             const totalHours = data.summary.total_hours;
             const hoursPerMonth = Math.round(totalHours / monthsToGenerate.length);
             
-            trendOverTime = monthsToGenerate.map((month, index) => ({
+            trendOverTime = monthsToGenerate.map((month, _index) => ({
               month: month.month,
               total_hours: hoursPerMonth
             }));
@@ -514,7 +467,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   // Fetch person's assignments for modals
-  const { data: personAssignments = [], refetch: refetchPersonAssignments } = useQuery({
+  const { data: personAssignments = [] } = useQuery({
     queryKey: queryKeys.people.assignments(selectedPerson?.id, currentScenario?.id),
     queryFn: async () => {
       const response = await api.assignments.list({ person_id: selectedPerson.id });
@@ -524,7 +477,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
   });
 
   // Fetch available projects with gaps for recommendations
-  const { data: availableProjects = [], refetch: refetchAvailableProjects } = useQuery({
+  const { data: availableProjects = [] } = useQuery({
     queryKey: queryKeys.reports.availableProjects(selectedPerson?.id, currentScenario?.id),
     queryFn: async () => {
       const response = await api.projects.list();
@@ -551,11 +504,12 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
     }
   });
 
-  // Get project removal recommendations
+  // Get project removal recommendations (reserved for future use)
   interface AssignmentWithRecommendation extends ProjectAssignment {
     reductionAmount: number;
     newUtilization: number;
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getProjectRemovalRecommendations = (person: SelectedPerson): AssignmentWithRecommendation[] => {
     // Sort by allocation percentage descending to suggest removing highest allocations first
     const sortedAssignments = [...personAssignments].sort((a, b) =>
@@ -580,13 +534,14 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
     return recommendations;
   };
 
-  // Get project addition recommendations
+  // Get project addition recommendations (reserved for future use)
   interface ProjectWithAllocation extends Project {
     allocation_status?: string;
     required_role_id?: string;
     remaining_demand?: number;
     suggestedAllocation: number;
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getProjectAdditionRecommendations = (person: SelectedPerson): ProjectWithAllocation[] => {
     const availableCapacity = person.availableCapacity || 0;
 
@@ -617,7 +572,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
       const availableCapacity = Math.max(0, 100 - person.utilization);
       
       if (availableCapacity <= 5) {
-        setModalNotification({
+        _setModalNotification({
           type: 'warning',
           message: `${person.name} is nearly at full capacity (${person.utilization}%) for this timeframe. Only ${availableCapacity.toFixed(1)}% capacity remains.`
         });
@@ -678,7 +633,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
         case 'pdf':
           response = await api.export.reportAsPDF(endpoint, filters);
           break;
-        case 'json':
+        case 'json': {
           // For JSON, we'll use the current report data
           const jsonBlob = new Blob([JSON.stringify(data, null, 2)], {
             type: 'application/json'
@@ -692,6 +647,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
           document.body.removeChild(jsonLink);
           URL.revokeObjectURL(jsonUrl);
           return;
+        }
         default:
           throw new Error(`Unsupported export format: ${format}`);
       }
@@ -713,7 +669,7 @@ export const ReportsTabContent: React.FC<ReportsTabContentProps> = ({ activeRepo
       
     } catch (error) {
       console.error('Export error:', error);
-      setModalNotification({
+      _setModalNotification({
         type: 'error',
         message: 'Error exporting data. Please try again.'
       });

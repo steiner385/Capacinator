@@ -92,42 +92,6 @@ interface ImportHistoryRecord {
 }
 
 /**
- * Project record for export
- */
-interface ExportProjectRecord {
-  id: string;
-  name: string;
-  description?: string;
-  project_type_id?: string;
-  project_sub_type_id?: string;
-  location_id?: string;
-  priority?: number;
-  aspiration_start?: string;
-  aspiration_finish?: string;
-  project_type_name?: string;
-  project_sub_type_name?: string;
-  location_name?: string;
-}
-
-/**
- * Person record for export
- */
-interface ExportPersonRecord {
-  id: string;
-  name: string;
-  email?: string;
-  primary_role_id?: string;
-  supervisor_id?: string;
-  location_id?: string;
-  worker_type?: string;
-  default_availability_percentage?: number;
-  default_hours_per_day?: number;
-  role_name?: string;
-  supervisor_name?: string;
-  location_name?: string;
-}
-
-/**
  * ImportController
  * 
  * ADMIN/UTILITY USE ONLY
@@ -201,7 +165,7 @@ export class ImportController extends BaseController {
       }
 
       return JSON.parse(result.value || '{}');
-    } catch (error) {
+    } catch {
       // Silently return default settings on error - settings table is optional
       return {
         clearExistingData: false,
@@ -1206,7 +1170,7 @@ export class ImportController extends BaseController {
     });
   }
 
-  private async addPeopleToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addPeopleToWorkbook(workbook: ExcelJSTypes.Workbook, _scenarioId: string, _scenarioType: string): Promise<void> {
     const rostersSheet = workbook.addWorksheet('Rosters');
     
     // Define columns for people
@@ -1253,7 +1217,7 @@ export class ImportController extends BaseController {
     });
   }
 
-  private async addStandardAllocationsToWorkbook(workbook: ExcelJSTypes.Workbook, scenarioId: string, scenarioType: string): Promise<void> {
+  private async addStandardAllocationsToWorkbook(workbook: ExcelJSTypes.Workbook, _scenarioId: string, _scenarioType: string): Promise<void> {
     const allocationsSheet = workbook.addWorksheet('Standard Allocations');
     
     // Define columns for standard allocations

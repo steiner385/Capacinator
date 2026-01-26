@@ -84,7 +84,7 @@ import {
   createProjectSubType,
   updateProjectSubType,
   deleteProjectSubType
-} from '../ProjectSubTypesController';
+} from '../ProjectSubTypesController.js';
 
 const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 

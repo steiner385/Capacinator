@@ -1,5 +1,5 @@
-import { SettingsController } from '../SettingsController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { SettingsController } from '../SettingsController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('SettingsController', () => {
   let controller: SettingsController;

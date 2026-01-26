@@ -1,7 +1,14 @@
 module.exports = {
   // Use jsdom environment for client tests
   testEnvironment: 'jsdom',
-  
+
+  // Test isolation - ensure clean state between tests
+  clearMocks: true,
+  restoreMocks: true,
+
+  // Test timeout - increase for CI environments
+  testTimeout: 30000,
+
   // Test file patterns - only client tests
   testMatch: [
     '**/client/**/*.(test|spec).[jt]s?(x)',

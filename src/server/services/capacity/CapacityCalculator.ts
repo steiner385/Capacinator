@@ -38,7 +38,7 @@ export class CapacityCalculator {
 
     for (const role of roles) {
       // Get people with this role
-      let peopleQuery = this.db('person_roles')
+      const peopleQuery = this.db('person_roles')
         .join('people', 'person_roles.person_id', 'people.id')
         .where('person_roles.role_id', role.id)
         .select(
@@ -136,7 +136,7 @@ export class CapacityCalculator {
       const dateStr = date.toISOString().split('T')[0];
       
       // Check if there's an override for this date
-      const override = overrides.find(o => 
+      const override = overrides.find((o: { start_date: string; end_date: string }) =>
         o.start_date <= dateStr && o.end_date >= dateStr
       );
 
@@ -250,14 +250,14 @@ export class CapacityCalculator {
       .select(
         'project_demands_view.role_id',
         'roles.name as role_name',
-        db.raw('SUM(project_demands_view.demand_hours) as total_demand_hours')
+        this.db.raw('SUM(project_demands_view.demand_hours) as total_demand_hours')
       )
       .groupBy('project_demands_view.role_id', 'roles.name');
 
     const bottlenecks = [];
 
     for (const capacity of capacityByRole) {
-      const demand = demandByRole.find(d => d.role_id === capacity.role_id);
+      const demand = demandByRole.find((d: { role_id: string }) => d.role_id === capacity.role_id);
       
       if (demand && demand.total_demand_hours > capacity.available_hours) {
         bottlenecks.push({

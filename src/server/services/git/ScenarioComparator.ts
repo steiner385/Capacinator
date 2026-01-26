@@ -87,8 +87,8 @@ export class ScenarioComparator {
       const targetEntities = targetData.data || [];
 
       // Create maps for quick lookup
-      const baseMap = new Map(baseEntities.map((e: any) => [e.id, e]));
-      const targetMap = new Map(targetEntities.map((e: any) => [e.id, e]));
+      const baseMap = new Map<string, any>(baseEntities.map((e: any) => [e.id as string, e]));
+      const targetMap = new Map<string, any>(targetEntities.map((e: any) => [e.id as string, e]));
 
       // Find added entities (in target but not in base)
       for (const [id, entity] of targetMap) {
@@ -148,7 +148,7 @@ export class ScenarioComparator {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(content);
-    } catch (error) {
+    } catch {
       return { data: [] };
     }
   }

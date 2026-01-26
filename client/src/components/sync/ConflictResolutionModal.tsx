@@ -15,7 +15,7 @@ interface ConflictResolutionModalProps {
   onClose: () => void;
   conflict: Conflict | null;
   onResolve: (conflictId: string, resolution: 'accept_local' | 'accept_remote' | 'custom', customValue?: any) => Promise<void>;
-  onResolve Later?: () => void;
+  onResolveLater?: () => void;
   overAllocationWarning?: {
     personName: string;
     totalAllocation: number;
