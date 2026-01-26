@@ -13,7 +13,8 @@ jest.mock('../../../lib/api-client', () => ({
       create: jest.fn(),
       update: jest.fn()
     }
-  }
+  },
+  isAuthenticated: jest.fn(() => true)
 }));
 
 // Mock UserContext

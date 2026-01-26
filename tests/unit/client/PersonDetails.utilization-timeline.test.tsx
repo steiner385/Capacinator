@@ -109,7 +109,7 @@ const renderPersonDetails = (personId = 'test-person-id') => {
   // Create a new QueryClient for each test to avoid state contamination
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { 
+      queries: {
         retry: false,
         staleTime: 0,
         gcTime: 0,

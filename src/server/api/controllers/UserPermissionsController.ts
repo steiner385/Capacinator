@@ -171,7 +171,7 @@ export class UserPermissionsController extends BaseController {
           'system_permissions.name as permission_name',
           'system_permissions.description as permission_description',
           'system_permissions.category as permission_category',
-          'role' as source
+          this.db.raw("'role' as source")
         )
         .where('user_role_permissions.user_role_id', user.user_role_id) : [];
       
@@ -186,7 +186,7 @@ export class UserPermissionsController extends BaseController {
           'user_permissions.granted',
           'user_permissions.reason',
           'user_permissions.granted_at',
-          'override' as source
+          this.db.raw("'override' as source")
         )
         .where('user_permissions.person_id', userId);
       

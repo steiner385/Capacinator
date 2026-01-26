@@ -89,12 +89,14 @@ describe('UserContext', () => {
       expect(screen.getByTestId('is-logged-in')).toHaveTextContent('no');
     });
 
-    it('loads user from localStorage on mount', () => {
+    it('loads user from localStorage on mount', async () => {
       localStorageMock.getItem.mockReturnValue(JSON.stringify(mockUser));
 
       renderWithProvider(<TestComponent />);
 
-      expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      await waitFor(() => {
+        expect(screen.getByTestId('current-user')).toHaveTextContent('John Doe');
+      });
       expect(screen.getByTestId('is-logged-in')).toHaveTextContent('yes');
     });
 

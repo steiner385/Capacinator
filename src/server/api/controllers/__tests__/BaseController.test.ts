@@ -1,8 +1,20 @@
 // Unmock the controller to test the real implementation
 jest.unmock('../BaseController.js');
 
+// Mock the logger
+jest.mock('../../../services/logging/config.js', () => ({
+  logger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    http: jest.fn(),
+    debug: jest.fn()
+  }
+}));
+
 import { BaseController, RequestWithContext, ControllerOptions } from '../BaseController';
 import type { Response, NextFunction } from 'express';
+import { logger } from '../../../services/logging/config.js';
 
 // Create a concrete implementation for testing
 class TestController extends BaseController {
@@ -130,38 +142,44 @@ describe('BaseController', () => {
   });
 
   describe('handleError (legacy signature)', () => {
-    it('should log SQL error details for SQLITE errors', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
 
+    it('should log SQL error details for SQLITE errors', () => {
       const sqliteError = new Error('SQLITE_CONSTRAINT error') as any;
       sqliteError.code = 'SQLITE_ERROR';
 
       controller.testHandleError(sqliteError, mockRes as Response);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Controller error:', sqliteError);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('SQL Error details:', 'SQLITE_CONSTRAINT error');
+      expect(logger.error).toHaveBeenCalledWith(
+        'Controller error',
+        sqliteError,
+        expect.objectContaining({
+          controller: 'TestController',
+          sqlError: 'SQLITE_CONSTRAINT error'
+        })
+      );
       expect(mockRes.status).toHaveBeenCalledWith(500);
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle regular errors without SQL logging', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       const regularError = new Error('Regular error');
 
       controller.testHandleError(regularError, mockRes as Response);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Controller error:', regularError);
-      expect(consoleErrorSpy).toHaveBeenCalledTimes(1); // Only called once, not twice
+      expect(logger.error).toHaveBeenCalledWith(
+        'Controller error',
+        regularError,
+        expect.objectContaining({
+          controller: 'TestController',
+          sqlError: undefined
+        })
+      );
       expect(mockRes.status).toHaveBeenCalledWith(500);
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle operational errors', () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       const operationalError = controller.testCreateOperationalError('Validation failed', 400);
 
       controller.testHandleError(operationalError, mockRes as Response);
@@ -171,8 +189,6 @@ describe('BaseController', () => {
         error: 'Validation failed',
         requestId: undefined
       });
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

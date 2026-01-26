@@ -317,10 +317,11 @@ describe('ProjectSubTypesController', () => {
 
       expect(auditModelChanges).toHaveBeenCalledWith(
         mockReq,
-        expect.objectContaining({
-          tableName: 'project_sub_types',
-          action: 'INSERT'
-        })
+        'project_sub_types',
+        'new-sub-1',
+        'CREATE',
+        undefined,
+        mockCreated
       );
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -420,12 +421,11 @@ describe('ProjectSubTypesController', () => {
 
       expect(auditModelChanges).toHaveBeenCalledWith(
         mockReq,
-        expect.objectContaining({
-          tableName: 'project_sub_types',
-          action: 'UPDATE',
-          oldValues: mockExisting,
-          newValues: mockUpdated
-        })
+        'project_sub_types',
+        'sub-1',
+        'UPDATE',
+        mockExisting,
+        mockUpdated
       );
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
@@ -519,12 +519,11 @@ describe('ProjectSubTypesController', () => {
       expect(mockDbFn.transaction).toHaveBeenCalled();
       expect(auditModelChanges).toHaveBeenCalledWith(
         mockReq,
-        expect.objectContaining({
-          tableName: 'project_sub_types',
-          action: 'DELETE',
-          oldValues: mockExisting,
-          newValues: null
-        })
+        'project_sub_types',
+        'sub-1',
+        'DELETE',
+        mockExisting,
+        undefined
       );
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,

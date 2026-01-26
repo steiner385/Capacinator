@@ -2,7 +2,15 @@ module.exports = {
   // Root configuration
   preset: 'ts-jest',
   testEnvironment: 'node',
-  
+
+  // Platform-specific configuration
+  ...(process.platform === 'win32' ? {
+    maxWorkers: 1,  // Reduce workers on Windows to avoid EPERM errors
+    workerIdleMemoryLimit: '512MB'  // Prevent memory issues
+  } : {
+    maxWorkers: '50%'  // Use 50% of available CPUs on Unix
+  }),
+
   // Separate projects for server and client
   projects: [
     {

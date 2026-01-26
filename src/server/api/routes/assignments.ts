@@ -5,25 +5,25 @@ const router = Router();
 const controller = new AssignmentsController();
 
 // Test data cleanup (for e2e tests) - must come before /:id route
-router.delete('/test-data', (req, res) => controller.deleteTestData(req, res));
+router.delete('/test-data', controller.deleteTestData);
 
 // Assignment CRUD operations
-router.get('/', (req, res) => controller.getAll(req, res));
-router.get('/:id', (req, res) => controller.getById(req, res));
-router.post('/', (req, res) => controller.create(req, res));
-router.put('/:id', (req, res) => controller.update(req, res));
-router.delete('/:id', (req, res) => controller.delete(req, res));
+router.get('/', controller.getAll);
+router.get('/:id', controller.getById);
+router.post('/', controller.create);
+router.put('/:id', controller.update);
+router.delete('/:id', controller.delete);
 
 // Bulk operations
-router.post('/bulk', (req, res) => controller.bulkAssign(req, res));
+router.post('/bulk', controller.bulkAssign);
 
 // Conflict detection
-router.get('/conflicts/:person_id', (req, res) => controller.getConflicts(req, res));
+router.get('/conflicts/:person_id', controller.getConflicts);
 
 // Assignment suggestions
-router.get('/suggestions', (req, res) => controller.getSuggestions(req, res));
+router.get('/suggestions', controller.getSuggestions);
 
 // Person timeline
-router.get('/timeline/:person_id', (req, res) => controller.getTimeline(req, res));
+router.get('/timeline/:person_id', controller.getTimeline);
 
 export default router;
