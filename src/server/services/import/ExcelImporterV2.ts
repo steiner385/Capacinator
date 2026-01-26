@@ -403,7 +403,7 @@ export class ExcelImporterV2 {
       if (projectsWorksheet) {
         const projectNames = new Set<string>();
         const existingProjects = await this.db('projects').select('name');
-        const existingProjectNames = new Set(existingProjects.map(p => p.name.toLowerCase()));
+        const existingProjectNames = new Set(existingProjects.map((p: { name: string }) => p.name.toLowerCase()));
 
         for (let rowNumber = 2; rowNumber <= projectsWorksheet.rowCount; rowNumber++) {
           const row = projectsWorksheet.getRow(rowNumber);
@@ -427,7 +427,7 @@ export class ExcelImporterV2 {
       if (rosterWorksheet) {
         const peopleNames = new Set<string>();
         const existingPeople = await this.db('people').select('name');
-        const existingPeopleNames = new Set(existingPeople.map(p => p.name.toLowerCase()));
+        const existingPeopleNames = new Set(existingPeople.map((p: { name: string }) => p.name.toLowerCase()));
 
         for (let rowNumber = 2; rowNumber <= rosterWorksheet.rowCount; rowNumber++) {
           const row = rosterWorksheet.getRow(rowNumber);
@@ -447,7 +447,7 @@ export class ExcelImporterV2 {
       if (rolesWorksheet) {
         const roleNames = new Set<string>();
         const existingRoles = await this.db('roles').select('name');
-        const existingRoleNames = new Set(existingRoles.map(r => r.name.toLowerCase()));
+        const existingRoleNames = new Set(existingRoles.map((r: { name: string }) => r.name.toLowerCase()));
 
         for (let rowNumber = 2; rowNumber <= rolesWorksheet.rowCount; rowNumber++) {
           const row = rolesWorksheet.getRow(rowNumber);
@@ -466,7 +466,7 @@ export class ExcelImporterV2 {
       if (projectsWorksheet) {
         const locationNames = new Set<string>();
         const existingLocations = await this.db('locations').select('name');
-        const existingLocationNames = new Set(existingLocations.map(l => l.name.toLowerCase()));
+        const existingLocationNames = new Set(existingLocations.map((l: { name: string }) => l.name.toLowerCase()));
         const reportedDuplicates = new Set<string>(); // Track which duplicates we've already reported
 
         for (let rowNumber = 2; rowNumber <= projectsWorksheet.rowCount; rowNumber++) {
@@ -1207,7 +1207,7 @@ export class ExcelImporterV2 {
           return result;
         }
       } catch (error) {
-        result.errors.push(`Duplicate validation failed: ${error.message}`);
+        result.errors.push(`Duplicate validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return result;
       }
     }
@@ -1305,10 +1305,10 @@ export class ExcelImporterV2 {
       result.warnings.push(...plannersResult.errors);
 
       // Count imported locations
-      result.imported.locations = await this.db('locations').count('* as count').first().then(r => parseInt(String(r?.count || '0'), 10));
+      result.imported.locations = await this.db('locations').count('* as count').first().then((r: { count?: number | string } | undefined) => parseInt(String(r?.count || '0'), 10));
 
       // Count availability overrides
-      result.imported.availabilityOverrides = await this.db('person_availability_overrides').count('* as count').first().then(r => parseInt(String(r?.count || '0'), 10));
+      result.imported.availabilityOverrides = await this.db('person_availability_overrides').count('* as count').first().then((r: { count?: number | string } | undefined) => parseInt(String(r?.count || '0'), 10));
 
       // Collect all structured errors and warnings
       const errorSummary = errorCollector.toJSON();
