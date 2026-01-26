@@ -42,6 +42,7 @@ module.exports = {
     {
       displayName: 'server-integration',
       testEnvironment: 'node',
+      maxWorkers: 1, // Run integration tests serially to avoid DB conflicts
       testMatch: [
         '<rootDir>/tests/integration/**/*.test.ts'
       ],

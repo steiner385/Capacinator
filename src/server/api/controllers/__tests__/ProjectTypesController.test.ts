@@ -54,7 +54,7 @@ describe('ProjectTypesController', () => {
       mockDb._setCountResult(2);
 
       // Mock sub-type counts query (separate query)
-      let secondQuery = false;
+      const secondQuery = false;
       mockDb._queueQueryResult(mockProjectTypes); // First query result
       mockDb._queueQueryResult(mockSubTypeCounts); // Second query result
 

@@ -13,7 +13,7 @@ import { UnifiedTabComponent, type UnifiedTabConfig } from '../components/ui/Uni
 import './People.css';
 import './Roles.css';
 
-type PeopleTab = 'people' | 'roles' | 'availability';
+// PeopleTab type intentionally not exported, used internally for tab configuration
 
 const tabs: UnifiedTabConfig[] = [
   {

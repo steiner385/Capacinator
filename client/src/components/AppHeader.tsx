@@ -8,8 +8,6 @@ import {
   Wifi,
   WifiOff,
   ChevronDown,
-  Sun,
-  Moon,
   LogOut
 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { BaseController, RequestWithContext } from './BaseController.js';
+import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
 export class PeopleController extends BaseController {
@@ -298,7 +298,7 @@ export class PeopleController extends BaseController {
       }> = [];
 
       // Generate monthly data points
-      let currentDate = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
+      const currentDate = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
       
       while (currentDate <= timelineEnd) {
         const monthStart = new Date(currentDate);

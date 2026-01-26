@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
@@ -957,7 +957,7 @@ export class ReportingController extends BaseController {
     const filterEnd = endDate ? new Date(endDate) : new Date('2024-12-31');
 
     // Generate months between start and end dates
-    let currentDate = new Date(filterStart);
+    const currentDate = new Date(filterStart);
     currentDate.setDate(1); // First day of month
     
     while (currentDate <= filterEnd) {

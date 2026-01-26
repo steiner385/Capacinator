@@ -13,10 +13,8 @@ export async function seed(knex: Knex): Promise<void> {
   const people = await knex('people').select('id', 'name').orderBy('name');
   const projects = await knex('projects').select('id', 'name', 'priority').orderBy('name');
   const roles = await knex('roles').select('id', 'name').orderBy('name');
-  const locations = await knex('locations').select('id', 'name').orderBy('name');
-  const projectTypes = await knex('project_types').select('id', 'name').orderBy('name');
-  const projectSubTypes = await knex('project_sub_types').select('id', 'name', 'project_type_id').orderBy('name');
-  
+  // Note: locations, projectTypes, projectSubTypes available for future scenario differences
+
   if (people.length === 0 || projects.length === 0) {
     throw new Error('No people or projects found. Please run comprehensive seed first.');
   }

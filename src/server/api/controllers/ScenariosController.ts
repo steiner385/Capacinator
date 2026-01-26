@@ -783,6 +783,7 @@ export class ScenariosController extends BaseController {
         .where('scenario_id', parentScenarioId);
 
       for (const assignment of parentAssignments) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, scenario_id, created_at, updated_at, ...assignmentData } = assignment;
         await this.db('scenario_project_assignments').insert({
           ...assignmentData,
@@ -797,6 +798,7 @@ export class ScenariosController extends BaseController {
         .where('scenario_id', parentScenarioId);
 
       for (const phase of parentPhases) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, scenario_id, created_at, updated_at, ...phaseData } = phase;
         await this.db('scenario_project_phases').insert({
           ...phaseData,
@@ -903,7 +905,7 @@ export class ScenariosController extends BaseController {
     return conflicts;
   }
 
-  private async performMerge(sourceScenarioId: string, targetScenarioId: string, conflictResolution: string = 'use_source') {
+  private async performMerge(sourceScenarioId: string, targetScenarioId: string, _conflictResolution: string = 'use_source') {
     // Start a transaction to ensure atomicity
     await this.db.transaction(async (trx) => {
       // Get all conflicts that need resolution

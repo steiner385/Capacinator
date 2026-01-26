@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Eye, Calendar, Users } from 'lucide-react';
@@ -125,6 +125,7 @@ export function Projects() {
     });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'planned': return 'badge badge-primary';

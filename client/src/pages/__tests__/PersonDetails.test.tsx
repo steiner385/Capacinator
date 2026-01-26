@@ -109,10 +109,10 @@ const mockPersonData = {
       project_name: 'Project Alpha',
       role_id: 'role-1',
       role_name: 'Developer',
-      start_date: '2025-01-01',
-      end_date: '2025-12-31',
-      computed_start_date: '2025-01-01',
-      computed_end_date: '2025-12-31',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      computed_start_date: '2026-01-01',
+      computed_end_date: '2026-12-31',
       allocation_percentage: 50,
       billable: true
     }

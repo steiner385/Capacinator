@@ -3,16 +3,6 @@ import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
 
-interface ProjectAllocation {
-  id: string;
-  project_id: string;
-  phase_id: string;
-  role_id: string;
-  allocation_percentage: number;
-  is_inherited: boolean;
-  template_id?: string;
-  notes?: string;
-}
 
 export class ProjectAllocationController extends BaseController {
   constructor(container?: ServiceContainer) {

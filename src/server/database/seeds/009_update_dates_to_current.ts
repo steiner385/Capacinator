@@ -216,7 +216,7 @@ export async function seed(knex: Knex): Promise<void> {
     
     // Adjust based on override type
     switch (override.override_type) {
-      case 'vacation':
+      case 'vacation': {
         // Vacations spread throughout the year
         const vacationMonth = Math.floor(Math.random() * 12);
         newStartDate = getRelativeDate(vacationMonth - currentMonth, 1);
@@ -225,8 +225,9 @@ export async function seed(knex: Knex): Promise<void> {
         newEndDate.setDate(newEndDate.getDate() + vacationDuration);
         newEndDate = newEndDate.toISOString().split('T')[0];
         break;
-        
-      case 'training':
+      }
+
+      case 'training': {
         // Training in next 6 months
         const trainingMonth = Math.floor(Math.random() * 6);
         newStartDate = getRelativeDate(trainingMonth, 15);
@@ -234,8 +235,9 @@ export async function seed(knex: Knex): Promise<void> {
         newEndDate.setDate(newEndDate.getDate() + 5); // 5 day training
         newEndDate = newEndDate.toISOString().split('T')[0];
         break;
-        
-      case 'medical':
+      }
+
+      case 'medical': {
         // Medical leave could be past or future
         const medicalOffset = Math.floor(Math.random() * 6) - 3; // -3 to +3 months
         newStartDate = getRelativeDate(medicalOffset);
@@ -244,7 +246,8 @@ export async function seed(knex: Knex): Promise<void> {
         newEndDate.setDate(newEndDate.getDate() + medicalDuration);
         newEndDate = newEndDate.toISOString().split('T')[0];
         break;
-        
+      }
+
       default:
         // Keep relative to original pattern
         newStartDate = getRelativeDate(0);

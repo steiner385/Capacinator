@@ -312,6 +312,7 @@ describe('ImportController', () => {
     });
 
     it('records import failure in history', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ExcelImporter } = require('../../../services/import/ExcelImporter');
       ExcelImporter.mockImplementationOnce(() => ({
         importFromFile: jest.fn().mockRejectedValue(new Error('Import failed'))
@@ -373,6 +374,7 @@ describe('ImportController', () => {
     });
 
     it('returns 400 when import completes with errors', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ExcelImporter } = require('../../../services/import/ExcelImporter');
       ExcelImporter.mockImplementationOnce(() => ({
         importFromFile: jest.fn().mockResolvedValue({
@@ -607,6 +609,7 @@ describe('ImportController', () => {
     });
 
     it('handles validation errors gracefully', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ExcelImporter } = require('../../../services/import/ExcelImporter');
       ExcelImporter.mockImplementationOnce(() => ({
         validateExcelStructure: jest.fn().mockRejectedValue(new Error('Corrupted file'))
@@ -913,6 +916,7 @@ describe('ImportController', () => {
     });
 
     it('returns 400 when analysis fails', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ExcelImporter } = require('../../../services/import/ExcelImporter');
       ExcelImporter.mockImplementationOnce(() => ({
         analyzeImport: jest.fn().mockRejectedValue(new Error('Analysis failed'))
@@ -1316,6 +1320,7 @@ describe('ImportController', () => {
     });
 
     it('cleans up uploaded file on validation error', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
 
       mockReq.file = {
@@ -1325,6 +1330,7 @@ describe('ImportController', () => {
         mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ExcelImporter } = require('../../../services/import/ExcelImporter');
       ExcelImporter.mockImplementationOnce(() => ({
         validateExcelStructure: jest.fn().mockRejectedValue(new Error('Validation error'))
@@ -1337,6 +1343,7 @@ describe('ImportController', () => {
     });
 
     it('cleans up uploaded file on upload error', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
 
       mockReq.file = {
@@ -1346,6 +1353,7 @@ describe('ImportController', () => {
         mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { ExcelImporter } = require('../../../services/import/ExcelImporter');
       ExcelImporter.mockImplementationOnce(() => ({
         importFromFile: jest.fn().mockRejectedValue(new Error('Import error'))
@@ -1367,6 +1375,7 @@ describe('ImportController', () => {
     });
 
     it('handles file cleanup errors gracefully', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const fs = require('fs/promises');
       fs.unlink.mockRejectedValueOnce(new Error('Cannot delete file'));
 

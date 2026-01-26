@@ -1,6 +1,5 @@
 import { Knex } from 'knex';
 import path from 'path';
-import fs from 'fs';
 
 /**
  * E2E Test Database Configuration

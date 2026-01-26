@@ -45,6 +45,7 @@ export interface LegacyAuditContext {
 
 // Extend Express Request type globally for legacy compatibility
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       audit?: LegacyAuditContext;

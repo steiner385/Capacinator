@@ -66,7 +66,7 @@ export class GitSyncController extends BaseController {
         });
       }
 
-      const status = await this.gitService.getStatus();
+      await this.gitService.getStatus();
       const isClean = await this.gitService.isClean();
       const commitsAhead = await this.gitService.getCommitsAhead();
       const commitsBehind = await this.gitService.getCommitsBehind();
@@ -273,7 +273,7 @@ export class GitSyncController extends BaseController {
       const message = commitMessage || (await this.exporter.generateCommitMessage('working'));
 
       // Get author from authenticated user
-      // @ts-ignore
+      // @ts-expect-error - req.user may be undefined
       const author = {
         name: req.user?.name || 'Capacinator User',
         email: req.user?.email || 'user@example.com',
@@ -631,7 +631,7 @@ export class GitSyncController extends BaseController {
       const { limit, entityType, entityId } = req.query;
 
       const options = {
-        maxCount: limit ? parseInt(limit as string) : 50,
+        maxCount: limit ? parseInt(limit as string, 10) : 50,
       };
 
       const commits = await this.gitService.getHistory(options);

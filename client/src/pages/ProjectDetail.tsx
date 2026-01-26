@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Edit2, Save, Users, Briefcase, Clock,
-  MapPin, Target, Trash2, AlertTriangle, AlertCircle,
-  CheckCircle, Circle, XCircle, RefreshCw
+  ArrowLeft, Users, Briefcase, Clock,
+  MapPin, Target, AlertTriangle, AlertCircle,
+  CheckCircle, XCircle, RefreshCw, Edit2, Trash2, Save
 } from 'lucide-react';
 import {
   Dialog,
@@ -28,11 +28,9 @@ import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
 import { ProjectDemandChart } from '../components/ProjectDemandChart';
-import { getProjectTypeIndicatorStyle } from '../lib/project-colors';
 import { InlineEdit } from '../components/ui/InlineEdit';
 import { CollapsibleSection } from '../components/ui/CollapsibleSection';
 import { AssignmentTable } from '../components/ui/AssignmentTable';
-import type { Project } from '../types';
 import './ProjectDetail.css';
 
 interface ProjectDetail {
@@ -224,6 +222,7 @@ export function ProjectDetail() {
   };
 
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getPriorityColor = (priority: number) => {
     switch (priority) {
       case 1: return 'red';

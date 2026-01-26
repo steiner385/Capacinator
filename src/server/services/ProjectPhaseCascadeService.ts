@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getAuditedDb } from '../database/index.js';
-import { DependencyType, ProjectPhaseTimeline, ProjectPhaseDependency } from '../types/project-phases.js';
+import { DependencyType } from '../types/project-phases.js';
 
 export interface CascadeCalculation {
   phase_timeline_id: string;
@@ -363,31 +363,38 @@ export class ProjectPhaseCascadeService {
     const predecessorEndStr = this.formatDateSafe(predecessorEndDate);
 
     switch (dependencyType) {
-      case 'FS': // Finish-to-Start: successor starts on or after predecessor finishes (allow same-day)
+      case 'FS': {
+        // Finish-to-Start: successor starts on or after predecessor finishes (allow same-day)
         const newStartStr = this.addDaysSafe(predecessorEndStr, lagDays);
         newStart = this.parseDateSafe(newStartStr);
         break;
+      }
       
-      case 'SS': // Start-to-Start: successor starts when predecessor starts
+      case 'SS': {
+        // Start-to-Start: successor starts when predecessor starts
         const predecessorStartStr = this.formatDateSafe(predecessorStartDate);
         const newStartStrSS = this.addDaysSafe(predecessorStartStr, lagDays);
         newStart = this.parseDateSafe(newStartStrSS);
         break;
+      }
       
-      case 'FF': // Finish-to-Finish: successor finishes when predecessor finishes
+      case 'FF': { // Finish-to-Finish: successor finishes when predecessor finishes
         const newEndStrFF = this.addDaysSafe(predecessorEndStr, lagDays);
         const newEndFF = this.parseDateSafe(newEndStrFF);
         const newStartStrFF = this.addDaysSafe(newEndStrFF, -durationDays);
         newStart = this.parseDateSafe(newStartStrFF);
         return { start: newStart, end: newEndFF };
-      
-      case 'SF': // Start-to-Finish: successor finishes when predecessor starts
+      }
+
+      case 'SF': {
+        // Start-to-Finish: successor finishes when predecessor starts
         const predecessorStartStrSF = this.formatDateSafe(predecessorStartDate);
         const newEndStrSF = this.addDaysSafe(predecessorStartStrSF, lagDays);
         const newEndSF = this.parseDateSafe(newEndStrSF);
         const newStartStrSF = this.addDaysSafe(newEndStrSF, -durationDays);
         newStart = this.parseDateSafe(newStartStrSF);
         return { start: newStart, end: newEndSF };
+      }
       
       default:
         newStart = this.parseDateSafe(dependentPhase.start_date);
@@ -449,31 +456,33 @@ export class ProjectPhaseCascadeService {
           }
           break;
           
-        case 'FF': // Finish-to-Finish: this phase must finish on or after predecessor finishes
+        case 'FF': { // Finish-to-Finish: this phase must finish on or after predecessor finishes
           if (newEndDate < predecessorEndDate) {
             const lagDays = dep.lag_days || 0;
             const requiredEndDate = new Date(predecessorEndDate);
             requiredEndDate.setDate(requiredEndDate.getDate() + lagDays);
-            
+
             errors.push(
               `Phase "${phase.phase_name}" cannot finish before "${predecessor.phase_name}" finishes. ` +
               `Required end date: ${this.formatDateSafe(requiredEndDate)} or later.`
             );
           }
           break;
-          
-        case 'SF': // Start-to-Finish: this phase must finish on or after predecessor starts
+        }
+
+        case 'SF': { // Start-to-Finish: this phase must finish on or after predecessor starts
           if (newEndDate < predecessorStartDate) {
             const lagDays = dep.lag_days || 0;
             const requiredEndDate = new Date(predecessorStartDate);
             requiredEndDate.setDate(requiredEndDate.getDate() + lagDays);
-            
+
             errors.push(
               `Phase "${phase.phase_name}" cannot finish before "${predecessor.phase_name}" starts. ` +
               `Required end date: ${this.formatDateSafe(requiredEndDate)} or later.`
             );
           }
           break;
+        }
       }
     }
     

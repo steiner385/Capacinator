@@ -223,9 +223,7 @@ export class ResourceTemplatesController extends BaseController {
         });
       }
 
-      // Determine if this is an inherited template or a parent/override template
-      const isInherited = false; // Direct creation is never inherited
-      const parentTemplateId = null; // Will be set during inheritance propagation
+      // Note: isInherited and parentTemplateId will be set during inheritance propagation
 
       const results = {
         created: [] as any[],

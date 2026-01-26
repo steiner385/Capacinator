@@ -11,7 +11,7 @@ export class ProjectTypesController extends BaseController {
   async getAll(req: Request, res: Response) {
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 50;
-    const include_inactive = req.query.include_inactive === 'true';
+    // Note: include_inactive query param can be used for future filtering
 
     const result = await this.executeQuery(async () => {
       let query = this.db('project_types')

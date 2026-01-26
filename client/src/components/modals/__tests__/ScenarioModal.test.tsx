@@ -12,9 +12,16 @@ jest.mock('../../../lib/api-client', () => ({
     scenarios: {
       create: jest.fn(),
       update: jest.fn()
+    },
+    auth: {
+      me: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn()
     }
   },
-  isAuthenticated: jest.fn(() => true)
+  isAuthenticated: jest.fn(() => false),
+  saveAuthTokens: jest.fn(),
+  clearAuthTokens: jest.fn()
 }));
 
 // Mock UserContext

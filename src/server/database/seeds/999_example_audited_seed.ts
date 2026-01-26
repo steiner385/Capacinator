@@ -5,7 +5,7 @@ export async function seed(knex: Knex): Promise<void> {
   console.log('Running example audited seed...');
   
   // Use the seed audit wrapper for all data operations
-  await withSeedAudit(knex, '999_example_audited_seed', async (auditDb) => {
+  await withSeedAudit(knex, '999_example_audited_seed', async (_auditDb) => {
     // Instead of using knex directly, use auditDb for audit-aware operations
     
     // Example: Clear existing data (audited)

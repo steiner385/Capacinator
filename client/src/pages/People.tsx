@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Eye, Users, UserPlus, Search, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Eye, Users, UserPlus, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';
@@ -73,7 +73,8 @@ export default function People() {
     }
   });
 
-  // Delete person mutation
+  // Delete person mutation (reserved for future delete functionality)
+   
   const deletePersonMutation = useMutation({
     mutationFn: async (personId: string) => {
       await api.people.delete(personId);
@@ -83,6 +84,7 @@ export default function People() {
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleDeletePerson = (personId: string, personName: string) => {
     if (confirm(`Are you sure you want to delete "${personName}"? This action cannot be undone.`)) {
       deletePersonMutation.mutate(personId);

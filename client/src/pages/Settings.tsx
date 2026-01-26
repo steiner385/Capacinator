@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Settings as SettingsIcon, Save, Database,
-  Users, X, Palette
+  Users, Palette
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
@@ -41,7 +41,7 @@ export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   
   // Use bookmarkable tabs for settings
-  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+  const { setActiveTab } = useBookmarkableTabs({
     tabs: settingsTabs,
     defaultTab: 'system'
   });
@@ -160,9 +160,9 @@ export default function Settings() {
 
       // Invalidate and refetch settings
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.import() });
-    } catch (error: any) {
-      console.error('Error saving import settings:', error);
-      setSaveMessage(error.response?.data?.error || 'Error saving settings. Please try again.');
+    } catch (err: any) {
+      console.error('Error saving import settings:', err);
+      setSaveMessage(err.response?.data?.error || 'Error saving settings. Please try again.');
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 3000);

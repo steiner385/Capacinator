@@ -12,7 +12,6 @@ import type {
   Scenario,
   PaginationParams,
   PaginatedResponse,
-  ApiError,
 } from '../types';
 
 // Import/Export options
