@@ -230,9 +230,6 @@
     "vitest": "^3.2.4",
     "wait-on": "^8.0.3"
   },
-  "optionalDependencies": {
-    "github-issue-prioritizer": "file:../PriorityCalculator"
-  },
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix"
