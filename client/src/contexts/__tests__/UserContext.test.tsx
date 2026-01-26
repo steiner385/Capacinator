@@ -522,10 +522,11 @@ describe('UserContext', () => {
         loginButton.click();
       });
 
+      // Both consumers should update together - wrap in single waitFor to avoid race
       await waitFor(() => {
         expect(screen.getByTestId('consumer-1')).toHaveTextContent('John Doe');
-      });
-      expect(screen.getByTestId('consumer-2')).toHaveTextContent('John Doe');
+        expect(screen.getByTestId('consumer-2')).toHaveTextContent('John Doe');
+      }, { timeout: 5000 });
     });
 
     it('updates all consumers when user changes', async () => {
@@ -570,10 +571,11 @@ describe('UserContext', () => {
         loginButton.click();
       });
 
+      // Both consumers should update together - wrap in single waitFor to avoid race
       await waitFor(() => {
         expect(screen.getByTestId('consumer-1')).toHaveTextContent('John Doe');
-      });
-      expect(screen.getByTestId('consumer-2')).toHaveTextContent('Logged in');
+        expect(screen.getByTestId('consumer-2')).toHaveTextContent('Logged in');
+      }, { timeout: 5000 });
 
       // Logout
       const logoutButton = screen.getByText('Logout');
@@ -581,10 +583,11 @@ describe('UserContext', () => {
         logoutButton.click();
       });
 
+      // Both consumers should update together - wrap in single waitFor to avoid race
       await waitFor(() => {
         expect(screen.getByTestId('consumer-1')).toHaveTextContent('No user');
-      });
-      expect(screen.getByTestId('consumer-2')).toHaveTextContent('Not logged in');
+        expect(screen.getByTestId('consumer-2')).toHaveTextContent('Not logged in');
+      }, { timeout: 5000 });
     });
   });
 

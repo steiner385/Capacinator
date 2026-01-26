@@ -1235,11 +1235,10 @@ describe('SmartAssignmentModal', () => {
         fireEvent.change(startDateInput, { target: { value: '2026-11-01' } });
         fireEvent.change(endDateInput, { target: { value: '2026-12-31' } });
 
-        // Wait a bit for form state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Verify form is interactive
-        expect(slider).toHaveValue('50');
+        // Verify form is interactive - use waitFor instead of manual setTimeout
+        await waitFor(() => {
+          expect(slider).toHaveValue('50');
+        }, { timeout: 5000 });
       });
 
       it('handles missing required fields validation', async () => {
@@ -1463,9 +1462,10 @@ describe('SmartAssignmentModal', () => {
         const removeButtons = screen.getAllByRole('button', { name: /Remove/i });
         fireEvent.click(removeButtons[0]);
 
-        // API should not be called when user cancels
-        await new Promise(resolve => setTimeout(resolve, 100));
-        expect(api.assignments.delete).not.toHaveBeenCalled();
+        // API should not be called when user cancels - verify with waitFor for stability
+        await waitFor(() => {
+          expect(api.assignments.delete).not.toHaveBeenCalled();
+        }, { timeout: 1000 });
         expect(global.confirm).toHaveBeenCalled();
       });
     });

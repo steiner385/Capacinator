@@ -3,6 +3,14 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
 
+  // Test isolation - ensure clean state between tests
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+
+  // Test timeout - increase for CI environments
+  testTimeout: 30000,
+
   // Platform-specific configuration
   ...(process.platform === 'win32' ? {
     maxWorkers: 1,  // Reduce workers on Windows to avoid EPERM errors

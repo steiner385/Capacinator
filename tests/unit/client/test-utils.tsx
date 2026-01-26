@@ -1,7 +1,7 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../../../client/src/contexts/ThemeContext';
 import { UserProvider } from '../../../client/src/contexts/UserContext';
 // ScenarioProvider is mocked in individual tests when needed
@@ -9,7 +9,6 @@ import { UserProvider } from '../../../client/src/contexts/UserContext';
 // Create a custom render function that includes all necessary providers
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   initialEntries?: string[];
-  useMemoryRouter?: boolean;
   queryClient?: QueryClient;
 }
 
@@ -19,7 +18,7 @@ export function createTestQueryClient() {
     defaultOptions: {
       queries: {
         retry: false,
-        cacheTime: 0,
+        gcTime: 0,      // Note: 'cacheTime' was renamed to 'gcTime' in React Query v5
         staleTime: 0,
       },
       mutations: {
@@ -38,7 +37,6 @@ export function renderWithProviders(
   ui: ReactElement,
   {
     initialEntries = ['/'],
-    useMemoryRouter = true,
     queryClient = createTestQueryClient(),
     ...renderOptions
   }: CustomRenderOptions = {}
