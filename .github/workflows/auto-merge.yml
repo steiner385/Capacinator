@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   enable-auto-merge:
-    runs-on: [self-hosted, linux]
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Enable auto-merge
         uses: peter-evans/enable-pull-request-automerge@v3
