@@ -5,6 +5,7 @@ module.exports = {
 
   // Test isolation - ensure clean state between tests
   clearMocks: true,
+  resetMocks: true,
   restoreMocks: true,
 
   // Test timeout - increase for CI environments
