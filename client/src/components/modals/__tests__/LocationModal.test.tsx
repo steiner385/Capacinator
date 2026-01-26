@@ -346,7 +346,7 @@ describe('LocationModal', () => {
 
       await waitFor(() => {
         expect(mockOnCancel).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
   });
 
