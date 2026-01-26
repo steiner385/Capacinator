@@ -29,9 +29,9 @@ export class GitRepositoryService {
 
   constructor(repoPath: string) {
     this.repoPath = repoPath;
-    // In test environment, delay git initialization until first use
-    // This prevents errors when the git directory doesn't exist during test imports
-    if (process.env.NODE_ENV === 'test') {
+    // In test/CI environment, delay git initialization until first use
+    // This prevents errors when the git directory doesn't exist during test imports or CI runs
+    if (process.env.NODE_ENV === 'test' || process.env.CI) {
       // Create a stub git instance that will be replaced on first use
       this.git = {} as SimpleGit;
       this.gitInitialized = false;
