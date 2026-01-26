@@ -258,8 +258,13 @@ export function createMockDb() {
 
   /**
    * Mock for raw SQL queries
+   * Returns a mock raw object that can be used in select/where clauses
    */
-  mock.raw = jest.fn();
+  mock.raw = jest.fn().mockImplementation((sql: string) => {
+    // Return an object that represents the raw SQL
+    // Knex internally uses this, but for mocking we just return a simple object
+    return { sql, bindings: [] };
+  });
 
   /**
    * Mock for transactions
@@ -270,6 +275,16 @@ export function createMockDb() {
     await callback(trx);
     return trx;
   });
+
+  /**
+   * Mock for schema operations
+   */
+  mock.schema = {
+    hasTable: jest.fn().mockResolvedValue(true),
+    createTable: jest.fn().mockReturnThis(),
+    dropTable: jest.fn().mockReturnThis(),
+    table: jest.fn().mockReturnThis()
+  };
 
   // Helper methods for tests to configure what data the mock returns
 

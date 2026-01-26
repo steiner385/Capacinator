@@ -12,6 +12,7 @@ dist/
 client/dist/
 client/build/
 *.tsbuildinfo
+shared/types/*.js
 
 # Database
 *.db
