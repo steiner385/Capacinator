@@ -13,7 +13,9 @@ export async function seed(knex: Knex): Promise<void> {
   const people = await knex('people').select('id', 'name').orderBy('name');
   const projects = await knex('projects').select('id', 'name', 'priority').orderBy('name');
   const roles = await knex('roles').select('id', 'name').orderBy('name');
-  // Note: locations, projectTypes, projectSubTypes available for future scenario differences
+  const locations = await knex('locations').select('id', 'name').orderBy('name');
+  const projectTypes = await knex('project_types').select('id', 'name').orderBy('name');
+  const projectSubTypes = await knex('project_sub_types').select('id', 'name', 'project_type_id').orderBy('name');
 
   if (people.length === 0 || projects.length === 0) {
     throw new Error('No people or projects found. Please run comprehensive seed first.');
@@ -146,63 +148,74 @@ export async function seed(knex: Knex): Promise<void> {
   console.log('\n📊 Setting up Market Expansion Branch...');
   
   // First, we need to add the new projects to the projects table
+  // Get default type/subtype/location for new projects
+  const defaultProjectType = projectTypes[0];
+  const defaultProjectSubType = projectSubTypes.find(pst => pst.project_type_id === defaultProjectType?.id) || projectSubTypes[0];
+  const defaultLocation = locations[0];
+
   const expansionProjects = [
     {
       id: uuidv4(),
       name: 'APAC Market Entry',
       description: 'Expansion into Asia-Pacific markets',
-      status: 'active',
       priority: 3, // High priority
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date().toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: expansionBranch.id,
       name: 'European Distribution Hub',
       description: 'Establish European distribution network',
-      status: 'planning',
       priority: 3, // High priority,
-      start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: expansionBranch.id,
       name: 'Latin America Partnership',
       description: 'Strategic partnerships in LATAM',
-      status: 'active',
       priority: 2, // Medium priority
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 270 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date().toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 270 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: expansionBranch.id,
       name: 'Global Marketing Campaign',
       description: 'Worldwide brand awareness campaign',
-      status: 'active',
       priority: 3, // High priority
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date().toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: expansionBranch.id,
       name: 'Multi-language Support',
       description: 'Localization for 15 languages',
-      status: 'planning',
       priority: 2, // Medium priority
-      start_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 240 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 240 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -279,46 +292,51 @@ export async function seed(knex: Knex): Promise<void> {
       id: uuidv4(),
       name: 'AI-Powered Analytics',
       description: 'Machine learning for predictive analytics',
-      status: 'active',
       priority: 3, // High priority
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date().toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: innovationSandbox.id,
       name: 'Blockchain Integration',
       description: 'Distributed ledger for supply chain',
-      status: 'planning', // Use valid status
       priority: 2, // Medium priority
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date().toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: innovationSandbox.id,
       name: 'Quantum Computing Research',
       description: 'Exploring quantum algorithms',
-      status: 'planning', // Use valid status
       priority: 1, // Low priority
-      start_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 years
+      aspiration_start: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 years
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
     {
       id: uuidv4(),
-      scenario_id: innovationSandbox.id,
       name: 'AR/VR Customer Experience',
       description: 'Augmented reality for customer engagement',
-      status: 'active',
       priority: 3, // High priority
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 270 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      aspiration_start: new Date().toISOString().split('T')[0],
+      aspiration_finish: new Date(Date.now() + 270 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      project_type_id: defaultProjectType?.id,
+      project_sub_type_id: defaultProjectSubType?.id,
+      location_id: defaultLocation?.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
