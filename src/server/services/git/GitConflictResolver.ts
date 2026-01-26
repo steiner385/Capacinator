@@ -6,7 +6,6 @@
  * Implements 3-way merge algorithm for detecting and resolving conflicts
  */
 
-// @ts-expect-error no types available for 'diff' package
 import { diffWords } from 'diff';
 import type { Conflict } from '../../../../shared/types/git-entities.js';
 
