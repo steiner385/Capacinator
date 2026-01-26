@@ -1,5 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
+import type { Worksheet } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -10,6 +11,9 @@ async function initializeExcelJS() {
   }
   return ExcelJS;
 }
+
+// Type alias for ExcelJS worksheet
+type ExcelWorksheet = Worksheet;
 import { ImportErrorCollector, ImportErrorUtils, ProgressCallback, ImportProgressTracker, ImportPhase } from './ImportError.js';
 
 export interface ImportOptions {
@@ -536,7 +540,7 @@ export class ExcelImporter {
     return phase.id;
   }
 
-  private async importProjects(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
+  private async importProjects(worksheet: ExcelWorksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -633,7 +637,7 @@ export class ExcelImporter {
     return { count, errors };
   }
 
-  private async importPeople(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
+  private async importPeople(worksheet: ExcelWorksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -764,7 +768,7 @@ export class ExcelImporter {
     return { count, errors };
   }
 
-  private async importStandardAllocations(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
+  private async importStandardAllocations(worksheet: ExcelWorksheet, errorCollector: ImportErrorCollector, progressTracker?: ImportProgressTracker): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -1240,16 +1244,16 @@ export class ExcelImporter {
     });
   }
 
-  private async analyzeStandardAllocationsWorksheet(workbook: any, _options: ImportOptions, analysis: any, _errorCollector: ImportErrorCollector) {
+  private async analyzeStandardAllocationsWorksheet(workbook: any, options: ImportOptions, analysis: any, _errorCollector: ImportErrorCollector) {
     const allocationsSheet = workbook.getWorksheet('Standard Allocations');
     if (!allocationsSheet) {
       return; // Optional worksheet
     }
 
-    const existingAllocations = await this.db('standard_allocations').count('* as count').first();
+    const existingAllocations = await this.db('standard_allocations').count('* as count').first() as { count: number } | undefined;
     let newAllocations = 0;
 
-    allocationsSheet.eachRow((row, rowNumber) => {
+    allocationsSheet.eachRow((row: any, rowNumber: number) => {
       if (rowNumber === 1) return; // Skip header
 
       const projectType = row.getCell(1).value?.toString()?.trim();
@@ -1261,7 +1265,7 @@ export class ExcelImporter {
       }
     });
 
-    if (options.clearExisting && existingAllocations.count > 0) {
+    if (options.clearExisting && existingAllocations && existingAllocations.count > 0) {
       analysis.summary.wouldDelete.standardAllocations = existingAllocations.count;
       analysis.preview.deletedEntities.push({
         type: 'standard_allocations',
@@ -1278,9 +1282,9 @@ export class ExcelImporter {
     let riskLevel = 'low';
 
     // Check for high-impact operations
-    const totalDeletions = Object.values(analysis.summary.wouldDelete).reduce((sum: number, count: any) => sum + count, 0);
-    const totalCreations = Object.values(analysis.summary.wouldCreate).reduce((sum: number, count: any) => sum + count, 0);
-    
+    const totalDeletions = Object.values(analysis.summary.wouldDelete as Record<string, number>).reduce((sum, count) => sum + count, 0);
+    const totalCreations = Object.values(analysis.summary.wouldCreate as Record<string, number>).reduce((sum, count) => sum + count, 0);
+
     if (totalDeletions > 0) {
       riskLevel = 'high';
       riskFactors.push(`${totalDeletions} existing records will be deleted`);

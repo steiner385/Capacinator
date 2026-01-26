@@ -87,9 +87,11 @@ export class GitAuditIntegration {
 
     if (this.db) {
       try {
+        // Map SyncOperation type to GitSyncAuditEntry operationType
+        const operationType = operation.type === 'merge' ? 'branch_merge' : operation.type;
         await this.insertAuditEntry({
           id: operation.id,
-          operationType: operation.type,
+          operationType,
           operationStatus: 'started',
           userId,
           branchName,

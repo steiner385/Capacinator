@@ -58,8 +58,8 @@ export class AssignmentRecalculationService {
     const phaseTimelines = await this.db('project_phases_timeline')
       .where('project_id', projectId)
       .whereIn('phase_id', affectedPhaseIds)
-      .select('phase_id', 'start_date', 'end_date');
-    
+      .select('phase_id', 'start_date', 'end_date') as { phase_id: string; start_date: string; end_date: string }[];
+
     const phaseTimelineMap = new Map(
       phaseTimelines.map(pt => [pt.phase_id, pt])
     );

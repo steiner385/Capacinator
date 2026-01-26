@@ -250,7 +250,7 @@ export class CapacityCalculator {
       .select(
         'project_demands_view.role_id',
         'roles.name as role_name',
-        db.raw('SUM(project_demands_view.demand_hours) as total_demand_hours')
+        this.db.raw('SUM(project_demands_view.demand_hours) as total_demand_hours')
       )
       .groupBy('project_demands_view.role_id', 'roles.name');
 

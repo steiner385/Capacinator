@@ -7,7 +7,7 @@
  */
 
 import { diffWords } from 'diff';
-import type { Conflict } from '../../../shared/types/git-entities.js';
+import type { Conflict } from '../../../../shared/types/git-entities.js';
 
 interface MergeInput {
   base: any;

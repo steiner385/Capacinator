@@ -57,7 +57,6 @@ export function requireGitAuth() {
       }
 
       // Attach credentials to request for use in controllers
-      // @ts-expect-error - Extending Request type
       req.gitCredentials = {
         token,
         repositoryUrl: process.env.GIT_REPOSITORY_URL || '',
@@ -88,19 +87,16 @@ export function checkGitSyncAvailable() {
     const repositoryUrl = process.env.GIT_REPOSITORY_URL;
 
     if (!gitSyncEnabled) {
-      // @ts-expect-error - Extending Request type
       req.gitSyncStatus = {
         available: false,
         reason: 'Feature not enabled',
       };
     } else if (!repositoryUrl) {
-      // @ts-expect-error - Extending Request type
       req.gitSyncStatus = {
         available: false,
         reason: 'Repository URL not configured',
       };
     } else {
-      // @ts-expect-error - Extending Request type
       req.gitSyncStatus = {
         available: true,
         repositoryUrl,

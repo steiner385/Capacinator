@@ -259,12 +259,11 @@ export class GitRepositoryService {
         '--no-ff': null, // Always create merge commit
       });
 
-      // Check for Git-level conflicts
-      const hasConflicts = result.summary.conflicts.length > 0;
+      // Check for Git-level conflicts by checking git status
+      const conflictedFiles = await this.getConflictedFiles();
+      const hasConflicts = conflictedFiles.length > 0;
 
       if (hasConflicts) {
-        // Get list of conflicted files
-        const conflictedFiles = await this.getConflictedFiles();
 
         gitLogger.warn('pull', `Conflicts detected (${conflictedFiles.length} files)`, {
           branch: targetBranch,
@@ -518,16 +517,6 @@ export class GitRepositoryService {
 
       throw categorizeGitError(error as Error, `checkout branch ${branchName}`);
     }
-  }
-
-  /**
-   * Get current branch name
-   *
-   * @returns Current branch name
-   */
-  async getCurrentBranch(): Promise<string> {
-    const status = await this.getStatus();
-    return status.current || 'main';
   }
 
   /**

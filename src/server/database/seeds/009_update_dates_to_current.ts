@@ -53,9 +53,9 @@ export async function seed(knex: Knex): Promise<void> {
       newEndDate = getRelativeDate(8);
     } else if (project.name.toLowerCase().includes('poc') || project.name.toLowerCase().includes('pilot')) {
       // POC/Pilot projects are shorter
-      newEndDate = new Date(newStartDate);
-      newEndDate.setMonth(newEndDate.getMonth() + 3);
-      newEndDate = newEndDate.toISOString().split('T')[0];
+      const tempDate = new Date(newStartDate);
+      tempDate.setMonth(tempDate.getMonth() + 3);
+      newEndDate = tempDate.toISOString().split('T')[0];
     }
 
     await knex('projects')
@@ -221,9 +221,9 @@ export async function seed(knex: Knex): Promise<void> {
         const vacationMonth = Math.floor(Math.random() * 12);
         newStartDate = getRelativeDate(vacationMonth - currentMonth, 1);
         const vacationDuration = Math.floor(Math.random() * 14) + 7; // 7-21 days
-        newEndDate = new Date(newStartDate);
-        newEndDate.setDate(newEndDate.getDate() + vacationDuration);
-        newEndDate = newEndDate.toISOString().split('T')[0];
+        const vacationEndDate = new Date(newStartDate);
+        vacationEndDate.setDate(vacationEndDate.getDate() + vacationDuration);
+        newEndDate = vacationEndDate.toISOString().split('T')[0];
         break;
       }
 
@@ -231,9 +231,9 @@ export async function seed(knex: Knex): Promise<void> {
         // Training in next 6 months
         const trainingMonth = Math.floor(Math.random() * 6);
         newStartDate = getRelativeDate(trainingMonth, 15);
-        newEndDate = new Date(newStartDate);
-        newEndDate.setDate(newEndDate.getDate() + 5); // 5 day training
-        newEndDate = newEndDate.toISOString().split('T')[0];
+        const trainingEndDate = new Date(newStartDate);
+        trainingEndDate.setDate(trainingEndDate.getDate() + 5); // 5 day training
+        newEndDate = trainingEndDate.toISOString().split('T')[0];
         break;
       }
 
@@ -242,9 +242,9 @@ export async function seed(knex: Knex): Promise<void> {
         const medicalOffset = Math.floor(Math.random() * 6) - 3; // -3 to +3 months
         newStartDate = getRelativeDate(medicalOffset);
         const medicalDuration = Math.floor(Math.random() * 30) + 10; // 10-40 days
-        newEndDate = new Date(newStartDate);
-        newEndDate.setDate(newEndDate.getDate() + medicalDuration);
-        newEndDate = newEndDate.toISOString().split('T')[0];
+        const medicalEndDate = new Date(newStartDate);
+        medicalEndDate.setDate(medicalEndDate.getDate() + medicalDuration);
+        newEndDate = medicalEndDate.toISOString().split('T')[0];
         break;
       }
 

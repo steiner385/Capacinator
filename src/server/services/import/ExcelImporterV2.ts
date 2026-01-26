@@ -1,5 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
+import type { Worksheet } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -10,6 +11,9 @@ async function initializeExcelJS() {
   }
   return ExcelJS;
 }
+
+// Type alias for ExcelJS worksheet
+type ExcelWorksheet = Worksheet;
 import {
   fiscalWeekToDate,
   extractFiscalWeekColumns,
@@ -491,7 +495,7 @@ export class ExcelImporterV2 {
     return { duplicatesFound: duplicates };
   }
 
-  private async importProjectTypes(worksheet: ExcelJS.Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectTypes(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -524,7 +528,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectPhases(worksheet: ExcelJS.Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectPhases(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -581,7 +585,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoles(worksheet: ExcelJS.Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoles(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -629,7 +633,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoster(worksheet: ExcelJS.Worksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoster(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -730,7 +734,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjects(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjects(worksheet: ExcelWorksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -820,7 +824,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectRoadmap(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectRoadmap(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -916,7 +920,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectDemand(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectDemand(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -983,7 +987,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectAssignments(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectAssignments(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -1072,7 +1076,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importStandardAllocations(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importStandardAllocations(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 

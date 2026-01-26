@@ -2,6 +2,9 @@ import type { Knex } from 'knex';
 import type { AuditService } from './audit/AuditService.js';
 import { logger } from './logging/config.js';
 
+// Declare jest as an optional global (only present in test environment)
+declare const jest: { fn: () => { mockResolvedValue: (val: unknown) => unknown } } | undefined;
+
 /**
  * Service Container for Dependency Injection
  *
@@ -111,6 +114,7 @@ export class ServiceContainer {
   /**
    * Create a mock container for testing
    * Accepts partial dependencies and fills in mocks for the rest
+   * NOTE: This method is only available in test environments (when jest is present)
    */
   static createMock(partialDeps: Partial<ServiceDependencies> = {}): ServiceContainer {
     let mockDb: Knex;
@@ -118,17 +122,24 @@ export class ServiceContainer {
     if (partialDeps.db) {
       mockDb = partialDeps.db;
     } else {
+      // Check if jest is available (only in test environment)
+      const jestGlobal = typeof jest !== 'undefined' ? jest : null;
+      if (!jestGlobal) {
+        throw new Error('createMock() is only available in test environments with jest');
+      }
+
       // Create a minimal mock for Knex
       // Note: The transaction callback receives a mock transaction object
+      const mockFn = jestGlobal.fn.bind(jestGlobal);
       const mockDbInstance: Record<string, unknown> = {
-        raw: jest.fn().mockResolvedValue({ rows: [] }),
+        raw: mockFn().mockResolvedValue({ rows: [] }),
         schema: {
-          hasTable: jest.fn().mockResolvedValue(true),
-          hasColumn: jest.fn().mockResolvedValue(true)
+          hasTable: mockFn().mockResolvedValue(true),
+          hasColumn: mockFn().mockResolvedValue(true)
         }
       };
       // Add transaction method separately to avoid circular reference in type inference
-      mockDbInstance.transaction = jest.fn((cb: (trx: Knex) => Promise<unknown>) =>
+      mockDbInstance.transaction = mockFn((cb: (trx: Knex) => Promise<unknown>) =>
         cb(mockDbInstance as unknown as Knex)
       );
       mockDb = mockDbInstance as unknown as Knex;

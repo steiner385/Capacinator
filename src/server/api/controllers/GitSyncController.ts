@@ -273,7 +273,6 @@ export class GitSyncController extends BaseController {
       const message = commitMessage || (await this.exporter.generateCommitMessage('working'));
 
       // Get author from authenticated user
-      // @ts-expect-error - req.user may be undefined
       const author = {
         name: req.user?.name || 'Capacinator User',
         email: req.user?.email || 'user@example.com',
@@ -717,7 +716,8 @@ export class GitSyncController extends BaseController {
 
       // Log for debugging
       if (error instanceof GitNetworkError || error instanceof GitAuthenticationError) {
-        logger?.warn(`Git operation failed: ${error.code}`, error, {
+        logger?.warn(`Git operation failed: ${error.code}`, {
+          error: error.message,
           userId: req.user?.id,
           operation: defaultMessage,
         });
