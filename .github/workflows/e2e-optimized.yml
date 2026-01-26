@@ -121,8 +121,8 @@ jobs:
       - name: Start application
         run: |
           npm run build:server && npm run build:client
-          npm run dev &
-          npx wait-on http://localhost:3120/api/health -t 120000
+          npm run dev:no-bg &
+          npx wait-on http://localhost:3110/api/health -t 120000
 
       - name: Run E2E tests (Shard ${{ matrix.shardIndex }})
         run: |
@@ -175,8 +175,8 @@ jobs:
       - name: Start application
         run: |
           npm run build:server && npm run build:client
-          npm run dev &
-          npx wait-on http://localhost:3120/api/health -t 120000
+          npm run dev:no-bg &
+          npx wait-on http://localhost:3110/api/health -t 120000
 
       - name: Run performance tests
         run: npm test -- --project=performance --workers=2
