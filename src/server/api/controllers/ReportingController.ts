@@ -1007,7 +1007,7 @@ export class ReportingController extends BaseController {
     }, {} as Record<string, any[]>);
 
     // Check each project for unmet demands
-    for (const [projectId, demands] of Object.entries(demandsByProject)) {
+    for (const [projectId, demands] of Object.entries(demandsByProject) as [string, any[]][]) {
       const projectHealthRecord = projectHealth.find((p: any) => p.project_id === projectId);
 
       // If project has no assignments at all but has demands, it has gaps
