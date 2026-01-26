@@ -347,7 +347,9 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   console.log(`📅 Inserting ${projectPhases.length} project phases...`);
-  await knex('project_phases_timeline').insert(projectPhases);
+  if (projectPhases.length > 0) {
+    await knex('project_phases_timeline').insert(projectPhases);
+  }
 
   // Generate comprehensive project assignments
   const assignments = [];
@@ -431,7 +433,9 @@ export async function seed(knex: Knex): Promise<void> {
   }));
 
   console.log(`👥 Inserting ${scenarioAssignments.length} scenario project assignments...`);
-  await knex('scenario_project_assignments').insert(scenarioAssignments);
+  if (scenarioAssignments.length > 0) {
+    await knex('scenario_project_assignments').insert(scenarioAssignments);
+  }
 
   // Generate availability overrides (vacations, training, etc.)
   const availabilityOverrides = [];
@@ -486,7 +490,9 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   console.log(`📊 Inserting ${availabilityOverrides.length} availability overrides...`);
-  await knex('person_availability_overrides').insert(availabilityOverrides);
+  if (availabilityOverrides.length > 0) {
+    await knex('person_availability_overrides').insert(availabilityOverrides);
+  }
 
   // Generate demand overrides for specific projects
   const demandOverrides = [];
@@ -523,7 +529,9 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   console.log(`🎯 Inserting ${demandOverrides.length} demand overrides...`);
-  await knex('demand_overrides').insert(demandOverrides);
+  if (demandOverrides.length > 0) {
+    await knex('demand_overrides').insert(demandOverrides);
+  }
 
   console.log('✅ Comprehensive portfolio data seeding completed!');
   console.log(`📈 Summary:
