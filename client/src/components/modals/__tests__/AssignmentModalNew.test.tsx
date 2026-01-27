@@ -88,8 +88,8 @@ describe('AssignmentModalNew', () => {
     // Default mock responses
     (api.projects.list as jest.Mock).mockResolvedValue(mockProjects);
     (api.people.list as jest.Mock).mockResolvedValue(mockPeople);
-    (api.roles.list as jest.Mock).mockResolvedValue({ data: { data: mockRoles } });
-    (api.phases.list as jest.Mock).mockResolvedValue({ data: { data: mockPhases } });
+    (api.roles.list as jest.Mock).mockResolvedValue({ data: mockRoles });
+    (api.phases.list as jest.Mock).mockResolvedValue({ data: mockPhases });
     (api.projects.get as jest.Mock).mockResolvedValue({ data: { phases: mockProjectPhases } });
 
     // Mock scrollIntoView for Radix Select
