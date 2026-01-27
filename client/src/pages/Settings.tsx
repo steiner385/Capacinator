@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Settings as SettingsIcon, Save, Database,
-  Users, Palette
+  Users, Palette, Github
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { useTheme } from '../contexts/ThemeContext';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import { UnifiedTabComponent } from '../components/ui/UnifiedTabComponent';
+import { GitHubConnectionManager } from '../components/GitHubConnectionManager';
 
 interface SystemSettings {
   defaultWorkHoursPerWeek: number;
@@ -33,6 +34,7 @@ const settingsTabs = [
   { id: 'system', label: 'System', icon: SettingsIcon },
   { id: 'import', label: 'Import', icon: Database },
   { id: 'users', label: 'User Permissions', icon: Users },
+  { id: 'github', label: 'GitHub', icon: Github },
   { id: 'appearance', label: 'Appearance', icon: Palette }
 ];
 
@@ -572,6 +574,7 @@ export default function Settings() {
       {activeTab === 'system' && renderSystemSettings()}
       {activeTab === 'import' && renderImportSettings()}
       {activeTab === 'users' && renderUserPermissions()}
+      {activeTab === 'github' && <GitHubConnectionManager />}
       {activeTab === 'appearance' && renderAppearanceSettings()}
     </UnifiedTabComponent>
   );

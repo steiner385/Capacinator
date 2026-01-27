@@ -1,0 +1,630 @@
+openapi: 3.0.3
+info:
+  title: GitHub Connections API
+  version: 1.0.0
+  description: API endpoints for managing GitHub authentication connections and associations
+
+paths:
+  /api/github-connections/oauth/authorize:
+    post:
+      summary: Initiate OAuth flow
+      description: Generates OAuth authorization URL and opens system browser. Returns state token for callback validation.
+      tags:
+        - GitHub OAuth
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OAuth flow initiated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      authorization_url:
+                        type: string
+                        format: uri
+                        example: "https://github.com/login/oauth/authorize?client_id=..."
+                      state:
+                        type: string
+                        description: CSRF protection token
+                        example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github-connections/oauth/callback:
+    get:
+      summary: OAuth callback handler
+      description: Handles GitHub OAuth redirect, exchanges code for token, stores encrypted credentials.
+      tags:
+        - GitHub OAuth
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from GitHub
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: CSRF state token
+      responses:
+        '302':
+          description: Redirect to user profile with success message
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "/profile?github_connected=true"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: GitHub account already connected to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github-connections/pat:
+    post:
+      summary: Add Personal Access Token connection
+      description: Validates PAT, retrieves GitHub user info, stores encrypted token.
+      tags:
+        - GitHub PAT
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: GitHub Personal Access Token
+                  example: "ghp_1234567890abcdefghijklmnopqrstuvwxyz"
+                github_base_url:
+                  type: string
+                  format: uri
+                  description: GitHub Enterprise URL (optional, defaults to github.com)
+                  example: "https://github.mycompany.com/api/v3"
+      responses:
+        '201':
+          description: PAT connection created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/GitHubConnection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: GitHub account already connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Invalid token or missing scopes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_scopes:
+                  value:
+                    success: false
+                    error:
+                      code: "INVALID_TOKEN_SCOPES"
+                      message: "Token is missing required scopes: repo, read:user"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github-connections:
+    get:
+      summary: List user's GitHub connections
+      description: Returns all GitHub connections for the authenticated user.
+      tags:
+        - GitHub Connections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, expired, revoked, error]
+          description: Filter by connection status
+      responses:
+        '200':
+          description: List of GitHub connections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GitHubConnection'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github-connections/{id}:
+    delete:
+      summary: Disconnect GitHub account
+      description: Removes GitHub connection and all associated people resource associations.
+      tags:
+        - GitHub Connections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub connection ID
+      responses:
+        '200':
+          description: Connection deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "GitHub connection removed successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      summary: Update connection settings
+      description: Update connection properties (is_default flag)
+      tags:
+        - GitHub Connections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub connection ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_default:
+                  type: boolean
+                  description: Set as default GitHub account
+      responses:
+        '200':
+          description: Connection updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/GitHubConnection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github-connections/{id}/associations:
+    get:
+      summary: Get people associated with connection
+      description: Returns all people resources associated with this GitHub connection.
+      tags:
+        - GitHub Associations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub connection ID
+      responses:
+        '200':
+          description: List of associated people
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GitHubAssociation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Manually associate people resources (Admin only)
+      description: Create manual associations between GitHub connection and people resources.
+      tags:
+        - GitHub Associations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub connection ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - person_ids
+              properties:
+                person_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Array of people resource IDs to associate
+                  example: [1, 5, 12]
+      responses:
+        '201':
+          description: Associations created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      associations_created:
+                        type: integer
+                        example: 3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Requires admin permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/github-connections/{id}/associations/{person_id}:
+    delete:
+      summary: Break association (Admin only)
+      description: Remove association between GitHub connection and person resource.
+      tags:
+        - GitHub Associations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: GitHub connection ID
+        - name: person_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: People resource ID
+      responses:
+        '200':
+          description: Association removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Association removed successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/people/{id}/github-activity:
+    get:
+      summary: Get GitHub commit activity for person
+      description: Returns recent Git commits attributed to this person via GitHub associations.
+      tags:
+        - GitHub Activity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: People resource ID
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter commits since this date
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Filter commits until this date
+      responses:
+        '200':
+          description: GitHub commit activity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      person_id:
+                        type: integer
+                        example: 42
+                      total_commits:
+                        type: integer
+                        example: 127
+                      github_accounts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            github_username:
+                              type: string
+                              example: "octocat"
+                            commit_count:
+                              type: integer
+                              example: 127
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    GitHubConnection:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 42
+        github_user_id:
+          type: integer
+          example: 123456
+        github_username:
+          type: string
+          example: "octocat"
+        connection_method:
+          type: string
+          enum: [oauth, pat]
+          example: "oauth"
+        scopes:
+          type: array
+          items:
+            type: string
+          example: ["read:user", "user:email", "repo"]
+        github_base_url:
+          type: string
+          format: uri
+          example: "https://api.github.com"
+        status:
+          type: string
+          enum: [active, expired, revoked, error]
+          example: "active"
+        is_default:
+          type: boolean
+          example: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2026-01-27T10:30:00Z"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-20T14:22:00Z"
+
+    GitHubAssociation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        github_connection_id:
+          type: integer
+          example: 1
+        person_id:
+          type: integer
+          example: 42
+        person_name:
+          type: string
+          example: "Jane Smith"
+        person_email:
+          type: string
+          format: email
+          example: "jane.smith@example.com"
+        association_type:
+          type: string
+          enum: [automatic, manual]
+          example: "automatic"
+        associated_by_user_id:
+          type: integer
+          nullable: true
+          example: null
+        active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-20T14:23:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid input provided"
+            details:
+              type: object
+              nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
