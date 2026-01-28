@@ -518,13 +518,14 @@ export class GitHubConnectionController extends BaseController {
 
           if (!createResult.success) {
             // Return validation error with missing scopes if available
-            if (createResult.missingScopes) {
+            const failureResult = createResult as { success: false; error: string; missingScopes?: string[] };
+            if (failureResult.missingScopes) {
               return {
-                error: createResult.error,
-                missingScopes: createResult.missingScopes,
+                error: failureResult.error,
+                missingScopes: failureResult.missingScopes,
               };
             }
-            throw new Error(createResult.error);
+            throw new Error(failureResult.error);
           }
 
           const connection = createResult.connection;
