@@ -316,15 +316,19 @@ describe('DataTable Component', () => {
 
       // Go to page 2
       await user.click(screen.getByRole('button', { name: /next/i }));
-      expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
+      }, { timeout: 5000 });
 
       // Sort by name
       const nameHeader = screen.getByText('Name').closest('th');
       await user.click(nameHeader!);
 
       // Should still be on page 2 but with sorted data
-      expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
-      expect(screen.getByText('Charlie Davis')).toBeInTheDocument(); // Sorted name on page 2
+      await waitFor(() => {
+        expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
+        expect(screen.getByText('Charlie Davis')).toBeInTheDocument(); // Sorted name on page 2
+      }, { timeout: 5000 });
     });
   });
 

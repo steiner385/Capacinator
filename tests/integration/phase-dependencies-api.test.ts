@@ -5,7 +5,9 @@ import express from 'express';
 import { ProjectPhaseDependenciesController } from '../../src/server/api/controllers/ProjectPhaseDependenciesController';
 
 // Mock the database module to use test database
+// Note: require() is used inside the factory to avoid hoisting issues with ES imports
 jest.mock('../../src/server/database/index.js', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- Required in jest.mock factory to avoid hoisting
   db: require('./setup').db
 }));
 
