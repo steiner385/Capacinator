@@ -19,7 +19,11 @@ jest.mock('../../../lib/api-client', () => ({
     locations: {
       list: jest.fn()
     }
-  }
+  },
+  isAuthenticated: jest.fn(() => true),
+  clearAuthTokens: jest.fn(),
+  saveAuthTokens: jest.fn(),
+  getAccessToken: jest.fn(() => 'mock-token')
 }));
 
 describe('PersonModal', () => {

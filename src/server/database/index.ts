@@ -177,8 +177,8 @@ export async function initializeDatabase(): Promise<void> {
     // Rebuild cache from Git repository if enabled
     await rebuildCacheFromGit(database);
 
-    // Seed initial data if needed (skip for E2E)
-    if (process.env.NODE_ENV !== 'e2e') {
+    // Seed initial data if needed (skip for E2E and production)
+    if (process.env.NODE_ENV !== 'e2e' && process.env.NODE_ENV !== 'production') {
       const hasData = await database('roles').count('* as count').first();
       if (hasData?.count === 0) {
         await database.seed.run();
