@@ -28,7 +28,11 @@ jest.mock('../../../lib/api-client', () => ({
       create: jest.fn(),
       delete: jest.fn()
     }
-  }
+  },
+  isAuthenticated: jest.fn(() => true),
+  clearAuthTokens: jest.fn(),
+  saveAuthTokens: jest.fn(),
+  getAccessToken: jest.fn(() => 'mock-token')
 }));
 
 describe('SmartAssignmentModal', () => {
@@ -439,7 +443,9 @@ describe('SmartAssignmentModal', () => {
         fireEvent.click(cancelButton);
       });
 
-      expect(mockOnClose).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockOnClose).toHaveBeenCalled();
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
 
     it('closes modal after successful assignment creation', async () => {

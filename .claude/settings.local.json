@@ -1,0 +1,11 @@
+{
+  "enabledMcpjsonServers": [
+    "shadcn-ui",
+    "jenkins"
+  ],
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:jenkins.kindash.com)"
+    ]
+  }
+}

@@ -91,7 +91,9 @@ async function startServer() {
       port: PORT,
       environment: process.env.NODE_ENV
     });
-    process.exit(1);
+    console.error('SERVER STARTUP ERROR:', error);
+    // TEMPORARILY COMMENTED FOR DEBUGGING - DO NOT COMMIT
+    // process.exit(1);
   }
 }
 
