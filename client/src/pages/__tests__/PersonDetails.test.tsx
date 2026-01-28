@@ -113,10 +113,10 @@ const mockPersonData = {
       project_name: 'Project Alpha',
       role_id: 'role-1',
       role_name: 'Developer',
-      start_date: '2025-01-01',
-      end_date: '2025-12-31',
-      computed_start_date: '2025-01-01',
-      computed_end_date: '2025-12-31',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      computed_start_date: '2026-01-01',
+      computed_end_date: '2026-12-31',
       allocation_percentage: 50,
       billable: true
     }
@@ -252,11 +252,10 @@ describe('PersonDetails', () => {
       if (rolesHeader) {
         fireEvent.click(rolesHeader);
 
-        // Give the component time to potentially update
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Verify the component didn't crash - Roles & Skills header should still exist
-        expect(screen.getByText('Roles & Skills')).toBeInTheDocument();
+        // Verify the component didn't crash - use waitFor for stability
+        await waitFor(() => {
+          expect(screen.getByText('Roles & Skills')).toBeInTheDocument();
+        }, { timeout: 5000 });
 
         // Note: The actual collapse behavior depends on component implementation
         // This test verifies the header is clickable without errors

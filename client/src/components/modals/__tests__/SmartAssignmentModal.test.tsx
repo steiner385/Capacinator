@@ -53,10 +53,10 @@ describe('SmartAssignmentModal', () => {
         project_name: 'Project Alpha',
         role_name: 'Developer',
         allocation_percentage: 40,
-        computed_start_date: '2025-01-01',
-        computed_end_date: '2025-12-31',
-        start_date: '2025-01-01',
-        end_date: '2025-12-31'
+        computed_start_date: '2026-01-01',
+        computed_end_date: '2026-12-31',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31'
       }
     ],
     roles: [
@@ -90,8 +90,8 @@ describe('SmartAssignmentModal', () => {
         {
           phase_id: 'phase-1',
           phase_name: 'Planning',
-          start_date: '2025-03-01',
-          end_date: '2025-03-31'
+          start_date: '2026-03-01',
+          end_date: '2026-03-31'
         }
       ]
     }
@@ -594,10 +594,10 @@ describe('SmartAssignmentModal', () => {
             project_name: 'Project Beta',
             role_name: 'Developer',
             allocation_percentage: 40,
-            computed_start_date: '2025-01-01',
-            computed_end_date: '2025-12-31',
-            start_date: '2025-01-01',
-            end_date: '2025-12-31'
+            computed_start_date: '2026-01-01',
+            computed_end_date: '2026-12-31',
+            start_date: '2026-01-01',
+            end_date: '2026-12-31'
           }
         ]
       };
@@ -624,10 +624,10 @@ describe('SmartAssignmentModal', () => {
             project_name: 'Project Alpha',
             role_name: 'Developer',
             allocation_percentage: 80,
-            computed_start_date: '2025-01-01',
-            computed_end_date: '2025-12-31',
-            start_date: '2025-01-01',
-            end_date: '2025-12-31'
+            computed_start_date: '2026-01-01',
+            computed_end_date: '2026-12-31',
+            start_date: '2026-01-01',
+            end_date: '2026-12-31'
           }
         ]
       };
@@ -720,8 +720,8 @@ describe('SmartAssignmentModal', () => {
             project_name: 'Project Alpha',
             role_name: 'Developer',
             allocation_percentage: 40,
-            computed_start_date: '2025-01-01',
-            computed_end_date: '2025-12-31'
+            computed_start_date: '2026-01-01',
+            computed_end_date: '2026-12-31'
           }
         ]
       };
@@ -778,14 +778,14 @@ describe('SmartAssignmentModal', () => {
             {
               phase_id: 'phase-1',
               phase_name: 'Planning',
-              start_date: '2025-03-01',
-              end_date: '2025-03-31'
+              start_date: '2026-03-01',
+              end_date: '2026-03-31'
             },
             {
               phase_id: 'phase-2',
               phase_name: 'Development',
-              start_date: '2025-04-01',
-              end_date: '2025-06-30'
+              start_date: '2026-04-01',
+              end_date: '2026-06-30'
             }
           ]
         }
@@ -1189,8 +1189,8 @@ describe('SmartAssignmentModal', () => {
         const startDateInput = screen.getByLabelText(/Start Date/i);
         const endDateInput = screen.getByLabelText(/End Date/i);
 
-        fireEvent.change(startDateInput, { target: { value: '2025-11-01' } });
-        fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
+        fireEvent.change(startDateInput, { target: { value: '2026-11-01' } });
+        fireEvent.change(endDateInput, { target: { value: '2026-12-31' } });
 
         await waitFor(() => {
           expect(screen.getByText(/Allocation: 50%/i)).toBeInTheDocument();
@@ -1236,14 +1236,13 @@ describe('SmartAssignmentModal', () => {
         const startDateInput = screen.getByLabelText(/Start Date/i);
         const endDateInput = screen.getByLabelText(/End Date/i);
 
-        fireEvent.change(startDateInput, { target: { value: '2025-11-01' } });
-        fireEvent.change(endDateInput, { target: { value: '2025-12-31' } });
+        fireEvent.change(startDateInput, { target: { value: '2026-11-01' } });
+        fireEvent.change(endDateInput, { target: { value: '2026-12-31' } });
 
-        // Wait a bit for form state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Verify form is interactive
-        expect(slider).toHaveValue('50');
+        // Verify form is interactive - use waitFor instead of manual setTimeout
+        await waitFor(() => {
+          expect(slider).toHaveValue('50');
+        }, { timeout: 5000 });
       });
 
       it('handles missing required fields validation', async () => {
@@ -1276,10 +1275,10 @@ describe('SmartAssignmentModal', () => {
               project_name: 'Project Alpha',
               role_name: 'Developer',
               allocation_percentage: 90,
-              computed_start_date: '2025-01-01',
-              computed_end_date: '2025-12-31',
-              start_date: '2025-01-01',
-              end_date: '2025-12-31'
+              computed_start_date: '2026-01-01',
+              computed_end_date: '2026-12-31',
+              start_date: '2026-01-01',
+              end_date: '2026-12-31'
             }
           ]
         };
@@ -1323,10 +1322,10 @@ describe('SmartAssignmentModal', () => {
               project_name: 'Project Alpha',
               role_name: 'Developer',
               allocation_percentage: 95,
-              computed_start_date: '2025-01-01',
-              computed_end_date: '2025-12-31',
-              start_date: '2025-01-01',
-              end_date: '2025-12-31'
+              computed_start_date: '2026-01-01',
+              computed_end_date: '2026-12-31',
+              start_date: '2026-01-01',
+              end_date: '2026-12-31'
             }
           ]
         };
@@ -1395,8 +1394,8 @@ describe('SmartAssignmentModal', () => {
               {
                 phase_id: 'phase-1',
                 phase_name: 'Development',
-                start_date: '2025-11-01',
-                end_date: '2025-12-31'
+                start_date: '2026-11-01',
+                end_date: '2026-12-31'
               },
               {
                 phase_id: 'phase-2',
@@ -1467,9 +1466,10 @@ describe('SmartAssignmentModal', () => {
         const removeButtons = screen.getAllByRole('button', { name: /Remove/i });
         fireEvent.click(removeButtons[0]);
 
-        // API should not be called when user cancels
-        await new Promise(resolve => setTimeout(resolve, 100));
-        expect(api.assignments.delete).not.toHaveBeenCalled();
+        // API should not be called when user cancels - verify with waitFor for stability
+        await waitFor(() => {
+          expect(api.assignments.delete).not.toHaveBeenCalled();
+        }, { timeout: 1000 });
         expect(global.confirm).toHaveBeenCalled();
       });
     });

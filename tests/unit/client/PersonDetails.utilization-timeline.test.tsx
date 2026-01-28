@@ -3,12 +3,14 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import PersonDetails from '../../../client/src/pages/PersonDetails';
-import '@testing-library/jest-dom';
+
+// Calculate expected date range dynamically based on current date
+const currentYear = new Date().getFullYear();
+const expectedStartDate = `${currentYear - 1}-01-01`;
+const expectedEndDate = `${currentYear + 1}-12-31`;
 
 // Mock the chart library
 jest.mock('recharts', () => ({
@@ -102,11 +104,6 @@ const mockUtilizationTimelineData = {
     }
   ]
 };
-
-// Calculate expected date range (matches PersonDetails component logic)
-const currentDate = new Date();
-const expectedStartDate = new Date(currentDate.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
-const expectedEndDate = new Date(currentDate.getFullYear() + 1, 11, 31).toISOString().split('T')[0];
 
 const renderPersonDetails = (personId = 'test-person-id') => {
   // Create a new QueryClient for each test to avoid state contamination

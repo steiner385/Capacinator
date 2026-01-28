@@ -69,7 +69,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Run only on mount - login and clearUserState are stable callbacks
   }, []);
 
   // Listen for auth:logout events (triggered by 401 responses)

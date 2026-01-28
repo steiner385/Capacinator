@@ -170,7 +170,7 @@ export function createMockDb() {
    * Mock for .insert() - returns inserted records
    * Checks queue first for sequential different responses
    */
-  mock.insert = jest.fn().mockImplementation((data) => {
+  mock.insert = jest.fn().mockImplementation((_data) => {
     // Capture result ONCE when .insert() is called
     const result = insertResultQueue.length > 0 ? insertResultQueue.shift() : insertResult;
 
@@ -199,7 +199,7 @@ export function createMockDb() {
    * Mock for .update() - returns updated records
    * Checks queue first for sequential different responses
    */
-  mock.update = jest.fn().mockImplementation((data) => {
+  mock.update = jest.fn().mockImplementation((_data) => {
     // Capture result ONCE when .update() is called
     const result = updateResultQueue.length > 0 ? updateResultQueue.shift() : updateResult;
 

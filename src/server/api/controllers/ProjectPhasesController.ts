@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { auditModelChanges } from '../../middleware/enhancedAuditMiddleware.js';
@@ -231,7 +232,7 @@ export class ProjectPhasesController extends BaseController {
       const isCustomPhase = currentPhase.is_custom_phase === 1;
       
       // Filter allowed fields based on phase type
-      let allowedFields = ['start_date', 'end_date'];
+      const allowedFields = ['start_date', 'end_date'];
       if (isCustomPhase) {
         allowedFields.push('phase_name');
       }
@@ -359,14 +360,14 @@ export class ProjectPhasesController extends BaseController {
         failed: [] as any[]
       };
 
-      await this.db.transaction(async (trx) => {
+      await this.db.transaction(async (trx: Knex.Transaction) => {
         for (const update of updates) {
           try {
             // Validate dates
             if (update.start_date && update.end_date) {
               const startDate = new Date(update.start_date);
               const endDate = new Date(update.end_date);
-              
+
               if (startDate >= endDate) {
                 results.failed.push({
                   id: update.id,
@@ -457,7 +458,7 @@ export class ProjectPhasesController extends BaseController {
         return null;
       }
 
-      return await this.db.transaction(async (trx) => {
+      return await this.db.transaction(async (trx: Knex.Transaction) => {
         // Validate that source project phase exists
         const sourcePhase = await trx('project_phases_timeline')
           .where({
@@ -597,7 +598,7 @@ export class ProjectPhasesController extends BaseController {
         return null;
       }
 
-      return await this.db.transaction(async (trx) => {
+      return await this.db.transaction(async (trx: Knex.Transaction) => {
         // Check if project exists
         const project = await trx('projects')
           .where('id', project_id)

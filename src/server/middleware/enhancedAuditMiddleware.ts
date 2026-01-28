@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from '../services/audit/AuditService.js';
@@ -45,6 +45,7 @@ export interface LegacyAuditContext {
 
 // Extend Express Request type globally for legacy compatibility
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       audit?: LegacyAuditContext;
@@ -272,14 +273,14 @@ export function createEnhancedAuditMiddleware(database: Knex) {
 }
 
 // Backward compatibility: export a default middleware that uses the global database
-export async function enhancedAuditMiddleware(req: RequestWithAudit, res: Response, next: NextFunction) {
+export const enhancedAuditMiddleware: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   // Import database dynamically to avoid import issues in tests
   const { getDb } = await import('../database/index.js');
   const database = getDb();
-  
+
   const middleware = createEnhancedAuditMiddleware(database);
-  return middleware(req, res, next);
-}
+  return middleware(req as RequestWithAudit, res, next);
+};
 
 // Middleware to automatically log audit events based on HTTP methods
 export function autoAuditMiddleware(tableName: string) {

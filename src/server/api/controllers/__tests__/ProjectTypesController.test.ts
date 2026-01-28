@@ -1,5 +1,5 @@
-import { ProjectTypesController } from '../ProjectTypesController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectTypesController } from '../ProjectTypesController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('ProjectTypesController', () => {
   let controller: ProjectTypesController;
@@ -54,7 +54,7 @@ describe('ProjectTypesController', () => {
       mockDb._setCountResult(2);
 
       // Mock sub-type counts query (separate query)
-      let secondQuery = false;
+      const secondQuery = false;
       mockDb._queueQueryResult(mockProjectTypes); // First query result
       mockDb._queueQueryResult(mockSubTypeCounts); // Second query result
 
@@ -170,7 +170,7 @@ describe('ProjectTypesController', () => {
         name: 'Parent Type'
       };
 
-      const mockPhases = [];
+      const mockPhases: unknown[] = [];
 
       // Mock main type lookup (not found)
       mockDb._queueFirstResult(null);

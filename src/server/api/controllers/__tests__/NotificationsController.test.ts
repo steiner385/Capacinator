@@ -1,6 +1,6 @@
-import { NotificationsController } from '../NotificationsController';
-import { db } from '../../../database/index';
-import { emailService } from '../../../services/EmailService';
+import { NotificationsController } from '../NotificationsController.js';
+import { db } from '../../../database/index.js';
+import { emailService } from '../../../services/EmailService.js';
 
 // Mock dependencies
 jest.mock('../../../database/index', () => ({

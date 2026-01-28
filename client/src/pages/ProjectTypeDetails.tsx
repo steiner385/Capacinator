@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import type { ProjectType, Role, ProjectPhase } from '../types';

@@ -57,7 +57,7 @@ export async function seed(knex: Knex): Promise<void> {
   for (const table of tablesToClear) {
     try {
       await knex(table).del();
-    } catch (error) {
+    } catch {
       // Table might not exist, continue
     }
   }

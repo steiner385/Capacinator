@@ -417,10 +417,10 @@ export abstract class BaseController {
    * Wrap async route handlers to catch errors
    */
   protected asyncHandler(
-    fn: (req: RequestWithContext, res: Response, next: NextFunction) => Promise<any>
-  ): (req: RequestWithContext, res: Response, next: NextFunction) => void {
-    return (req: RequestWithContext, res: Response, next: NextFunction) => {
-      Promise.resolve(fn(req, res, next)).catch(next);
+    fn: (req: RequestWithContext, res: Response, next?: NextFunction) => Promise<any>
+  ): (req: RequestWithContext, res: Response, next?: NextFunction) => void {
+    return (req: RequestWithContext, res: Response, next?: NextFunction) => {
+      Promise.resolve(fn(req, res, next)).catch(next || ((e: unknown) => { throw e; }));
     };
   }
 

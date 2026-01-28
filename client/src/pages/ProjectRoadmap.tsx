@@ -1,14 +1,14 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Edit2, Save, X, ZoomIn, ZoomOut, Filter, Search, ChevronLeft, ChevronRight, SkipBack, SkipForward } from 'lucide-react';
+import { Calendar, X, ZoomIn, ZoomOut, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorMessage } from '../components/ui/ErrorMessage';
 import InteractiveTimeline, { TimelineItem, TimelineViewport } from '../components/InteractiveTimeline';
-import type { Project, ProjectPhase } from '../types';
-import { parseDate, formatTimelineDate, toISODateString } from '../utils/dateUtils';
+import type { Project } from '../types';
+import { parseDate, toISODateString } from '../utils/dateUtils';
 import './ProjectRoadmap.css';
 
 interface ProjectWithPhases extends Project {
@@ -194,8 +194,8 @@ export default function ProjectRoadmap() {
 
   // Update phase dates mutation for drag operations
   const updatePhaseDragMutation = useMutation({
-    mutationFn: async ({ projectId, phaseId, startDate, endDate }: {
-      projectId: string;
+    mutationFn: async ({ _projectId, phaseId, startDate, endDate }: {
+      _projectId: string;
       phaseId: string;
       startDate: string;
       endDate: string;
@@ -213,8 +213,8 @@ export default function ProjectRoadmap() {
 
   // Update phase dates mutation for manual editing
   const updatePhaseManualMutation = useMutation({
-    mutationFn: async ({ projectId, phaseId, startDate, endDate }: {
-      projectId: string;
+    mutationFn: async ({ _projectId, phaseId, startDate, endDate }: {
+      _projectId: string;
       phaseId: string;
       startDate: string;
       endDate: string;
@@ -370,11 +370,6 @@ export default function ProjectRoadmap() {
     return Math.max(0, diffInDays * viewport.pixelsPerDay);
   }, [viewport]);
 
-  // Calculate date from position
-  const getDateFromPosition = useCallback((position: number) => {
-    const daysFromStart = position / viewport.pixelsPerDay;
-    return new Date(viewport.startDate.getTime() + daysFromStart * 24 * 60 * 60 * 1000);
-  }, [viewport]);
 
   // Handle zoom
   const handleZoom = (direction: 'in' | 'out') => {

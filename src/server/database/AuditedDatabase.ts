@@ -56,8 +56,11 @@ export class AuditedDatabase {
   // Get a table query builder with audit capabilities
   table(tableName: string): AuditableQueryBuilder {
     const queryBuilder = this.db(tableName) as any;
+
+    // Capture 'this' for use in wrapped methods (needed for closures)
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const auditedDbInstance = this;
-    
+
     // Add audit context storage
     let auditContext: AuditContext = { ...this.defaultContext };
     let skipAuditFlag = false;
@@ -78,11 +81,11 @@ export class AuditedDatabase {
     const originalInsert = queryBuilder.insert.bind(queryBuilder);
     queryBuilder.insert = async function(data: any) {
       const result = await originalInsert(data);
-      
+
       if (!skipAuditFlag && shouldAuditTable(tableName)) {
         await auditedDbInstance._auditInsert(tableName, data, result, auditContext);
       }
-      
+
       return result;
     };
 
@@ -92,14 +95,14 @@ export class AuditedDatabase {
       if (!skipAuditFlag && shouldAuditTable(tableName)) {
         // Get old values before update
         const oldRecords = await queryBuilder.clone().select('*');
-        
+
         const result = await originalUpdate(data);
-        
+
         // Log audit for each updated record
         for (const oldRecord of oldRecords) {
           await auditedDbInstance._auditUpdate(tableName, oldRecord, data, auditContext);
         }
-        
+
         return result;
       } else {
         return await originalUpdate(data);
@@ -112,14 +115,14 @@ export class AuditedDatabase {
       if (!skipAuditFlag && shouldAuditTable(tableName)) {
         // Get records before deletion
         const recordsToDelete = await queryBuilder.clone().select('*');
-        
+
         const result = await originalDel();
-        
+
         // Log audit for each deleted record
         for (const record of recordsToDelete) {
           await auditedDbInstance._auditDelete(tableName, record, auditContext);
         }
-        
+
         return result;
       } else {
         return await originalDel();
@@ -288,7 +291,7 @@ export function createAuditedDatabase(db: Knex, auditService?: AuditService): an
     has(target, prop) {
       return (prop in auditedDb) || (prop in auditedDb.raw);
     },
-    apply(target, thisArg, args) {
+    apply(target, thisArg, args: [tableName?: string]) {
       return target.apply(thisArg, args);
     }
   });

@@ -3,9 +3,33 @@
  * Get next priority issue from GitHub
  *
  * Usage: npx tsx scripts/get-next-issue.ts
+ *
+ * Note: Requires the github-issue-prioritizer package (optional dependency).
+ * If not installed, the script will exit with an error message.
  */
 
-import { PriorityEngine } from 'github-issue-prioritizer';
+// Types for the optional github-issue-prioritizer dependency
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PriorityEngineClass = new (options: { owner: string; repo: string }) => any;
+
+// Dynamic import to handle optional dependency
+let PriorityEngine: PriorityEngineClass;
+try {
+  const module = await import('github-issue-prioritizer');
+  PriorityEngine = module.PriorityEngine;
+} catch {
+  console.error('❌ Error: github-issue-prioritizer is not installed.');
+  console.error('');
+  console.error('This is an optional dependency that requires the PriorityCalculator');
+  console.error('project to be available at ../PriorityCalculator relative to this repo.');
+  console.error('');
+  console.error('To install it:');
+  console.error('  1. Clone the PriorityCalculator repo as a sibling directory');
+  console.error('  2. Run: npm install');
+  console.error('');
+  console.error('Alternatively, use GitHub\'s web interface to manage issues.');
+  process.exit(1);
+}
 
 async function main() {
   // Token will be auto-detected from GITHUB_TOKEN, GH_TOKEN env vars, or gh CLI
@@ -111,9 +135,10 @@ async function main() {
     console.log('ℹ️  Note: The issue has been automatically marked as in-progress to prevent other working directories from claiming it.\n');
 
   } catch (error: unknown) {
-    console.error('❌ Error:', (error as any).message);
-    if ((error as any).stack) {
-      console.error((error as any).stack);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('❌ Error:', err.message);
+    if (err.stack) {
+      console.error(err.stack);
     }
     process.exit(1);
   }
@@ -134,7 +159,16 @@ function getFoundationDescription(level: string): string {
   }
 }
 
-function generateRationale(score: any): string {
+interface PriorityScore {
+  issue: {
+    foundationLevel: string;
+    dependencies: number[];
+    businessValue: number;
+    effortHours: number;
+  };
+}
+
+function generateRationale(score: PriorityScore): string {
   const { issue } = score;
   const level = issue.foundationLevel;
   const hasNoDeps = issue.dependencies.length === 0;

@@ -239,26 +239,30 @@ export class ExportController extends BaseController {
       let filename = '';
       
       switch (reportType) {
-        case 'capacity':
+        case 'capacity': {
           const capacityData = await this.getCapacityData(filters);
           csvContent = this.generateCapacityCSV(capacityData);
           filename = 'capacity-report.csv';
           break;
-        case 'utilization':
+        }
+        case 'utilization': {
           const utilizationData = await this.getUtilizationData(filters);
           csvContent = this.generateUtilizationCSV(utilizationData);
           filename = 'utilization-report.csv';
           break;
-        case 'demand':
+        }
+        case 'demand': {
           const demandData = await this.getDemandData(filters);
           csvContent = this.generateDemandCSV(demandData);
           filename = 'demand-report.csv';
           break;
-        case 'gaps':
+        }
+        case 'gaps': {
           const gapsData = await this.getGapsData(filters);
           csvContent = this.generateGapsCSV(gapsData);
           filename = 'capacity-gaps-report.csv';
           break;
+        }
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }
@@ -290,26 +294,30 @@ export class ExportController extends BaseController {
       let filename = '';
       
       switch (reportType) {
-        case 'capacity':
+        case 'capacity': {
           const capacityData = await this.getCapacityData(filters);
           htmlContent = this.generateCapacityHTML(capacityData);
           filename = 'capacity-report.pdf';
           break;
-        case 'utilization':
+        }
+        case 'utilization': {
           const utilizationData = await this.getUtilizationData(filters);
           htmlContent = this.generateUtilizationHTML(utilizationData);
           filename = 'utilization-report.pdf';
           break;
-        case 'demand':
+        }
+        case 'demand': {
           const demandData = await this.getDemandData(filters);
           htmlContent = this.generateDemandHTML(demandData);
           filename = 'demand-report.pdf';
           break;
-        case 'gaps':
+        }
+        case 'gaps': {
           const gapsData = await this.getGapsData(filters);
           htmlContent = this.generateGapsHTML(gapsData);
           filename = 'capacity-gaps-report.pdf';
           break;
+        }
         default:
           return res.status(400).json({ error: 'Invalid report type' });
       }

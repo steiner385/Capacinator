@@ -7,18 +7,18 @@ export async function up(knex: Knex): Promise<void> {
   const assignmentsWithoutId = await knex('project_assignments')
     .select(knex.raw('rowid'))
     .whereNull('id')
-    .orWhere('id', '');
-    
+    .orWhere('id', '') as unknown as { rowid: number }[];
+
   console.log(`Found ${assignmentsWithoutId.length} assignments without IDs`);
-  
+
   for (const assignment of assignmentsWithoutId) {
     // Generate a new UUID for records missing IDs
     await knex.raw(`
-      UPDATE project_assignments 
-      SET id = lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || 
-               substr(lower(hex(randomblob(2))),2) || '-' || 
-               substr('89ab',abs(random()) % 4 + 1, 1) || 
-               substr(lower(hex(randomblob(2))),2) || '-' || 
+      UPDATE project_assignments
+      SET id = lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' ||
+               substr(lower(hex(randomblob(2))),2) || '-' ||
+               substr('89ab',abs(random()) % 4 + 1, 1) ||
+               substr(lower(hex(randomblob(2))),2) || '-' ||
                lower(hex(randomblob(6)))
       WHERE rowid = ?
     `, [assignment.rowid]);
@@ -28,17 +28,17 @@ export async function up(knex: Knex): Promise<void> {
   const overridesWithoutId = await knex('person_availability_overrides')
     .select(knex.raw('rowid'))
     .whereNull('id')
-    .orWhere('id', '');
-    
+    .orWhere('id', '') as unknown as { rowid: number }[];
+
   console.log(`Found ${overridesWithoutId.length} availability overrides without IDs`);
-  
+
   for (const override of overridesWithoutId) {
     await knex.raw(`
-      UPDATE person_availability_overrides 
-      SET id = lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || 
-               substr(lower(hex(randomblob(2))),2) || '-' || 
-               substr('89ab',abs(random()) % 4 + 1, 1) || 
-               substr(lower(hex(randomblob(2))),2) || '-' || 
+      UPDATE person_availability_overrides
+      SET id = lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' ||
+               substr(lower(hex(randomblob(2))),2) || '-' ||
+               substr('89ab',abs(random()) % 4 + 1, 1) ||
+               substr(lower(hex(randomblob(2))),2) || '-' ||
                lower(hex(randomblob(6)))
       WHERE rowid = ?
     `, [override.rowid]);
@@ -47,7 +47,7 @@ export async function up(knex: Knex): Promise<void> {
   console.log('✅ Fixed missing IDs');
 }
 
-export async function down(knex: Knex): Promise<void> {
+export async function down(_knex: Knex): Promise<void> {
   // This migration cannot be reversed as we can't remove generated IDs
   console.log('⚠️  This migration cannot be reversed');
 }

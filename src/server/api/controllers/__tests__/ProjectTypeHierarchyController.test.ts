@@ -1,5 +1,5 @@
-import { ProjectTypeHierarchyController } from '../ProjectTypeHierarchyController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ProjectTypeHierarchyController } from '../ProjectTypeHierarchyController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('ProjectTypeHierarchyController', () => {
   let controller: ProjectTypeHierarchyController;

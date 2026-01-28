@@ -87,7 +87,7 @@ async function startServer() {
     });
 
   } catch (error) {
-    logger.error('Failed to start server', error, {
+    logger.error('Failed to start server', error instanceof Error ? error : undefined, {
       port: PORT,
       environment: process.env.NODE_ENV
     });

@@ -44,14 +44,13 @@ export function getAuditedDb(): any {
   if (!_auditedDb) {
     const rawDb = getDb();
     const auditService = getAuditService();
-    _auditedDb = createAuditedDatabase(rawDb, auditService);
+    _auditedDb = createAuditedDatabase(rawDb, auditService ?? undefined);
   }
   return _auditedDb;
 }
 
 // Export db as a getter for backward compatibility
 // For ESM modules, we need a different approach
-let _dbProxy: Knex | null = null;
 
 // Create a function that returns the current database instance
 // This allows controllers to use this.db() or this.db('table')
@@ -77,7 +76,7 @@ export function createDbFunction(): any {
       const actualDb = getDb();
       return (prop in target) || (prop in actualDb);
     },
-    apply(target, thisArg, args) {
+    apply(target, thisArg, args: [tableName?: string]) {
       return target.apply(thisArg, args);
     }
   });
@@ -109,7 +108,6 @@ export const auditedDb = new Proxy(() => getAuditedDb(), {
 // Function to reinitialize db (useful for E2E tests)
 export function reinitializeDb(): void {
   _db = null;
-  _dbProxy = null;
   _auditedDb = null;
 }
 
@@ -231,6 +229,7 @@ function getDataPath(): string {
   }
   // In production, try to get electron path, fallback to current directory
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('electron').app.getPath('userData');
   } catch {
     return path.join(process.cwd(), 'data');

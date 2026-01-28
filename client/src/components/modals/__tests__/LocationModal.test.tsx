@@ -221,8 +221,10 @@ describe('LocationModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Save Location/i }));
 
+      // Use waitFor to properly await async state change
+      // FormActions renders "Creating..." in create mode, not "Saving..."
       await waitFor(() => {
-        expect(screen.getByText('Saving...')).toBeInTheDocument();
+        expect(screen.getByText('Creating...')).toBeInTheDocument();
       });
     });
 
@@ -348,7 +350,7 @@ describe('LocationModal', () => {
 
       await waitFor(() => {
         expect(mockOnCancel).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
   });
 

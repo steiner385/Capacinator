@@ -402,6 +402,19 @@ export const queryKeys = {
     forPerson: (personId: string, scenarioId?: string) =>
       [...queryKeys.availableProjects.all, personId, scenarioId] as const,
   },
+
+  // GitHub Connections (Feature: 005-github-auth-user-link)
+  githubConnections: {
+    all: ['github-connections'] as const,
+    lists: () => [...queryKeys.githubConnections.all, 'list'] as const,
+    list: (options?: { includeInactive?: boolean; includeAssociations?: boolean }) =>
+      [...queryKeys.githubConnections.lists(), options] as const,
+    details: () => [...queryKeys.githubConnections.all, 'detail'] as const,
+    detail: (id?: number, options?: { includeAssociations?: boolean }) =>
+      [...queryKeys.githubConnections.details(), id, options] as const,
+    associations: (id?: number, options?: { includeInactive?: boolean }) =>
+      [...queryKeys.githubConnections.all, 'associations', id, options] as const,
+  },
 } as const;
 
 // Type exports for use in components

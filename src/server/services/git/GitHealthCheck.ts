@@ -10,7 +10,6 @@ import https from 'https';
 import http from 'http';
 import { URL } from 'url';
 import fs from 'fs/promises';
-import os from 'os';
 import path from 'path';
 import { GitNetworkError, GitDiskSpaceError } from './GitErrors.js';
 
@@ -46,7 +45,7 @@ export class GitHealthCheck {
       const url = new URL(repositoryUrl);
       const startTime = Date.now();
 
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => {
         const protocol = url.protocol === 'https:' ? https : http;
 
         const req = protocol.get(

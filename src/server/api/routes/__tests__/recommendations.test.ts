@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import recommendationsRouter from '../recommendations';
+import recommendationsRouter from '../recommendations.js';
 
 // Mock the RecommendationsController
 jest.mock('../../controllers/RecommendationsController', () => {

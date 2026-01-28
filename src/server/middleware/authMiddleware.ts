@@ -4,6 +4,7 @@ import { logger } from '../services/logging/config.js';
 
 // Extend Express Request to include auth user
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       authUser?: TokenPayload;

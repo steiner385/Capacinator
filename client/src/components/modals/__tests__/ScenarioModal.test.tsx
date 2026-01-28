@@ -12,12 +12,16 @@ jest.mock('../../../lib/api-client', () => ({
     scenarios: {
       create: jest.fn(),
       update: jest.fn()
+    },
+    auth: {
+      me: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn()
     }
   },
-  isAuthenticated: jest.fn(() => true),
-  clearAuthTokens: jest.fn(),
+  isAuthenticated: jest.fn(() => false),
   saveAuthTokens: jest.fn(),
-  getAccessToken: jest.fn(() => 'mock-token')
+  clearAuthTokens: jest.fn()
 }));
 
 // Mock UserContext
@@ -301,7 +305,7 @@ describe('CreateScenarioModal', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
 
     it('disables submit button when name is empty', () => {
@@ -382,7 +386,7 @@ describe('CreateScenarioModal', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
   });
 });
@@ -536,7 +540,7 @@ describe('EditScenarioModal', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
 
     it('disables submit button when name is empty', () => {
@@ -601,7 +605,7 @@ describe('EditScenarioModal', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
   });
 });
@@ -733,7 +737,7 @@ describe('DeleteConfirmationModal', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
 
     it('does not call onConfirm if button is disabled', () => {
@@ -767,7 +771,7 @@ describe('DeleteConfirmationModal', () => {
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
   });
 

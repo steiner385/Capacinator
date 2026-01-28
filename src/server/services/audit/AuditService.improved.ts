@@ -149,7 +149,7 @@ export class ImprovedAuditService {
     const lastChangeRaw = await this.db('audit_log')
       .where('table_name', tableName)
       .where('record_id', recordId)
-      .whereNotLike('comment', '%Undo%')
+      .whereRaw("comment NOT LIKE '%Undo%' OR comment IS NULL")
       .orderBy('changed_at', 'desc')
       .first();
 
@@ -245,7 +245,7 @@ export class ImprovedAuditService {
     // Get only non-undo changes by the specified user
     const changes = await this.db('audit_log')
       .where('changed_by', changedBy)
-      .whereNotLike('comment', '%Undo%')
+      .whereRaw("comment NOT LIKE '%Undo%' OR comment IS NULL")
       .orderBy('changed_at', 'desc')
       .limit(count);
 
@@ -313,7 +313,7 @@ export class ImprovedAuditService {
     const query = this.db('audit_log')
       .where('table_name', tableName)
       .where('record_id', recordId)
-      .whereNotLike('comment', '%Undo%')
+      .whereRaw("comment NOT LIKE '%Undo%' OR comment IS NULL")
       .orderBy('changed_at', 'desc');
     
     if (limit) {

@@ -9,14 +9,10 @@ import type { Knex } from 'knex';
 import fs from 'fs/promises';
 import path from 'path';
 import {
-  validateJSON,
   ProjectJSONSchema,
   PersonJSONSchema,
   AssignmentJSONSchema,
   ProjectPhaseJSONSchema,
-  RoleJSONSchema,
-  LocationJSONSchema,
-  ProjectTypeJSONSchema,
   SCHEMA_VERSION,
 } from '../../../../shared/types/json-schemas.js';
 import type { ScenarioExportData } from '../../../../shared/types/git-entities.js';
@@ -131,7 +127,7 @@ export class ScenarioExporter {
           console.warn(`Recovery attempt ${i + 1} succeeded for ${filePath}`);
           return result;
         }
-      } catch (e) {
+      } catch {
         // Try next recovery attempt
         continue;
       }
@@ -186,7 +182,7 @@ export class ScenarioExporter {
             try {
               const parsed = JSON.parse(trimmed);
               recovered.push(parsed);
-            } catch (e) {
+            } catch {
               console.warn('Failed to parse record, skipping:', trimmed.substring(0, 100));
             }
           }
@@ -204,7 +200,7 @@ export class ScenarioExporter {
       try {
         const parsed = JSON.parse(trimmed);
         recovered.push(parsed);
-      } catch (e) {
+      } catch {
         console.warn('Failed to parse last record, skipping:', trimmed.substring(0, 100));
       }
     }
@@ -442,7 +438,7 @@ export class ScenarioExporter {
     for (const record of records) {
       try {
         // Validate individual record (the schema validates the wrapper, so we need to validate just the record)
-        const result = schema.parse({
+        schema.parse({
           schemaVersion: SCHEMA_VERSION,
           exportedAt: new Date().toISOString(),
           exportedBy: 'import',
@@ -549,7 +545,7 @@ export class ScenarioExporter {
       const timestamp = new Date().toISOString();
 
       return `Updated scenario data: ${summary} (${timestamp})`;
-    } catch (error) {
+    } catch {
       // Fallback message if unable to read files
       return `Updated scenario data (${new Date().toISOString()})`;
     }
@@ -569,31 +565,31 @@ export class ScenarioExporter {
   async detectConflictsAfterPull(
     scenarioId: string,
     syncOperationId: string
-  ): Promise<import('../../../shared/types/git-entities.js').Conflict[]> {
+  ): Promise<import('../../../../shared/types/git-entities.js').Conflict[]> {
     // Import GitConflictResolver
     const { GitConflictResolver } = await import('./GitConflictResolver.js');
     const resolver = new GitConflictResolver();
 
     const scenarioDir = this.getScenarioDir(scenarioId);
-    const allConflicts: import('../../../shared/types/git-entities.js').Conflict[] = [];
+    const allConflicts: import('../../../../shared/types/git-entities.js').Conflict[] = [];
 
     try {
       // For now, we'll detect conflicts by comparing JSON to database
       // In a full implementation, we'd compare BASE/LOCAL/REMOTE versions
 
       // Read JSON files (REMOTE version after pull)
-      const [projectsData, peopleData, assignmentsData, phasesData] = await Promise.all([
+      const [projectsData, peopleData, assignmentsData] = await Promise.all([
         this.readJSON(`${scenarioDir}/projects.json`).catch(() => ({ data: [] })),
         this.readJSON(`${scenarioDir}/people.json`).catch(() => ({ data: [] })),
         this.readJSON(`${scenarioDir}/assignments.json`).catch(() => ({ data: [] })),
-        this.readJSON(`${scenarioDir}/project_phases.json`).catch(() => ({ data: [] })),
       ]);
+      // phasesData available via: this.readJSON(`${scenarioDir}/project_phases.json`)
 
       // Get current database state (LOCAL version)
       const localProjects = await this.db('projects').select('*');
       const localPeople = await this.db('people').select('*');
       const localAssignments = await this.db('project_assignments').select('*');
-      const localPhases = await this.db('project_phases').select('*');
+      // localPhases available via this.db('project_phases').select('*') if needed
 
       // For simplicity, we'll use the JSON as BASE (since we don't have true git merge-base)
       // In production, you'd use git show merge-base:path to get true BASE

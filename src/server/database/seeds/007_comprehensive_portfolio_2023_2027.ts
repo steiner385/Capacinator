@@ -22,16 +22,7 @@ export async function seed(knex: Knex): Promise<void> {
     return shuffled.slice(0, count);
   };
 
-  // Helper to generate date ranges
-  const generateDateRange = (startDate: string, durationDays: number): { start: string; end: string } => {
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setDate(end.getDate() + durationDays);
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0]
-    };
-  };
+  // Note: generateDateRange helper available for future date calculations
 
   // Create comprehensive project portfolio spanning 2023-2027
   const comprehensiveProjects = [
@@ -324,7 +315,14 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('projects').insert(comprehensiveProjects);
 
   // Generate project phases for each project
-  const projectPhases = [];
+  interface ProjectPhase {
+    id: string;
+    project_id: string;
+    phase_id: string;
+    start_date: string;
+    end_date: string;
+  }
+  const projectPhases: ProjectPhase[] = [];
   for (const project of comprehensiveProjects) {
     const relevantPhases = getRandomItems(phases, Math.floor(Math.random() * 4) + 3); // 3-6 phases per project
     let currentDate = new Date(project.aspiration_start);
@@ -356,10 +354,25 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   console.log(`📅 Inserting ${projectPhases.length} project phases...`);
-  await knex('project_phases_timeline').insert(projectPhases);
+  if (projectPhases.length > 0) {
+    await knex('project_phases_timeline').insert(projectPhases);
+  }
 
   // Generate comprehensive project assignments
-  const assignments = [];
+  interface Assignment {
+    id: string;
+    project_id: string;
+    person_id: string;
+    role_id: string;
+    phase_id: string;
+    start_date: null;
+    end_date: null;
+    computed_start_date: string;
+    computed_end_date: string;
+    allocation_percentage: number;
+    assignment_date_mode: string;
+  }
+  const assignments: Assignment[] = [];
   const assignmentMap = new Map(); // Track assignments to avoid conflicts
 
   for (const project of comprehensiveProjects) {
@@ -440,7 +453,9 @@ export async function seed(knex: Knex): Promise<void> {
   }));
 
   console.log(`👥 Inserting ${scenarioAssignments.length} scenario project assignments...`);
-  await knex('scenario_project_assignments').insert(scenarioAssignments);
+  if (scenarioAssignments.length > 0) {
+    await knex('scenario_project_assignments').insert(scenarioAssignments);
+  }
 
   // Generate availability overrides (vacations, training, etc.)
   const availabilityOverrides = [];
@@ -486,7 +501,7 @@ export async function seed(knex: Knex): Promise<void> {
         end_date: endDate.toISOString().split('T')[0],
         availability_percentage: 0, // Not available
         hours_per_day: 0,
-        override_type: reasonTypeMapping[reason],
+        override_type: (reasonTypeMapping as Record<string, string>)[reason],
         reason: reason,
         notes: `${reason.charAt(0).toUpperCase() + reason.slice(1).replace('_', ' ')} - ${year}`,
         is_approved: true
@@ -495,7 +510,9 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   console.log(`📊 Inserting ${availabilityOverrides.length} availability overrides...`);
-  await knex('person_availability_overrides').insert(availabilityOverrides);
+  if (availabilityOverrides.length > 0) {
+    await knex('person_availability_overrides').insert(availabilityOverrides);
+  }
 
   // Generate demand overrides for specific projects
   const demandOverrides = [];
@@ -532,7 +549,9 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   console.log(`🎯 Inserting ${demandOverrides.length} demand overrides...`);
-  await knex('demand_overrides').insert(demandOverrides);
+  if (demandOverrides.length > 0) {
+    await knex('demand_overrides').insert(demandOverrides);
+  }
 
   console.log('✅ Comprehensive portfolio data seeding completed!');
   console.log(`📈 Summary:

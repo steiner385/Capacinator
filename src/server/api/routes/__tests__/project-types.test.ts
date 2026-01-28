@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import projectTypesRouter from '../project-types';
+import projectTypesRouter from '../project-types.js';
 
 // Mock the ProjectTypesController
 jest.mock('../../controllers/ProjectTypesController', () => {

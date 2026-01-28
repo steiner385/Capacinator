@@ -467,6 +467,13 @@ export class ImportErrorCollector {
   }
 
   /**
+   * Get all errors and warnings
+   */
+  getErrors(): ImportError[] {
+    return [...this.errors, ...this.warnings];
+  }
+
+  /**
    * Check if there are critical errors that should stop import
    */
   hasCriticalErrors(): boolean {
@@ -719,6 +726,20 @@ export class ImportErrorCollector {
  * Utility functions for common error scenarios
  */
 export class ImportErrorUtils {
+  /**
+   * Create error for missing worksheet
+   */
+  static missingWorksheet(worksheetName: string): ImportErrorData {
+    return {
+      type: 'error',
+      severity: 'critical',
+      category: 'structure',
+      worksheet: worksheetName,
+      message: `Required worksheet '${worksheetName}' not found`,
+      suggestion: `Add a worksheet named '${worksheetName}' to your Excel file`
+    };
+  }
+
   /**
    * Create error for missing required field
    */

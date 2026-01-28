@@ -55,17 +55,12 @@ export class ProjectsController extends BaseController {
       // Calculate phase dates using template durations when available
       const now = new Date();
       const projectStart = project?.aspiration_start ? new Date(project.aspiration_start) : now;
-      const projectEnd = project?.aspiration_finish ? new Date(project.aspiration_finish) : null;
-
-      // Calculate total template duration from default_duration_days
-      const totalTemplateDuration = projectTypePhases.reduce((sum, phase) => {
-        return sum + (phase.default_duration_days || 30); // Default to 30 days if not specified
-      }, 0);
+      // Note: projectEnd can be used for future phase date validation
 
       let currentDate = new Date(projectStart);
       
       // Create timeline entries for each template phase
-      const timelineEntries = projectTypePhases.map((templatePhase, index) => {
+      const timelineEntries = projectTypePhases.map((templatePhase: Record<string, any>, index: number) => {
         const phaseDurationDays = templatePhase.default_duration_days || 30;
         const phaseStart = new Date(currentDate);
         const phaseEnd = new Date(currentDate.getTime() + (phaseDurationDays * 24 * 60 * 60 * 1000));
@@ -512,7 +507,7 @@ export class ProjectsController extends BaseController {
         return null;
       }
 
-      const deletedCount = await this.db('projects')
+      await this.db('projects')
         .where('id', id)
         .del();
 

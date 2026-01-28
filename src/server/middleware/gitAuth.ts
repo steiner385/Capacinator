@@ -57,7 +57,6 @@ export function requireGitAuth() {
       }
 
       // Attach credentials to request for use in controllers
-      // @ts-ignore - Extending Request type
       req.gitCredentials = {
         token,
         repositoryUrl: process.env.GIT_REPOSITORY_URL || '',
@@ -88,19 +87,16 @@ export function checkGitSyncAvailable() {
     const repositoryUrl = process.env.GIT_REPOSITORY_URL;
 
     if (!gitSyncEnabled) {
-      // @ts-ignore
       req.gitSyncStatus = {
         available: false,
         reason: 'Feature not enabled',
       };
     } else if (!repositoryUrl) {
-      // @ts-ignore
       req.gitSyncStatus = {
         available: false,
         reason: 'Repository URL not configured',
       };
     } else {
-      // @ts-ignore
       req.gitSyncStatus = {
         available: true,
         repositoryUrl,
@@ -113,6 +109,7 @@ export function checkGitSyncAvailable() {
 
 // Extend Express Request type to include git properties
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       gitCredentials?: {

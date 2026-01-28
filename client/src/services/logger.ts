@@ -156,7 +156,7 @@ export class ClientLogger {
         },
         body: JSON.stringify({ logs: logsToSend })
       });
-    } catch (error) {
+    } catch {
       // If remote logging fails, put logs back in buffer (but limit size)
       this.logBuffer = [...logsToSend, ...this.logBuffer].slice(-50);
     }

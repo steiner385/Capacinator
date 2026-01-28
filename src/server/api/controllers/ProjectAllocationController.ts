@@ -3,16 +3,6 @@ import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { randomUUID } from 'crypto';
 
-interface ProjectAllocation {
-  id: string;
-  project_id: string;
-  phase_id: string;
-  role_id: string;
-  allocation_percentage: number;
-  is_inherited: boolean;
-  template_id?: string;
-  notes?: string;
-}
 
 export class ProjectAllocationController extends BaseController {
   constructor(container?: ServiceContainer) {
@@ -71,7 +61,7 @@ export class ProjectAllocationController extends BaseController {
         );
 
       // Create inherited allocations for this project
-      const inheritedAllocations = projectTypeAllocations.map(template => ({
+      const inheritedAllocations = projectTypeAllocations.map((template: Record<string, any>) => ({
         id: randomUUID(),
         project_id: projectId,
         phase_id: template.phase_id,

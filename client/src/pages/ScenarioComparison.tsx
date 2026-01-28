@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api-client';
 import { useBookmarkableTabs } from '../hooks/useBookmarkableTabs';
 import './ScenarioComparison.css';
@@ -87,7 +87,7 @@ export const ScenarioComparison: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Use bookmarkable tabs for scenario comparison
-  const { activeTab, setActiveTab, isActiveTab } = useBookmarkableTabs({
+  const { setActiveTab, isActiveTab } = useBookmarkableTabs({
     tabs: comparisonTabs,
     defaultTab: 'summary'
   });

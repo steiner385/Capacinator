@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import type { Knex } from 'knex';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
 
@@ -17,13 +18,13 @@ export class UserPermissionsController extends BaseController {
         .orderBy('name', 'asc');
       
       // Group permissions by category
-      const permissionsByCategory = permissions.reduce((acc, permission) => {
+      const permissionsByCategory = permissions.reduce((acc: Record<string, any[]>, permission: Record<string, any>) => {
         if (!acc[permission.category]) {
           acc[permission.category] = [];
         }
         acc[permission.category].push(permission);
         return acc;
-      }, {});
+      }, {} as Record<string, any[]>);
       
       res.json({
         success: true,
@@ -101,7 +102,7 @@ export class UserPermissionsController extends BaseController {
         .select('*');
 
       // Begin transaction
-      await this.db.transaction(async (trx) => {
+      await this.db.transaction(async (trx: Knex.Transaction) => {
         // Remove existing permissions
         await trx('user_role_permissions')
           .where('user_role_id', roleId)
@@ -192,18 +193,18 @@ export class UserPermissionsController extends BaseController {
       
       // Combine permissions (individual overrides take precedence)
       const permissionMap = new Map();
-      
+
       // Add role permissions first
-      rolePermissions.forEach(perm => {
+      rolePermissions.forEach((perm: Record<string, any>) => {
         permissionMap.set(perm.permission_id, {
           ...perm,
           granted: true,
           source: 'role'
         });
       });
-      
+
       // Override with individual permissions
-      individualPermissions.forEach(perm => {
+      individualPermissions.forEach((perm: Record<string, any>) => {
         permissionMap.set(perm.permission_id, {
           ...perm,
           source: 'override'
@@ -455,10 +456,10 @@ export class UserPermissionsController extends BaseController {
         .groupBy('person_id');
       
       const countMap = new Map(
-        userPermissionCounts.map(row => [row.person_id, row.override_count])
+        userPermissionCounts.map((row: Record<string, any>) => [row.person_id, row.override_count])
       );
-      
-      const usersWithCounts = users.map(user => ({
+
+      const usersWithCounts = users.map((user: Record<string, any>) => ({
         ...user,
         permission_overrides: countMap.get(user.id) || 0
       }));

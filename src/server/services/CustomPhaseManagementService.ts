@@ -56,7 +56,7 @@ export class CustomPhaseManagementService {
       }
 
       // Create a new project phase if it doesn't exist
-      let phaseId = await this.findOrCreatePhase(phaseData.name, phaseData.description);
+      const phaseId = await this.findOrCreatePhase(phaseData.name, phaseData.description);
 
       // Get current project timeline for insertion calculation
       const currentTimeline = await this.db('project_phases_timeline')

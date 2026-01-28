@@ -99,7 +99,7 @@ export class NotificationScheduler {
         .orderBy('assignments.start_date');
 
       // Calculate total allocation
-      const totalAllocation = assignments.reduce((sum, assignment) => {
+      const totalAllocation = assignments.reduce((sum: number, assignment: { allocation?: number }) => {
         return sum + (assignment.allocation || 0);
       }, 0);
 
@@ -124,15 +124,15 @@ export class NotificationScheduler {
         .orderBy('assignments.end_date');
 
       return {
-        assignments: assignments.map(assignment => ({
+        assignments: assignments.map((assignment: { project_name: string; role_name: string; allocation: number }) => ({
           projectName: assignment.project_name,
           roleName: assignment.role_name,
           allocation: assignment.allocation
         })),
         totalAllocation,
         availableCapacity,
-        upcomingDeadlines: upcomingDeadlines.length > 0 
-          ? upcomingDeadlines.map(deadline => `${deadline.project_name} (${deadline.role_name}) - ${new Date(deadline.end_date).toLocaleDateString()}`).join(', ')
+        upcomingDeadlines: upcomingDeadlines.length > 0
+          ? upcomingDeadlines.map((deadline: { project_name: string; role_name: string; end_date: string }) => `${deadline.project_name} (${deadline.role_name}) - ${new Date(deadline.end_date).toLocaleDateString()}`).join(', ')
           : 'None'
       };
     } catch (error) {

@@ -19,6 +19,7 @@ const getConfig = (): Knex.Config => {
   
   // In production, try to get electron path, fallback to current directory
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { app } = require('electron');
     return app.getPath('userData');
   } catch {

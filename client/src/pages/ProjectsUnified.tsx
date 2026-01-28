@@ -14,7 +14,7 @@ import './Projects.css';
 import './ProjectRoadmap.css';
 import './ProjectTypes.css';
 
-type ProjectsTab = 'list' | 'roadmap' | 'types';
+// ProjectsTab type intentionally not exported, used internally for tab configuration
 
 const tabs: UnifiedTabConfig[] = [
   {

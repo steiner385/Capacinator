@@ -187,7 +187,7 @@ describe('PersonRoleModal', () => {
       await waitFor(() => {
         const primaryCheckbox = screen.getByRole('checkbox', { name: /Set as Primary Role/i });
         expect(primaryCheckbox).not.toBeChecked();
-      }, { timeout: 500 });
+      }, { timeout: 1000 });  // Allow margin for modal reset timing
     });
   });
 
@@ -509,7 +509,7 @@ describe('PersonRoleModal', () => {
       // onClose should be called after the timeout (200ms)
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 300 });
+      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
     });
 
     it('cancel button is disabled during submission', async () => {

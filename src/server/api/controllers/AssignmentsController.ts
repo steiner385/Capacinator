@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import type { Knex } from 'knex';
 import { BaseController, RequestWithContext } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
@@ -1222,32 +1222,33 @@ export class AssignmentsController extends BaseController {
           computed_end_date: assignment.end_date
         };
         
-      case 'phase':
+      case 'phase': {
         // Get dates from project phase timeline
         if (!assignment.phase_id || !assignment.project_id) {
           throw new Error('Phase mode requires both phase_id and project_id');
         }
-        
+
         const phaseTimeline = await this.db('project_phases_timeline')
           .where('project_id', assignment.project_id)
           .where('phase_id', assignment.phase_id)
           .first();
-          
+
         if (!phaseTimeline) {
           throw new Error(`No timeline found for phase ${assignment.phase_id} in project ${assignment.project_id}`);
         }
-        
+
         return {
           computed_start_date: phaseTimeline.start_date,
           computed_end_date: phaseTimeline.end_date
         };
-        
-      case 'project':
+      }
+
+      case 'project': {
         // Get dates from project aspiration dates
         if (!assignment.project_id) {
           throw new Error('Project mode requires project_id');
         }
-        
+
         // Use project data from assignment if available (when called from getAll),
         // otherwise fetch from database
         let project = assignment.project;
@@ -1255,34 +1256,35 @@ export class AssignmentsController extends BaseController {
           project = await this.db('projects')
             .where('id', assignment.project_id)
             .first();
-            
+
           if (!project) {
             throw new Error(`Project ${assignment.project_id} not found`);
           }
         }
-        
+
         // Use aspiration dates if available, otherwise fall back to project start/end dates
         const startDate = project.aspiration_start || project.start_date;
         const endDate = project.aspiration_finish || project.end_date;
-        
+
         if (!startDate || !endDate) {
           logger.warn('Project missing both aspiration and start/end dates, using assignment dates as fallback', { projectId: assignment.project_id, projectName: project.name || 'Unknown' });
-          
+
           // If assignment dates are also missing, use reasonable defaults
           const fallbackStartDate = assignment.start_date || new Date().toISOString().split('T')[0];
           const fallbackEndDate = assignment.end_date || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 90 days from now
-          
+
           return {
             computed_start_date: fallbackStartDate,
             computed_end_date: fallbackEndDate
           };
         }
-        
+
         return {
           computed_start_date: startDate,
           computed_end_date: endDate
         };
-        
+      }
+
       default:
         throw new Error(`Unknown assignment_date_mode: ${mode}`);
     }

@@ -6,8 +6,8 @@
  * Implements 3-way merge algorithm for detecting and resolving conflicts
  */
 
-import { diffLines, diffWords } from 'diff';
-import type { Conflict } from '../../../shared/types/git-entities.js';
+import { diffWords } from 'diff';
+import type { Conflict } from '../../../../shared/types/git-entities.js';
 
 interface MergeInput {
   base: any;
@@ -301,7 +301,7 @@ export class GitConflictResolver {
     const diff = diffWords(String(value1 || ''), String(value2 || ''));
 
     return diff
-      .map((part) => {
+      .map((part: { added?: boolean; removed?: boolean; value: string }) => {
         if (part.added) return `+${part.value}`;
         if (part.removed) return `-${part.value}`;
         return part.value;
