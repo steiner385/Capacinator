@@ -19,7 +19,7 @@ try {
   controller = new GitSyncController();
   logger.info('Git sync controller initialized successfully');
 } catch (error) {
-  logger.warn('Git sync controller failed to initialize (this is normal if Git sync is not configured):', error);
+  logger.warn('Git sync controller failed to initialize (this is normal if Git sync is not configured):', error instanceof Error ? { message: error.message, stack: error.stack } : { error: String(error) });
   // Controller will remain null, middleware will handle requests appropriately
 }
 
