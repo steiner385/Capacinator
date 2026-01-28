@@ -464,14 +464,18 @@ describe('PersonModal', () => {
     it('calls onClose when Cancel button is clicked', async () => {
       renderComponent();
 
+      // Wait for modal to fully render
       await waitFor(() => {
-        const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-        fireEvent.click(cancelButton);
-      });
+        expect(screen.getByRole('heading', { name: /Add New Person/i })).toBeInTheDocument();
+      }, { timeout: 5000 });
 
+      const cancelButton = screen.getByRole('button', { name: /Cancel/i });
+      fireEvent.click(cancelButton);
+
+      // Wait for handleClose with 200ms setTimeout to complete
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
-      }, { timeout: 1000 });  // Allow margin for 200ms modal close delay
+      }, { timeout: 5000 });
     });
   });
 
