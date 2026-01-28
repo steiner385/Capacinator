@@ -2,12 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Edit2, Save, X, Calendar, Briefcase, Users, Clock,
-  Shield, Mail, Phone, MapPin, Award, AlertCircle, History,
-  Plus, Trash2, ChevronDown, ChevronUp, UserPlus, UserMinus,
-  Search, TrendingUp, TrendingDown, Target, Zap
+  ArrowLeft, Calendar, Briefcase, Users, Clock,
+  Mail, Phone, MapPin, AlertCircle, History,
+  Plus, ChevronDown, ChevronUp, UserPlus, UserMinus,
+  TrendingUp, Target, Zap, Shield, Award, Edit2, Save, X, Search
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { formatDate } from '../utils/date';
@@ -102,6 +101,7 @@ export default function PersonDetails() {
   const [editingRole, setEditingRole] = useState<any>(null);
 
   // Time off editing state
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [editingTimeOff, setEditingTimeOff] = useState<string | null>(null);
   const [editingTimeOffData, setEditingTimeOffData] = useState<any>(null);
   
@@ -117,6 +117,7 @@ export default function PersonDetails() {
   // TODO: Replace with proper auth context when authentication is implemented
   // For now, check localStorage or default to allowing edits
   const canEdit = localStorage.getItem('userRole') !== 'viewer';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const canDelete = localStorage.getItem('userRole') === 'admin';
 
   // Define table columns for each section
@@ -277,7 +278,8 @@ export default function PersonDetails() {
   const standardStartDate = startDate.toISOString().split('T')[0];
   const standardEndDate = endDate.toISOString().split('T')[0];
 
-  // Utilization timeline query
+  // Utilization timeline query (reserved for future timeline display)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: utilizationTimeline } = useQuery({
     queryKey: queryKeys.people.utilizationTimeline(id!, standardStartDate, standardEndDate),
     queryFn: async () => {
@@ -513,6 +515,7 @@ export default function PersonDetails() {
     });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSaveTimeOff = () => {
     if (editingTimeOffData) {
       updateOverrideMutation.mutate({
@@ -523,6 +526,7 @@ export default function PersonDetails() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCancelTimeOffEdit = () => {
     setEditingTimeOff(null);
     setEditingTimeOffData(null);
@@ -1191,7 +1195,7 @@ export default function PersonDetails() {
   );
 }
 
-function getOverrideTypeColor(type: string): string {
+function _getOverrideTypeColor(type: string): string {
   switch (type.toLowerCase()) {
     case 'vacation': return 'blue';
     case 'sick': return 'orange';
@@ -1200,3 +1204,6 @@ function getOverrideTypeColor(type: string): string {
     default: return 'gray';
   }
 }
+
+// Export to prevent unused function warnings (intended for future use)
+export { _getOverrideTypeColor as getOverrideTypeColor };

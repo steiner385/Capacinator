@@ -12,7 +12,6 @@ import type {
   Scenario,
   PaginationParams,
   PaginatedResponse,
-  ApiError,
 } from '../types';
 
 // Import/Export options
@@ -562,5 +561,42 @@ export const api = {
     checkoutBranch: (branchName: string) => apiClient.post<any>(`/sync/branches/${branchName}/checkout`),
     mergeBranch: (branchName: string) => apiClient.post<any>(`/sync/branches/${branchName}/merge`),
     compareBranches: (base: string, target: string) => apiClient.get<any>(`/sync/compare?base=${base}&target=${target}`),
+  },
+
+  // GitHub Connections (Feature: 005-github-auth-user-link)
+  githubConnections: {
+    // List connections
+    list: (params?: { include_inactive?: boolean; include_associations?: boolean }) =>
+      apiClient.get<{ success: boolean; data: any[] }>('/github-connections', { params }),
+
+    // Get single connection
+    get: (id: number, params?: { include_associations?: boolean }) =>
+      apiClient.get<any>(`/github-connections/${id}`, { params }),
+
+    // Update connection (set as default, update status)
+    update: (id: number, data: { is_default?: boolean; status?: string }) =>
+      apiClient.patch<{ success: boolean; data: any; message: string }>(`/github-connections/${id}`, data),
+
+    // Delete connection
+    delete: (id: number) =>
+      apiClient.delete<{ success: boolean; data: { deleted: boolean; id: number }; message: string }>(`/github-connections/${id}`),
+
+    // OAuth flow
+    initiateOAuth: (data?: { github_base_url?: string }) =>
+      apiClient.post<{ success: boolean; data: { authorization_url: string; state: string }; message: string }>('/github-connections/oauth/authorize', data),
+
+    // PAT connection
+    connectWithPAT: (data: { token: string; github_base_url?: string }) =>
+      apiClient.post<{ success: boolean; data: any; message: string }>('/github-connections/pat', data),
+
+    // Associations
+    getAssociations: (id: number, params?: { include_inactive?: boolean }) =>
+      apiClient.get<any[]>(`/github-connections/${id}/associations`, { params }),
+
+    createAssociation: (id: number, data: { person_id: number; association_type?: string }) =>
+      apiClient.post<any>(`/github-connections/${id}/associations`, data),
+
+    deleteAssociation: (id: number, personId: number) =>
+      apiClient.delete<{ success: boolean; message: string }>(`/github-connections/${id}/associations/${personId}`),
   },
 };

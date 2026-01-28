@@ -45,8 +45,7 @@ export function PhaseTimeline({ projectId }: PhaseTimelineProps) {
     deletePhaseMutation,
     createDependencyMutation,
     deleteDependencyMutation,
-    applyBulkCorrectionsMutation,
-    queryClient
+    applyBulkCorrectionsMutation
   } = usePhaseTimelineData({
     projectId,
     onPhaseUpdateError: (errors) => {

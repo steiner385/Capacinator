@@ -1,5 +1,5 @@
-import { ResourceTemplatesController } from '../ResourceTemplatesController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ResourceTemplatesController } from '../ResourceTemplatesController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('ResourceTemplatesController', () => {
   let controller: ResourceTemplatesController;

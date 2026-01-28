@@ -128,7 +128,6 @@ export function SmartAssignmentModal({
   const isDarkMode = document.documentElement.classList.contains('dark');
   const [activeTab, setActiveTab] = useState(triggerContext === 'manual_add' ? 'manual' : 'recommended');
   const [selectedRecommendation, setSelectedRecommendation] = useState<ProjectRecommendation | null>(null);
-  const [showImpactPreview, setShowImpactPreview] = useState(false);
   
   // Form state for manual assignment
   const [formData, setFormData] = useState({
@@ -183,7 +182,7 @@ export function SmartAssignmentModal({
             projectId: project.id,
             allocations: response.data.data?.allocations || []
           };
-        } catch (error) {
+        } catch {
           // If project has no allocations, return empty array
           return {
             projectId: project.id,
@@ -206,7 +205,8 @@ export function SmartAssignmentModal({
     }
   });
 
-  const { data: phases } = useQuery({
+  // Phases data is fetched to populate phase selection dropdown
+  useQuery({
     queryKey: queryKeys.phases.list(),
     queryFn: async () => {
       const response = await api.phases.list();
@@ -269,7 +269,8 @@ export function SmartAssignmentModal({
     }
   }, [utilizationData.remainingCapacity, formData.allocation_percentage]);
 
-  // Get selected project details
+  // Get selected project details (reserved for project info display)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const selectedProject = useMemo(() => {
     const projectId = selectedRecommendation?.project.id || formData.project_id;
     return (projects?.data as Project[] | undefined)?.find((p) => p.id === projectId);
@@ -346,7 +347,7 @@ export function SmartAssignmentModal({
       console.log('Creating assignment with data:', data);
       return api.assignments.create(data);
     },
-    onSuccess: (response) => {
+    onSuccess: (_response) => {
       // Invalidate all queries that might be affected by the new assignment
       const projectId = selectedRecommendation?.project.id || formData.project_id;
 
@@ -579,7 +580,7 @@ export function SmartAssignmentModal({
             <TabsContent value="recommended" className="recommendations-tab">
               {projectRecommendations.length > 0 ? (
                 <div className="recommendations-list">
-                  {projectRecommendations.map((rec, index) => (
+                  {projectRecommendations.map((rec, _index) => (
                     <div
                       key={rec.project.id}
                       className={cn(

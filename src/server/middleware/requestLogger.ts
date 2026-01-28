@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../services/logging/config.js';
 
@@ -8,14 +8,15 @@ export interface RequestWithLogging extends Request {
   logger: any;
 }
 
-export function requestLoggerMiddleware(req: RequestWithLogging, res: Response, next: NextFunction) {
+export const requestLoggerMiddleware: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const reqWithLogging = req as RequestWithLogging;
   // Generate unique request ID
-  req.requestId = uuidv4();
-  req.startTime = Date.now();
+  reqWithLogging.requestId = uuidv4();
+  reqWithLogging.startTime = Date.now();
 
   // Create child logger with request context
-  req.logger = logger.child({
-    requestId: req.requestId,
+  reqWithLogging.logger = logger.child({
+    requestId: reqWithLogging.requestId,
     method: req.method,
     url: req.url,
     userAgent: req.get('User-Agent'),
@@ -23,19 +24,19 @@ export function requestLoggerMiddleware(req: RequestWithLogging, res: Response, 
   });
 
   // Log request start (only in debug mode to avoid noise)
-  req.logger.debug('Request started');
+  reqWithLogging.logger.debug('Request started');
 
   // Capture response
   const originalSend = res.send;
   res.send = function(body: any) {
-    const duration = Date.now() - req.startTime;
-    
+    const duration = Date.now() - reqWithLogging.startTime;
+
     // Log request completion
-    req.logger.logRequest(req, res.statusCode, duration);
+    reqWithLogging.logger.logRequest(req, res.statusCode, duration);
 
     // Log slow requests as warnings
     if (duration > 1000) {
-      req.logger.warn('Slow request detected', {
+      reqWithLogging.logger.warn('Slow request detected', {
         duration: `${duration}ms`,
         statusCode: res.statusCode
       });
@@ -45,17 +46,18 @@ export function requestLoggerMiddleware(req: RequestWithLogging, res: Response, 
   };
 
   next();
-}
+};
 
 // Middleware to extract user information and add to logger context
-export function userContextMiddleware(req: RequestWithLogging, res: Response, next: NextFunction) {
+export const userContextMiddleware: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  const reqWithLogging = req as RequestWithLogging;
   // If user is authenticated, add to logger context
   if ((req as any).user) {
-    req.logger = req.logger.child({
+    reqWithLogging.logger = reqWithLogging.logger.child({
       userId: (req as any).user.id,
       userRole: (req as any).user.role
     });
   }
 
   next();
-}
+};

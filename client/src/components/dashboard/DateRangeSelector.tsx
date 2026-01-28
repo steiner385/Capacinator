@@ -30,11 +30,12 @@ function getDateRangeForPreset(preset: DateRangePreset): { startDate: string; en
   const now = new Date();
   
   switch (preset) {
-    case 'current':
+    case 'current': {
       const currentDate = now.toISOString().split('T')[0];
       return { startDate: currentDate, endDate: currentDate };
-    
-    case 'this_week':
+    }
+
+    case 'this_week': {
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - now.getDay());
       const weekEnd = new Date(weekStart);
@@ -43,39 +44,44 @@ function getDateRangeForPreset(preset: DateRangePreset): { startDate: string; en
         startDate: weekStart.toISOString().split('T')[0],
         endDate: weekEnd.toISOString().split('T')[0]
       };
-    
-    case 'this_month':
+    }
+
+    case 'this_month': {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       return {
         startDate: monthStart.toISOString().split('T')[0],
         endDate: monthEnd.toISOString().split('T')[0]
       };
-    
-    case 'next_month':
+    }
+
+    case 'next_month': {
       const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
       return {
         startDate: nextMonthStart.toISOString().split('T')[0],
         endDate: nextMonthEnd.toISOString().split('T')[0]
       };
-    
-    case 'this_quarter':
+    }
+
+    case 'this_quarter': {
       const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
       const quarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 0);
       return {
         startDate: quarterStart.toISOString().split('T')[0],
         endDate: quarterEnd.toISOString().split('T')[0]
       };
-    
-    case 'next_quarter':
+    }
+
+    case 'next_quarter': {
       const nextQuarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 3, 1);
       const nextQuarterEnd = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3 + 6, 0);
       return {
         startDate: nextQuarterStart.toISOString().split('T')[0],
         endDate: nextQuarterEnd.toISOString().split('T')[0]
       };
-    
+    }
+
     default:
       return { startDate: '', endDate: '' };
   }
@@ -86,7 +92,6 @@ export function DateRangeSelector({ selectedRange, onRangeChange, className = ''
   const [customStartDate, setCustomStartDate] = useState(selectedRange.startDate);
   const [customEndDate, setCustomEndDate] = useState(selectedRange.endDate);
 
-  const selectedPreset = DATE_PRESETS.find(preset => preset.value === selectedRange.preset);
 
   const handlePresetSelect = (preset: DateRangePreset) => {
     if (preset === 'custom') {

@@ -4,9 +4,12 @@ import supertest from 'supertest';
 import express from 'express';
 import { ProjectPhaseDependenciesController } from '../../src/server/api/controllers/ProjectPhaseDependenciesController';
 
+// Import db for mock
+import { db as testDb } from './setup';
+
 // Mock the database module to use test database
 jest.mock('../../src/server/database/index.js', () => ({
-  db: require('./setup').db
+  db: testDb
 }));
 
 // Mock the notification scheduler to prevent cron jobs
@@ -23,14 +26,15 @@ const app = express();
 app.use(express.json());
 
 // Create routes using the controller with mocked database
+const controller = new ProjectPhaseDependenciesController();
 const router = express.Router();
-router.get('/', ProjectPhaseDependenciesController.getAll);
-router.post('/calculate-cascade', ProjectPhaseDependenciesController.calculateCascade);
-router.post('/apply-cascade', ProjectPhaseDependenciesController.applyCascade);
-router.get('/:id', ProjectPhaseDependenciesController.getById);
-router.post('/', ProjectPhaseDependenciesController.create);
-router.put('/:id', ProjectPhaseDependenciesController.update);
-router.delete('/:id', ProjectPhaseDependenciesController.delete);
+router.get('/', controller.getAll.bind(controller));
+router.post('/calculate-cascade', controller.calculateCascade.bind(controller));
+router.post('/apply-cascade', controller.applyCascade.bind(controller));
+router.get('/:id', controller.getById.bind(controller));
+router.post('/', controller.create.bind(controller));
+router.put('/:id', controller.update.bind(controller));
+router.delete('/:id', controller.delete.bind(controller));
 app.use('/api/project-phase-dependencies', router);
 
 const request = supertest(app);

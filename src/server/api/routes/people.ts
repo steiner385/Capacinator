@@ -26,5 +26,7 @@ router.post('/:id/roles', (req, res) => controller.addRole(req, res));
 router.put('/:id/roles/:roleId', (req, res) => controller.updateRole(req, res));
 router.delete('/:id/roles/:roleId', (req, res) => controller.removeRole(req, res));
 
+// GitHub integration (Feature: 005-github-auth-user-link, Task T054)
+router.get('/:id/github-activity', (req, res) => controller.getGitHubActivity(req, res));
 
 export default router;

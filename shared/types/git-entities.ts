@@ -100,7 +100,7 @@ export type SyncStatus = 'synced' | 'pending' | 'syncing' | 'conflict' | 'offlin
 export interface PullResult {
   success: boolean;
   filesChanged: number;
-  conflicts: Conflict[];
+  conflicts: string[]; // Array of conflicted file paths
 }
 
 /**
@@ -131,3 +131,20 @@ export interface ScenarioExportData {
   scenarioId: string;
   data: any[]; // Array of entities (projects, people, assignments, etc.)
 }
+
+/**
+ * Progress update for Git operations
+ */
+export interface GitProgressUpdate {
+  operation: 'clone' | 'pull' | 'push' | 'merge' | 'fetch';
+  phase: 'starting' | 'transferring' | 'processing' | 'completing' | 'complete' | 'error';
+  message: string;
+  current?: number;
+  total?: number;
+  percentComplete?: number;
+}
+
+/**
+ * Callback for Git progress updates
+ */
+export type GitProgressCallback = (update: GitProgressUpdate) => void;

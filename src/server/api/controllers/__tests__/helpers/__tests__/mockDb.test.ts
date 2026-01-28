@@ -1,4 +1,4 @@
-import { createMockDb } from '../mockDb';
+import { createMockDb } from '../mockDb.js';
 
 describe('mockDb queue mechanism', () => {
   it('returns queued values in order for .first()', async () => {

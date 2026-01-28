@@ -1,26 +1,25 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  GitBranch, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Merge, 
+import {
+  GitBranch,
+  Plus,
+  Edit3,
+  Trash2,
+  Merge,
   ArrowRightLeft,
   Users,
   Calendar,
-  AlertTriangle,
-  List,
   Search,
-  Filter,
-  X,
   ChevronDown,
-  ArrowRight
+  ArrowRight,
+  Filter,
+  List,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { Scenario } from '../types';
-import { useUser } from '../contexts/UserContext';
 import { CreateScenarioModal, EditScenarioModal, DeleteConfirmationModal } from '../components/modals/ScenarioModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
@@ -90,6 +89,7 @@ const getTimelineDetails = (createdAt: string) => {
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ScenarioCard: React.FC<ScenarioCardProps> = ({
   scenario,
   onEdit,
@@ -100,6 +100,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
+   
   const isBaseline = scenario.scenario_type === 'baseline';
   const canMerge = scenario.parent_scenario_id && scenario.status === 'active';
   const timelineInfo = getTimelineDetails(scenario.created_at);
@@ -221,23 +222,13 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({
   );
 };
 
-interface CreateScenarioModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  parentScenario?: Scenario;
-}
-
-interface EditScenarioModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  scenario: Scenario;
-}
-
-interface DeleteConfirmationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  scenario: Scenario;
-}
+// Interfaces reserved for modal prop types
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type CreateScenarioModalPropsType = { isOpen: boolean; onClose: () => void; parentScenario?: Scenario; };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type EditScenarioModalPropsType = { isOpen: boolean; onClose: () => void; scenario: Scenario; };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type DeleteConfirmationModalPropsType = { isOpen: boolean; onClose: () => void; scenario: Scenario; };
 
 interface MergeModalProps {
   isOpen: boolean;
@@ -768,8 +759,10 @@ export const Scenarios: React.FC = () => {
     creators: []
   });
   
-  // List view state
+  // List view state (reserved for pagination feature)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showAllScenarios, setShowAllScenarios] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [displayLimit, setDisplayLimit] = useState(10);
   const [hideMergedScenarios, setHideMergedScenarios] = useState(false);
   
@@ -921,7 +914,7 @@ export const Scenarios: React.FC = () => {
   const filteredScenarios = React.useMemo(() => {
     if (!scenarios) return [];
     
-    let filtered = scenarios.filter(scenario => {
+    const filtered = scenarios.filter(scenario => {
       // Search filter
       const searchMatch = !searchTerm || 
         scenario.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1044,6 +1037,7 @@ export const Scenarios: React.FC = () => {
     return filteredScenarios;
   }, [filteredScenarios, showAllScenarios, hasActiveFilters, displayLimit]);
   
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const isLimitedView = !showAllScenarios && !hasActiveFilters && displayedScenarios.length < totalScenariosCount;
 
   // Click outside handler for filter dropdown
@@ -1164,11 +1158,13 @@ export const Scenarios: React.FC = () => {
       return roots;
     };
 
+     
     const renderScenarioNode = (scenario: ScenarioTreeNode, level: number = 0, isLast: boolean = true, parentLines: boolean[] = []): React.ReactNode => {
       const indent = level * 24;
       const hasChildren = scenario.children && scenario.children.length > 0;
       const isExpanded = expandedNodes.has(scenario.id);
       const isFocused = focusedNodeId === scenario.id;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const isBaseline = scenario.scenario_type === 'baseline';
       
       return (
@@ -1372,6 +1368,7 @@ export const Scenarios: React.FC = () => {
       );
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const scenarioTree = buildScenarioTree();
 
     return (

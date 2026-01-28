@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Palette, Eye, ExternalLink } from 'lucide-react';
+import { Palette, ExternalLink } from 'lucide-react';
 import { ProjectType } from '../types';
 import { api } from '../lib/api-client';
 import { InlineDataTable } from '../components/ui/InlineDataTable';

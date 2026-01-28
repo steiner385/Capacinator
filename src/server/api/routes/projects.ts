@@ -5,33 +5,33 @@ const router = Router();
 const controller = new ProjectsController();
 
 // Test data cleanup (for e2e tests) - must come before /:id route
-router.delete('/test-data', (req, res) => controller.deleteTestData(req, res));
+router.delete('/test-data', controller.deleteTestData);
 
 // Debug endpoint - must come before /:id route
-router.get('/debug', (req, res) => controller.debugQuery(req, res));
+router.get('/debug', controller.debugQuery);
 
 // Project CRUD operations
-router.get('/', (req, res) => controller.getAll(req, res));
-router.get('/:id', (req, res) => controller.getById(req, res));
-router.post('/', (req, res) => controller.create(req, res));
-router.put('/:id', (req, res) => controller.update(req, res));
-router.delete('/:id', (req, res) => controller.delete(req, res));
+router.get('/', controller.getAll);
+router.get('/:id', controller.getById);
+router.post('/', controller.create);
+router.put('/:id', controller.update);
+router.delete('/:id', controller.delete);
 
 // Project-specific endpoints
-router.get('/:id/demands', (req, res) => controller.getDemands(req, res));
-router.get('/:id/timeline', (req, res) => controller.getProjectTimeline(req, res));
+router.get('/:id/demands', controller.getDemands);
+router.get('/:id/timeline', controller.getProjectTimeline);
 
 // Phase template validation endpoints
-router.post('/:id/phases/validate-updates', (req, res) => controller.validatePhaseUpdates(req, res));
-router.post('/:id/phases/validate-custom', (req, res) => controller.validateCustomPhase(req, res));
-router.get('/:id/template-compliance', (req, res) => controller.getTemplateCompliance(req, res));
+router.post('/:id/phases/validate-updates', controller.validatePhaseUpdates);
+router.post('/:id/phases/validate-custom', controller.validateCustomPhase);
+router.get('/:id/template-compliance', controller.getTemplateCompliance);
 
 // Custom phase management endpoints
-router.post('/:id/phases/custom', (req, res) => controller.addCustomPhase(req, res));
-router.put('/:id/phases/:phaseTimelineId', (req, res) => controller.updateProjectPhase(req, res));
-router.delete('/:id/phases/:phaseTimelineId', (req, res) => controller.deleteProjectPhase(req, res));
+router.post('/:id/phases/custom', controller.addCustomPhase);
+router.put('/:id/phases/:phaseTimelineId', controller.updateProjectPhase);
+router.delete('/:id/phases/:phaseTimelineId', controller.deleteProjectPhase);
 
 // Dashboard/reporting endpoints
-router.get('/dashboard/health', (req, res) => controller.getHealth(req, res));
+router.get('/dashboard/health', controller.getHealth);
 
 export default router;

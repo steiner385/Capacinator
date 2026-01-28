@@ -1,5 +1,5 @@
-import { PeopleController } from '../PeopleController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { PeopleController } from '../PeopleController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 describe('PeopleController', () => {
   let controller: PeopleController;
@@ -46,7 +46,7 @@ describe('PeopleController', () => {
 
     // Replace controller's db AND auditedDb with our mock
     (controller as any).db = mockDb;
-    (controller as any).auditedDb = mockDb;
+    (controller as any)._auditedDb = mockDb;
 
     // Reset mock data for clean state
     mockDb._reset();

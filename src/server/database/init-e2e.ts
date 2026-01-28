@@ -1,6 +1,5 @@
 import { Knex } from 'knex';
 import knex from 'knex';
-import path from 'path';
 import fs from 'fs/promises';
 import e2eConfig, { E2E_DB_FILE, E2E_DB_DIR } from './knexfile.e2e.js';
 import { initializeAuditService } from '../services/audit/index.js';

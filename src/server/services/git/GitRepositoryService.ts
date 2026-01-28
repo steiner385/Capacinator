@@ -5,7 +5,7 @@
  * Uses simple-git library for Git operations
  */
 
-import simpleGit, { SimpleGit } from 'simple-git';
+import { simpleGit, type SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
 import type { GitCredential, PullResult, GitAuthor } from '../../../../shared/types/git-entities.js';
@@ -25,12 +25,32 @@ export class GitRepositoryService {
   private repoPath: string;
   private authService: GitAuthService;
   private healthCheck: GitHealthCheck;
+  private gitInitialized: boolean = false;
 
   constructor(repoPath: string) {
     this.repoPath = repoPath;
-    this.git = simpleGit(repoPath);
+    // In test/CI environment, delay git initialization until first use
+    // This prevents errors when the git directory doesn't exist during test imports or CI runs
+    if (process.env.NODE_ENV === 'test' || process.env.CI) {
+      // Create a stub git instance that will be replaced on first use
+      this.git = {} as SimpleGit;
+      this.gitInitialized = false;
+    } else {
+      this.git = simpleGit(repoPath);
+      this.gitInitialized = true;
+    }
     this.authService = new GitAuthService();
     this.healthCheck = new GitHealthCheck();
+  }
+
+  /**
+   * Ensure git instance is initialized (lazy init for test environment)
+   */
+  private ensureGitInitialized(): void {
+    if (!this.gitInitialized) {
+      this.git = simpleGit(this.repoPath);
+      this.gitInitialized = true;
+    }
   }
 
   /**
@@ -53,6 +73,7 @@ export class GitRepositoryService {
    * @returns Git status object
    */
   async getStatus() {
+    this.ensureGitInitialized();
     return await this.git.status();
   }
 
@@ -62,6 +83,7 @@ export class GitRepositoryService {
    * @returns Remote URL or null if not found
    */
   async getRemoteUrl(): Promise<string | null> {
+    this.ensureGitInitialized();
     try {
       const remotes = await this.git.getRemotes(true);
       const origin = remotes.find((r) => r.name === 'origin');
@@ -88,6 +110,7 @@ export class GitRepositoryService {
    * @returns True if working directory is clean
    */
   async isClean(): Promise<boolean> {
+    this.ensureGitInitialized();
     const status = await this.getStatus();
     return status.isClean();
   }
@@ -98,6 +121,7 @@ export class GitRepositoryService {
    * @returns Array of branch names
    */
   async listBranches(): Promise<string[]> {
+    this.ensureGitInitialized();
     const branches = await this.git.branch();
     return branches.all;
   }
@@ -133,6 +157,7 @@ export class GitRepositoryService {
    * @throws {GitAuthenticationError} If authentication fails
    */
   async initialize(remoteUrl: string, credentials: GitCredential): Promise<void> {
+    this.ensureGitInitialized();
     try {
       const exists = await this.repositoryExists();
 
@@ -164,6 +189,7 @@ export class GitRepositoryService {
    * @throws {GitDiskSpaceError} If insufficient disk space
    */
   async clone(remoteUrl: string, credentials: GitCredential): Promise<void> {
+    this.ensureGitInitialized();
     const timer = gitLogger.startTimer();
     gitLogger.logOperationStart('clone', { repositoryUrl: remoteUrl });
 
@@ -212,6 +238,7 @@ export class GitRepositoryService {
    * @throws {GitConflictError} If merge conflicts occur (returned in PullResult instead)
    */
   async pull(branch?: string): Promise<PullResult> {
+    this.ensureGitInitialized();
     const timer = gitLogger.startTimer();
     const targetBranch = branch || (await this.getCurrentBranch());
     gitLogger.logOperationStart('pull', { branch: targetBranch });
@@ -232,12 +259,11 @@ export class GitRepositoryService {
         '--no-ff': null, // Always create merge commit
       });
 
-      // Check for Git-level conflicts
-      const hasConflicts = result.summary.conflicts.length > 0;
+      // Check for Git-level conflicts by checking git status
+      const conflictedFiles = await this.getConflictedFiles();
+      const hasConflicts = conflictedFiles.length > 0;
 
       if (hasConflicts) {
-        // Get list of conflicted files
-        const conflictedFiles = await this.getConflictedFiles();
 
         gitLogger.warn('pull', `Conflicts detected (${conflictedFiles.length} files)`, {
           branch: targetBranch,
@@ -292,6 +318,7 @@ export class GitRepositoryService {
    * @returns Array of conflicted file paths
    */
   async getConflictedFiles(): Promise<string[]> {
+    this.ensureGitInitialized();
     try {
       const status = await this.git.status();
       return status.conflicted;
@@ -311,6 +338,7 @@ export class GitRepositoryService {
    * @throws {GitRepositoryStateError} If nothing to commit or repository in invalid state
    */
   async commit(message: string, author: GitAuthor): Promise<string> {
+    this.ensureGitInitialized();
     const timer = gitLogger.startTimer();
     gitLogger.logOperationStart('commit', { author: author.email, message: message.substring(0, 50) });
 
@@ -359,6 +387,7 @@ export class GitRepositoryService {
    * @throws {GitPermissionError} If insufficient permissions
    */
   async push(credentials: GitCredential, branch: string = 'main'): Promise<void> {
+    this.ensureGitInitialized();
     const timer = gitLogger.startTimer();
     gitLogger.logOperationStart('push', { branch });
 
@@ -414,6 +443,7 @@ export class GitRepositoryService {
    * @throws {GitBranchError} If branch already exists or base branch doesn't exist
    */
   async createBranch(branchName: string, baseBranch?: string): Promise<void> {
+    this.ensureGitInitialized();
     try {
       // Check if branch already exists
       const branches = await this.listBranches();
@@ -457,6 +487,7 @@ export class GitRepositoryService {
    * @throws {GitRepositoryStateError} If there are uncommitted changes blocking checkout
    */
   async checkoutBranch(branchName: string): Promise<void> {
+    this.ensureGitInitialized();
     try {
       // Check if branch exists
       const branches = await this.listBranches();
@@ -489,16 +520,6 @@ export class GitRepositoryService {
   }
 
   /**
-   * Get current branch name
-   *
-   * @returns Current branch name
-   */
-  async getCurrentBranch(): Promise<string> {
-    const status = await this.getStatus();
-    return status.current || 'main';
-  }
-
-  /**
    * Merge a branch into the current branch
    * Task: T068, T093
    *
@@ -511,6 +532,7 @@ export class GitRepositoryService {
     success: boolean;
     conflicts: string[];
   }> {
+    this.ensureGitInitialized();
     try {
       // Check if branch exists
       const branches = await this.listBranches();
@@ -577,6 +599,7 @@ export class GitRepositoryService {
     author_name: string;
     author_email: string;
   }>> {
+    this.ensureGitInitialized();
     const logOptions: any = {
       maxCount: options?.maxCount || 50,
     };
@@ -603,6 +626,7 @@ export class GitRepositoryService {
    * @param force - Force delete even if not merged
    */
   async deleteBranch(branchName: string, force: boolean = false): Promise<void> {
+    this.ensureGitInitialized();
     await this.git.deleteLocalBranch(branchName, force);
   }
 
@@ -614,6 +638,7 @@ export class GitRepositoryService {
    * @returns Diff summary
    */
   async getDiff(baseBranch: string, targetBranch: string): Promise<string> {
+    this.ensureGitInitialized();
     const diff = await this.git.diff([`${baseBranch}..${targetBranch}`]);
     return diff;
   }

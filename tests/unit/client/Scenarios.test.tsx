@@ -1,4 +1,5 @@
 import React from 'react';
+import { api } from '../../../client/src/lib/api-client';
 
 // Mock the API client
 jest.mock('../../../client/src/lib/api-client', () => ({
@@ -135,8 +136,6 @@ const mockScenarios = [
 ];
 
 describe('Scenarios Component', () => {
-  const { api } = require('../../../client/src/lib/api-client');
-
   beforeEach(() => {
     jest.clearAllMocks();
     api.scenarios.list.mockResolvedValue({ data: mockScenarios });
@@ -145,14 +144,18 @@ describe('Scenarios Component', () => {
   describe('Component Rendering', () => {
     test('renders the scenarios page with header', async () => {
       renderWithProviders(<Scenarios />);
-      
+
       // Wait for loading to finish
       await waitFor(() => {
         expect(screen.getByText('Scenario Planning')).toBeInTheDocument();
       });
-      
+
       expect(screen.getByText('Create and manage resource planning scenarios to explore different allocation strategies')).toBeInTheDocument();
-      expect(screen.getByText('Baseline Scenario')).toBeInTheDocument();
+
+      // Wait for scenario data to load before asserting
+      await waitFor(() => {
+        expect(screen.getByText('Baseline Scenario')).toBeInTheDocument();
+      }, { timeout: 5000 });
     });
 
     test('displays loading state initially', async () => {

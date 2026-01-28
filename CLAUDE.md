@@ -15,8 +15,13 @@ A web-based project capacity planning system replacing Excel-based planning. Sta
 
 ## Common Commands
 
+**Development is fully cross-platform** - all commands work identically on Windows, macOS, and Linux.
+
 ```bash
-npm run dev              # Start all dev servers (server + client + Electron)
+npm run dev              # Start all dev servers (server + client)
+npm run dev:stop         # Stop dev servers
+npm run dev:logs         # View live logs
+npm run dev:cleanup      # Clean up orphaned processes
 npm run dev:server       # Backend only (port 3110)
 npm run dev:client       # Frontend only (port 3120)
 npm run build            # Build all
@@ -27,7 +32,11 @@ npm run test:e2e         # Playwright E2E tests
 npm run lint             # ESLint check
 npm run typecheck        # TypeScript validation
 npm run db:migrate       # Run database migrations
+npm run commands         # List all available commands
 ```
+
+See [docs/PLATFORM_AGNOSTIC_SETUP.md](docs/PLATFORM_AGNOSTIC_SETUP.md) for details on the cross-platform architecture.
+See [docs/BUILD_AND_TEST_SETUP.md](docs/BUILD_AND_TEST_SETUP.md) for build system and test configuration.
 
 ## Project Structure
 

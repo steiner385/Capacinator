@@ -1,5 +1,5 @@
-import { ExportController } from '../ExportController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { ExportController } from '../ExportController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 // Mock ExcelJS
 jest.mock('exceljs', () => {
@@ -18,7 +18,7 @@ jest.mock('exceljs', () => {
     }
 
     addWorksheet(name: string) {
-      const worksheet = {
+      const worksheet: { name: string; columns: unknown[]; rows: unknown[]; getRow: jest.Mock; addRow: jest.Mock } = {
         name,
         columns: [],
         rows: [],
@@ -128,7 +128,7 @@ describe('ExportController', () => {
         filters: {}
       };
 
-      const mockGapsData = [];
+      const mockGapsData: unknown[] = [];
       const mockUtilizationData = [
         {
           person_id: 'person-1',
@@ -250,7 +250,7 @@ describe('ExportController', () => {
         }
       ];
 
-      const mockUtilizationData = [];
+      const mockUtilizationData: unknown[] = [];
 
       mockDb._queueQueryResult(mockGapsData);
       mockDb._queueQueryResult(mockUtilizationData);
@@ -276,7 +276,7 @@ describe('ExportController', () => {
         filters: {}
       };
 
-      const mockGapsData = [];
+      const mockGapsData: unknown[] = [];
       const mockUtilizationData = [
         {
           person_id: 'person-1',
@@ -388,7 +388,7 @@ describe('ExportController', () => {
         }
       ];
 
-      const mockUtilizationData = [];
+      const mockUtilizationData: unknown[] = [];
 
       mockDb._queueQueryResult(mockGapsData);
       mockDb._queueQueryResult(mockUtilizationData);
@@ -435,7 +435,7 @@ describe('ExportController', () => {
     });
 
     it('retrieves utilization data', async () => {
-      const mockGapsData = [];
+      const mockGapsData: unknown[] = [];
       const mockUtilizationData = [
         {
           person_id: 'person-1',
@@ -546,7 +546,9 @@ describe('ExportController', () => {
       };
 
       // Mock the dynamic import of puppeteer-core
-      jest.spyOn(controller as any, 'exportReportAsPDF').mockImplementation(async function(req: any, res: any) {
+      jest.spyOn(controller as any, 'exportReportAsPDF').mockImplementation(async function(this: ExportController, req: any, res: any) {
+        // Cast this to any to access private methods in test mock
+        const self = this as unknown as { getCapacityData: (f: unknown) => Promise<unknown>; generateCapacityHTML: (d: unknown) => string; getUtilizationData: (f: unknown) => Promise<unknown>; generateUtilizationHTML: (d: unknown) => string; getDemandData: (f: unknown) => Promise<unknown>; generateDemandHTML: (d: unknown) => string; getGapsData: (f: unknown) => Promise<unknown>; generateGapsHTML: (d: unknown) => string; handleError: (e: unknown, r: unknown, m: string) => void };
         try {
           const { reportType, filters = {} } = req.body;
 
@@ -558,26 +560,30 @@ describe('ExportController', () => {
           let filename = '';
 
           switch (reportType) {
-            case 'capacity':
-              const capacityData = await this.getCapacityData(filters);
-              htmlContent = this.generateCapacityHTML(capacityData);
+            case 'capacity': {
+              const capacityData = await self.getCapacityData(filters);
+              htmlContent = self.generateCapacityHTML(capacityData);
               filename = 'capacity-report.pdf';
               break;
-            case 'utilization':
-              const utilizationData = await this.getUtilizationData(filters);
-              htmlContent = this.generateUtilizationHTML(utilizationData);
+            }
+            case 'utilization': {
+              const utilizationData = await self.getUtilizationData(filters);
+              htmlContent = self.generateUtilizationHTML(utilizationData);
               filename = 'utilization-report.pdf';
               break;
-            case 'demand':
-              const demandData = await this.getDemandData(filters);
-              htmlContent = this.generateDemandHTML(demandData);
+            }
+            case 'demand': {
+              const demandData = await self.getDemandData(filters);
+              htmlContent = self.generateDemandHTML(demandData);
               filename = 'demand-report.pdf';
               break;
-            case 'gaps':
-              const gapsData = await this.getGapsData(filters);
-              htmlContent = this.generateGapsHTML(gapsData);
+            }
+            case 'gaps': {
+              const gapsData = await self.getGapsData(filters);
+              htmlContent = self.generateGapsHTML(gapsData);
               filename = 'capacity-gaps-report.pdf';
               break;
+            }
             default:
               return res.status(400).json({ error: 'Invalid report type' });
           }
@@ -611,7 +617,7 @@ describe('ExportController', () => {
           }
 
         } catch (error) {
-          this.handleError(error, res, 'PDF export failed');
+          self.handleError(error, res, 'PDF export failed');
         }
       });
     });
@@ -630,7 +636,7 @@ describe('ExportController', () => {
         }
       ];
 
-      const mockUtilizationData = [];
+      const mockUtilizationData: unknown[] = [];
 
       mockDb._queueQueryResult(mockGapsData);
       mockDb._queueQueryResult(mockUtilizationData);
@@ -656,7 +662,7 @@ describe('ExportController', () => {
         filters: {}
       };
 
-      const mockGapsData = [];
+      const mockGapsData: unknown[] = [];
       const mockUtilizationData = [
         {
           person_id: 'person-1',
@@ -770,8 +776,8 @@ describe('ExportController', () => {
 
       mockPage.pdf.mockRejectedValue(new Error('PDF generation failed'));
 
-      const mockGapsData = [];
-      const mockUtilizationData = [];
+      const mockGapsData: unknown[] = [];
+      const mockUtilizationData: unknown[] = [];
 
       mockDb._queueQueryResult(mockGapsData);
       mockDb._queueQueryResult(mockUtilizationData);
@@ -949,7 +955,7 @@ describe('ExportController', () => {
     });
 
     it('getDemandData - applies location filter', async () => {
-      const mockDemands = [];
+      const mockDemands: unknown[] = [];
 
       mockDb._setQueryResult(mockDemands);
 
@@ -964,7 +970,7 @@ describe('ExportController', () => {
     });
 
     it('getDemandData - applies project type filter', async () => {
-      const mockDemands = [];
+      const mockDemands: unknown[] = [];
 
       mockDb._setQueryResult(mockDemands);
 

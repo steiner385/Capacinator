@@ -157,10 +157,12 @@ export class AuditService {
 
     // Find the last change that hasn't been specifically undone
     // This includes both original operations and undo operations (undo operations can themselves be undone)
+    // Use rowid as secondary sort for deterministic ordering when timestamps are identical
     const candidates = await this.db('audit_log')
       .where('table_name', tableName)
       .where('record_id', recordId)
-      .orderBy('changed_at', 'desc');
+      .orderBy('changed_at', 'desc')
+      .orderByRaw('rowid DESC');
 
     // Find the first candidate that either:
     // 1. Is an undo operation (can always be undone), OR
@@ -316,6 +318,7 @@ export class AuditService {
     comment?: string
   ): Promise<{ undone: number; errors: string[] }> {
     // Get only non-undo changes by the specified user
+    // Use rowid as secondary sort for deterministic ordering when timestamps are identical
     const changes = await this.db('audit_log')
       .where('changed_by', changedBy)
       .where(function() {
@@ -323,6 +326,7 @@ export class AuditService {
           .orWhere('comment', 'not like', '%Undo%');
       })
       .orderBy('changed_at', 'desc')
+      .orderByRaw('rowid DESC')
       .limit(count);
 
     let undone = 0;

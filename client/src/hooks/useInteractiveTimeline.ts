@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { TimelineItem, TimelineViewport } from '../components/InteractiveTimeline';
-import { addDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { addDays, startOfYear, endOfYear } from 'date-fns';
 
 export interface UseInteractiveTimelineProps {
   // Data

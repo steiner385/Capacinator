@@ -1,9 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { ExternalLink, Users, AlertTriangle, GitBranch } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ReportSummaryCard, ReportEmptyState, ReportTable } from './index';
-import { getChartColor, CHART_AXIS_CONFIG } from './chartConfig';
+import { getChartColor } from './chartConfig';
 import { useScenario } from '../../contexts/ScenarioContext';
 import type { Column, ActionButton } from './ReportTable';
 

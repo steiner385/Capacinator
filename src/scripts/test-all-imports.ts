@@ -22,7 +22,7 @@ async function testAllImports() {
     const templatePath = path.join(__dirname, `../../test-data/${test.file}`);
     
     try {
-      const result = await importer.importFromFile(templatePath, true);
+      const result = await importer.importFromFile(templatePath, { clearExisting: true });
       
       console.log(`✅ Import completed - Success: ${result.success}`);
       

@@ -1,5 +1,5 @@
-import { RolesController } from '../RolesController';
-import { createMockDb, flushPromises } from './helpers/mockDb';
+import { RolesController } from '../RolesController.js';
+import { createMockDb, flushPromises } from './helpers/mockDb.js';
 
 const mockLogger = {
   info: jest.fn(),

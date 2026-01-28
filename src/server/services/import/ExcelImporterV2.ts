@@ -1,5 +1,6 @@
 import { getAuditedDb } from '../../database/index.js';
 import { logger } from '../logging/config.js';
+import type { Worksheet } from 'exceljs';
 
 // Import ExcelJS using dynamic import for better ES module compatibility
 let ExcelJS: any;
@@ -10,16 +11,18 @@ async function initializeExcelJS() {
   }
   return ExcelJS;
 }
-import { 
-  fiscalWeekToDate, 
-  extractFiscalWeekColumns, 
-  getPhaseFullName,
+
+// Type alias for ExcelJS worksheet
+type ExcelWorksheet = Worksheet;
+import {
+  fiscalWeekToDate,
+  extractFiscalWeekColumns,
   parseProjectSite,
   PHASE_ABBREVIATIONS
 } from '../../utils/fiscalWeek.js';
 import { v4 as uuidv4 } from 'uuid';
 import { ImportOptions, ValidationResult, ValidationError, WorksheetValidation } from './ExcelImporter.js';
-import { ImportError, ImportErrorCollector, ImportErrorUtils } from './ImportError.js';
+import { ImportErrorCollector } from './ImportError.js';
 
 export interface ImportResultV2 {
   success: boolean;
@@ -400,7 +403,7 @@ export class ExcelImporterV2 {
       if (projectsWorksheet) {
         const projectNames = new Set<string>();
         const existingProjects = await this.db('projects').select('name');
-        const existingProjectNames = new Set(existingProjects.map(p => p.name.toLowerCase()));
+        const existingProjectNames = new Set(existingProjects.map((p: { name: string }) => p.name.toLowerCase()));
 
         for (let rowNumber = 2; rowNumber <= projectsWorksheet.rowCount; rowNumber++) {
           const row = projectsWorksheet.getRow(rowNumber);
@@ -424,7 +427,7 @@ export class ExcelImporterV2 {
       if (rosterWorksheet) {
         const peopleNames = new Set<string>();
         const existingPeople = await this.db('people').select('name');
-        const existingPeopleNames = new Set(existingPeople.map(p => p.name.toLowerCase()));
+        const existingPeopleNames = new Set(existingPeople.map((p: { name: string }) => p.name.toLowerCase()));
 
         for (let rowNumber = 2; rowNumber <= rosterWorksheet.rowCount; rowNumber++) {
           const row = rosterWorksheet.getRow(rowNumber);
@@ -444,7 +447,7 @@ export class ExcelImporterV2 {
       if (rolesWorksheet) {
         const roleNames = new Set<string>();
         const existingRoles = await this.db('roles').select('name');
-        const existingRoleNames = new Set(existingRoles.map(r => r.name.toLowerCase()));
+        const existingRoleNames = new Set(existingRoles.map((r: { name: string }) => r.name.toLowerCase()));
 
         for (let rowNumber = 2; rowNumber <= rolesWorksheet.rowCount; rowNumber++) {
           const row = rolesWorksheet.getRow(rowNumber);
@@ -463,7 +466,7 @@ export class ExcelImporterV2 {
       if (projectsWorksheet) {
         const locationNames = new Set<string>();
         const existingLocations = await this.db('locations').select('name');
-        const existingLocationNames = new Set(existingLocations.map(l => l.name.toLowerCase()));
+        const existingLocationNames = new Set(existingLocations.map((l: { name: string }) => l.name.toLowerCase()));
         const reportedDuplicates = new Set<string>(); // Track which duplicates we've already reported
 
         for (let rowNumber = 2; rowNumber <= projectsWorksheet.rowCount; rowNumber++) {
@@ -492,7 +495,7 @@ export class ExcelImporterV2 {
     return { duplicatesFound: duplicates };
   }
 
-  private async importProjectTypes(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectTypes(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -525,7 +528,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectPhases(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjectPhases(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -582,7 +585,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoles(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoles(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -591,15 +594,14 @@ export class ExcelImporterV2 {
       return { count, errors };
     }
 
-    const headerRow = worksheet.getRow(1);
-    const headers = headerRow.values as string[];
+    // Note: headerRow and headers available for future column validation
 
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
         const roleName = row.getCell(1).value?.toString(); // Role
         const planOwner = row.getCell(2).value?.toString(); // Plan Owner
-        const cwOption = row.getCell(3).value?.toString(); // CW Option
+        // Note: cwOption (cell 3) available for CW Option field
         const dataAccess = row.getCell(4).value?.toString(); // Required Data Access
 
         if (!roleName) continue;
@@ -631,7 +633,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importRoster(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importRoster(worksheet: ExcelWorksheet, _errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -732,7 +734,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjects(worksheet: ExcelJS.Worksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
+  private async importProjects(worksheet: ExcelWorksheet, errorCollector: ImportErrorCollector): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -822,7 +824,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectRoadmap(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectRoadmap(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -918,7 +920,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectDemand(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectDemand(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -935,7 +937,7 @@ export class ExcelImporterV2 {
       try {
         const row = worksheet.getRow(rowNumber);
         const projectSite = row.getCell(1).value?.toString();
-        const planOwner = row.getCell(2).value?.toString();
+        // Note: planOwner (cell 2) available for plan owner assignment
         const roleName = row.getCell(3).value?.toString();
 
         if (!projectSite || !roleName) continue;
@@ -985,7 +987,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importProjectAssignments(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importProjectAssignments(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -1074,7 +1076,7 @@ export class ExcelImporterV2 {
     return { count, errors };
   }
 
-  private async importStandardAllocations(worksheet: ExcelJS.Worksheet): Promise<{ count: number; errors: string[] }> {
+  private async importStandardAllocations(worksheet: ExcelWorksheet): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
@@ -1083,8 +1085,8 @@ export class ExcelImporterV2 {
       return { count, errors };
     }
 
-    const headerRow = worksheet.getRow(1);
-    
+    // Note: headerRow available for column validation if needed
+
     for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
       try {
         const row = worksheet.getRow(rowNumber);
@@ -1205,7 +1207,7 @@ export class ExcelImporterV2 {
           return result;
         }
       } catch (error) {
-        result.errors.push(`Duplicate validation failed: ${error.message}`);
+        result.errors.push(`Duplicate validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         return result;
       }
     }
@@ -1303,10 +1305,10 @@ export class ExcelImporterV2 {
       result.warnings.push(...plannersResult.errors);
 
       // Count imported locations
-      result.imported.locations = await this.db('locations').count('* as count').first().then(r => parseInt(String(r?.count || '0'), 10));
+      result.imported.locations = await this.db('locations').count('* as count').first().then((r: { count?: number | string } | undefined) => parseInt(String(r?.count || '0'), 10));
 
       // Count availability overrides
-      result.imported.availabilityOverrides = await this.db('person_availability_overrides').count('* as count').first().then(r => parseInt(String(r?.count || '0'), 10));
+      result.imported.availabilityOverrides = await this.db('person_availability_overrides').count('* as count').first().then((r: { count?: number | string } | undefined) => parseInt(String(r?.count || '0'), 10));
 
       // Collect all structured errors and warnings
       const errorSummary = errorCollector.toJSON();

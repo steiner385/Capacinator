@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, Palette, ChevronRight, ChevronDown, List, GitBranch, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, List, GitBranch, Eye } from 'lucide-react';
 import { api } from '../lib/api-client';
 import { queryKeys } from '../lib/queryKeys';
 import { DataTable, Column } from '../components/ui/DataTable';

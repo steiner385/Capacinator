@@ -1,20 +1,15 @@
 import { type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderKanban,
   Users,
-  UserCog,
-  Calendar,
   BarChart3,
   Settings,
   GitBranch,
   ClipboardList,
-  Palette,
   History,
-  GanttChart,
   MapPin,
-  Upload,
   ArrowUpDown,
 } from 'lucide-react';
 import { AppHeader } from './AppHeader';
@@ -38,8 +33,6 @@ const navigation = [
 ];
 
 export function Layout({ children }: LayoutProps) {
-  const location = useLocation();
-
   return (
     <div className="layout">
       <AppHeader />

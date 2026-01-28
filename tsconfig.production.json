@@ -5,7 +5,7 @@
     "moduleResolution": "node",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,13 +15,15 @@
     "types": ["node"],
     "noImplicitAny": false,
     "strictNullChecks": false,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"],
-      "@server/*": ["server/*"],
-      "@client/*": ["client/*"]
+      "@/*": ["src/*"],
+      "@server/*": ["src/server/*"],
+      "@shared/*": ["shared/*"],
+      "@shared/types": ["shared/types/index.ts"],
+      "@shared/types/*": ["shared/types/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "client", "**/*.test.ts", "**/*.spec.ts", "**/__tests__/**", "**/tests/**", "src/scripts/**", "**/*.e2e.*", "src/server/database/knexfile.e2e.ts", "src/server/database/init-e2e.ts"]
+  "include": ["src/**/*", "shared/**/*"],
+  "exclude": ["node_modules", "dist", "client", "**/*.test.ts", "**/*.spec.ts", "**/__tests__/**", "**/tests/**", "src/scripts/**", "scripts/**", "**/*.e2e.*", "src/server/database/knexfile.e2e.ts", "src/server/database/init-e2e.ts"]
 }
