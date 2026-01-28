@@ -123,6 +123,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
+    '/dist-electron/',
     '/build/',
     '/tests/e2e/',
     '\\.spec\\.ts$'
