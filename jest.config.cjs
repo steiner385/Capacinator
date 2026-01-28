@@ -32,6 +32,9 @@ module.exports = {
       moduleNameMapper: {
         '^(\\.{1,2}/.*)\\.js$': '$1'
       },
+      transformIgnorePatterns: [
+        'node_modules/(?!(@octokit)/)'
+      ],
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           tsconfig: {
@@ -62,6 +65,9 @@ module.exports = {
       moduleNameMapper: {
         '^(\\.{1,2}/.*)\\.js$': '$1'
       },
+      transformIgnorePatterns: [
+        'node_modules/(?!(@octokit)/)'
+      ],
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           tsconfig: {

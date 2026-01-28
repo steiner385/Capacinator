@@ -553,4 +553,139 @@ export class PeopleController extends BaseController {
       res.json(result);
     }
   }
+
+  /**
+   * GET /api/people/:id/github-activity
+   * Get GitHub commit activity for a person
+   *
+   * Task T054 (Phase 7)
+   */
+  async getGitHubActivity(req: Request, res: Response) {
+    const { id } = req.params;
+    const personId = parseInt(id, 10);
+
+    if (isNaN(personId)) {
+      return this.handleValidationError(req, res, { id: 'Invalid person ID' });
+    }
+
+    const result = await this.executeQuery(async () => {
+      // Get person with GitHub info
+      const person = await this.db('people')
+        .where({ id: personId })
+        .first();
+
+      if (!person) {
+        this.handleNotFound(req, res, 'Person');
+        return null;
+      }
+
+      // Check if person has GitHub username
+      if (!person.github_username || !person.github_user_id) {
+        return {
+          person_id: personId,
+          person_name: person.name,
+          github_connected: false,
+          activity: [],
+          message: 'Person has no GitHub account connected',
+        };
+      }
+
+      // Find active GitHub connection for this person
+      const connection = await this.db('github_account_associations as gaa')
+        .join('github_connections as gc', 'gaa.github_connection_id', 'gc.id')
+        .where('gaa.person_id', personId)
+        .where('gaa.active', true)
+        .where('gc.status', 'active')
+        .select('gc.*')
+        .first();
+
+      if (!connection) {
+        return {
+          person_id: personId,
+          person_name: person.name,
+          github_username: person.github_username,
+          github_connected: false,
+          activity: [],
+          message: 'No active GitHub connection found for this person',
+        };
+      }
+
+      // Import services
+      const { getGitHubConnectionService } = await import('../../services/GitHubConnectionService.js');
+      const { getEncryptionService } = await import('../../services/EncryptionService.js');
+      const { default: GitHubApiService } = await import('../../services/GitHubApiService.js');
+
+      const connectionService = getGitHubConnectionService();
+      const encryptionService = getEncryptionService();
+
+      // Refresh token if needed
+      try {
+        await connectionService.refreshTokenIfNeeded(connection.id);
+      } catch {
+        // Continue even if refresh fails - token might still be valid
+        const { logger } = await import('../../services/logging/config.js');
+        logger.warn('Token refresh failed, continuing with existing token', {
+          connectionId: connection.id,
+        });
+      }
+
+      // Decrypt access token
+      const accessToken = encryptionService.decrypt(connection.encrypted_token);
+
+      // Create GitHub API client with error handling
+      const octokit = GitHubApiService.createClient({
+        auth: accessToken,
+        baseUrl: connection.github_base_url,
+      });
+
+      try {
+        // Fetch recent events for the user (last 90 days)
+        const activity = await GitHubApiService.withErrorHandling(async () => {
+          const { data: events } = await octokit.activity.listEventsForAuthenticatedUser({
+            username: person.github_username,
+            per_page: 100,
+          });
+
+          // Filter to push events (commits)
+          const pushEvents = events.filter((event) => event.type === 'PushEvent');
+
+          // Extract commit information
+          return pushEvents.map((event: any) => ({
+            id: event.id,
+            type: event.type,
+            repo: event.repo.name,
+            created_at: event.created_at,
+            commits: event.payload?.commits?.length || 0,
+            commit_messages: event.payload?.commits?.map((c: any) => c.message).slice(0, 3) || [],
+          }));
+        });
+
+        // Update last_used_at timestamp
+        await connectionService.markAsUsed(connection.id);
+
+        return {
+          person_id: personId,
+          person_name: person.name,
+          github_username: person.github_username,
+          github_connected: true,
+          activity,
+          activity_count: activity.length,
+        };
+      } catch (error: any) {
+        // Return error with user-friendly message
+        return {
+          person_id: personId,
+          person_name: person.name,
+          github_username: person.github_username,
+          github_connected: true,
+          activity: [],
+          error: error.message || 'Failed to fetch GitHub activity',
+        };
+      }
+    }, res, 'Failed to fetch GitHub activity');
+
+    if (result) {
+      res.json(result);
+    }
+  }
 }

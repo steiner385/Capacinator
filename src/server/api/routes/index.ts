@@ -26,6 +26,7 @@ import notificationsRoutes from './notifications.js';
 import recommendationsRoutes from './recommendations.js';
 import authRoutes from './auth.js';
 import syncRoutes from './sync.js';
+import githubConnectionsRoutes from './github-connections.js';
 // Note: createAuditRoutes and getAuditService removed - unused imports
 import type { RequestWithLogging } from '../../middleware/requestLogger.js';
 
@@ -36,6 +37,9 @@ router.use('/auth', authRoutes);
 
 // Git Sync routes (Feature: 001-git-sync-integration)
 router.use('/sync', syncRoutes);
+
+// GitHub connections routes (Feature: 005-github-auth-user-link)
+router.use('/github-connections', githubConnectionsRoutes);
 
 // Mount all route modules
 router.use('/projects', projectRoutes);
