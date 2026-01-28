@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import { AuthorizationCode } from 'simple-oauth2';
-import { Octokit } from '@octokit/rest';
 import type {
   OAuthState,
   OAuthAuthorizationResponse,
@@ -194,6 +193,8 @@ export class GitHubOAuthService {
     githubBaseUrl?: string
   ): Promise<GitHubUserInfo> {
     try {
+      // Dynamic import to avoid ESM issues in Jest
+      const { Octokit } = await import('@octokit/rest');
       const octokit = new Octokit({
         auth: accessToken,
         baseUrl: githubBaseUrl || 'https://api.github.com',
@@ -234,6 +235,8 @@ export class GitHubOAuthService {
     githubBaseUrl?: string
   ): Promise<GitHubEmail[]> {
     try {
+      // Dynamic import to avoid ESM issues in Jest
+      const { Octokit } = await import('@octokit/rest');
       const octokit = new Octokit({
         auth: accessToken,
         baseUrl: githubBaseUrl || 'https://api.github.com',
@@ -338,5 +341,3 @@ export function getGitHubOAuthService(): GitHubOAuthService {
   }
   return gitHubOAuthServiceInstance;
 }
-
-export default getGitHubOAuthService();

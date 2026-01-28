@@ -1,7 +1,6 @@
 import { getDb } from '../database/index.js';
 import type { Knex } from 'knex';
 import { getEncryptionService } from './EncryptionService.js';
-import { Octokit } from '@octokit/rest';
 import { logger } from './logging/config.js';
 import type {
   GitHubConnection,
@@ -334,6 +333,8 @@ export class GitHubConnectionService {
     error?: string;
   }> {
     try {
+      // Dynamic import to avoid ESM issues in Jest
+      const { Octokit } = await import('@octokit/rest');
       const octokit = new Octokit({
         auth: token,
         baseUrl: githubBaseUrl || 'https://api.github.com',
@@ -484,6 +485,8 @@ export class GitHubConnectionService {
 
     // Try to use the token
     try {
+      // Dynamic import to avoid ESM issues in Jest
+      const { Octokit } = await import('@octokit/rest');
       const octokit = new Octokit({
         auth: token,
         baseUrl: connection.github_base_url,
