@@ -468,10 +468,8 @@ describe('PersonModal', () => {
     it('calls onClose when Cancel button is clicked', async () => {
       renderComponent();
 
-      await waitFor(() => {
-        const cancelButton = screen.getByRole('button', { name: /Cancel/i });
-        fireEvent.click(cancelButton);
-      });
+      const cancelButton = await screen.findByRole('button', { name: /Cancel/i });
+      fireEvent.click(cancelButton);
 
       await waitFor(() => {
         expect(mockOnClose).toHaveBeenCalled();
