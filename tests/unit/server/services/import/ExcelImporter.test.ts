@@ -190,7 +190,7 @@ describe('ExcelImporter', () => {
       onUpdate: jest.fn().mockReturnThis()
     };
     
-    mockTrx.schema.createTable.mockImplementation((tableName: string, callback: Function) => {
+    mockTrx.schema.createTable.mockImplementation((tableName: string, callback: (tableBuilder: any) => void) => {
       if (callback) {
         callback(mockTableBuilder);
       }

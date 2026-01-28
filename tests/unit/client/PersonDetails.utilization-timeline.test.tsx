@@ -46,7 +46,7 @@ jest.mock('../../../client/src/lib/api-client', () => ({
   }
 }));
 
-const { api } = require('../../../client/src/lib/api-client');
+import { api } from '../../../client/src/lib/api-client';
 
 // Mock fetch for utilization timeline
 global.fetch = jest.fn();
