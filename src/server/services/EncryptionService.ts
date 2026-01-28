@@ -178,6 +178,3 @@ export function getEncryptionService(): EncryptionService {
   }
   return encryptionServiceInstance;
 }
-
-// Export singleton instance as default
-export default getEncryptionService();
