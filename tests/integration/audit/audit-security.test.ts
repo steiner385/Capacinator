@@ -7,7 +7,26 @@ import { createEnhancedAuditMiddleware } from '../../../src/server/middleware/en
 import { Logger } from '../../../src/server/services/logging/Logger.js';
 
 // Mock the config module for security testing
-jest.mock('../../../src/server/config/auditConfig.js', () => ({
+jest.mock('../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: {
+      level: 'error',
+      serviceName: 'test',
+      enableTestLogs: false
+    },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 90,
+      sensitiveFields: ['password', 'token', 'secret', 'api_key', 'private_key', 'ssn', 'credit_card', 'bank_account', 'auth_token', 'refresh_token', 'session_id', 'csrf_token'],
+      enabledTables: ['secure_entities', 'user_data', 'financial_records']
+    }
+  }),
   getAuditConfig: () => ({
     maxHistoryEntries: 1000,
     retentionDays: 90, // Compliance requirement
@@ -20,7 +39,9 @@ jest.mock('../../../src/server/config/auditConfig.js', () => ({
   }),
   isTableAudited: (tableName: string) => {
     return ['secure_entities', 'user_data', 'financial_records'].includes(tableName);
-  }
+  },
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
 }));
 
 describe('Audit System Security and Compliance Tests', () => {

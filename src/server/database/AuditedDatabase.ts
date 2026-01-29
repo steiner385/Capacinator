@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { AuditService } from '../services/audit/AuditService.js';
-import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
+import { getAuditConfig, isTableAudited } from '../config/index.js';
 import { logger } from '../services/logging/config.js';
 
 // Table name mapping for audit configuration

@@ -1,11 +1,31 @@
 import { createAutoAuditMiddleware, createEnhancedAuditMiddleware } from '../enhancedAuditMiddleware.js';
 import { AuditService } from '../../services/audit/AuditService.js';
-import { getAuditConfig, isTableAudited } from '../../config/auditConfig.js';
+import { getAuditConfig, isTableAudited } from '../../config/index.js';
 import type { Knex } from 'knex';
 
 // Mock dependencies
 jest.mock('../../services/audit/AuditService');
-jest.mock('../../config/auditConfig');
+jest.mock('../../config/index', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password', 'token', 'secret'],
+      enabledTables: ['projects', 'people', 'project_assignments']
+    }
+  }),
+  getAuditConfig: jest.fn(),
+  isTableAudited: jest.fn(),
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
+}));
 
 describe('enhancedAuditMiddleware', () => {
   let mockDb: any;

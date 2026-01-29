@@ -6,6 +6,31 @@ jest.mock('../../../../../src/server/database/index.js', () => ({
   db: jest.fn()
 }));
 
+// Mock the config module to provide consistent test values
+jest.mock('../../../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    auth: {
+      jwtSecret: 'test-secret',
+      jwtExpiresIn: '15m',
+      jwtRefreshExpiresIn: '7d'
+    },
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password', 'token', 'secret'],
+      enabledTables: ['projects', 'people']
+    }
+  }),
+  resetConfig: () => {}
+}));
+
 import { AuthService, AuthError } from '../../../../../src/server/services/auth/AuthService';
 
 describe('AuthService', () => {

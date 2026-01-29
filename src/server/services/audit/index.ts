@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { AuditService } from './AuditService.js';
-import { getAuditConfig, isAuditEnabled } from '../../config/auditConfig.js';
+import { getAuditConfig, isAuditEnabled } from '../../config/index.js';
 import { logger } from '../logging/config.js';
 
 let auditServiceInstance: AuditService | null = null;

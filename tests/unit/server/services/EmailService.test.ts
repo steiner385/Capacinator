@@ -1,5 +1,26 @@
 import { describe, test, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 
+// Mock logging first to prevent getConfig from being called during module load
+jest.mock('../../../../src/server/services/logging/config.js', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  }
+}));
+
+// Mutable mock email config state - needs to be defined before jest.mock for config
+const mockEmailConfigState = {
+  host: 'smtp.test.com',
+  port: 587,
+  secure: false,
+  user: 'test@test.com',
+  pass: 'testpass',
+  from: 'noreply@test.com',
+  appUrl: 'http://localhost:3000'
+};
+
 // Mock database
 const createMockQuery = () => {
   const query: any = {
@@ -53,6 +74,27 @@ const mockNodemailer = {
 
 jest.mock('nodemailer', () => mockNodemailer);
 
+// Mock config module - uses mutable mockEmailConfigState defined above
+jest.mock('../../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    email: mockEmailConfigState,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password', 'token', 'secret'],
+      enabledTables: ['projects', 'people']
+    }
+  }),
+  resetConfig: () => {}
+}));
+
 import { EmailService } from '../../../../src/server/services/EmailService';
 
 describe('EmailService', () => {
@@ -84,14 +126,14 @@ describe('EmailService', () => {
   });
 
   describe('constructor and initialization', () => {
-    it('should initialize with SMTP configuration from environment', () => {
+    it('should initialize with SMTP configuration from config module', () => {
       expect((emailService as any).config).toEqual({
         host: 'smtp.test.com',
         port: 587,
         secure: false,
         auth: {
-          user: 'test@example.com',
-          pass: 'password'
+          user: 'test@test.com',
+          pass: 'testpass'
         },
         from: 'noreply@test.com'
       });
@@ -103,18 +145,25 @@ describe('EmailService', () => {
         port: 587,
         secure: false,
         auth: {
-          user: 'test@example.com',
-          pass: 'password'
+          user: 'test@test.com',
+          pass: 'testpass'
         }
       });
     });
 
     it('should not create transporter when SMTP credentials are missing', () => {
-      process.env.SMTP_USER = '';
-      process.env.SMTP_PASS = '';
-      
+      // Temporarily clear credentials in mock config
+      const originalUser = mockEmailConfigState.user;
+      const originalPass = mockEmailConfigState.pass;
+      mockEmailConfigState.user = '';
+      mockEmailConfigState.pass = '';
+
       const serviceWithoutCreds = new EmailService();
       expect(serviceWithoutCreds.isConfigured()).toBe(false);
+
+      // Restore
+      mockEmailConfigState.user = originalUser;
+      mockEmailConfigState.pass = originalPass;
     });
   });
 

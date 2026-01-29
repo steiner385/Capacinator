@@ -1,3 +1,44 @@
+// Mock logging first to prevent getConfig from being called during module load
+jest.mock('../logging/config.js', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  }
+}));
+
+// Mock config module with mutable state
+const mockEmailConfig = {
+  host: 'smtp.test.com',
+  port: 587,
+  secure: false,
+  user: 'test@test.com',
+  pass: 'testpass',
+  from: 'noreply@test.com',
+  appUrl: 'http://localhost:3000'
+};
+
+jest.mock('../../config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    email: mockEmailConfig,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password', 'token', 'secret'],
+      enabledTables: ['projects', 'people']
+    }
+  }),
+  resetConfig: () => {}
+}));
+
 import { EmailService } from '../EmailService.js';
 import { getAuditedDb } from '../../database/index.js';
 import nodemailer from 'nodemailer';
@@ -43,20 +84,19 @@ describe('EmailService', () => {
 
     (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
 
-    // Set environment variables for email config
-    process.env.SMTP_HOST = 'smtp.test.com';
-    process.env.SMTP_PORT = '587';
-    process.env.SMTP_USER = 'test@test.com';
-    process.env.SMTP_PASS = 'testpass';
-    process.env.SMTP_FROM = 'noreply@test.com';
+    // Reset mock email config to default values
+    mockEmailConfig.host = 'smtp.test.com';
+    mockEmailConfig.port = 587;
+    mockEmailConfig.secure = false;
+    mockEmailConfig.user = 'test@test.com';
+    mockEmailConfig.pass = 'testpass';
+    mockEmailConfig.from = 'noreply@test.com';
+    mockEmailConfig.appUrl = 'http://localhost:3000';
   });
 
   afterEach(() => {
-    delete process.env.SMTP_HOST;
-    delete process.env.SMTP_PORT;
-    delete process.env.SMTP_USER;
-    delete process.env.SMTP_PASS;
-    delete process.env.SMTP_FROM;
+    // Clean up mock state if needed
+    jest.clearAllMocks();
   });
 
   describe('getEmailTemplate', () => {
@@ -421,15 +461,21 @@ describe('EmailService', () => {
     });
 
     it('should throw error when email service not configured', async () => {
-      // Create service without SMTP config
-      delete process.env.SMTP_USER;
-      delete process.env.SMTP_PASS;
+      // Temporarily set empty credentials to simulate unconfigured state
+      const originalUser = mockEmailConfig.user;
+      const originalPass = mockEmailConfig.pass;
+      mockEmailConfig.user = '';
+      mockEmailConfig.pass = '';
 
       const unconfiguredService = new EmailService();
 
       await expect(
         unconfiguredService.sendTestEmail('test@example.com')
       ).rejects.toThrow('Email service not configured');
+
+      // Restore
+      mockEmailConfig.user = originalUser;
+      mockEmailConfig.pass = originalPass;
     });
 
     it('should throw error when sending fails', async () => {
@@ -448,11 +494,18 @@ describe('EmailService', () => {
     });
 
     it('should return false when SMTP is not configured', () => {
-      delete process.env.SMTP_USER;
-      delete process.env.SMTP_PASS;
+      // Temporarily set empty credentials
+      const originalUser = mockEmailConfig.user;
+      const originalPass = mockEmailConfig.pass;
+      mockEmailConfig.user = '';
+      mockEmailConfig.pass = '';
 
       const service = new EmailService();
       expect(service.isConfigured()).toBe(false);
+
+      // Restore
+      mockEmailConfig.user = originalUser;
+      mockEmailConfig.pass = originalPass;
     });
   });
 
@@ -476,13 +529,20 @@ describe('EmailService', () => {
     });
 
     it('should return false when transporter not configured', async () => {
-      delete process.env.SMTP_USER;
-      delete process.env.SMTP_PASS;
+      // Temporarily set empty credentials
+      const originalUser = mockEmailConfig.user;
+      const originalPass = mockEmailConfig.pass;
+      mockEmailConfig.user = '';
+      mockEmailConfig.pass = '';
 
       const service = new EmailService();
       const result = await service.testConnection();
 
       expect(result).toBe(false);
+
+      // Restore
+      mockEmailConfig.user = originalUser;
+      mockEmailConfig.pass = originalPass;
     });
   });
 });

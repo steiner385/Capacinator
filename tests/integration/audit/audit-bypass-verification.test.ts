@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import { db } from '../setup.js';
 import { createAuditedDatabase } from '../../../src/server/database/AuditedDatabase.js';
 import { AuditService } from '../../../src/server/services/audit/AuditService.js';
-import { getAuditConfig } from '../../../src/server/config/auditConfig.js';
+import { getAuditConfig } from '../../../src/server/config/index.js';
 
 /**
  * Audit Bypass Verification Tests

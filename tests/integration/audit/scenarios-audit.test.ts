@@ -7,7 +7,22 @@ import { createEnhancedAuditMiddleware } from '../../../src/server/middleware/en
 import { Logger } from '../../../src/server/services/logging/Logger.js';
 
 // Mock the config module
-jest.mock('../../../src/server/config/auditConfig.js', () => ({
+jest.mock('../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password', 'token'],
+      enabledTables: ['scenarios', 'scenario_project_assignments', 'scenario_merge_conflicts']
+    }
+  }),
   getAuditConfig: () => ({
     maxHistoryEntries: 1000,
     retentionDays: 365,
@@ -16,7 +31,9 @@ jest.mock('../../../src/server/config/auditConfig.js', () => ({
   }),
   isTableAudited: (tableName: string) => {
     return ['scenarios', 'scenario_project_assignments', 'scenario_merge_conflicts'].includes(tableName);
-  }
+  },
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
 }));
 
 describe('ScenariosController Audit Integration Tests', () => {

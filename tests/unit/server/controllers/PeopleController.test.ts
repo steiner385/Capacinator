@@ -9,7 +9,7 @@ jest.mock('../../../../src/server/middleware/enhancedAuditMiddleware', () => ({
   auditModelChanges: mockAuditModelChanges
 }));
 
-jest.mock('../../../../src/server/config/auditConfig', () => ({
+jest.mock('../../../../src/server/config/index', () => ({
   isTableAudited: jest.fn().mockReturnValue(true)
 }));
 

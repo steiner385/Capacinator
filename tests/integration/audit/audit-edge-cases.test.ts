@@ -7,7 +7,22 @@ import { createEnhancedAuditMiddleware } from '../../../src/server/middleware/en
 import { Logger } from '../../../src/server/services/logging/Logger.js';
 
 // Mock the config module
-jest.mock('../../../src/server/config/auditConfig.js', () => ({
+jest.mock('../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 5,
+      retentionDays: 1,
+      sensitiveFields: ['password', 'token', 'secret', 'api_key'],
+      enabledTables: ['test_entities', 'audit_test_table']
+    }
+  }),
   getAuditConfig: () => ({
     maxHistoryEntries: 5, // Low limit for testing history cleanup
     retentionDays: 1, // Short retention for testing cleanup
@@ -16,7 +31,9 @@ jest.mock('../../../src/server/config/auditConfig.js', () => ({
   }),
   isTableAudited: (tableName: string) => {
     return ['test_entities', 'audit_test_table'].includes(tableName);
-  }
+  },
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
 }));
 
 describe('Audit System Edge Cases and Error Scenarios', () => {
@@ -214,7 +231,7 @@ describe('Audit System Edge Cases and Error Scenarios', () => {
         accents: 'Café résumé naïve façade',
         special: '"quotes" \'apostrophes\' & <tags> / slashes \\ backslashes',
         newlines: 'line1\nline2\r\nline3\ttab',
-        json: '{"nested": "json", "with": "special \\\"chars\\\""}',
+        json: '{"nested": "json", "with": "special \\"chars\\""}',
         sql: "'; DROP TABLE users; --",
         control: '\x00\x01\x02\x03'
       })

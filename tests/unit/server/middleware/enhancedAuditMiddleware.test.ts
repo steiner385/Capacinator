@@ -2,11 +2,31 @@ import { describe, test, expect, jest, beforeEach } from '@jest/globals';
 import { Request, Response, NextFunction } from 'express';
 import { enhancedAuditMiddleware, autoAuditMiddleware } from '../../../../src/server/middleware/enhancedAuditMiddleware.js';
 import { AuditService } from '../../../../src/server/services/audit/AuditService.js';
-import { getAuditConfig, isTableAudited } from '../../../../src/server/config/auditConfig.js';
+import { getAuditConfig, isTableAudited } from '../../../../src/server/config/index.js';
 import { db } from '../../../../src/server/database/index.js';
 
 // Mock dependencies
-jest.mock('../../../../src/server/config/auditConfig.js');
+jest.mock('../../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password'],
+      enabledTables: ['projects', 'people']
+    }
+  }),
+  getAuditConfig: jest.fn(),
+  isTableAudited: jest.fn(),
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
+}));
 jest.mock('../../../../src/server/database/index.js');
 
 describe('Enhanced Audit Middleware', () => {
