@@ -537,7 +537,7 @@ export class ReportDataService {
   private calculateUtilizationStats(
     personUtilizationData: Record<string, unknown>[]
   ): Record<string, number> {
-    const utilizationStats = personUtilizationData.reduce((acc: Record<string, number>, person) => {
+    const utilizationStats: Record<string, number> = personUtilizationData.reduce<Record<string, number>>((acc, person) => {
       const status = person.utilization_status as string;
       acc[status] = (acc[status] || 0) + 1;
       return acc;
@@ -682,7 +682,8 @@ export class ReportDataService {
       return acc;
     }, {});
 
-    for (const [projectId, demands] of Object.entries(demandsByProject)) {
+    for (const [projectId, demandsRaw] of Object.entries(demandsByProject)) {
+      const demands = demandsRaw as Record<string, unknown>[];
       const projectHealthRecord = projectHealth.find((p) => p.project_id === projectId);
 
       if (!projectHealthRecord || projectHealthRecord.allocation_health === 'UNASSIGNED') {
