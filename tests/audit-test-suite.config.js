@@ -46,7 +46,7 @@ module.exports = {
     'src/server/middleware/*audit*.ts',
     'src/server/middleware/enhancedAudit*.ts',
     'src/server/api/controllers/Enhanced*.ts',
-    'src/server/config/auditConfig.ts'
+    'src/server/config/index.ts'
   ],
   coverageThreshold: {
     global: {

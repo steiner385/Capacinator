@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { AuditService } from '../services/audit/AuditService.js';
-import { getAuditConfig, isTableAudited } from '../config/auditConfig.js';
+import { getAuditConfig, isTableAudited } from '../config/index.js';
 import { RequestWithLogging } from './requestLogger.js';
 import { logger } from '../services/logging/config.js';
 

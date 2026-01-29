@@ -7,7 +7,22 @@ import { Logger } from '../../../src/server/services/logging/Logger.js';
 import { createEnhancedAuditMiddleware, createAutoAuditMiddleware } from '../../../src/server/middleware/enhancedAuditMiddleware.js';
 
 // Mock the config module
-jest.mock('../../../src/server/config/auditConfig.js', () => ({
+jest.mock('../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 1000,
+      retentionDays: 365,
+      sensitiveFields: ['password', 'token', 'secret'],
+      enabledTables: ['projects', 'people', 'project_assignments']
+    }
+  }),
   getAuditConfig: () => ({
     maxHistoryEntries: 1000,
     retentionDays: 365,
@@ -16,7 +31,9 @@ jest.mock('../../../src/server/config/auditConfig.js', () => ({
   }),
   isTableAudited: (tableName: string) => {
     return ['projects', 'people', 'project_assignments'].includes(tableName);
-  }
+  },
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
 }));
 
 describe('Enhanced Audit Middleware Integration Tests - Clean', () => {

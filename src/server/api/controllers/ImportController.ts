@@ -4,6 +4,7 @@ import { ServiceContainer } from '../../services/ServiceContainer.js';
 import { ExcelImporter } from '../../services/import/ExcelImporter.js';
 import { ExcelImporterV2 } from '../../services/import/ExcelImporterV2.js';
 import { logger } from '../../services/logging/config.js';
+import { getConfig } from '../../config/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs/promises';
@@ -123,7 +124,7 @@ export class ImportController extends BaseController {
       }
     },
     limits: {
-      fileSize: parseInt(process.env.MAX_FILE_SIZE || '52428800', 10) // 50MB default
+      fileSize: getConfig().server.maxFileSize
     }
   });
 

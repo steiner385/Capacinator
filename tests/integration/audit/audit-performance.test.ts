@@ -7,7 +7,22 @@ import { createEnhancedAuditMiddleware } from '../../../src/server/middleware/en
 import { Logger } from '../../../src/server/services/logging/Logger.js';
 
 // Mock the config module for performance testing
-jest.mock('../../../src/server/config/auditConfig.js', () => ({
+jest.mock('../../../src/server/config/index.js', () => ({
+  getConfig: () => ({
+    env: 'test',
+    isProduction: false,
+    isDevelopment: false,
+    isTest: true,
+    isE2E: false,
+    logging: { level: 'error', serviceName: 'test', enableTestLogs: false },
+    audit: {
+      enabled: true,
+      maxHistoryEntries: 100,
+      retentionDays: 30,
+      sensitiveFields: ['password', 'token'],
+      enabledTables: ['performance_test_entities']
+    }
+  }),
   getAuditConfig: () => ({
     maxHistoryEntries: 100, // Higher limit for performance testing
     retentionDays: 30,
@@ -16,7 +31,9 @@ jest.mock('../../../src/server/config/auditConfig.js', () => ({
   }),
   isTableAudited: (tableName: string) => {
     return ['performance_test_entities'].includes(tableName);
-  }
+  },
+  isAuditEnabled: () => true,
+  resetConfig: () => {}
 }));
 
 describe('Audit System Performance and Load Tests', () => {

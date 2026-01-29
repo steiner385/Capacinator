@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import { db } from '../setup.js';
 import { createAuditedDatabase } from '../../../src/server/database/AuditedDatabase.js';
 import { AuditService } from '../../../src/server/services/audit/AuditService.js';
-import { getAuditConfig } from '../../../src/server/config/auditConfig.js';
+import { getAuditConfig } from '../../../src/server/config/index.js';
 import { AssignmentRecalculationService } from '../../../src/server/services/AssignmentRecalculationService.js';
 import { ProjectPhaseCascadeService } from '../../../src/server/services/ProjectPhaseCascadeService.js';
 import { EmailService } from '../../../src/server/services/EmailService.js';

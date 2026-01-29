@@ -2,7 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import { db } from '../setup.js';
 import { createMigrationAuditWrapper, withMigrationAudit, withSeedAudit } from '../../../src/server/database/MigrationAuditWrapper.js';
 import { AuditService } from '../../../src/server/services/audit/AuditService.js';
-import { getAuditConfig } from '../../../src/server/config/auditConfig.js';
+import { getAuditConfig } from '../../../src/server/config/index.js';
 
 /**
  * Migration and Seed Audit Tests

@@ -6,6 +6,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+import { getConfig } from '../config/index.js';
 
 /**
  * Middleware to require GitHub credentials for sync operations
@@ -16,8 +17,8 @@ export function requireGitAuth() {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Check if Git sync feature is enabled
-      const gitSyncEnabled = process.env.ENABLE_GIT_SYNC === 'true';
-      if (!gitSyncEnabled) {
+      const config = getConfig();
+      if (!config.gitSync.enabled) {
         return res.status(503).json({
           success: false,
           error: {
@@ -59,7 +60,7 @@ export function requireGitAuth() {
       // Attach credentials to request for use in controllers
       req.gitCredentials = {
         token,
-        repositoryUrl: process.env.GIT_REPOSITORY_URL || '',
+        repositoryUrl: config.gitSync.repositoryUrl,
       };
 
       next();
@@ -83,15 +84,14 @@ export function requireGitAuth() {
  */
 export function checkGitSyncAvailable() {
   return (req: Request, res: Response, next: NextFunction) => {
-    const gitSyncEnabled = process.env.ENABLE_GIT_SYNC === 'true';
-    const repositoryUrl = process.env.GIT_REPOSITORY_URL;
+    const config = getConfig();
 
-    if (!gitSyncEnabled) {
+    if (!config.gitSync.enabled) {
       req.gitSyncStatus = {
         available: false,
         reason: 'Feature not enabled',
       };
-    } else if (!repositoryUrl) {
+    } else if (!config.gitSync.repositoryUrl) {
       req.gitSyncStatus = {
         available: false,
         reason: 'Repository URL not configured',
@@ -99,7 +99,7 @@ export function checkGitSyncAvailable() {
     } else {
       req.gitSyncStatus = {
         available: true,
-        repositoryUrl,
+        repositoryUrl: config.gitSync.repositoryUrl,
       };
     }
 

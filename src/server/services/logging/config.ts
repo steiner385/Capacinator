@@ -1,79 +1,67 @@
 import { LogLevel, LoggerConfig, Logger } from './Logger.js';
+import { getConfig, resetConfig as resetCentralConfig } from '../../config/index.js';
+
+/**
+ * Convert string log level to enum
+ */
+function toLogLevel(level: string): LogLevel {
+  switch (level) {
+    case 'error':
+      return LogLevel.ERROR;
+    case 'warn':
+      return LogLevel.WARN;
+    case 'info':
+      return LogLevel.INFO;
+    case 'http':
+      return LogLevel.HTTP;
+    case 'debug':
+      return LogLevel.DEBUG;
+    default:
+      return LogLevel.INFO;
+  }
+}
 
 export function getLoggerConfig(): LoggerConfig {
-  const logLevelStr = process.env.LOG_LEVEL?.toLowerCase() || 'info';
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isTest = process.env.NODE_ENV === 'test';
+  const config = getConfig();
 
-  // Parse log level
-  let level: LogLevel;
-  switch (logLevelStr) {
-    case 'error':
-      level = LogLevel.ERROR;
-      break;
-    case 'warn':
-    case 'warning':
-      level = LogLevel.WARN;
-      break;
-    case 'info':
-      level = LogLevel.INFO;
-      break;
-    case 'http':
-      level = LogLevel.HTTP;
-      break;
-    case 'debug':
-      level = LogLevel.DEBUG;
-      break;
-    default:
-      level = LogLevel.INFO;
-  }
-
-  // In test mode, reduce logging unless explicitly set
-  if (isTest && !process.env.LOG_LEVEL) {
-    level = LogLevel.ERROR;
-  }
-
-  const config: LoggerConfig = {
-    level,
-    service: process.env.SERVICE_NAME || 'capacinator',
-    enableConsole: !isTest || process.env.ENABLE_TEST_LOGS === 'true',
-    enableFile: isProduction,
-    logDirectory: process.env.LOG_DIRECTORY || '/tmp/capacinator-logs',
-    maxFileSize: parseInt(process.env.LOG_MAX_FILE_SIZE || '10485760', 10), // 10MB
-    maxFiles: parseInt(process.env.LOG_MAX_FILES || '10', 10),
-    enableStructuredLogs: process.env.LOG_FORMAT === 'json' || isProduction,
+  const loggerConfig: LoggerConfig = {
+    level: toLogLevel(config.logging.level),
+    service: config.logging.serviceName,
+    enableConsole: !config.isTest || config.logging.enableTestLogs,
+    enableFile: config.isProduction,
+    logDirectory: config.logging.directory,
+    maxFileSize: config.logging.maxFileSize,
+    maxFiles: config.logging.maxFiles,
+    enableStructuredLogs: config.logging.format === 'json',
     redactedFields: [
-      'password',
-      'token',
-      'secret',
-      'key',
-      'hash',
+      // Include audit sensitive fields
+      ...config.audit.sensitiveFields,
+      // Additional logging-specific fields
       'authorization',
       'cookie',
       'jwt',
       'session',
       'credit_card',
       'ssn',
-      'email', // Only in debug mode
+      'email',
       'phone'
     ]
   };
 
-  // Validate configuration
-  if (config.maxFileSize < 1024) {
-    throw new Error('LOG_MAX_FILE_SIZE must be at least 1024 bytes');
-  }
-
-  if (config.maxFiles < 1) {
-    throw new Error('LOG_MAX_FILES must be at least 1');
-  }
-
-  return config;
+  return loggerConfig;
 }
 
 export function createLogger() {
   const config = getLoggerConfig();
   return Logger.getInstance(config);
+}
+
+/**
+ * Reset both the central config and recreate the logger.
+ * Only use in tests.
+ */
+export function resetLoggerConfig(): void {
+  resetCentralConfig();
 }
 
 // Export singleton instance

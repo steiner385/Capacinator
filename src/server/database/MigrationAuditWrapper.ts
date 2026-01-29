@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { getAuditService } from '../services/audit/index.js';
-import { isTableAudited } from '../config/auditConfig.js';
+import { isTableAudited } from '../config/index.js';
 import { logger } from '../services/logging/config.js';
 
 export interface MigrationAuditContext {

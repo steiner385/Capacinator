@@ -1,43 +1,45 @@
-import { config } from 'dotenv';
+import { config as dotenvConfig } from 'dotenv';
 import { createExpressApp } from './app.js';
 import { initializeDatabase } from './database/index.js';
 import { initializeE2EDatabase } from './database/init-e2e.js';
 import { setupGlobalErrorHandlers } from './middleware/enhancedErrorHandler.js';
 import { logger } from './services/logging/config.js';
+import { getConfig } from './config/index.js';
 
-// Load environment variables
+// Load environment variables from appropriate .env file
+// This must happen before getConfig() is called
+const nodeEnv = process.env.NODE_ENV || 'development';
 let envFile = '.env';
-if (process.env.NODE_ENV === 'development') {
+if (nodeEnv === 'development') {
   envFile = '.env.development';
-} else if (process.env.NODE_ENV === 'test') {
+} else if (nodeEnv === 'test') {
   envFile = '.env.test';
-} else if (process.env.NODE_ENV === 'e2e') {
+} else if (nodeEnv === 'e2e') {
   envFile = '.env.e2e';
 }
-config({ path: envFile });
+dotenvConfig({ path: envFile });
 
-const PORT = process.env.PORT || 8081;
-const isDev = process.env.NODE_ENV === 'development';
-const isE2E = process.env.NODE_ENV === 'e2e';
+// Now load the validated configuration
+const appConfig = getConfig();
 
 // Setup global error handlers for enhanced logging
 setupGlobalErrorHandlers();
 
 // For notification system stability
-if (isDev) {
+if (appConfig.isDevelopment) {
   logger.info('Notification scheduler initialized');
 }
 
 async function startServer() {
   try {
-    logger.info('Starting Capacinator server', { 
-      port: PORT, 
-      environment: process.env.NODE_ENV 
+    logger.info('Starting Capacinator server', {
+      port: appConfig.server.port,
+      environment: appConfig.env
     });
-    
+
     // Initialize database
-    logger.info('Initializing database', { environment: process.env.NODE_ENV });
-    if (isE2E) {
+    logger.info('Initializing database', { environment: appConfig.env });
+    if (appConfig.isE2E) {
       const e2eDb = await initializeE2EDatabase();
       // Set global reference for E2E database
       global.__E2E_DB__ = e2eDb;
@@ -46,25 +48,25 @@ async function startServer() {
       await initializeDatabase();
     }
     logger.info('Database ready');
-    
+
     // Create Express app
     const app = await createExpressApp();
-    
+
     // Start the server
-    const server = app.listen(PORT, () => {
-      logger.info('Server running', { 
-        port: PORT,
-        healthCheck: `http://localhost:${PORT}/api/health`,
-        environment: process.env.NODE_ENV
+    const server = app.listen(appConfig.server.port, () => {
+      logger.info('Server running', {
+        port: appConfig.server.port,
+        healthCheck: `http://localhost:${appConfig.server.port}/api/health`,
+        environment: appConfig.env
       });
-      
-      if (isDev) {
+
+      if (appConfig.isDevelopment) {
         logger.info('Development mode', {
           frontendUrl: 'http://localhost:3120'
         });
       } else {
         logger.info('Production mode', {
-          applicationUrl: `http://localhost:${PORT}`
+          applicationUrl: `http://localhost:${appConfig.server.port}`
         });
       }
     });
@@ -88,8 +90,8 @@ async function startServer() {
 
   } catch (error) {
     logger.error('Failed to start server', error instanceof Error ? error : undefined, {
-      port: PORT,
-      environment: process.env.NODE_ENV
+      port: appConfig.server.port,
+      environment: appConfig.env
     });
     console.error('SERVER STARTUP ERROR:', error);
     // TEMPORARILY COMMENTED FOR DEBUGGING - DO NOT COMMIT
