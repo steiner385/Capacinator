@@ -518,6 +518,61 @@ describe('ScenarioExporter', () => {
       // Should attempt recovery
       expect(result).toBeDefined();
     });
+
+    test('should recover JSON with escape sequences in strings', async () => {
+      // JSON with escaped characters - valid JSON that tests escape handling
+      const jsonWithEscapes = JSON.stringify({
+        schemaVersion: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        exportedBy: 'test',
+        scenarioId: 'working',
+        data: [{ id: 1, name: 'Test \\"quoted\\" name', description: 'Line1\\nLine2' }],
+      });
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', jsonWithEscapes);
+      setupScenarioFiles('working', {
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.imported.projects).toBe(1);
+    });
+
+    test('should recover partial records from corrupted JSON array', async () => {
+      // JSON with data array containing some parseable records
+      const partiallyCorrupted = '{"schemaVersion":"1.0.0","data":[{"id":1,"name":"Valid"},CORRUPTED,{"id":2,"name":"AlsoValid"}]}';
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', partiallyCorrupted);
+      setupScenarioFiles('working', {
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+      // Should attempt recovery of valid records
+      expect(result).toBeDefined();
+    });
+
+    test('should handle JSON with backslash in values', async () => {
+      // Tests escape sequence handling in recoverJSONArray
+      const jsonWithBackslash = JSON.stringify({
+        schemaVersion: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        exportedBy: 'test',
+        scenarioId: 'working',
+        data: [{ id: 1, name: 'Path: C:\\Users\\test', path: '/some/path' }],
+      });
+      mockFs.files.set('/test/repo/scenarios/working/projects.json', jsonWithBackslash);
+      setupScenarioFiles('working', {
+        people: [],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+      expect(result.imported.projects).toBe(1);
+    });
   });
 
   describe('generateCommitMessage', () => {
@@ -701,6 +756,45 @@ describe('ScenarioExporter', () => {
         expect.anything(),
         expect.objectContaining({ syncOperationId: 'sync-456' })
       );
+    });
+
+    test('should detect assignment conflicts when local and remote assignments differ', async () => {
+      const assignmentConflict = {
+        id: 'assignment-conflict-1',
+        entityType: 'assignment',
+        entityId: 1,
+        field: 'allocation_percentage',
+        localValue: 50,
+        remoteValue: 75,
+      };
+      mockDetectConflicts.mockReturnValue([assignmentConflict]);
+
+      setupScenarioFiles('working', {
+        projects: [],
+        people: [],
+        assignments: [createTestAssignment({ id: 1, allocation_percentage: 75 })],
+        phases: [],
+      });
+      mockDbState.project_assignments = [createTestAssignment({ id: 1, allocation_percentage: 50 })];
+
+      const conflicts = await exporter.detectConflictsAfterPull('working', 'sync-assignment');
+
+      expect(conflicts).toHaveLength(1);
+      expect(conflicts[0].entityType).toBe('assignment');
+    });
+
+    test('should handle error during conflict detection gracefully', async () => {
+      // Simulate read error by not setting up files and making readJSON throw
+      mockFs.simulateError = {
+        operation: 'readFile',
+        path: 'projects.json',
+        error: new Error('File read error'),
+      };
+
+      const conflicts = await exporter.detectConflictsAfterPull('working', 'sync-error');
+
+      // Should return empty array on error, not throw
+      expect(conflicts).toEqual([]);
     });
   });
 
@@ -934,6 +1028,99 @@ describe('ScenarioExporter', () => {
 
       // Some projects should have been imported
       expect(result.imported.projects).toBeGreaterThan(0);
+    });
+
+    test('should skip invalid people records during import and report errors', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const schemas = require('../../../../../../shared/types/json-schemas.js');
+      let personCallCount = 0;
+      schemas.PersonJSONSchema.parse = jest.fn().mockImplementation((data: any) => {
+        personCallCount++;
+        if (personCallCount === 2) {
+          throw new Error('Person validation failed');
+        }
+        return data;
+      });
+
+      setupScenarioFiles('working', {
+        projects: [],
+        people: [
+          createTestPerson({ id: 1 }),
+          createTestPerson({ id: 2 }), // This will fail validation
+          createTestPerson({ id: 3 }),
+        ],
+        assignments: [],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+
+      // Should have imported 2 of 3 people
+      expect(result.imported.people).toBe(2);
+      // Should report error for skipped records
+      expect(result.errors.some(e => e.entity === 'people' && e.recordsSkipped > 0)).toBe(true);
+    });
+
+    test('should skip invalid assignment records during import and report errors', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const schemas = require('../../../../../../shared/types/json-schemas.js');
+      let assignmentCallCount = 0;
+      schemas.AssignmentJSONSchema.parse = jest.fn().mockImplementation((data: any) => {
+        assignmentCallCount++;
+        if (assignmentCallCount === 1) {
+          throw new Error('Assignment validation failed');
+        }
+        return data;
+      });
+
+      setupScenarioFiles('working', {
+        projects: [],
+        people: [],
+        assignments: [
+          createTestAssignment({ id: 1 }), // This will fail validation
+          createTestAssignment({ id: 2 }),
+          createTestAssignment({ id: 3 }),
+        ],
+        phases: [],
+      });
+
+      const result = await exporter.importFromJSON('working');
+
+      // Should have imported 2 of 3 assignments
+      expect(result.imported.assignments).toBe(2);
+      // Should report error for skipped records
+      expect(result.errors.some(e => e.entity === 'assignments' && e.recordsSkipped > 0)).toBe(true);
+    });
+
+    test('should skip invalid project_phases records during import and report errors', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const schemas = require('../../../../../../shared/types/json-schemas.js');
+      let phaseCallCount = 0;
+      schemas.ProjectPhaseJSONSchema.parse = jest.fn().mockImplementation((data: any) => {
+        phaseCallCount++;
+        if (phaseCallCount === 2) {
+          throw new Error('Phase validation failed');
+        }
+        return data;
+      });
+
+      setupScenarioFiles('working', {
+        projects: [],
+        people: [],
+        assignments: [],
+        phases: [
+          createTestPhase({ id: 1 }),
+          createTestPhase({ id: 2 }), // This will fail validation
+          createTestPhase({ id: 3 }),
+        ],
+      });
+
+      const result = await exporter.importFromJSON('working');
+
+      // Should have imported 2 of 3 phases
+      expect(result.imported.phases).toBe(2);
+      // Should report error for skipped records
+      expect(result.errors.some(e => e.entity === 'project_phases' && e.recordsSkipped > 0)).toBe(true);
     });
   });
 
