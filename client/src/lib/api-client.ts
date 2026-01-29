@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { logger } from '../services/logger';
 import type {
   Location,
@@ -12,6 +12,106 @@ import type {
   Scenario,
   PaginationParams,
   PaginatedResponse,
+  // API Response types
+  ProjectDemandsResponse,
+  PhaseValidationResponse,
+  CustomPhaseValidationResponse,
+  TemplateComplianceResponse,
+  CustomPhaseResponse,
+  ProjectPhaseUpdateResponse,
+  ProjectHealthResponse,
+  PersonRoleResponse,
+  UtilizationResponse,
+  AvailabilityResponse,
+  RolePlannerResponse,
+  CapacityGapsResponse,
+  AssignmentConflictsResponse,
+  AssignmentSuggestionsResponse,
+  AssignmentTimelineResponse,
+  ResourceTemplatesListResponse,
+  ResourceTemplateResponse,
+  ResourceTemplateBulkResponse,
+  ResourceTemplateCopyResponse,
+  TemplatesListResponse,
+  ResourceTemplateSummaryResponse,
+  ProjectTypeResourceTemplatesResponse,
+  AvailabilityCalendarResponse,
+  AvailabilityForecastResponse,
+  DemandSummaryResponse,
+  DemandOverrideResponse,
+  DemandForecastResponse,
+  DemandGapsResponse,
+  DemandScenarioResponse,
+  DashboardReportResponse,
+  CapacityReportResponse,
+  DemandReportResponse,
+  UtilizationReportResponse,
+  GapsReportResponse,
+  ProjectsReportResponse,
+  TimelineReportResponse,
+  ImportExcelResponse,
+  ImportValidationResponse,
+  ImportSettingsResponse,
+  ImportHistoryResponse,
+  ImportAnalysisResponse,
+  ProjectTypeHierarchyResponse,
+  ProjectTypePhasesResponse,
+  ProjectPhasesListResponse,
+  ProjectPhaseResponse,
+  ProjectPhasesBulkResponse,
+  ProjectPhaseDependenciesListResponse,
+  ProjectPhaseDependencyResponse,
+  CascadeCalculationResponse,
+  CascadeApplicationResponse,
+  ProjectAllocationsResponse,
+  ProjectAllocationsInitResponse,
+  ProjectAllocationOverrideResponse,
+  ScenarioAssignmentsResponse,
+  ScenarioComparisonResponse,
+  AuditHistoryResponse,
+  AuditRecentResponse,
+  AuditSearchResponse,
+  AuditStatsResponse,
+  SystemSettingsResponse,
+  ImportSettingsResponseType,
+  SystemPermissionsResponse,
+  UserRolesResponse,
+  RolePermissionsResponse,
+  UsersListResponse,
+  UserPermissionsResponse,
+  RolePermissionsUpdateResponse,
+  UserRoleUpdateResponse,
+  UserPermissionUpdateResponse,
+  UserPermissionCheckResponse,
+  NotificationResponse,
+  NotificationPreferencesResponse,
+  EmailTemplatesResponse,
+  NotificationHistoryResponse,
+  EmailConfigResponse,
+  NotificationStatsResponse,
+  RecommendationsListResponse,
+  RecommendationExecuteResponse,
+  HealthCheckResponse,
+  SyncStatusResponse,
+  SyncPullResponse,
+  SyncPushResponse,
+  SyncConflictsResponse,
+  SyncConflictResolveResponse,
+  SyncHistoryResponse,
+  BranchesListResponse,
+  BranchCreateResponse,
+  BranchCheckoutResponse,
+  BranchMergeResponse,
+  BranchCompareResponse,
+  GitHubConnectionsListResponse,
+  GitHubConnectionResponse,
+  GitHubConnectionUpdateResponse,
+  GitHubConnectionDeleteResponse,
+  GitHubOAuthInitResponse,
+  GitHubPATConnectResponse,
+  GitHubAssociationsResponse,
+  GitHubAssociationCreateResponse,
+  GitHubAssociationDeleteResponse,
 } from '../types';
 
 // Import/Export options
@@ -89,16 +189,28 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Extended request config to track retry attempts
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
 // Response interceptor for error handling and token refresh
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: unknown) => {
-    const axiosError = error as any;
-    const originalRequest = axiosError.config as any;
+    // Use Axios type guard for proper type narrowing
+    if (!axios.isAxiosError(error)) {
+      return Promise.reject(error);
+    }
+
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
 
     // Handle 401 Unauthorized errors
-    if (axiosError.response?.status === 401 && !originalRequest._retry) {
-      const errorCode = axiosError.response?.data?.code;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const errorCode = (error.response?.data as { code?: string })?.code;
 
       // If token expired, try to refresh
       if (errorCode === 'TOKEN_EXPIRED') {
@@ -200,15 +312,15 @@ export const api = {
     create: (data: Partial<Project>) => apiClient.post<{ data: Project }>('/projects', data),
     update: (id: string, data: Partial<Project>) => apiClient.put<{ data: Project }>(`/projects/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/projects/${id}`),
-    getDemands: (id: string) => apiClient.get<any>(`/projects/${id}/demands`),
+    getDemands: (id: string) => apiClient.get<ProjectDemandsResponse>(`/projects/${id}/demands`),
     // Phase management endpoints
-    validatePhaseUpdates: (id: string, data: Record<string, unknown>) => apiClient.post<any>(`/projects/${id}/phases/validate-updates`, data),
-    validateCustomPhase: (id: string, data: Record<string, unknown>) => apiClient.post<any>(`/projects/${id}/phases/validate-custom`, data),
-    getTemplateCompliance: (id: string) => apiClient.get<any>(`/projects/${id}/template-compliance`),
-    addCustomPhase: (id: string, data: Record<string, unknown>) => apiClient.post<any>(`/projects/${id}/phases/custom`, data),
-    updateProjectPhase: (id: string, phaseTimelineId: string, data: Record<string, unknown>) => apiClient.put<any>(`/projects/${id}/phases/${phaseTimelineId}`, data),
+    validatePhaseUpdates: (id: string, data: Record<string, unknown>) => apiClient.post<PhaseValidationResponse>(`/projects/${id}/phases/validate-updates`, data),
+    validateCustomPhase: (id: string, data: Record<string, unknown>) => apiClient.post<CustomPhaseValidationResponse>(`/projects/${id}/phases/validate-custom`, data),
+    getTemplateCompliance: (id: string) => apiClient.get<TemplateComplianceResponse>(`/projects/${id}/template-compliance`),
+    addCustomPhase: (id: string, data: Record<string, unknown>) => apiClient.post<CustomPhaseResponse>(`/projects/${id}/phases/custom`, data),
+    updateProjectPhase: (id: string, phaseTimelineId: string, data: Record<string, unknown>) => apiClient.put<ProjectPhaseUpdateResponse>(`/projects/${id}/phases/${phaseTimelineId}`, data),
     deleteProjectPhase: (id: string, phaseTimelineId: string) => apiClient.delete<{ message: string }>(`/projects/${id}/phases/${phaseTimelineId}`),
-    getHealth: () => apiClient.get<any>('/projects/dashboard/health'),
+    getHealth: () => apiClient.get<ProjectHealthResponse>('/projects/dashboard/health'),
   },
 
   // People
@@ -218,11 +330,11 @@ export const api = {
     create: (data: Partial<Person>) => apiClient.post<{ data: Person }>('/people', data),
     update: (id: string, data: Partial<Person>) => apiClient.put<{ data: Person }>(`/people/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/people/${id}`),
-    addRole: (id: string, data: Record<string, unknown>) => apiClient.post<{ data: any }>(`/people/${id}/roles`, data),
-    updateRole: (id: string, roleId: string, data: Record<string, unknown>) => apiClient.put<{ data: any }>(`/people/${id}/roles/${roleId}`, data),
+    addRole: (id: string, data: Record<string, unknown>) => apiClient.post<PersonRoleResponse>(`/people/${id}/roles`, data),
+    updateRole: (id: string, roleId: string, data: Record<string, unknown>) => apiClient.put<PersonRoleResponse>(`/people/${id}/roles/${roleId}`, data),
     removeRole: (id: string, roleId: string) => apiClient.delete<{ message: string }>(`/people/${id}/roles/${roleId}`),
-    getUtilization: () => apiClient.get<any>('/people/dashboard/utilization'),
-    getAvailability: () => apiClient.get<any>('/people/dashboard/availability'),
+    getUtilization: () => apiClient.get<UtilizationResponse>('/people/dashboard/utilization'),
+    getAvailability: () => apiClient.get<AvailabilityResponse>('/people/dashboard/availability'),
   },
 
   // Roles
@@ -232,9 +344,9 @@ export const api = {
     create: (data: Partial<Role>) => apiClient.post<{ data: Role }>('/roles', data),
     update: (id: string, data: Partial<Role>) => apiClient.put<{ data: Role }>(`/roles/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/roles/${id}`),
-    addPlanner: (id: string, data: Record<string, unknown>) => apiClient.post<{ data: any }>(`/roles/${id}/planners`, data),
+    addPlanner: (id: string, data: Record<string, unknown>) => apiClient.post<RolePlannerResponse>(`/roles/${id}/planners`, data),
     removePlanner: (id: string, plannerId: string) => apiClient.delete<{ message: string }>(`/roles/${id}/planners/${plannerId}`),
-    getCapacityGaps: () => apiClient.get<any>('/roles/dashboard/capacity-gaps'),
+    getCapacityGaps: () => apiClient.get<CapacityGapsResponse>('/roles/dashboard/capacity-gaps'),
   },
 
   // Assignments
@@ -244,20 +356,20 @@ export const api = {
     update: (id: string, data: Partial<ProjectAssignment>) => apiClient.put<{ data: ProjectAssignment }>(`/assignments/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/assignments/${id}`),
     bulkCreate: (data: Record<string, unknown>) => apiClient.post<{ data: ProjectAssignment[] }>('/assignments/bulk', data),
-    getConflicts: (personId: string, params?: PaginationParams) => apiClient.get<any>(`/assignments/conflicts/${personId}`, { params }),
-    getSuggestions: (params: Record<string, unknown>) => apiClient.get<any>('/assignments/suggestions', { params }),
-    getTimeline: (personId: string, params?: PaginationParams) => apiClient.get<any>(`/assignments/timeline/${personId}`, { params }),
+    getConflicts: (personId: string, params?: PaginationParams) => apiClient.get<AssignmentConflictsResponse>(`/assignments/conflicts/${personId}`, { params }),
+    getSuggestions: (params: Record<string, unknown>) => apiClient.get<AssignmentSuggestionsResponse>('/assignments/suggestions', { params }),
+    getTimeline: (personId: string, params?: PaginationParams) => apiClient.get<AssignmentTimelineResponse>(`/assignments/timeline/${personId}`, { params }),
   },
 
   // Resource Templates
   resourceTemplates: {
-    list: (params?: PaginationParams) => apiClient.get<any>('/resource-templates', { params }),
-    create: (data: Record<string, unknown>) => apiClient.post<any>('/resource-templates', data),
-    bulkUpdate: (data: Record<string, unknown>) => apiClient.post<any>('/resource-templates/bulk', data),
-    copy: (data: Record<string, unknown>) => apiClient.post<any>('/resource-templates/copy', data),
-    getTemplates: () => apiClient.get<any>('/resource-templates/templates'),
-    getSummary: () => apiClient.get<any>('/resource-templates/summary'),
-    getByProjectType: (projectTypeId: string) => apiClient.get<any>(`/resource-templates/project-type/${projectTypeId}`),
+    list: (params?: PaginationParams) => apiClient.get<ResourceTemplatesListResponse>('/resource-templates', { params }),
+    create: (data: Record<string, unknown>) => apiClient.post<ResourceTemplateResponse>('/resource-templates', data),
+    bulkUpdate: (data: Record<string, unknown>) => apiClient.post<ResourceTemplateBulkResponse>('/resource-templates/bulk', data),
+    copy: (data: Record<string, unknown>) => apiClient.post<ResourceTemplateCopyResponse>('/resource-templates/copy', data),
+    getTemplates: () => apiClient.get<TemplatesListResponse>('/resource-templates/templates'),
+    getSummary: () => apiClient.get<ResourceTemplateSummaryResponse>('/resource-templates/summary'),
+    getByProjectType: (projectTypeId: string) => apiClient.get<ProjectTypeResourceTemplatesResponse>(`/resource-templates/project-type/${projectTypeId}`),
   },
 
   // Availability
@@ -268,30 +380,30 @@ export const api = {
     delete: (id: string) => apiClient.delete<{ message: string }>(`/availability/${id}`),
     bulkCreate: (data: Record<string, unknown>) => apiClient.post<{ data: PersonAvailabilityOverride[] }>('/availability/bulk', data),
     approve: (id: string, data: Record<string, unknown>) => apiClient.post<{ data: PersonAvailabilityOverride }>(`/availability/${id}/approve`, data),
-    getCalendar: (params?: PaginationParams) => apiClient.get<any>('/availability/calendar', { params }),
-    getForecast: (params?: PaginationParams) => apiClient.get<any>('/availability/forecast', { params }),
+    getCalendar: (params?: PaginationParams) => apiClient.get<AvailabilityCalendarResponse>('/availability/calendar', { params }),
+    getForecast: (params?: PaginationParams) => apiClient.get<AvailabilityForecastResponse>('/availability/forecast', { params }),
   },
 
   // Demands
   demands: {
-    getProjectDemands: (projectId: string) => apiClient.get<any>(`/demands/project/${projectId}`),
-    getSummary: (params?: PaginationParams) => apiClient.get<any>('/demands/summary', { params }),
-    createOverride: (data: Record<string, unknown>) => apiClient.post<{ data: any }>('/demands/override', data),
+    getProjectDemands: (projectId: string) => apiClient.get<ProjectDemandsResponse>(`/demands/project/${projectId}`),
+    getSummary: (params?: PaginationParams) => apiClient.get<DemandSummaryResponse>('/demands/summary', { params }),
+    createOverride: (data: Record<string, unknown>) => apiClient.post<DemandOverrideResponse>('/demands/override', data),
     deleteOverride: (id: string) => apiClient.delete<{ message: string }>(`/demands/override/${id}`),
-    getForecast: (params?: PaginationParams) => apiClient.get<any>('/demands/forecast', { params }),
-    getGaps: () => apiClient.get<any>('/demands/gaps'),
-    calculateScenario: (data: Record<string, unknown>) => apiClient.post<any>('/demands/scenario', data),
+    getForecast: (params?: PaginationParams) => apiClient.get<DemandForecastResponse>('/demands/forecast', { params }),
+    getGaps: () => apiClient.get<DemandGapsResponse>('/demands/gaps'),
+    calculateScenario: (data: Record<string, unknown>) => apiClient.post<DemandScenarioResponse>('/demands/scenario', data),
   },
 
   // Reporting
   reporting: {
-    getDashboard: () => apiClient.get<any>('/reporting/dashboard'),
-    getCapacity: (params?: PaginationParams) => apiClient.get<any>('/reporting/capacity', { params }),
-    getDemand: (params?: PaginationParams) => apiClient.get<any>('/reporting/demand', { params }),
-    getUtilization: (params?: PaginationParams) => apiClient.get<any>('/reporting/utilization', { params }),
-    getGaps: (params?: PaginationParams) => apiClient.get<any>('/reporting/gaps', { params }),
-    getProjects: (params?: PaginationParams) => apiClient.get<any>('/reporting/projects', { params }),
-    getTimeline: (params?: PaginationParams) => apiClient.get<any>('/reporting/timeline', { params }),
+    getDashboard: () => apiClient.get<DashboardReportResponse>('/reporting/dashboard'),
+    getCapacity: (params?: PaginationParams) => apiClient.get<CapacityReportResponse>('/reporting/capacity', { params }),
+    getDemand: (params?: PaginationParams) => apiClient.get<DemandReportResponse>('/reporting/demand', { params }),
+    getUtilization: (params?: PaginationParams) => apiClient.get<UtilizationReportResponse>('/reporting/utilization', { params }),
+    getGaps: (params?: PaginationParams) => apiClient.get<GapsReportResponse>('/reporting/gaps', { params }),
+    getProjects: (params?: PaginationParams) => apiClient.get<ProjectsReportResponse>('/reporting/projects', { params }),
+    getTimeline: (params?: PaginationParams) => apiClient.get<TimelineReportResponse>('/reporting/timeline', { params }),
   },
 
   // Import
@@ -316,22 +428,22 @@ export const api = {
       if (options.dateFormat) {
         formData.append('dateFormat', options.dateFormat);
       }
-      return apiClient.post<any>('/import/excel', formData, {
+      return apiClient.post<ImportExcelResponse>('/import/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
     validateFile: (file: File) => {
       const formData = new FormData();
       formData.append('excelFile', file);
-      return apiClient.post<any>('/import/validate', formData, {
+      return apiClient.post<ImportValidationResponse>('/import/validate', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
-    getSettings: () => apiClient.get<any>('/import/settings'),
+    getSettings: () => apiClient.get<ImportSettingsResponse>('/import/settings'),
     getTemplate: () => apiClient.get<Blob>('/import/template', {
       responseType: 'blob',
     }),
-    getHistory: () => apiClient.get<any>('/import/history'),
+    getHistory: () => apiClient.get<ImportHistoryResponse>('/import/history'),
     analyzeImport: (file: File, options: ImportExcelOptions = {}) => {
       const formData = new FormData();
       formData.append('excelFile', file);
@@ -352,7 +464,7 @@ export const api = {
       if (options.dateFormat) {
         formData.append('dateFormat', options.dateFormat);
       }
-      return apiClient.post<any>('/import/analyze', formData, {
+      return apiClient.post<ImportAnalysisResponse>('/import/analyze', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
@@ -410,8 +522,8 @@ export const api = {
     update: (id: string, data: Partial<ProjectType>) => apiClient.put<{ data: ProjectType }>(`/project-types/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/project-types/${id}`),
     // Hierarchy methods
-    getHierarchy: () => apiClient.get<any>('/project-type-hierarchy/hierarchy'),
-    getPhases: (id: string) => apiClient.get<any>(`/project-type-hierarchy/${id}/phases`),
+    getHierarchy: () => apiClient.get<ProjectTypeHierarchyResponse>('/project-type-hierarchy/hierarchy'),
+    getPhases: (id: string) => apiClient.get<ProjectTypePhasesResponse>(`/project-type-hierarchy/${id}/phases`),
     createSubType: (parentId: string, data: Partial<ProjectType>) => apiClient.post<{ data: ProjectType }>(`/project-type-hierarchy/${parentId}/children`, data),
     addPhase: (id: string, data: Record<string, unknown>) => apiClient.post<{ data: ProjectPhase }>(`/project-type-hierarchy/${id}/phases`, data),
     updatePhase: (id: string, phaseId: string, data: Record<string, unknown>) => apiClient.put<{ data: ProjectPhase }>(`/project-type-hierarchy/${id}/phases/${phaseId}`, data),
@@ -428,32 +540,32 @@ export const api = {
   },
 
   projectPhases: {
-    list: (params?: PaginationParams) => apiClient.get<any>('/project-phases', { params }),
-    get: (id: string) => apiClient.get<any>(`/project-phases/${id}`),
-    create: (data: Record<string, unknown>) => apiClient.post<any>('/project-phases', data),
-    update: (id: string, data: Record<string, unknown>) => apiClient.put<any>(`/project-phases/${id}`, data),
+    list: (params?: PaginationParams) => apiClient.get<ProjectPhasesListResponse>('/project-phases', { params }),
+    get: (id: string) => apiClient.get<ProjectPhaseResponse>(`/project-phases/${id}`),
+    create: (data: Record<string, unknown>) => apiClient.post<ProjectPhaseResponse>('/project-phases', data),
+    update: (id: string, data: Record<string, unknown>) => apiClient.put<ProjectPhaseResponse>(`/project-phases/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/project-phases/${id}`),
-    bulkUpdate: (data: Record<string, unknown>) => apiClient.post<any>('/project-phases/bulk', data),
-    duplicatePhase: (data: Record<string, unknown>) => apiClient.post<any>('/project-phases/duplicate', data),
-    createCustomPhase: (data: Record<string, unknown>) => apiClient.post<any>('/project-phases/create-custom', data),
-    applyBulkCorrections: (data: Record<string, unknown>) => apiClient.post<any>('/project-phases/bulk-corrections', data),
+    bulkUpdate: (data: Record<string, unknown>) => apiClient.post<ProjectPhasesBulkResponse>('/project-phases/bulk', data),
+    duplicatePhase: (data: Record<string, unknown>) => apiClient.post<ProjectPhaseResponse>('/project-phases/duplicate', data),
+    createCustomPhase: (data: Record<string, unknown>) => apiClient.post<ProjectPhaseResponse>('/project-phases/create-custom', data),
+    applyBulkCorrections: (data: Record<string, unknown>) => apiClient.post<ProjectPhasesBulkResponse>('/project-phases/bulk-corrections', data),
   },
 
   // Project Phase Dependencies
   projectPhaseDependencies: {
-    list: (params?: PaginationParams) => apiClient.get<any>('/project-phase-dependencies', { params }),
-    get: (id: string) => apiClient.get<any>(`/project-phase-dependencies/${id}`),
-    create: (data: Record<string, unknown>) => apiClient.post<any>('/project-phase-dependencies', data),
-    update: (id: string, data: Record<string, unknown>) => apiClient.put<any>(`/project-phase-dependencies/${id}`, data),
+    list: (params?: PaginationParams) => apiClient.get<ProjectPhaseDependenciesListResponse>('/project-phase-dependencies', { params }),
+    get: (id: string) => apiClient.get<ProjectPhaseDependencyResponse>(`/project-phase-dependencies/${id}`),
+    create: (data: Record<string, unknown>) => apiClient.post<ProjectPhaseDependencyResponse>('/project-phase-dependencies', data),
+    update: (id: string, data: Record<string, unknown>) => apiClient.put<ProjectPhaseDependencyResponse>(`/project-phase-dependencies/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/project-phase-dependencies/${id}`),
-    calculateCascade: (data: Record<string, unknown>) => apiClient.post<any>('/project-phase-dependencies/calculate-cascade', data),
-    applyCascade: (data: Record<string, unknown>) => apiClient.post<any>('/project-phase-dependencies/apply-cascade', data),
+    calculateCascade: (data: Record<string, unknown>) => apiClient.post<CascadeCalculationResponse>('/project-phase-dependencies/calculate-cascade', data),
+    applyCascade: (data: Record<string, unknown>) => apiClient.post<CascadeApplicationResponse>('/project-phase-dependencies/apply-cascade', data),
   },
 
   projectAllocations: {
-    get: (projectId: string) => apiClient.get<any>(`/project-allocations/${projectId}`),
-    initialize: (projectId: string) => apiClient.post<any>(`/project-allocations/${projectId}/initialize`),
-    override: (projectId: string, data: Record<string, unknown>) => apiClient.post<any>(`/project-allocations/${projectId}/override`, data),
+    get: (projectId: string) => apiClient.get<ProjectAllocationsResponse>(`/project-allocations/${projectId}`),
+    initialize: (projectId: string) => apiClient.post<ProjectAllocationsInitResponse>(`/project-allocations/${projectId}/initialize`),
+    override: (projectId: string, data: Record<string, unknown>) => apiClient.post<ProjectAllocationOverrideResponse>(`/project-allocations/${projectId}/override`, data),
     reset: (projectId: string, phaseId: string, roleId: string) => apiClient.post<{ message: string }>(`/project-allocations/${projectId}/reset/${phaseId}/${roleId}`),
     delete: (projectId: string, phaseId: string, roleId: string) => apiClient.delete<{ message: string }>(`/project-allocations/${projectId}/${phaseId}/${roleId}`),
   },
@@ -465,22 +577,22 @@ export const api = {
     create: (data: Partial<Scenario>) => apiClient.post<{ data: Scenario }>('/scenarios', data),
     update: (id: string, data: Partial<Scenario>) => apiClient.put<{ data: Scenario }>(`/scenarios/${id}`, data),
     delete: (id: string) => apiClient.delete<{ message: string }>(`/scenarios/${id}`),
-    getAssignments: (id: string) => apiClient.get<any>(`/scenarios/${id}/assignments`),
+    getAssignments: (id: string) => apiClient.get<ScenarioAssignmentsResponse>(`/scenarios/${id}/assignments`),
     upsertAssignment: (id: string, data: Record<string, unknown>) => apiClient.post<{ data: ProjectAssignment }>(`/scenarios/${id}/assignments`, data),
     removeAssignment: (id: string, assignmentId: string) => apiClient.delete<{ message: string }>(`/scenarios/${id}/assignments/${assignmentId}`),
-    compare: (id: string, compareToId: string) => apiClient.get<any>(`/scenarios/${id}/compare?compare_to=${compareToId}`),
+    compare: (id: string, compareToId: string) => apiClient.get<ScenarioComparisonResponse>(`/scenarios/${id}/compare?compare_to=${compareToId}`),
     merge: (id: string, data?: Record<string, unknown>) => apiClient.post<{ data: Scenario }>(`/scenarios/${id}/merge`, data || {}),
   },
 
   // Audit
   audit: {
     getHistory: (tableName: string, recordId: string, limit?: number) =>
-      apiClient.get<any>(`/audit/history/${tableName}/${recordId}`, { params: { limit } }),
+      apiClient.get<AuditHistoryResponse>(`/audit/history/${tableName}/${recordId}`, { params: { limit } }),
     getRecentChanges: (changedBy?: string, limit?: number, offset?: number) =>
-      apiClient.get<any>('/audit/recent', { params: { changedBy, limit, offset } }),
+      apiClient.get<AuditRecentResponse>('/audit/recent', { params: { changedBy, limit, offset } }),
     searchAuditLog: (filters: Record<string, unknown>) =>
-      apiClient.get<any>('/audit/search', { params: filters }),
-    getStats: () => apiClient.get<any>('/audit/stats'),
+      apiClient.get<AuditSearchResponse>('/audit/search', { params: filters }),
+    getStats: () => apiClient.get<AuditStatsResponse>('/audit/stats'),
     undoLastChange: (tableName: string, recordId: string, comment?: string) =>
       apiClient.post<{ message: string }>(`/audit/undo/${tableName}/${recordId}`, { comment }),
     undoLastNChanges: (changedBy: string, count: number, comment?: string) =>
@@ -490,51 +602,51 @@ export const api = {
 
   // Settings
   settings: {
-    getSystemSettings: () => apiClient.get<any>('/settings/system'),
-    saveSystemSettings: (data: Record<string, unknown>) => apiClient.post<{ data: any }>('/settings/system', data),
-    updateSystemSettings: (data: Record<string, unknown>) => apiClient.put<{ data: any }>('/settings/system', data),
-    getImportSettings: () => apiClient.get<any>('/settings/import'),
-    saveImportSettings: (data: Record<string, unknown>) => apiClient.post<{ data: any }>('/settings/import', data),
-    updateImportSettings: (data: Record<string, unknown>) => apiClient.put<{ data: any }>('/settings/import', data),
+    getSystemSettings: () => apiClient.get<SystemSettingsResponse>('/settings/system'),
+    saveSystemSettings: (data: Record<string, unknown>) => apiClient.post<SystemSettingsResponse>('/settings/system', data),
+    updateSystemSettings: (data: Record<string, unknown>) => apiClient.put<SystemSettingsResponse>('/settings/system', data),
+    getImportSettings: () => apiClient.get<ImportSettingsResponseType>('/settings/import'),
+    saveImportSettings: (data: Record<string, unknown>) => apiClient.post<ImportSettingsResponseType>('/settings/import', data),
+    updateImportSettings: (data: Record<string, unknown>) => apiClient.put<ImportSettingsResponseType>('/settings/import', data),
   },
 
   // User Permissions
   userPermissions: {
-    getSystemPermissions: () => apiClient.get<any>('/user-permissions/permissions'),
-    getUserRoles: () => apiClient.get<any>('/user-permissions/roles'),
-    getRolePermissions: (roleId: string) => apiClient.get<any>(`/user-permissions/roles/${roleId}/permissions`),
-    updateRolePermissions: (roleId: string, permissionIds: string[]) => apiClient.put<any>(`/user-permissions/roles/${roleId}/permissions`, { permissionIds }),
-    getUsersList: () => apiClient.get<any>('/user-permissions/users'),
-    getUserPermissions: (userId: string) => apiClient.get<any>(`/user-permissions/users/${userId}/permissions`),
-    updateUserRole: (userId: string, roleId: string) => apiClient.put<any>(`/user-permissions/users/${userId}/role`, { roleId }),
+    getSystemPermissions: () => apiClient.get<SystemPermissionsResponse>('/user-permissions/permissions'),
+    getUserRoles: () => apiClient.get<UserRolesResponse>('/user-permissions/roles'),
+    getRolePermissions: (roleId: string) => apiClient.get<RolePermissionsResponse>(`/user-permissions/roles/${roleId}/permissions`),
+    updateRolePermissions: (roleId: string, permissionIds: string[]) => apiClient.put<RolePermissionsUpdateResponse>(`/user-permissions/roles/${roleId}/permissions`, { permissionIds }),
+    getUsersList: () => apiClient.get<UsersListResponse>('/user-permissions/users'),
+    getUserPermissions: (userId: string) => apiClient.get<UserPermissionsResponse>(`/user-permissions/users/${userId}/permissions`),
+    updateUserRole: (userId: string, roleId: string) => apiClient.put<UserRoleUpdateResponse>(`/user-permissions/users/${userId}/role`, { roleId }),
     updateUserPermission: (userId: string, permissionId: string, granted: boolean, reason?: string) =>
-      apiClient.put<any>(`/user-permissions/users/${userId}/permissions`, { permissionId, granted, reason }),
+      apiClient.put<UserPermissionUpdateResponse>(`/user-permissions/users/${userId}/permissions`, { permissionId, granted, reason }),
     removeUserPermissionOverride: (userId: string, permissionId: string) =>
       apiClient.delete<{ message: string }>(`/user-permissions/users/${userId}/permissions/${permissionId}`),
     checkUserPermission: (userId: string, permissionName: string) =>
-      apiClient.get<any>(`/user-permissions/users/${userId}/check/${permissionName}`),
+      apiClient.get<UserPermissionCheckResponse>(`/user-permissions/users/${userId}/check/${permissionName}`),
   },
 
   // Notifications
   notifications: {
-    sendNotification: (data: Record<string, unknown>) => apiClient.post<{ data: any }>('/notifications/send', data),
-    getUserNotificationPreferences: (userId: string) => apiClient.get<any>(`/notifications/preferences/${userId}`),
-    updateUserNotificationPreferences: (userId: string, preferences: Record<string, unknown>) => apiClient.put<any>(`/notifications/preferences/${userId}`, { preferences }),
-    getEmailTemplates: () => apiClient.get<any>('/notifications/templates'),
-    getNotificationHistory: (userId?: string, params?: PaginationParams) => apiClient.get<any>(`/notifications/history/${userId || ''}`, { params }),
+    sendNotification: (data: Record<string, unknown>) => apiClient.post<NotificationResponse>('/notifications/send', data),
+    getUserNotificationPreferences: (userId: string) => apiClient.get<NotificationPreferencesResponse>(`/notifications/preferences/${userId}`),
+    updateUserNotificationPreferences: (userId: string, preferences: Record<string, unknown>) => apiClient.put<NotificationPreferencesResponse>(`/notifications/preferences/${userId}`, { preferences }),
+    getEmailTemplates: () => apiClient.get<EmailTemplatesResponse>('/notifications/templates'),
+    getNotificationHistory: (userId?: string, params?: PaginationParams) => apiClient.get<NotificationHistoryResponse>(`/notifications/history/${userId || ''}`, { params }),
     sendTestEmail: (email: string) => apiClient.post<{ message: string }>('/notifications/test', { email }),
-    checkEmailConfiguration: () => apiClient.get<any>('/notifications/config'),
-    getNotificationStats: (userId?: string, params?: PaginationParams) => apiClient.get<any>(`/notifications/stats/${userId || ''}`, { params }),
+    checkEmailConfiguration: () => apiClient.get<EmailConfigResponse>('/notifications/config'),
+    getNotificationStats: (userId?: string, params?: PaginationParams) => apiClient.get<NotificationStatsResponse>(`/notifications/stats/${userId || ''}`, { params }),
   },
 
   // Recommendations
   recommendations: {
-    list: (params?: PaginationParams) => apiClient.get<any>('/recommendations', { params }),
-    execute: (recommendationId: string, actions: Record<string, unknown>) => apiClient.post<{ data: any }>(`/recommendations/${recommendationId}/execute`, { actions }),
+    list: (params?: PaginationParams) => apiClient.get<RecommendationsListResponse>('/recommendations', { params }),
+    execute: (recommendationId: string, actions: Record<string, unknown>) => apiClient.post<RecommendationExecuteResponse>(`/recommendations/${recommendationId}/execute`, { actions }),
   },
 
   // Health check
-  health: () => apiClient.get<any>('/health'),
+  health: () => apiClient.get<HealthCheckResponse>('/health'),
 
   // Authentication
   auth: {
@@ -547,56 +659,56 @@ export const api = {
 
   // Git Sync (Feature: 001-git-sync-integration)
   sync: {
-    getStatus: () => apiClient.get<any>('/sync/status'),
-    pull: () => apiClient.post<any>('/sync/pull'),
-    push: (data?: { commitMessage?: string }) => apiClient.post<any>('/sync/push', data),
-    getConflicts: () => apiClient.get<any>('/sync/conflicts'),
-    resolveConflict: (conflictId: string, resolution: 'accept_local' | 'accept_remote' | 'custom', customValue?: any) =>
-      apiClient.post<any>(`/sync/conflicts/${conflictId}/resolve`, { resolution, customValue }),
+    getStatus: () => apiClient.get<SyncStatusResponse>('/sync/status'),
+    pull: () => apiClient.post<SyncPullResponse>('/sync/pull'),
+    push: (data?: { commitMessage?: string }) => apiClient.post<SyncPushResponse>('/sync/push', data),
+    getConflicts: () => apiClient.get<SyncConflictsResponse>('/sync/conflicts'),
+    resolveConflict: (conflictId: string, resolution: 'accept_local' | 'accept_remote' | 'custom', customValue?: unknown) =>
+      apiClient.post<SyncConflictResolveResponse>(`/sync/conflicts/${conflictId}/resolve`, { resolution, customValue }),
     getHistory: (params?: { limit?: number; entityType?: string; entityId?: string }) =>
-      apiClient.get<any>('/sync/history', { params }),
+      apiClient.get<SyncHistoryResponse>('/sync/history', { params }),
     // Branch operations (User Story 3)
-    listBranches: () => apiClient.get<any>('/sync/branches'),
-    createBranch: (data: { name: string; description: string }) => apiClient.post<any>('/sync/branches', data),
-    checkoutBranch: (branchName: string) => apiClient.post<any>(`/sync/branches/${branchName}/checkout`),
-    mergeBranch: (branchName: string) => apiClient.post<any>(`/sync/branches/${branchName}/merge`),
-    compareBranches: (base: string, target: string) => apiClient.get<any>(`/sync/compare?base=${base}&target=${target}`),
+    listBranches: () => apiClient.get<BranchesListResponse>('/sync/branches'),
+    createBranch: (data: { name: string; description: string }) => apiClient.post<BranchCreateResponse>('/sync/branches', data),
+    checkoutBranch: (branchName: string) => apiClient.post<BranchCheckoutResponse>(`/sync/branches/${branchName}/checkout`),
+    mergeBranch: (branchName: string) => apiClient.post<BranchMergeResponse>(`/sync/branches/${branchName}/merge`),
+    compareBranches: (base: string, target: string) => apiClient.get<BranchCompareResponse>(`/sync/compare?base=${base}&target=${target}`),
   },
 
   // GitHub Connections (Feature: 005-github-auth-user-link)
   githubConnections: {
     // List connections
     list: (params?: { include_inactive?: boolean; include_associations?: boolean }) =>
-      apiClient.get<{ success: boolean; data: any[] }>('/github-connections', { params }),
+      apiClient.get<GitHubConnectionsListResponse>('/github-connections', { params }),
 
     // Get single connection
     get: (id: number, params?: { include_associations?: boolean }) =>
-      apiClient.get<any>(`/github-connections/${id}`, { params }),
+      apiClient.get<GitHubConnectionResponse>(`/github-connections/${id}`, { params }),
 
     // Update connection (set as default, update status)
     update: (id: number, data: { is_default?: boolean; status?: string }) =>
-      apiClient.patch<{ success: boolean; data: any; message: string }>(`/github-connections/${id}`, data),
+      apiClient.patch<GitHubConnectionUpdateResponse>(`/github-connections/${id}`, data),
 
     // Delete connection
     delete: (id: number) =>
-      apiClient.delete<{ success: boolean; data: { deleted: boolean; id: number }; message: string }>(`/github-connections/${id}`),
+      apiClient.delete<GitHubConnectionDeleteResponse>(`/github-connections/${id}`),
 
     // OAuth flow
     initiateOAuth: (data?: { github_base_url?: string }) =>
-      apiClient.post<{ success: boolean; data: { authorization_url: string; state: string }; message: string }>('/github-connections/oauth/authorize', data),
+      apiClient.post<GitHubOAuthInitResponse>('/github-connections/oauth/authorize', data),
 
     // PAT connection
     connectWithPAT: (data: { token: string; github_base_url?: string }) =>
-      apiClient.post<{ success: boolean; data: any; message: string }>('/github-connections/pat', data),
+      apiClient.post<GitHubPATConnectResponse>('/github-connections/pat', data),
 
     // Associations
     getAssociations: (id: number, params?: { include_inactive?: boolean }) =>
-      apiClient.get<any[]>(`/github-connections/${id}/associations`, { params }),
+      apiClient.get<GitHubAssociationsResponse>(`/github-connections/${id}/associations`, { params }),
 
     createAssociation: (id: number, data: { person_id: number; association_type?: string }) =>
-      apiClient.post<any>(`/github-connections/${id}/associations`, data),
+      apiClient.post<GitHubAssociationCreateResponse>(`/github-connections/${id}/associations`, data),
 
     deleteAssociation: (id: number, personId: number) =>
-      apiClient.delete<{ success: boolean; message: string }>(`/github-connections/${id}/associations/${personId}`),
+      apiClient.delete<GitHubAssociationDeleteResponse>(`/github-connections/${id}/associations/${personId}`),
   },
 };

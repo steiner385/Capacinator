@@ -87,3 +87,6 @@ export type {
   ScenarioComparison,
   ScenarioAssignmentsView,
 } from '../../../shared/types/scenarios';
+
+// API Response types (for api-client.ts)
+export * from './api-responses';
