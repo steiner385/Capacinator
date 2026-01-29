@@ -1,927 +1,177 @@
 import type { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
 import { ServiceContainer } from '../../services/ServiceContainer.js';
-import ExcelJS from 'exceljs';
-
-// ============================================================================
-// Export Data Types
-// ============================================================================
+import { ReportDataService } from '../../services/reports/ReportDataService.js';
+import { ExportFormatterService } from '../../services/export/ExportFormatterService.js';
+import type { ReportType, ExportCapacityData, ExportUtilizationData, ExportDemandData, ExportGapsData } from '../../services/export/types.js';
+import type { DateRangeFilter } from '../../services/reports/types.js';
 
 /**
  * Filter parameters for report generation
  */
-interface ReportFilters {
-  startDate?: string;
-  endDate?: string;
+interface ReportFilters extends DateRangeFilter {
   projectTypeId?: string;
   locationId?: string;
   roleId?: string;
 }
 
-/**
- * Role capacity data for reports
- */
-interface RoleCapacityData {
-  role: string;
-  capacity: number;
-  utilized: number;
-  gap_fte?: number;
-}
-
-/**
- * Person utilization data for reports
- */
-interface PersonUtilizationData {
-  id: string;
-  name: string;
-  role: string;
-  utilization: number;
-}
-
-/**
- * Project type demand data for reports
- */
-interface ProjectTypeDemandData {
-  type: string;
-  demand: number;
-}
-
-/**
- * Role gap data for reports
- */
-interface RoleGapData {
-  roleId: string;
-  roleName: string;
-  demand: number;
-  capacity: number;
-  gap: number;
-}
-
-/**
- * Capacity report data structure
- */
-interface CapacityReportData {
-  totalCapacity: number;
-  utilizedCapacity: number;
-  availableCapacity: number;
-  byRole: RoleCapacityData[];
-  capacityGaps: CapacityGapRow[];
-  personUtilization: PersonUtilizationRow[];
-}
-
-/**
- * Utilization report data structure
- */
-interface UtilizationReportData {
-  peopleUtilization: PersonUtilizationData[];
-  averageUtilization: number;
-}
-
-/**
- * Demand report data structure
- */
-interface DemandReportData {
-  totalDemand: number;
-  byProjectType: ProjectTypeDemandData[];
-}
-
-/**
- * Gaps report data structure
- */
-interface GapsReportData {
-  totalGap: number;
-  gapsByRole: RoleGapData[];
-}
-
-/**
- * Database row type for capacity gaps view
- */
-interface CapacityGapRow {
-  role_id: string;
-  role_name: string;
-  total_capacity_fte: number;
-  total_demand_fte: number;
-  gap_fte?: number;
-}
-
-/**
- * Database row type for person utilization view
- */
-interface PersonUtilizationRow {
-  person_id: string;
-  person_name: string;
-  primary_role?: string;
-  total_allocation?: number;
-}
-
-/**
- * CSV cell value type
- */
-type CsvCellValue = string | number | boolean | null | undefined;
-
-/**
- * Database row type for demand view
- */
-interface DemandRow {
-  project_id: string;
-  role_id: string;
-  demand_hours: number;
-  start_date: string;
-  end_date: string;
-  project_name?: string;
-  project_priority?: number;
-  role_name?: string;
-}
-
-/**
- * Role demand aggregation helper
- */
-interface RoleDemandAggregation {
-  role_id: string;
-  role_name: string;
-  total_hours: number;
-  total_fte: number;
-  project_count: Set<string>;
-  demands: DemandRow[];
-}
-
-/**
- * Gap row with extended data
- */
-interface ExtendedGapRow extends CapacityGapRow {
-  current_demands?: CurrentDemandRow[];
-  gap_details?: {
-    capacity_fte: number;
-    demand_fte: number;
-    shortage_fte: number;
-    shortage_percentage: number;
-  };
-}
-
-/**
- * Current demand row
- */
-interface CurrentDemandRow {
-  project_id: string;
-  project_name: string;
-  priority: number;
-  demand_hours: number;
-}
-
 export class ExportController extends BaseController {
+  private _reportDataService?: ReportDataService;
+  private _exportFormatterService?: ExportFormatterService;
+
   constructor(container?: ServiceContainer) {
     super({}, { container });
+  }
+
+  // Lazy initialization to allow db mocking in tests
+  private get reportDataService(): ReportDataService {
+    if (!this._reportDataService) {
+      this._reportDataService = new ReportDataService(this.db);
+    }
+    return this._reportDataService;
+  }
+
+  private get exportFormatterService(): ExportFormatterService {
+    if (!this._exportFormatterService) {
+      this._exportFormatterService = new ExportFormatterService();
+    }
+    return this._exportFormatterService;
   }
 
   async exportReportAsExcel(req: Request, res: Response) {
     try {
       const { reportType, filters = {} } = req.body;
-      
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
-      const workbook = new ExcelJS.Workbook();
-      
-      // Set workbook properties
-      workbook.creator = 'Capacinator';
-      workbook.lastModifiedBy = 'Capacinator';
-      workbook.created = new Date();
-      workbook.modified = new Date();
-      
-      let filename = '';
-      
-      switch (reportType) {
-        case 'capacity':
-          await this.generateCapacityExcel(workbook, filters);
-          filename = 'capacity-report.xlsx';
-          break;
-        case 'utilization':
-          await this.generateUtilizationExcel(workbook, filters);
-          filename = 'utilization-report.xlsx';
-          break;
-        case 'demand':
-          await this.generateDemandExcel(workbook, filters);
-          filename = 'demand-report.xlsx';
-          break;
-        case 'gaps':
-          await this.generateGapsExcel(workbook, filters);
-          filename = 'capacity-gaps-report.xlsx';
-          break;
-        default:
-          return res.status(400).json({ error: 'Invalid report type' });
-      }
-      
-      // Generate Excel buffer
-      const buffer = await workbook.xlsx.writeBuffer();
-      
-      // Set response headers
+
+      const data = await this.getReportData(reportType, filters);
+      const buffer = await this.exportFormatterService.generateExcel(reportType, data);
+      const filename = this.exportFormatterService.getFilename(reportType, 'xlsx');
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
-      // Send the file
       res.send(buffer);
-      
     } catch (error) {
       this.handleError(error, res, 'Export failed');
     }
   }
-  
+
   async exportReportAsCSV(req: Request, res: Response) {
     try {
       const { reportType, filters = {} } = req.body;
-      
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
-      let csvContent = '';
-      let filename = '';
-      
-      switch (reportType) {
-        case 'capacity': {
-          const capacityData = await this.getCapacityData(filters);
-          csvContent = this.generateCapacityCSV(capacityData);
-          filename = 'capacity-report.csv';
-          break;
-        }
-        case 'utilization': {
-          const utilizationData = await this.getUtilizationData(filters);
-          csvContent = this.generateUtilizationCSV(utilizationData);
-          filename = 'utilization-report.csv';
-          break;
-        }
-        case 'demand': {
-          const demandData = await this.getDemandData(filters);
-          csvContent = this.generateDemandCSV(demandData);
-          filename = 'demand-report.csv';
-          break;
-        }
-        case 'gaps': {
-          const gapsData = await this.getGapsData(filters);
-          csvContent = this.generateGapsCSV(gapsData);
-          filename = 'capacity-gaps-report.csv';
-          break;
-        }
-        default:
-          return res.status(400).json({ error: 'Invalid report type' });
-      }
-      
-      // Set response headers
+
+      const data = await this.getReportData(reportType, filters);
+      const csvContent = this.exportFormatterService.generateCSV(reportType, data);
+      const filename = this.exportFormatterService.getFilename(reportType, 'csv');
+
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      
-      // Send the CSV content
       res.send(csvContent);
-      
     } catch (error) {
       this.handleError(error, res, 'CSV export failed');
     }
   }
-  
+
   async exportReportAsPDF(req: Request, res: Response) {
     try {
       const { reportType, filters = {} } = req.body;
-      
+
       if (!reportType) {
         return res.status(400).json({ error: 'Report type is required' });
       }
-      
-      const puppeteer = await import('puppeteer-core');
-      
-      // Generate HTML content for the report
-      let htmlContent = '';
-      let filename = '';
-      
-      switch (reportType) {
-        case 'capacity': {
-          const capacityData = await this.getCapacityData(filters);
-          htmlContent = this.generateCapacityHTML(capacityData);
-          filename = 'capacity-report.pdf';
-          break;
-        }
-        case 'utilization': {
-          const utilizationData = await this.getUtilizationData(filters);
-          htmlContent = this.generateUtilizationHTML(utilizationData);
-          filename = 'utilization-report.pdf';
-          break;
-        }
-        case 'demand': {
-          const demandData = await this.getDemandData(filters);
-          htmlContent = this.generateDemandHTML(demandData);
-          filename = 'demand-report.pdf';
-          break;
-        }
-        case 'gaps': {
-          const gapsData = await this.getGapsData(filters);
-          htmlContent = this.generateGapsHTML(gapsData);
-          filename = 'capacity-gaps-report.pdf';
-          break;
-        }
-        default:
-          return res.status(400).json({ error: 'Invalid report type' });
-      }
-      
-      // Launch browser and generate PDF
-      const browser = await puppeteer.launch({ 
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      
-      try {
-        const page = await browser.newPage();
-        await page.setContent(htmlContent);
-        
-        const pdfBuffer = await page.pdf({
-          format: 'A4',
-          printBackground: true,
-          margin: {
-            top: '20px',
-            right: '20px',
-            bottom: '20px',
-            left: '20px'
-          }
-        });
-        
-        // Set response headers
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-        
-        // Send the PDF
-        res.send(pdfBuffer);
-        
-      } finally {
-        await browser.close();
-      }
-      
+
+      const data = await this.getReportData(reportType, filters);
+      const pdfBuffer = await this.exportFormatterService.generatePDF(reportType, data);
+      const filename = this.exportFormatterService.getFilename(reportType, 'pdf');
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.send(pdfBuffer);
     } catch (error) {
       this.handleError(error, res, 'PDF export failed');
     }
   }
-  
-  private async generateCapacityExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
-    const data = await this.getCapacityData(filters);
-    const sheet = workbook.addWorksheet('Capacity Report');
 
-    // Add headers
-    sheet.columns = [
-      { header: 'Role', key: 'role', width: 20 },
-      { header: 'Total Capacity (Hours)', key: 'capacity', width: 20 },
-      { header: 'Utilized (Hours)', key: 'utilized', width: 20 },
-      { header: 'Available (Hours)', key: 'available', width: 20 },
-      { header: 'Utilization %', key: 'utilization', width: 15 }
-    ];
-
-    // Style header
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE6E6FA' }
-    };
-
-    // Add data rows
-    data.byRole?.forEach((role: RoleCapacityData) => {
-      sheet.addRow({
-        role: role.role,
-        capacity: role.capacity,
-        utilized: role.utilized,
-        available: role.capacity - role.utilized,
-        utilization: Math.round((role.utilized / role.capacity) * 100)
-      });
-    });
-  }
-  
-  private async generateUtilizationExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
-    const data = await this.getUtilizationData(filters);
-    const sheet = workbook.addWorksheet('Utilization Report');
-
-    // Add headers
-    sheet.columns = [
-      { header: 'Name', key: 'name', width: 25 },
-      { header: 'Role', key: 'role', width: 20 },
-      { header: 'Utilization %', key: 'utilization', width: 15 },
-      { header: 'Status', key: 'status', width: 15 }
-    ];
-
-    // Style header
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE6E6FA' }
-    };
-
-    // Add data rows
-    data.peopleUtilization?.forEach((person: PersonUtilizationData) => {
-      sheet.addRow({
-        name: person.name,
-        role: person.role,
-        utilization: person.utilization,
-        status: person.utilization > 100 ? 'Over-allocated' :
-                person.utilization < 70 ? 'Under-utilized' : 'Optimal'
-      });
-    });
-  }
-  
-  private async generateDemandExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
-    const data = await this.getDemandData(filters);
-    const sheet = workbook.addWorksheet('Demand Report');
-
-    // Add headers
-    sheet.columns = [
-      { header: 'Project Type', key: 'type', width: 20 },
-      { header: 'Demand (Hours)', key: 'demand', width: 20 }
-    ];
-
-    // Style header
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE6E6FA' }
-    };
-
-    // Add data rows
-    data.byProjectType?.forEach((type: ProjectTypeDemandData) => {
-      sheet.addRow({
-        type: type.type,
-        demand: type.demand
-      });
-    });
-  }
-  
-  private async generateGapsExcel(workbook: ExcelJS.Workbook, filters: ReportFilters): Promise<void> {
-    const data = await this.getGapsData(filters);
-    const sheet = workbook.addWorksheet('Capacity Gaps');
-
-    // Add headers
-    sheet.columns = [
-      { header: 'Role', key: 'role', width: 20 },
-      { header: 'Demand (Hours)', key: 'demand', width: 20 },
-      { header: 'Capacity (Hours)', key: 'capacity', width: 20 },
-      { header: 'Gap (Hours)', key: 'gap', width: 20 },
-      { header: 'Status', key: 'status', width: 15 }
-    ];
-
-    // Style header
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE6E6FA' }
-    };
-
-    // Add data rows
-    data.gapsByRole?.forEach((gap: RoleGapData) => {
-      sheet.addRow({
-        role: gap.roleName,
-        demand: gap.demand,
-        capacity: gap.capacity,
-        gap: gap.gap,
-        status: gap.gap < 0 ? 'Gap' : 'Sufficient'
-      });
-    });
-  }
-  
-  private generateCapacityCSV(data: CapacityReportData): string {
-    const headers = ['Role', 'Total Capacity (Hours)', 'Utilized (Hours)', 'Available (Hours)', 'Utilization %'];
-    const rows = data.byRole?.map((role: RoleCapacityData) => [
-      role.role,
-      role.capacity,
-      role.utilized,
-      role.capacity - role.utilized,
-      Math.round((role.utilized / role.capacity) * 100)
-    ]) || [];
-
-    return this.arrayToCSV([headers, ...rows]);
+  /**
+   * Get report data based on report type and filters
+   */
+  private async getReportData(reportType: ReportType, filters: ReportFilters): Promise<unknown> {
+    switch (reportType) {
+      case 'capacity':
+        return this.getCapacityExportData(filters);
+      case 'utilization':
+        return this.getUtilizationExportData(filters);
+      case 'demand':
+        return this.getDemandExportData(filters);
+      case 'gaps':
+        return this.getGapsExportData();
+      default:
+        throw new Error('Invalid report type');
+    }
   }
 
-  private generateUtilizationCSV(data: UtilizationReportData): string {
-    const headers = ['Name', 'Role', 'Utilization %', 'Status'];
-    const rows = data.peopleUtilization?.map((person: PersonUtilizationData) => [
-      person.name,
-      person.role,
-      person.utilization,
-      person.utilization > 100 ? 'Over-allocated' :
-      person.utilization < 70 ? 'Under-utilized' : 'Optimal'
-    ]) || [];
-
-    return this.arrayToCSV([headers, ...rows]);
-  }
-
-  private generateDemandCSV(data: DemandReportData): string {
-    const headers = ['Project Type', 'Demand (Hours)'];
-    const rows = data.byProjectType?.map((type: ProjectTypeDemandData) => [
-      type.type,
-      type.demand
-    ]) || [];
-
-    return this.arrayToCSV([headers, ...rows]);
-  }
-
-  private generateGapsCSV(data: GapsReportData): string {
-    const headers = ['Role', 'Demand (Hours)', 'Capacity (Hours)', 'Gap (Hours)', 'Status'];
-    const rows = data.gapsByRole?.map((gap: RoleGapData) => [
-      gap.roleName,
-      gap.demand,
-      gap.capacity,
-      gap.gap,
-      gap.gap < 0 ? 'Gap' : 'Sufficient'
-    ]) || [];
-
-    return this.arrayToCSV([headers, ...rows]);
-  }
-
-  private arrayToCSV(data: CsvCellValue[][]): string {
-    return data.map(row =>
-      row.map(cell =>
-        typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
-      ).join(',')
-    ).join('\n');
-  }
-  
-  private generateCapacityHTML(data: CapacityReportData): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Capacity Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; }
-          table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-          .summary { display: flex; gap: 20px; margin-bottom: 20px; }
-          .summary-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
-        </style>
-      </head>
-      <body>
-        <h1>Capacity Report</h1>
-        <div class="summary">
-          <div class="summary-card">
-            <h3>Total Capacity</h3>
-            <p>${data.totalCapacity || 0} hours</p>
-          </div>
-          <div class="summary-card">
-            <h3>Utilized</h3>
-            <p>${data.utilizedCapacity || 0} hours</p>
-          </div>
-          <div class="summary-card">
-            <h3>Available</h3>
-            <p>${data.availableCapacity || 0} hours</p>
-          </div>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Role</th>
-              <th>Total Capacity</th>
-              <th>Utilized</th>
-              <th>Available</th>
-              <th>Utilization %</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.byRole?.map((role: RoleCapacityData) => `
-              <tr>
-                <td>${role.role}</td>
-                <td>${role.capacity} hours</td>
-                <td>${role.utilized} hours</td>
-                <td>${role.capacity - role.utilized} hours</td>
-                <td>${Math.round((role.utilized / role.capacity) * 100)}%</td>
-              </tr>
-            `).join('') || ''}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-  }
-  
-  private generateUtilizationHTML(data: UtilizationReportData): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Utilization Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; }
-          table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-          .over-allocated { background-color: #ffebee; }
-          .under-utilized { background-color: #fff3e0; }
-          .optimal { background-color: #e8f5e8; }
-        </style>
-      </head>
-      <body>
-        <h1>Utilization Report</h1>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Utilization %</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.peopleUtilization?.map((person: PersonUtilizationData) => {
-              const status = person.utilization > 100 ? 'Over-allocated' :
-                           person.utilization < 70 ? 'Under-utilized' : 'Optimal';
-              const rowClass = person.utilization > 100 ? 'over-allocated' :
-                              person.utilization < 70 ? 'under-utilized' : 'optimal';
-              return `
-                <tr class="${rowClass}">
-                  <td>${person.name}</td>
-                  <td>${person.role}</td>
-                  <td>${person.utilization}%</td>
-                  <td>${status}</td>
-                </tr>
-              `;
-            }).join('') || ''}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-  }
-  
-  private generateDemandHTML(data: DemandReportData): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Demand Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; }
-          table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-        </style>
-      </head>
-      <body>
-        <h1>Demand Report</h1>
-        <table>
-          <thead>
-            <tr>
-              <th>Project Type</th>
-              <th>Demand (Hours)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.byProjectType?.map((type: ProjectTypeDemandData) => `
-              <tr>
-                <td>${type.type}</td>
-                <td>${type.demand} hours</td>
-              </tr>
-            `).join('') || ''}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-  }
-  
-  private generateGapsHTML(data: GapsReportData): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Capacity Gaps Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; }
-          table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-          .gap { background-color: #ffebee; }
-          .sufficient { background-color: #e8f5e8; }
-        </style>
-      </head>
-      <body>
-        <h1>Capacity Gaps Report</h1>
-        <table>
-          <thead>
-            <tr>
-              <th>Role</th>
-              <th>Demand (Hours)</th>
-              <th>Capacity (Hours)</th>
-              <th>Gap (Hours)</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.gapsByRole?.map((gap: RoleGapData) => {
-              const rowClass = gap.gap < 0 ? 'gap' : 'sufficient';
-              return `
-                <tr class="${rowClass}">
-                  <td>${gap.roleName}</td>
-                  <td>${gap.demand} hours</td>
-                  <td>${gap.capacity} hours</td>
-                  <td>${gap.gap} hours</td>
-                  <td>${gap.gap < 0 ? 'Gap' : 'Sufficient'}</td>
-                </tr>
-              `;
-            }).join('') || ''}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-  }
-  
-  private async getCapacityData(filters: ReportFilters): Promise<CapacityReportData> {
-    // Use the same logic as ReportingController.getCapacityReport
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { startDate, endDate } = filters;
-
-    // Get capacity gaps
-    const capacityGaps = await this.db('capacity_gaps_view').select('*') as CapacityGapRow[];
-
-    // Get person utilization
-    const personUtilization = await this.db('person_utilization_view').select('*') as PersonUtilizationRow[];
-
-    // Transform capacity gaps to role-based data
-    const byRole: RoleCapacityData[] = capacityGaps.map((gap: CapacityGapRow) => ({
-      role: gap.role_name,
-      capacity: Math.round(gap.total_capacity_fte * 160), // Convert FTE to hours
-      utilized: Math.round((gap.total_capacity_fte - Math.abs(gap.gap_fte || 0)) * 160),
-      gap_fte: gap.gap_fte
-    }));
-
-    // Calculate totals
-    const totalCapacity = byRole.reduce((sum, r) => sum + r.capacity, 0);
-    const utilizedCapacity = byRole.reduce((sum, r) => sum + r.utilized, 0);
+  private async getCapacityExportData(filters: ReportFilters): Promise<ExportCapacityData> {
+    const report = await this.reportDataService.getCapacityReport(filters);
 
     return {
-      totalCapacity,
-      utilizedCapacity,
-      availableCapacity: totalCapacity - utilizedCapacity,
-      byRole,
-      capacityGaps,
-      personUtilization
+      totalCapacity: report.byRole.reduce((sum, r) => sum + r.capacity, 0),
+      utilizedCapacity: report.byRole.reduce((sum, r) => sum + r.utilized, 0),
+      availableCapacity: report.byRole.reduce((sum, r) => sum + r.available, 0),
+      byRole: report.byRole.map((r) => ({
+        role: r.role,
+        capacity: r.capacity,
+        utilized: r.utilized,
+      })),
     };
   }
-  
-  private async getUtilizationData(filters: ReportFilters): Promise<UtilizationReportData> {
-    // Use the same logic as ReportingController.getCapacityReport
-    const capacityReport = await this.getCapacityData(filters);
 
-    // Transform person utilization data
-    const peopleUtilization: PersonUtilizationData[] = capacityReport.personUtilization.map((person: PersonUtilizationRow) => ({
-      id: person.person_id,
-      name: person.person_name,
-      role: person.primary_role || '',
-      utilization: Math.round(person.total_allocation || 0)
-    }));
+  private async getUtilizationExportData(filters: ReportFilters): Promise<ExportUtilizationData> {
+    const report = await this.reportDataService.getUtilizationReport(filters);
 
     return {
-      peopleUtilization,
-      averageUtilization: Math.round(
-        peopleUtilization.reduce((sum, p) => sum + p.utilization, 0) /
-        (peopleUtilization.length || 1)
-      )
+      peopleUtilization: report.utilizationData.map((p) => ({
+        id: p.person_id,
+        name: p.person_name,
+        role: p.primary_role_name || '',
+        utilization: Math.round(p.total_allocation_percentage),
+      })),
+      averageUtilization: report.summary.averageUtilization,
     };
   }
-  
-  private async getDemandData(filters: ReportFilters): Promise<DemandReportData> {
-    // Use the same logic as DemandController.getDemandSummary
-    const { startDate, endDate, projectTypeId, locationId } = filters;
 
-    // Build base query
-    let query = this.db('project_demands_view')
-      .join('projects', 'project_demands_view.project_id', 'projects.id')
-      .join('roles', 'project_demands_view.role_id', 'roles.id')
-      .where('projects.include_in_demand', true);
-
-    // Apply filters
-    if (startDate) {
-      query = query.where('project_demands_view.end_date', '>=', startDate);
-    }
-    if (endDate) {
-      query = query.where('project_demands_view.start_date', '<=', endDate);
-    }
-    if (locationId) {
-      query = query.where('projects.location_id', locationId);
-    }
-    if (projectTypeId) {
-      query = query.where('projects.project_type_id', projectTypeId);
-    }
-
-    // Get demands
-    const demands = await query.select(
-      'project_demands_view.*',
-      'projects.name as project_name',
-      'projects.priority as project_priority',
-      'roles.name as role_name'
-    ) as DemandRow[];
-
-    // Calculate summary by role (used as project type in export)
-    const roleMap = new Map<string, RoleDemandAggregation>();
-    demands.forEach((demand: DemandRow) => {
-      if (!roleMap.has(demand.role_id)) {
-        roleMap.set(demand.role_id, {
-          role_id: demand.role_id,
-          role_name: demand.role_name || '',
-          total_hours: 0,
-          total_fte: 0,
-          project_count: new Set<string>(),
-          demands: []
-        });
-      }
-
-      const role = roleMap.get(demand.role_id)!;
-      role.total_hours += demand.demand_hours;
-      role.total_fte += this.calculateFte(demand.demand_hours, demand.start_date, demand.end_date);
-      role.project_count.add(demand.project_id);
-      role.demands.push(demand);
+  private async getDemandExportData(filters: ReportFilters): Promise<ExportDemandData> {
+    const report = await this.reportDataService.getDemandReport({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
     });
 
-    const byProjectType: ProjectTypeDemandData[] = Array.from(roleMap.values()).map((role: RoleDemandAggregation) => ({
-      type: role.role_name,
-      demand: role.total_hours
-    }));
-
     return {
-      totalDemand: demands.reduce((sum: number, d: DemandRow) => sum + d.demand_hours, 0),
-      byProjectType
+      totalDemand: report.summary.total_hours,
+      byProjectType: report.by_project_type.map((t) => ({
+        type: t.project_type_name,
+        demand: t.total_hours,
+      })),
     };
   }
-  
-  private async getGapsData(filters: ReportFilters): Promise<GapsReportData> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _filters = filters; // Preserved for future filter implementation
 
-    // Use the same logic as DemandController.getDemandGaps - calculate gaps based on demand vs capacity
-    const gapsData = await this.db('capacity_gaps_view').select('*') as CapacityGapRow[];
-
-    // Filter for actual gaps where demand exceeds capacity
-    const gaps: CapacityGapRow[] = gapsData.map((role: CapacityGapRow) => {
-      const gapFte = role.total_demand_fte - role.total_capacity_fte;
-      return {
-        ...role,
-        gap_fte: gapFte
-      };
-    }).filter((role: CapacityGapRow) => (role.gap_fte || 0) > 0); // Only include roles with actual gaps
-
-    // Get detailed demand vs capacity for each gap
-    const detailedGaps: ExtendedGapRow[] = await Promise.all(gaps.map(async (gap: CapacityGapRow): Promise<ExtendedGapRow> => {
-      // Get current demand
-      const currentDemand = await this.db('project_demands_view')
-        .join('projects', 'project_demands_view.project_id', 'projects.id')
-        .where('project_demands_view.role_id', gap.role_id)
-        .where('project_demands_view.start_date', '<=', new Date())
-        .where('project_demands_view.end_date', '>=', new Date())
-        .where('projects.include_in_demand', true)
-        .select(
-          'projects.id as project_id',
-          'projects.name as project_name',
-          'projects.priority',
-          'project_demands_view.demand_hours'
-        ) as CurrentDemandRow[];
-
-      return {
-        ...gap,
-        current_demands: currentDemand,
-        gap_details: {
-          capacity_fte: gap.total_capacity_fte,
-          demand_fte: gap.total_demand_fte,
-          shortage_fte: gap.gap_fte || 0,
-          shortage_percentage: Math.abs(((gap.gap_fte || 0) / gap.total_capacity_fte) * 100)
-        }
-      };
-    }));
-
-    // Sort by shortage
-    detailedGaps.sort((a: ExtendedGapRow, b: ExtendedGapRow) => (a.gap_fte || 0) - (b.gap_fte || 0));
-
-    const gapsByRole: RoleGapData[] = detailedGaps.map((gap: ExtendedGapRow) => ({
-      roleId: gap.role_id,
-      roleName: gap.role_name,
-      demand: Math.round(gap.total_demand_fte * 160), // Convert FTE to hours
-      capacity: Math.round(gap.total_capacity_fte * 160),
-      gap: Math.round((gap.gap_fte || 0) * 160)
-    }));
+  private async getGapsExportData(): Promise<ExportGapsData> {
+    const report = await this.reportDataService.getGapsAnalysis();
 
     return {
-      totalGap: detailedGaps.reduce((sum: number, g: ExtendedGapRow) => sum + Math.abs(g.gap_fte || 0), 0) * 160,
-      gapsByRole
+      totalGap: report.summary.totalGapHours,
+      gapsByRole: report.capacityGaps.map((g) => ({
+        roleId: g.role_id,
+        roleName: g.role_name,
+        demand: Math.round((g.total_demand_fte || 0) * 160),
+        capacity: Math.round((g.total_capacity_fte || 0) * 160),
+        gap: Math.round((g.demand_vs_capacity || 0) * 160),
+      })),
     };
-  }
-  
-  private calculateFte(hours: number, startDate: string, endDate: string): number {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const daysInPeriod = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
-    const workingDaysInPeriod = Math.ceil(daysInPeriod * (5/7)); // Approximate working days
-    const hoursPerDay = 8;
-    const totalWorkingHours = workingDaysInPeriod * hoursPerDay;
-    
-    return totalWorkingHours > 0 ? hours / totalWorkingHours : 0;
   }
 }
