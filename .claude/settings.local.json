@@ -1,11 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:jenkins.kindash.com)",
+      "Skill(implement-gh-issue)",
+      "Skill(implement-next-gh-issue)"
+    ]
+  },
   "enabledMcpjsonServers": [
     "shadcn-ui",
     "jenkins"
-  ],
-  "permissions": {
-    "allow": [
-      "WebFetch(domain:jenkins.kindash.com)"
-    ]
-  }
+  ]
 }
