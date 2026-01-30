@@ -174,13 +174,15 @@ async function startDevServerWithProcessManager(): Promise<void> {
   };
   
   // Start backend server
-  await processManager.startProcess('e2e-backend', 
+  await processManager.startProcess('e2e-backend',
     ['npx', 'tsx', 'src/server/index.ts'],
     {
       env,
       port: E2E_PORTS.backend,
-      waitForOutput: /Server running|Production mode/,
-      timeout: 30000
+      // Match on database initialization complete - this is the reliable startup indicator
+      // The structured logger may not output "Server running" in plain text format
+      waitForOutput: /E2E database initialized|Server running|Production mode/,
+      timeout: 60000 // Increase timeout to allow for database migrations
     }
   );
   
