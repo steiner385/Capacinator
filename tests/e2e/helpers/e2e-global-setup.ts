@@ -2,6 +2,11 @@ import { chromium, FullConfig, Browser, BrowserContext, Page } from '@playwright
 import path from 'path';
 import fs from 'fs';
 import { spawn, ChildProcess, execSync } from 'child_process';
+import dotenv from 'dotenv';
+
+// Load E2E environment variables before anything else
+dotenv.config({ path: path.resolve(process.cwd(), '.env.e2e') });
+
 // Import E2E database initialization
 import { initializeE2EDatabase } from '../../../src/server/database/init-e2e.js';
 import { E2EProcessManager } from './process-manager.js';

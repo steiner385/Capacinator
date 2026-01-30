@@ -179,7 +179,7 @@ export const AppHeader: React.FC = () => {
 
           <div className="status-indicators">
             {/* Git Sync Status (Feature: 001-git-sync-integration) */}
-            {process.env.ENABLE_GIT_SYNC === 'true' && <SyncStatusIndicator />}
+            {import.meta.env.VITE_ENABLE_GIT_SYNC === 'true' && <SyncStatusIndicator />}
 
             <div className={`status-indicator ${isOnline ? 'online' : 'offline'}`} title={isOnline ? 'Online' : 'Offline'}>
               {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}

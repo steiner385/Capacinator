@@ -785,5 +785,7 @@ export function getGitHubConnectionService(): GitHubConnectionService {
   return gitHubConnectionServiceInstance;
 }
 
-// Export singleton instance as default
-export default getGitHubConnectionService();
+// Export getter function as default to enable lazy initialization
+// The service is instantiated on first use, not at module load time,
+// which allows dotenv to load environment variables first
+export default getGitHubConnectionService;
