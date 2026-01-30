@@ -502,3 +502,85 @@ SELECT
   spa.updated_at
 FROM scenario_project_assignments spa
 INNER JOIN projects p ON spa.project_id = p.id;
+
+-- =============================================================================
+-- Git Sync Tables (Feature: 001-git-sync-integration)
+-- =============================================================================
+
+-- Sync operations tracking table
+CREATE TABLE IF NOT EXISTS sync_operations (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL CHECK(type IN ('pull', 'push', 'merge', 'clone')),
+  status TEXT NOT NULL CHECK(status IN ('in-progress', 'completed', 'completed-with-errors', 'failed', 'conflict')),
+  started_at TEXT NOT NULL,
+  completed_at TEXT,
+  user_id TEXT,
+  branch TEXT DEFAULT 'main',
+  commit_sha TEXT,
+  conflict_count INTEGER DEFAULT 0,
+  files_changed INTEGER DEFAULT 0,
+  error_message TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES people(id)
+);
+
+-- Conflicts table for tracking Git sync conflicts
+CREATE TABLE IF NOT EXISTS conflicts (
+  id TEXT PRIMARY KEY,
+  sync_operation_id TEXT NOT NULL,
+  entity_type TEXT NOT NULL CHECK(entity_type IN ('project', 'person', 'assignment', 'project_phase', 'scenario')),
+  entity_id TEXT NOT NULL,
+  entity_name TEXT,
+  field TEXT NOT NULL,
+  base_value TEXT,
+  local_value TEXT,
+  remote_value TEXT,
+  resolution_status TEXT NOT NULL DEFAULT 'pending' CHECK(resolution_status IN ('pending', 'resolved', 'skipped')),
+  resolved_value TEXT,
+  resolved_at TEXT,
+  resolved_by TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (sync_operation_id) REFERENCES sync_operations(id) ON DELETE CASCADE,
+  FOREIGN KEY (resolved_by) REFERENCES people(id)
+);
+
+-- Branch metadata table
+CREATE TABLE IF NOT EXISTS branch_metadata (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  base_branch TEXT DEFAULT 'main',
+  is_active INTEGER DEFAULT 1,
+  last_sync_at TEXT,
+  scenario_id TEXT,
+  FOREIGN KEY (created_by) REFERENCES people(id),
+  FOREIGN KEY (scenario_id) REFERENCES scenarios(id)
+);
+
+-- Offline queue for pending changes when network unavailable
+CREATE TABLE IF NOT EXISTS offline_queue (
+  id TEXT PRIMARY KEY,
+  operation_type TEXT NOT NULL CHECK(operation_type IN ('create', 'update', 'delete')),
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  entity_data TEXT NOT NULL,
+  queued_at TEXT NOT NULL DEFAULT (datetime('now')),
+  retry_count INTEGER DEFAULT 0,
+  last_retry_at TEXT,
+  error_message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+  user_id TEXT,
+  FOREIGN KEY (user_id) REFERENCES people(id)
+);
+
+-- Git sync indexes
+CREATE INDEX IF NOT EXISTS idx_sync_operations_status ON sync_operations(status);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_type ON sync_operations(type);
+CREATE INDEX IF NOT EXISTS idx_sync_operations_user ON sync_operations(user_id);
+CREATE INDEX IF NOT EXISTS idx_conflicts_sync_op ON conflicts(sync_operation_id);
+CREATE INDEX IF NOT EXISTS idx_conflicts_status ON conflicts(resolution_status);
+CREATE INDEX IF NOT EXISTS idx_conflicts_entity ON conflicts(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_branch_metadata_name ON branch_metadata(name);
+CREATE INDEX IF NOT EXISTS idx_offline_queue_status ON offline_queue(status);
