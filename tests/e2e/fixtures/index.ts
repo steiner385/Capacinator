@@ -23,9 +23,9 @@ import {
 } from '../helpers/unified-test-data-factory';
 import {
   TestContextManager,
-  TestContext,
   createTestContextManager,
 } from '../helpers/test-context-manager';
+import type { TestContext } from '../helpers/test-context-manager';
 import fs from 'fs';
 import path from 'path';
 
@@ -198,7 +198,8 @@ export const test = base.extend<TestFixtures>({
 export { expect } from '@playwright/test';
 export { TestHelpers } from '../utils/test-helpers';
 export { testConfig } from '../helpers/test-config';
-export { TestContextManager, TestContext } from '../helpers/test-context-manager';
+export { TestContextManager } from '../helpers/test-context-manager';
+export type { TestContext } from '../helpers/test-context-manager';
 // Export unified test data factory (recommended)
 export {
   UnifiedTestDataFactory,
