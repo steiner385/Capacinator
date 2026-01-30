@@ -15,9 +15,31 @@ import type { RequestWithOAuthState } from '../../middleware/github-oauth-state.
  * Phase 4 (User Story 2): PAT connection implementation (T026-T032)
  */
 export class GitHubConnectionController extends BaseController {
-  private connectionService = getGitHubConnectionService();
-  private associationService = getGitHubAssociationService();
-  private oauthService = getGitHubOAuthService();
+  // Lazy initialization of services to allow dotenv to load first
+  private _connectionService: ReturnType<typeof getGitHubConnectionService> | null = null;
+  private _associationService: ReturnType<typeof getGitHubAssociationService> | null = null;
+  private _oauthService: ReturnType<typeof getGitHubOAuthService> | null = null;
+
+  private get connectionService() {
+    if (!this._connectionService) {
+      this._connectionService = getGitHubConnectionService();
+    }
+    return this._connectionService;
+  }
+
+  private get associationService() {
+    if (!this._associationService) {
+      this._associationService = getGitHubAssociationService();
+    }
+    return this._associationService;
+  }
+
+  private get oauthService() {
+    if (!this._oauthService) {
+      this._oauthService = getGitHubOAuthService();
+    }
+    return this._oauthService;
+  }
 
   constructor() {
     super({ enableLogging: true, enableAudit: true });
@@ -785,4 +807,14 @@ export class GitHubConnectionController extends BaseController {
   );
 }
 
-export default new GitHubConnectionController();
+// Export factory function for lazy instantiation
+// Controller is created on first use, not at module load time
+let controllerInstance: GitHubConnectionController | null = null;
+export function getGitHubConnectionController(): GitHubConnectionController {
+  if (!controllerInstance) {
+    controllerInstance = new GitHubConnectionController();
+  }
+  return controllerInstance;
+}
+
+export default getGitHubConnectionController;

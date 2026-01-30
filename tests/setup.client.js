@@ -49,6 +49,39 @@ jest.mock('../client/src/components/PortalThemeProvider', () => ({
   PortalThemeProvider: ({ children }) => children,
 }));
 
+// Mock logger service (uses import.meta.env which isn't available in Jest)
+jest.mock('../client/src/services/logger', () => ({
+  logger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    logUserAction: jest.fn(),
+    logApiCall: jest.fn(),
+    logPerformance: jest.fn(),
+    child: jest.fn(() => ({
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+      debug: jest.fn(),
+      logUserAction: jest.fn(),
+      logApiCall: jest.fn(),
+      logPerformance: jest.fn(),
+      child: jest.fn(),
+    })),
+    flush: jest.fn(),
+  },
+  LogLevel: {
+    ERROR: 0,
+    WARN: 1,
+    INFO: 2,
+    DEBUG: 3,
+  },
+  ClientLogger: jest.fn(),
+  ChildClientLogger: jest.fn(),
+  withErrorLogging: (Component) => Component,
+}));
+
 // Mock window and document if needed
 if (typeof window !== 'undefined') {
   global.ResizeObserver = jest.fn().mockImplementation(() => ({

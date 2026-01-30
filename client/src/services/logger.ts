@@ -29,7 +29,7 @@ export class ClientLogger {
   private sessionId: string;
 
   constructor() {
-    this.isProduction = process.env.NODE_ENV === 'production';
+    this.isProduction = import.meta.env.MODE === 'production';
     this.enableConsole = !this.isProduction || localStorage.getItem('debug') === 'true';
     this.enableRemoteLogging = this.isProduction;
     this.sessionId = this.generateSessionId();
