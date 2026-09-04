@@ -73,3 +73,6 @@ release/
 
 # Server logs
 server.log
+
+# Agent-local overrides
+.claude/settings.local.json

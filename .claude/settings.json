@@ -1,8 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash"
+      "Bash",
+      "WebFetch(domain:jenkins.kindash.com)",
+      "Skill(implement-gh-issue)",
+      "Skill(implement-next-gh-issue)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "shadcn-ui",
+    "jenkins"
+  ]
 }
