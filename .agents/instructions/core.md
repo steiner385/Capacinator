@@ -1,0 +1,60 @@
+# Capacinator agent guidance
+
+Capacinator is an Electron capacity-planning application with a React 19/Vite/
+TypeScript client, an Express/TypeScript server, and SQLite through Knex. Read
+`.agents/knowledge/project-context.md` when a task needs the detailed architecture,
+environment, packaging, or debugging reference preserved from the original project
+instructions.
+
+## Commands
+
+All commands are cross-platform:
+
+```bash
+npm run dev
+npm run dev:stop
+npm run build
+npm run test
+npm run test:client
+npm run test:server
+npm run test:e2e
+npm run lint
+npm run typecheck
+npm run db:migrate
+```
+
+Use `npm run commands` for the full checked-in command list. See
+`docs/PLATFORM_AGNOSTIC_SETUP.md` and `docs/BUILD_AND_TEST_SETUP.md` for setup and
+test details.
+
+## Architecture and conventions
+
+- Client code lives under `client/src`; server code lives under `src/server`; tests
+  live under `tests`.
+- Route all API calls through `client/src/lib/api-client.ts` and use its namespaced
+  clients. Scenario context is applied by its interceptor.
+- Use React Query for server state and invalidate relevant queries after mutations.
+  Use Context or local state for UI state.
+- Controllers extend `BaseController` and keep business logic in services.
+- Use Tailwind theme variables and the shadcn/Radix components under
+  `client/src/components/ui`.
+- All data operations are scenario-aware. Preserve the working-versus-committed
+  scenario distinction.
+- Use `ProjectPhaseCascadeService` for phase changes and
+  `AssignmentRecalculationService` for assignment recalculation.
+- Never bypass production audit logging.
+- Never modify a committed database migration. Create a new migration with
+  `npm run db:migrate:make <name>`.
+
+## Testing and completion
+
+- Jest tests are colocated in `__tests__`; Playwright suites are under
+  `tests/e2e/suites` and must isolate their data context.
+- Components must handle loading and error states, and modal state must reset on
+  close.
+- Keep PRs focused, use conventional commits, run checks appropriate to the changed
+  area, and document any check that could not run.
+- Search for the existing source of truth before adding helpers, constants, schemas,
+  registries, or configuration copies.
+- Treat provider-local memory as temporary. Use `capture-learning` for verified
+  knowledge that should persist.
